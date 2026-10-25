@@ -1,3 +1,4 @@
+import {mountFlightLayout} from './flight-layout.js';
 import {mountDescentPanel} from './descent-panel.js';
 import {mountCapturePanel} from './capture-panel.js';
 import {advanceCoastFleet} from './coast-flight.js';
@@ -240,6 +241,7 @@ function updateWorkshop(){if(flight)return;const bounds=new T.Box3().setFromObje
 
 const capturePanel=mountCapturePanel(document.querySelector('#transferPanel'),()=>flight,message=>{syncFlightControls();notify(message);});
 const descentPanel=mountDescentPanel(document.querySelector('#capturePanel'),()=>flight,()=>syncFlightControls());
+mountFlightLayout();
 const trajectoryPanel=mountTrajectoryPanel(document.querySelector('.mapContent'),()=>{
  if(!flight)return null;let burn=null,note='';const time=flight.universalTime;
  if(document.querySelector('#planEnabled').checked){const preview=maneuverPreview(flightCenter(),flight.vel,document.querySelector('#planLocation').value,Number(document.querySelector('#planDeltaV').value),time);burn={time:preview.universalTime,deltaV:preview.impulse.toArray()};}

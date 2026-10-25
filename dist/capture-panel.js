@@ -11,7 +11,7 @@ export function mountCapturePanel(host,getFlight,notify){
  planButton.onclick=()=>{const f=getFlight();if(!f)return;try{const plan=lunarCapturePlan(f);f.maneuver=captureNode(plan,f);f.sas=true;f.sasMode='maneuver';message='';notify('月周回計画を固定しました。60秒の整列後、点火・停止は手動です。');}catch(e){message=e.message;}update();};
  for(const [name,throttle]of [['Full',1],['Fine',.1],['Stop',0]])panel.querySelector('.capture'+name).onclick=()=>{const f=getFlight();if(f&&!f.crashed&&f.maneuver?.capture)f.throttle=throttle;update();};
  function update(){
-  const f=getFlight(),node=f?.maneuver,meta=node?.capture;panel.hidden=!f||(f.orbit?.bodyId!=='moon'&&!meta);if(panel.hidden)return;
+  const f=getFlight(),node=f?.maneuver,meta=node?.capture;panel.hidden=!f||(!meta&&(f.orbit?.bodyId!=='moon'||(f.orbit.energy<0&&(f.orbit.periapsis<1000||f.orbit.apoapsis+MOON.radius<MOON.sphereOfInfluence))));if(panel.hidden)return;
   const o=f.orbit,closed=o?.bodyId==='moon'&&o.energy<0&&o.periapsis>1000&&o.apoapsis+MOON.radius<MOON.sphereOfInfluence;
   planButton.disabled=!!meta||f.crashed;
   for(const name of ['Full','Fine','Stop'])panel.querySelector('.capture'+name).disabled=!meta||f.crashed;

@@ -1,0 +1,21 @@
+// Reuse the existing controls and event handlers across workshop/flight views.
+export function mountFlightLayout(){
+ const inspector=document.querySelector('#inspector'),orbit=document.querySelector('.orbitpanel');
+ orbit.classList.add('flightNavigation');
+ inspector.querySelector('.panelhead').after(orbit);
+ for(const id of ['descentPanel','capturePanel','transferPanel'])inspector.insertBefore(document.getElementById(id),orbit);
+ for(const id of ['transferPanel','capturePanel','descentPanel']){
+  const panel=document.getElementById(id),help=panel.querySelector(':scope > small');
+  if(help){const details=document.createElement('details');details.className='flightHelp';
+   const summary=document.createElement('summary');summary.textContent='操作手順と計器の前提';details.append(summary,help);panel.append(details);}
+ }
+ const warpHelp=document.createElement('details');warpHelp.className='flightHelp';
+ warpHelp.innerHTML='<summary>時間倍率の条件</summary>';
+ for(const el of [...orbit.children])if(el.tagName==='SMALL'&&!el.id)warpHelp.append(el);
+ orbit.append(warpHelp);
+ const bottom=document.querySelector('.flightbottom'),extra=document.createElement('details');extra.className='flightExtra';
+ extra.innerHTML='<summary>駆動系・トリム・キー操作</summary><div class="flightExtraBody"></div>';
+ for(const el of [...bottom.children])if(el.tagName==='LABEL'||el.tagName==='SPAN'||el.id==='actuatorControls'||el.id==='aeroFlight')extra.lastElementChild.append(el);
+ bottom.append(extra);
+ document.querySelector('#thermalPanel').open=false;
+}

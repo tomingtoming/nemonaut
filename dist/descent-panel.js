@@ -7,7 +7,7 @@ export function mountDescentPanel(host,getFlight,changed){
  for(const [name,mode]of [['Retro','retrograde'],['Up','radial']])panel.querySelector('.descent'+name).onclick=()=>{const f=getFlight();if(f&&!f.crashed){f.sas=true;f.sasMode=mode;changed();}};
  for(const name of ['Full','Hover','Less','More','Stop'])panel.querySelector('.descent'+name).onclick=()=>{const f=getFlight();if(!f||f.crashed)return;const d=descentTelemetry(f);f.throttle=name==='Stop'?0:name==='Full'?1:name==='Hover'?Math.min(1,d.hoverThrottle):Math.max(0,Math.min(1,f.throttle+(name==='More'?.005:-.005)));changed();};
  function update(){
-  const f=getFlight();panel.hidden=!f||f.orbit?.bodyId!=='moon';if(panel.hidden)return;
+  const f=getFlight();panel.hidden=!f||f.orbit?.bodyId!=='moon'||(f.orbit.energy>=0&&f.orbit.altitude>30000);if(panel.hidden)return;
   const d=descentTelemetry(f);for(const button of panel.querySelectorAll('button'))button.disabled=f.crashed;
   panel.querySelector('.descentHover').disabled=f.crashed||!Number.isFinite(d.hoverThrottle)||d.hoverThrottle>1;
   panel.querySelector('.descentStatus').textContent=d.crashed?'機体損傷':d.landed?(f.throttle>0?'月面で静止：噴射を停止してください':'月面着陸完了：噴射停止・静止を確認'):!d.thrust?'点火段を確認してください。Spaceで点火、スロットルは手動です。':d.netAcceleration<=0?'推力不足：月面へ向かう速度を止められません':d.clearance<d.brakingDistance?'減速距離が対地距離を超えています：直ちに減速し、姿勢も確認':d.horizontal>5?'まず水平速度を減らしてください':'天頂へ整列し、接地前に鉛直速度を1 m/s未満へ';

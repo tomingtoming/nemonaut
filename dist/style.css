@@ -58,3 +58,52 @@
 #capturePanel{border:1px solid #689eac;background:#20343b;padding:12px;margin:12px 0;border-radius:8px}#capturePanel strong{color:#a5deee}#capturePanel p{line-height:1.6}#capturePanel button{margin:3px 0}#capturePanel small{display:block;line-height:1.6;margin-top:8px}
 
 #descentPanel{border:1px solid #839b77;background:#2c352c;padding:12px;margin:12px 0;border-radius:8px}#descentPanel strong{color:#c5ddaf}#descentPanel p{line-height:1.6}#descentPanel button{margin:3px 2px}#descentPanel small{display:block;line-height:1.6;margin-top:8px}
+
+/* Flight instruments occupy the edges; assembly tools return on leaving flight. */
+.flying main{grid-template-columns:minmax(0,1fr) 300px}
+.flying #library,.flying header nav,.flying #launch,.flying header .status{display:none}
+.flying #inspector{display:block;padding:0 16px}
+.flying #selection,.flying .sectionlabel:has(+ #selection){display:none}
+.flightNavigation{display:none}
+.flying .flightNavigation{position:static;display:flex;gap:8px;margin:0 0 14px;padding:12px;background:#203039;border:1px solid #49606b;border-radius:8px;text-shadow:none;overflow-wrap:anywhere}
+.flightNavigation b{font-weight:500;line-height:1.6}
+.flightHelp summary,.flightExtra summary{cursor:pointer;color:#b5cdd2;font-size:11px;padding:7px 0}
+.flightHelp small{display:block;line-height:1.7;color:#b0c3c9;margin:7px 0}
+.flightExtra{flex-basis:100%;border-top:1px solid #41545e}
+.flightExtraBody{display:flex;gap:12px;flex-wrap:wrap;padding:8px 0;font-size:10px;line-height:1.8}
+.flightExtraBody>label input[type=range]{display:block;width:100px}
+.flying .hudtop{top:12px;left:16px;right:16px;display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap;padding:10px;background:#14232bf2;border-radius:7px}
+.flying .hudtop button{font-size:11px;padding:7px 10px}
+.flying #activeVessel{position:static;flex-basis:100%;font-size:11px;order:2}
+.flying #flightStatus{margin-left:auto;font-size:11px;text-shadow:none}
+.flying .hudreadings{top:105px;left:16px;gap:24px;background:#14232bf2;border:1px solid #41545e;border-radius:7px;padding:10px 14px;text-shadow:none}
+.flying .hudreadings strong{font-size:32px;font-variant-numeric:tabular-nums}
+.flying .universalClock{top:178px;left:16px;right:auto;font-size:10px}
+.flying .navpanel{top:auto;bottom:45px;left:16px;right:auto;width:155px;background:#14232bf2;border:1px solid #41545e;padding:8px}
+.flying .navpanel canvas{width:135px;height:135px}
+.flying .navpanel label,.flying .navpanel select{display:block;width:100%}
+.flying #orbitMap{display:none}
+.flying .flightbottom{left:185px;right:16px;bottom:45px;gap:8px;padding:12px;max-height:220px;overflow:auto;background:#14232bf2}
+.flying .flightbottom button{padding:8px;font-size:11px}
+.flying .throttle{width:140px;flex:1;min-width:100px}
+.flying #viewport>button{top:178px!important;right:16px!important;font-size:10px}
+.flying #recordingDownload{top:215px!important}
+@media(max-width:900px){
+ body.flying{overflow:auto}
+ .flying main{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:max(680px,calc(100dvh - 78px)) auto}
+ .flying #inspector{overflow:visible;padding:18px;min-width:0}
+ .flying header{gap:8px}
+ .flying .brand small{display:none}
+ .flying .hudtop{left:10px;right:10px}
+ .flying .hudtop button{padding:6px;font-size:10px}
+ .flying #flightStatus{flex-basis:100%;order:3;margin:0}
+ .flying .hudreadings{top:125px;left:10px;right:10px;gap:12px;justify-content:space-between}
+ .flying .hudreadings strong{font-size:27px}
+ .flying .hudreadings small{font-size:8px;letter-spacing:1px}
+ .flying .universalClock,.flying #viewport>button{top:200px!important}
+ .flying .navpanel{left:10px;width:135px}
+ .flying .navpanel canvas{width:115px;height:115px}
+ .flying .flightbottom{left:155px;right:10px;max-height:245px}
+ .flying .throttle{flex-basis:100%}
+ .flying #recordingDownload{top:235px!important}
+}
