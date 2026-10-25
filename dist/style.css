@@ -56,3 +56,5 @@
 #transferPanel{border:1px solid #c38e55;border-radius:5px;padding:10px;margin:10px 0;background:#273036}#transferPanel[hidden]{display:none}#transferPanel strong{color:#ffc18a}#transferPanel p{font-size:12px;line-height:1.7}#transferPanel small{display:block;color:#b9c8d0;line-height:1.7;margin-top:8px}#transferPanel button{margin:4px 4px 4px 0}
 
 #capturePanel{border:1px solid #689eac;background:#20343b;padding:12px;margin:12px 0;border-radius:8px}#capturePanel strong{color:#a5deee}#capturePanel p{line-height:1.6}#capturePanel button{margin:3px 0}#capturePanel small{display:block;line-height:1.6;margin-top:8px}
+
+#descentPanel{border:1px solid #839b77;background:#2c352c;padding:12px;margin:12px 0;border-radius:8px}#descentPanel strong{color:#c5ddaf}#descentPanel p{line-height:1.6}#descentPanel button{margin:3px 2px}#descentPanel small{display:block;line-height:1.6;margin-top:8px}

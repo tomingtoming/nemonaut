@@ -1,4 +1,5 @@
 export const PARTS = {
+ landingLeg:{name:'固定式着陸脚',code:'LL-16',cat:'構造',mass:45,size:[.65,1.6,.65],landingLeg:true,desc:'幅65 cmの接地パッドと支柱。固定式。四脚で推進器を地面から離し、低速で接地してください。'},
  heatShield:{name:'熱シールド',code:'HS-20',cat:'構造',mass:70,size:[2,.28,2],heatShield:true,shieldRadius:1,shieldNormal:[0,-1,0],ablator:40,noseRadius:1,maxTemperature:1800,desc:'直径2 mの曲面耐熱材。茶色の面（ローカル−Y）を進行方向へ。消耗材40 kgで加熱を吸収。'},
  dockingPort:{name:'ドッキングポート',code:'DP-12',cat:'構造',mass:55,size:[1.25,.242,1.25],docking:true,dockFace:.121,desc:'正面はローカル+Y。ポート面を向き合わせて低速で結合。'},
  rcs:{name:'RCSブロック',code:'RC-6',cat:'推進',mass:16,monoprop:12,rcsThrust:120,rcsIsp:65,size:[.48,.48,.48],desc:'6方向・各120 N。内蔵単一推進剤12 kg。配置と重心で姿勢制御の効きが変わります。'},
@@ -37,6 +38,7 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
  if(kind==='recovery'){add('capsule',[0,0,0]);add('parachute',[0,.85,0]);}
  if(kind==='rcs'){add('probe',[0,0,0]);a[0].reactionEnabled=false;add('truss',[0,-.7,0]);for(const x of [-.74,.74])for(const y of [-1.2,.4])add('rcs',[x,y,0],[0,0,0],1);}
  if(kind==='orbiter'||kind==='transfer'){add('probe',[0,2.5,0]);add('tank',[0,1.3,0]);add('engine',[0,-.3,0],[0,0,0],1);add('solar',[1.6,2.5,0],[0,0,0]);add('solar',[-1.6,2.5,0],[0,0,0]);}
+ if(kind==='lander'){add('probe',[0,2.5,0]);add('tank',[0,1.3,0]);add('engine',[0,-.3,0],[0,0,0],1);add('solar',[1.6,2.5,0]);add('solar',[-1.6,2.5,0]);for(const [x,z]of [[1,0],[-1,0],[0,1],[0,-1]]){const frame=add('truss',[x*.9,.3,z*.9],[0,0,0],1);add('landingLeg',[x*1.2,-.8,z*1.2],[0,0,0],frame);}}
  if(kind==='twin'){add('probe',[0,2.5,0]);add('tank',[0,1.3,0]);add('engine',[0,-.3,0],[0,0,0],1,0);add('decoupler',[0,-1.01,0],[0,0,0],2,1);add('probe',[0,-1.35,0],[0,0,0],3);add('tank',[0,-2.55,0],[0,0,0],4);add('engine',[0,-4.15,0],[0,0,0],5,2);add('solar',[1.6,2.5,0]);add('solar',[-1.6,2.5,0]);add('solar',[1.6,-1.35,0],[0,0,0],4);add('solar',[-1.6,-1.35,0],[0,0,0],4);}
  if(kind==='rendezvous'){a=preset('twin');for(const core of a.filter(p=>p.type==='probe')){core.reactionEnabled=false;for(const x of [-.9,.9])for(const y of [-1.2,1.2])a.push(part('rcs',[x,core.p[1]-1.3+y,0],[0,0,0],core.id));}}
  if(kind==='docking'){add('probe',[0,-1.4,0]);add('truss',[0,-.7,0]);add('dockingPort',[0,-.079,0],[0,0,0],1);add('dockingPort',[0,.163,0],[Math.PI,0,0],2);add('truss',[0,.784,0],[Math.PI,0,0],3);add('probe',[0,1.484,0],[Math.PI,0,0],4);a[2].dockPartner=a[3].id;a[3].dockPartner=a[2].id;for(const [core,ys]of [[0,[-1.2,-.2]],[5,[.284,1.284]]])for(const x of [-.74,.74])for(const y of ys)add('rcs',[x,y,0],[0,0,0],core);}

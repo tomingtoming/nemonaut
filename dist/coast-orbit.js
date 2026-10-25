@@ -55,9 +55,9 @@ export function coastDrift(position,velocity,time,dt){
 function travelTime(clearance,speed,acceleration){
  return 2*clearance/(speed+Math.sqrt(speed*speed+2*acceleration*clearance));
 }
-export function coastStepLimit(position,velocity,time,{requested=30,deadline=Infinity,margin=1000}={}){
- if(![...position.toArray(),...velocity.toArray(),time,requested,margin].every(Number.isFinite)||time<0||requested<=0||margin<=0||!(Number.isFinite(deadline)||deadline===Infinity))throw Error('時間加速の条件が不正です');
- const local=relativeMotion(position,velocity,time),surface=local.body.radius+Math.max(1000,local.body.atmosphereTop),clearance=local.r.length()-surface-margin;
+export function coastStepLimit(position,velocity,time,{requested=30,deadline=Infinity,margin=1000,surfaceMargin=margin}={}){
+ if(![...position.toArray(),...velocity.toArray(),time,requested,margin,surfaceMargin].every(Number.isFinite)||time<0||requested<=0||margin<=0||surfaceMargin<margin||!(Number.isFinite(deadline)||deadline===Infinity))throw Error('時間加速の条件が不正です');
+ const local=relativeMotion(position,velocity,time),surface=local.body.radius+Math.max(1000,local.body.atmosphereTop),clearance=local.r.length()-surface-surfaceMargin;
  if(clearance<=0)return {dt:0,reason:'surface'};
  if(deadline-time<=15)return {dt:0,reason:'maneuver'};
  const moon=bodyState(MOON,time),moonDistance=position.distanceTo(moon.position),soiClearance=Math.abs(moonDistance-MOON.sphereOfInfluence)-margin;

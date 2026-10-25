@@ -6,6 +6,7 @@ import {coastDrift,coastStepLimit} from './coast-orbit.js';
 import {powerStep} from './power.js';
 import {THERMAL} from './thermal.js';
 import {atmosphere} from './planet.js';
+import {engineBurn} from './resources.js';
 
 const zero=new T.Vector3(),commands={pitch:0,yaw:0,roll:0};
 const center=v=>v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q));
@@ -43,6 +44,15 @@ function deadline(v){
  return result;
 }
 
+export function coastSurfaceMargin(v){
+ const o=bodyOrbitState(center(v),v.vel,v.universalTime),fall=Math.max(0,-o.vertical);
+ if(o.bodyId!=='moon'||fall<5)return 1000;
+ const thrust=[...engineBurn(v.networks,new Map(v.fuel),v.started?v.active:new Set(),1,0,.001).values()].reduce((a,b)=>a+b,0),net=thrust/v.stats.mass-o.gravity;
+ // Leave braking distance plus ten seconds for attitude/input, even though
+ // actual steering and manual throttle can need more. Never promise a landing.
+ return net>0?1000+fall*10+1.5*fall*fall/(2*net):1000+fall*20;
+}
+
 export function coastEligibility(root,{input=false}={}){
  if(input)return '操作中';
  for(const v of fleet(root)){
@@ -51,7 +61,7 @@ export function coastEligibility(root,{input=false}={}){
   if(v.throttle!==0)return '推力設定のある機体';
   if([...v.thermal.values()].some(s=>s.failed||!Number.isFinite(s.temperature)||s.temperature<3))return '熱状態を確認してください';
   if(isParked(v))continue;
-  const limit=coastStepLimit(center(v),v.vel,v.universalTime,{deadline:deadline(v)});
+  const limit=coastStepLimit(center(v),v.vel,v.universalTime,{deadline:deadline(v),surfaceMargin:coastSurfaceMargin(v)});
   if(limit.dt<.05)return {surface:'大気・地表への接近',soi:'月重力圏の境界',maneuver:'予定噴射の直前'}[limit.reason]||'通常物理が必要';
  }
  return null;
@@ -67,7 +77,7 @@ export function advanceCoastFleet(root,requested,{input=false,maxSteps=64}={}){
  const vessels=fleet(root);
  while(!reason&&advanced<requested&&steps<maxSteps){
   let dt=Math.min(5,requested-advanced),limiting=null;
-  for(const v of vessels){if(v.crashed||isParked(v))continue;const limit=coastStepLimit(center(v),v.vel,v.universalTime,{requested:dt,deadline:deadline(v)});if(limit.dt<dt){dt=limit.dt;limiting=limit.reason;}}
+  for(const v of vessels){if(v.crashed||isParked(v))continue;const limit=coastStepLimit(center(v),v.vel,v.universalTime,{requested:dt,deadline:deadline(v),surfaceMargin:coastSurfaceMargin(v)});if(limit.dt<dt){dt=limit.dt;limiting=limit.reason;}}
   // Guard encounters between retained vehicles, including a fast fly-through.
   for(let i=0;i<vessels.length;i++)for(let j=i+1;j<vessels.length;j++){
    const a=vessels[i],b=vessels[j];if(a.crashed||b.crashed||(isParked(a)&&isParked(b)))continue;
