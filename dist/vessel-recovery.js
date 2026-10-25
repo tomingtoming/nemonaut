@@ -1,3 +1,4 @@
+import {surfaceRelativeVelocity,surfaceAngularVelocity} from './surface-frame.js';
 import * as T from 'three';
 import {loadFlight,saveFlight} from './flight-save.js';
 import {fleet,canControl} from './fleet.js';
@@ -7,7 +8,7 @@ import {bodyAltitude,bodyUp,relativeMotion} from './celestial.js';
 import {PARTS} from './catalog.js';
 
 export function recoveryStatus(v){
- const motion=relativeMotion(v.pos,v.vel,v.universalTime),quiet=motion.velocity.length()<.8&&v.omega.length()<.15&&v.throttle===0;
+ const motion=relativeMotion(v.pos,v.vel,v.universalTime),quiet=surfaceRelativeVelocity(v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)),v.vel,v.universalTime,motion.body).length()<.8&&v.omega.clone().sub(surfaceAngularVelocity(motion.body)).length()<.15&&v.throttle===0;
  const afloat=v.environment==='water'&&motion.body.id==='planet'&&v.parts.some(p=>{
   const center=partCenter(p).applyQuaternion(v.q).add(v.pos),normal=bodyUp(center,v.universalTime),q=v.q.clone().multiply(partRotation(p)),size=PARTS[p.type].size;
   const extent=[[1,0,0],[0,1,0],[0,0,1]].reduce((sum,axis,i)=>sum+Math.abs(new T.Vector3(...axis).applyQuaternion(q).dot(normal))*size[i]/2,0);

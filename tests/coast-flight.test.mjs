@@ -1,3 +1,5 @@
+import {surfaceRelativeVelocity,inertialToFixed,surfaceOrientation} from '../dist/surface-frame.js';
+const surfaceSpeed=f=>surfaceRelativeVelocity(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.vel,f.universalTime).length();
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
@@ -76,9 +78,9 @@ test('A settled ground vehicle remains on the surface while an orbital fleet adv
   for(let i=0;i<1200;i++)ground.step(1/120);
   assert.ok(isParked(ground),'actual ground physics must establish parking');
   orbit=new Flight(preset('orbiter'),'orbit',ground.universalTime);orbit.detached.push(ground);
-  const p=ground.pos.clone(),q=ground.q.clone(),fuel=[...ground.fuel],time=ground.time;
+  const p=inertialToFixed(ground.pos,ground.universalTime),q=ground.q.clone().premultiply(surfaceOrientation(ground.universalTime).invert()),fuel=[...ground.fuel],time=ground.time;
   const result=advanceCoastFleet(orbit,300,{maxSteps:200});assert.equal(result.advanced,300);assert.equal(result.reason,null);
-  assert.ok(ground.pos.distanceTo(p)<1e-8);assert.deepEqual(ground.q.toArray(),q.toArray());assert.deepEqual([...ground.fuel],fuel);
+  assert.ok(inertialToFixed(ground.pos,ground.universalTime).distanceTo(p)<1e-7);assert.ok(ground.q.clone().premultiply(surfaceOrientation(ground.universalTime).invert()).angleTo(q)<1e-7);assert.ok(surfaceSpeed(ground)<.1);assert.deepEqual([...ground.fuel],fuel);
   assert.ok(ground.landed);assert.ok(Math.abs(ground.time-time-300)<1e-8);assert.equal(ground.universalTime,orbit.universalTime);
   ground.vel.x=1;assert.equal(isParked(ground),false);assert.equal(advanceCoastFleet(orbit,10).advanced,0);
  }finally{if(orbit)orbit.dispose();else ground.dispose();}

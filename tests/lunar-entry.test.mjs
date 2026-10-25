@@ -1,3 +1,5 @@
+import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
+const surfaceSpeed=f=>surfaceRelativeVelocity(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.vel,f.universalTime).length();
 import test from 'node:test';import assert from 'node:assert/strict';import * as T from 'three';
 import {Flight} from '../dist/core.js';import {preset} from '../dist/catalog.js';
 import {lunarReturnPlan,lunarReturnNode} from '../dist/lunar-return.js';import {advanceCoastFleet} from '../dist/coast-flight.js';
@@ -23,7 +25,7 @@ test('Lunar return capsule burns, escapes, separates, survives entry and lands w
   let maxSpeed=0,sawReefed=false,sawOpen=false;
   for(let i=0;i<900*120&&!f.crashed&&!f.landed;i++){f.step(1/120);maxSpeed=Math.max(maxSpeed,f.orbit.speed);const chute=[...f.chutes.values()][0];sawReefed||=chute.status==='reefed';sawOpen||=chute.status==='open';}
   assert.ok(maxSpeed>3100);assert.equal(f.crashed,false);assert.ok(f.landed);assert.ok(sawReefed&&sawOpen);
-  assert.ok(f.orbit.speed<1);assert.ok([...f.thermal.values()].every(s=>!s.failed));
+  assert.ok(surfaceSpeed(f)<1);assert.ok([...f.thermal.values()].every(s=>!s.failed));
   const shield=f.parts.find(p=>p.type==='heatShield');assert.ok(f.thermal.get(shield.id).ablator<40);assert.ok(f.thermal.get(shield.id).ablator>0);
  }finally{f.dispose();}
 });

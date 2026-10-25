@@ -1,3 +1,5 @@
+import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
+const surfaceSpeed=f=>surfaceRelativeVelocity(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.vel,f.universalTime).length();
 import {saveFlight,loadFlight} from '../dist/flight-save.js';
 import {lunarReturnPlan,lunarReturnNode} from '../dist/lunar-return.js';
 import test from 'node:test';import assert from 'node:assert/strict';import * as T from 'three';
@@ -32,6 +34,6 @@ test('Surface launch, lunar orbit, return burn and capsule touchdown form one co
   assert.equal(advanceCoastFleet(f,60000,{maxSteps:10000}).reason,'大気・地表への接近');assert.ok(Math.abs(f.orbit.periapsis-ret.finite.exit.orbit.periapsis)<1000);
   f.stageNext();f.sasMode='retrograde';f.stageNext();assert.equal(f.parts.length,3);
   for(let i=0;i<900*120&&!f.crashed&&!f.landed;i++)f.step(1/120);
-  assert.ok(f.landed);assert.equal(f.crashed,false);assert.ok([...f.thermal.values()].every(s=>!s.failed));assert.ok(f.orbit.speed<1);assert.equal(f.detached.length,3);
+  assert.ok(f.landed);assert.equal(f.crashed,false);assert.ok([...f.thermal.values()].every(s=>!s.failed));assert.ok(surfaceSpeed(f)<1);assert.equal(f.detached.length,3);
  }finally{f.dispose();}
 });

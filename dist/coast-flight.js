@@ -1,3 +1,4 @@
+import {surfaceRelativeVelocity,surfaceAngularVelocity,surfaceOrientation,surfaceVelocity} from './surface-frame.js';
 import {pendingBurns} from './burn-schedule.js';
 import * as T from 'three';
 import {PARTS} from './catalog.js';
@@ -35,7 +36,7 @@ export function coolStationary(parts,states,dt,air){
 export function isParked(v){
  const body=referenceBody(v.pos,v.universalTime);
  const contact=(v.landed&&v.landedTime>.5)||(v.brake&&v.time>.5&&v.telemetry.contacts>0);
- return contact&&v.environment!=='water'&&v.vel.clone().sub(bodyState(body,v.universalTime).velocity).length()<.1&&v.omega.length()<.01;
+ return contact&&v.environment!=='water'&&surfaceRelativeVelocity(center(v),v.vel,v.universalTime,body).length()<.1&&v.omega.clone().sub(surfaceAngularVelocity(body)).length()<.01;
 }
 
 function deadline(v){const burn=pendingBurns(v)[0];return burn?burn.cutoff+15:Infinity;}
@@ -95,17 +96,17 @@ export function advanceCoastFleet(root,requested,{input=false,maxSteps=64}={}){
   const updates=vessels.map(v=>{
    if(v.crashed){const body=referenceBody(v.pos,time),a=bodyState(body,time),b=bodyState(body,end);return {v,pos:v.pos.clone().add(b.position).sub(a.position),vel:v.vel.clone().add(b.velocity).sub(a.velocity)};}
    const c=center(v),parked=isParked(v),body=referenceBody(c,time),start=bodyState(body,time);
-   const drift=duration=>{if(!parked)return coastDrift(c,v.vel,time,duration);const end=bodyState(body,time+duration);return {position:c.clone().add(end.position).sub(start.position),velocity:v.vel.clone().add(end.velocity).sub(start.velocity)};};
-   const next=drift(dt),mid=drift(dt/2),q=v.q.clone(),air=parked&&body.id==='planet'?atmosphere(c.distanceTo(start.position)-body.radius):{density:0,pressure:0,temperature:3};
+   const drift=duration=>{if(!parked)return coastDrift(c,v.vel,time,duration);const end=bodyState(body,time+duration),turn=surfaceOrientation(duration,body),position=c.clone().sub(start.position).applyQuaternion(turn).add(end.position),velocity=surfaceRelativeVelocity(c,v.vel,time,body).applyQuaternion(turn).add(surfaceVelocity(position,time+duration,body));return {position,velocity};};
+   const next=drift(dt),mid=drift(dt/2),turn=parked?surfaceOrientation(dt,body):new T.Quaternion(),q=v.q.clone().premultiply(turn),midQ=parked?v.q.clone().premultiply(surfaceOrientation(dt/2,body)):q,air=parked&&body.id==='planet'?atmosphere(c.distanceTo(start.position)-body.radius):{density:0,pressure:0,temperature:3};
    const charge=new Map(v.charge),thermal=new Map([...v.thermal].map(([id,s])=>[id,{...s}]));
-   const power=powerStep(v.parts,charge,mid.position,q,commands,false,dt,time+dt/2);
+   const power=powerStep(v.parts,charge,mid.position,midQ,commands,false,dt,time+dt/2);
    coolStationary(v.parts,thermal,dt,air);
-   return {v,parked,air,pos:next.position.clone().sub(v.stats.com.clone().applyQuaternion(q)),vel:next.velocity,q,charge,thermal,power,orbit:bodyOrbitState(next.position,next.velocity,end)};
+   return {v,parked,air,turn,pos:next.position.clone().sub(v.stats.com.clone().applyQuaternion(q)),vel:next.velocity,q,charge,thermal,power,orbit:bodyOrbitState(next.position,next.velocity,end)};
   });
   for(const u of updates){
    const v=u.v;v.pos.copy(u.pos);v.vel.copy(u.vel);v.universalTime=end;
    if(v.crashed)continue;
-   v.time+=dt;v.q.copy(u.q);v.charge=u.charge;v.thermal=u.thermal;v.orbit=u.orbit;
+   v.time+=dt;v.q.copy(u.q);if(u.parked){v.omega.applyQuaternion(u.turn);if(v.holdQ)v.holdQ.premultiply(u.turn);}v.charge=u.charge;v.thermal=u.thermal;v.orbit=u.orbit;
    v.landed=u.parked;v.landedTime=u.parked?Math.max(.500001,v.landedTime)+dt:0;v.lastThrust=0;v.engineThrust.clear();v.rcsJets=[];
    v.maxAltitude=Math.max(v.maxAltitude,u.orbit.altitude);
    v.telemetry={power:u.power,force:zero.clone(),torque:zero.clone(),engineForce:zero.clone(),commands:{...commands},stallCount:0,contacts:0,atmosphere:u.air,engine:'Kepler coast'};

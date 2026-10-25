@@ -1,3 +1,5 @@
+import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
+const surfaceSpeed=f=>surfaceRelativeVelocity(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.vel,f.universalTime).length();
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PhysicsClock,physicalWarpStop} from '../dist/physics-clock.js';
@@ -67,7 +69,7 @@ test('Accelerated parachute descent reaches exactly the same touchdown and fleet
   try{
    f.armParachutes();let frames=0;
    while(!f.landed&&!f.crashed&&frames++<12000)clock.advance(1/60,rate,dt=>{f.step(dt);return !physicalWarpStop(f);});
-   assert.ok(f.landed);assert.equal(f.crashed,false);assert.ok(f.orbit.speed<1);
+   assert.ok(f.landed);assert.equal(f.crashed,false);assert.ok(surfaceSpeed(f)<1);
    return saveFlight(f);
   }finally{f.dispose();}
  };
