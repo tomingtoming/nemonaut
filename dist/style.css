@@ -18,3 +18,5 @@
 .mapContent{align-items:start}.mapReadings{max-height:calc(100dvh - 220px);overflow:auto;padding-right:8px}.maneuverControls{border:1px solid #45616d;border-radius:4px;padding:12px;margin-top:16px}.maneuverControls legend{color:#7de6ef}.maneuverControls label{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:7px 0}.maneuverControls input[type=number]{width:110px}.maneuverControls small{display:block;color:#afc2cc;line-height:1.7}.maneuverControls p{white-space:pre-line;color:#7de6ef}#mapFlightState{margin-bottom:5px}@media(max-width:650px){.mapReadings{max-height:none}}
 
 .maneuverControls label:has(input[type=checkbox]){justify-content:flex-start}.mapReadings{scrollbar-width:thin;scrollbar-color:#45616d #101d27}
+
+#debrisPanel{display:none;margin:14px 0;border-top:1px solid #45616d;padding-top:10px}.flying #debrisPanel{display:block}#debrisList>div{display:flex;align-items:center;gap:6px;margin:10px 0}#debrisList small{line-height:1.8}#debrisList button,#trackPrimary{padding:4px 7px;font-size:10px}#debrisPanel>small{color:#9bacb6;font-size:9px}
