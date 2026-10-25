@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {PhysicsClock,physicalWarpStop} from '../dist/physics-clock.js';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
-import {saveFlight} from '../dist/flight-save.js';
+import {saveFlight,loadFlight} from '../dist/flight-save.js';
 
 test('Physical acceleration preserves every fixed integration step',()=>{
  const run=rate=>{const clock=new PhysicsClock();let t=0,x=0,v=0,calls=0;
@@ -52,7 +52,8 @@ test('Manual burn deadlines, input, damage and touchdown stop physical accelerat
 test('Real launch, entry and parachute physics are identical across frame acceleration',()=>{
  for(const environment of ['land','entry','drop']){
   const parts=preset(environment==='land'?'lunar-expedition':'recovery');
-  const run=rate=>{const f=new Flight(parts,environment),clock=new PhysicsClock();
+  const seed=new Flight(parts,environment),initial=saveFlight(seed);seed.dispose();
+  const run=rate=>{const f=loadFlight(initial),clock=new PhysicsClock();
    try{
     if(environment==='land'){f.stageNext();f.throttle=1;}else f.armParachutes();
     for(let frame=0;frame<1200/rate;frame++)clock.advance(1/60,rate,dt=>{f.step(dt);});
@@ -65,7 +66,8 @@ test('Real launch, entry and parachute physics are identical across frame accele
 
 test('Accelerated parachute descent reaches exactly the same touchdown and fleet epoch',()=>{
  const parts=preset('recovery');
- const run=rate=>{const f=new Flight(parts,'drop',12345),clock=new PhysicsClock();
+ const seed=new Flight(parts,'drop',12345),initial=saveFlight(seed);seed.dispose();
+ const run=rate=>{const f=loadFlight(initial),clock=new PhysicsClock();
   try{
    f.armParachutes();let frames=0;
    while(!f.landed&&!f.crashed&&frames++<12000)clock.advance(1/60,rate,dt=>{f.step(dt);return !physicalWarpStop(f);});

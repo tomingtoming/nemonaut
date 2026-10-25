@@ -44,7 +44,7 @@ export function dockVessels(root,target,rootPort,targetPort){
  while(parent){const next=byId.get(parent),previous=next.parent;next.parent=current.id;current=next;parent=previous;}
  for(const p of incoming){p.p=new T.Vector3(...p.p).applyQuaternion(relative).add(offset).toArray();const e=new T.Euler().setFromQuaternion(relative.clone().multiply(partRotation(p)));p.r=[e.x,e.y,e.z];}
  parts.find(p=>p.id===rootPort).dockPartner=targetPort;byId.get(targetPort).dockPartner=rootPort;parts.push(...incoming);
- const motion=combinedMotion(root,target),merged=rebuilt(root,parts,[root,target]);merged.vel.copy(motion.velocity);merged.omega.copy(motion.omega);updateOrbit(merged);
+ const motion=combinedMotion(root,target),merged=rebuilt(root,parts,[root,target]);merged.vesselId=root.vesselId;merged.vel.copy(motion.velocity);merged.omega.copy(motion.omega);updateOrbit(merged);
  return replaceFleet(root,[root,target],merged);
 }
 export function undockVessel(root,portId){
@@ -52,7 +52,7 @@ export function undockVessel(root,portId){
  const childPort=port.parent===partner.id?port:partner.parent===port.id?partner:null;if(!childPort)throw Error('ポート間の接続が不正です');
  const ids=descendants(root.parts,childPort.id),parts=structuredClone(root.parts);for(const p of parts){if(p.id===port.id||p.id===partner.id)delete p.dockPartner;if(p.id===childPort.id)p.parent=null;}
  const retained=parts.filter(p=>!ids.has(p.id)),branch=parts.filter(p=>ids.has(p.id)),before=centerOfVessel(root),a=rebuilt(root,retained),b=rebuilt(root,branch);
- for(const v of [a,b])v.vel.copy(root.vel).add(root.omega.clone().cross(centerOfVessel(v).sub(before)));
+ a.vesselId=root.vesselId;for(const v of [a,b])v.vel.copy(root.vel).add(root.omega.clone().cross(centerOfVessel(v).sub(before)));
  // Equal-and-opposite impulses through the COM line preserve total angular momentum.
  const direction=centerOfVessel(b).sub(centerOfVessel(a));if(direction.lengthSq()>1e-10){direction.normalize();const impulse=.1/(1/a.stats.mass+1/b.stats.mass);a.vel.addScaledVector(direction,-impulse/a.stats.mass);b.vel.addScaledVector(direction,impulse/b.stats.mass);}
  updateOrbit(a);updateOrbit(b);return replaceFleet(root,[root],a,[b]);
