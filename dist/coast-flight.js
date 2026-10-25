@@ -39,7 +39,7 @@ export function isParked(v){
 function deadline(v){
  let result=Infinity;
  if(v.transferGuide?.firstBurnTime===null)result=v.transferGuide.startTime;
- if(v.maneuver&&!v.maneuver.complete)result=Math.min(result,v.maneuver.universalTime??v.universalTime+v.maneuver.time-v.time);
+ if(v.maneuver&&!v.maneuver.complete)result=Math.min(result,(v.maneuver.universalTime??v.universalTime+v.maneuver.time-v.time)-(v.maneuver.capture?45:0));
  return result;
 }
 
