@@ -1,12 +1,19 @@
 import {PARTS} from './catalog.js';
+import * as T from 'three';
 
 export function validateSymmetry(parts){
  const types=new Map();
  for(const p of parts){
-  const g=p.symmetryGroup;if(g===undefined)continue;
+  const g=p.symmetryGroup;if(g===undefined){if(p.symmetryFrame!==undefined)throw Error('対称軸にグループがありません');continue;}
   if(typeof g!=='string'||!g.trim()||g.length>200)throw Error('対称グループが不正です');
   if(types.has(g)&&types.get(g)!==p.type)throw Error('対称グループの部品種類が異なります');
   types.set(g,p.type);
+  if(p.symmetryFrame!==undefined){
+   const a=p.symmetryFrame;
+   if(!Array.isArray(a)||a.length!==16||a.some(n=>!Number.isFinite(n)||Math.abs(n)>1e7)||[3,7,11].some(i=>Math.abs(a[i])>1e-8)||Math.abs(a[15]-1)>1e-8)throw Error('対称軸が不正です');
+   const axes=[0,4,8].map(i=>new T.Vector3(a[i],a[i+1],a[i+2]));
+   if(axes.some(v=>Math.abs(v.lengthSq()-1)>1e-7)||Math.abs(axes[0].dot(axes[1]))>1e-7||Math.abs(axes[0].dot(axes[2]))>1e-7||Math.abs(axes[1].dot(axes[2]))>1e-7)throw Error('対称軸の倍率・角度が不正です');
+  }
  }
 }
 export function symmetryTargets(parts,id,linked=true){
@@ -17,11 +24,16 @@ export function symmetryTargets(parts,id,linked=true){
 export function normalizeSymmetry(parts,{fresh=false}={}){
  const groups=new Map();for(const p of parts)if(p.symmetryGroup){if(!groups.has(p.symmetryGroup))groups.set(p.symmetryGroup,[]);groups.get(p.symmetryGroup).push(p);}
  for(const members of groups.values()){
-  if(members.length<2){delete members[0].symmetryGroup;continue;}
+  if(members.length<2){delete members[0].symmetryGroup;delete members[0].symmetryFrame;continue;}
   if(fresh){const id=crypto.randomUUID();for(const p of members)p.symmetryGroup=id;}
  }
  return parts;
 }
+export function hasSymmetryGeometry(parts,id){const group=symmetryTargets(parts,id);return group.length>1&&group.every(p=>p.symmetryFrame!==undefined);}
+export function placementSymmetryFrame(mode,bay,index,count){
+ return (mode==='mirror'?new T.Matrix4().makeScale(index?-1:1,1,1):new T.Matrix4().makeRotationAxis(bay==='vab'?new T.Vector3(0,1,0):new T.Vector3(0,0,1),index*2*Math.PI/count)).toArray();
+}
+export function transformSymmetryFrames(parts,delta){for(const p of parts)if(p.symmetryFrame)p.symmetryFrame=delta.clone().multiply(new T.Matrix4().fromArray(p.symmetryFrame)).toArray();}
 export function editSymmetrySetting(parts,id,key,value,linked=true){
  validateSymmetry(parts);
  const copy=structuredClone(parts),targets=symmetryTargets(copy,id,linked);
