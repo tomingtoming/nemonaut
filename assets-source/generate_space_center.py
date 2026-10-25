@@ -59,6 +59,7 @@ box('SPH orange canopy',(61,3,.8),(62,-77,21.5),orange,.2)
 box('SPH rear enclosure',(58,.5,17),(62,-34,10),white)
 for y in [-60,-45]:box('SPH side glass',(2.1,9,3),(91,-55+(y+55),12),glass)
 parent=None
+facility('runway')
 box('Runway',(300,22,.2),(30,-145,1.1),road)
 for x in range(-110,176,16):box('Runway center line',(8,.5,.02),(x,-145,1.22),paint)
 for x in [-109,169]:
