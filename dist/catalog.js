@@ -18,6 +18,7 @@ export const PARTS = {
  nosegear:{name:'操向前脚',code:'NG-1',cat:'走行',mass:35,size:[.34,.7,.7],wheel:true,steer:true,model:'wheel',desc:'前輪1輪の操向脚。地上のA/D入力で操向。'},
  maingear:{name:'主脚',code:'MG-1',cat:'走行',mass:45,size:[.34,.7,.7],wheel:true,model:'wheel',desc:'航空機の自由転動する主脚。ブレーキ付き。'},
  wheel:{name:'駆動輪',code:'RW-7',cat:'走行',mass:45,size:[.34,.7,.7],wheel:true,steer:true,desc:'接地中に駆動・ブレーキ・操舵できるサスペンション輪。'},
+ parachute:{name:'回収パラシュート',code:'RC-14',cat:'装備',mass:80,size:[.8,.4,.8],parachute:154,desc:'Hで待機。高度5 km以下・250 m/s未満で縮帆展開、1.5 km以下・80 m/s未満で全開。'},
  solar:{name:'ソーラーパネル',code:'SP-2',cat:'装備',mass:22,size:[2,1,.08],desc:'展開済みの太陽電池パネル。現版では電力系は未実装。'},
  pontoon:{name:'フロート',code:'FL-3',cat:'船舶',mass:85,size:[1,3,.8],volume:1.9,desc:'水密の浮体。水没体積に応じた浮力を生む。'},
  ballast:{name:'バラストタンク',code:'BT-1',cat:'船舶',mass:110,size:[1.25,1,1.25],volume:1.05,ballast:1050,desc:'注排水で質量を変え、浮上・潜航を調整する。'}
@@ -27,7 +28,9 @@ export function nodes(type){const d=PARTS[type], [x,y,z]=d.size;if(type==='wing'
 export function part(type,p=[0,0,0],r=[0,0,0],parent=null,stage=0){return {id:crypto.randomUUID(),type,p,r,parent,stage};}
 export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{const o=part(t,p,r,a[par]?.id??null,stage);a.push(o);return a.length-1;};
  if(kind==='rocket'){add('capsule',[0,3.6,0]);add('tank',[0,1.95,0]);add('engine',[0,.35,0],[0,0,0],1);for(let i=0;i<4;i++){const t=i*Math.PI/2;add('fin',[.625*Math.cos(t),.8,-.625*Math.sin(t)],[0,t,0],1);} }
- if(kind==='launcher'){add('capsule',[0,5.6,0]);add('tank',[0,3.95,0]);add('tank',[0,1.95,0],[0,0,0],1);add('engine',[0,.35,0],[0,0,0],2,1);add('decoupler',[0,-.36,0],[0,0,0],3,1);add('tank',[0,-1.47,0],[0,0,0],4);add('tank',[0,-3.47,0],[0,0,0],5);add('tank',[0,-5.47,0],[0,0,0],6);for(const x of [-.7,.7])for(const z of [-.7,.7])add('engine',[x,-7.07,z],[0,0,0],7);for(let i=0;i<4;i++){const t=i*Math.PI/2;add('fin',[.625*Math.cos(t),-5.5,-.625*Math.sin(t)],[0,t,0],7);}}
+ if(kind==='launcher'||kind==='returner'){add('capsule',[0,5.6,0]);add('tank',[0,3.95,0]);add('tank',[0,1.95,0],[0,0,0],1);add('engine',[0,.35,0],[0,0,0],2,1);add('decoupler',[0,-.36,0],[0,0,0],3,1);add('tank',[0,-1.47,0],[0,0,0],4);add('tank',[0,-3.47,0],[0,0,0],5);add('tank',[0,-5.47,0],[0,0,0],6);for(const x of [-.7,.7])for(const z of [-.7,.7])add('engine',[x,-7.07,z],[0,0,0],7);for(let i=0;i<4;i++){const t=i*Math.PI/2;add('fin',[.625*Math.cos(t),-5.5,-.625*Math.sin(t)],[0,t,0],7);}}
+ if(kind==='returner'){for(let i=1;i<a.length;i++)a[i].p[1]-=.22;const separator=part('decoupler',[0,4.84,0],[0,0,0],a[0].id,2);a[1].parent=separator.id;a.push(separator);a.push(part('parachute',[0,6.45,0],[0,0,0],a[0].id,3));}
+ if(kind==='recovery'){add('capsule',[0,0,0]);add('parachute',[0,.85,0]);}
  if(kind==='orbiter'){add('probe',[0,2.5,0]);add('tank',[0,1.3,0]);add('engine',[0,-.3,0],[0,0,0],1);add('solar',[1.6,2.5,0],[0,0,0]);add('solar',[-1.6,2.5,0],[0,0,0]);}
  if(kind==='plane'){
  const r=[Math.PI/2,0,0],left=[Math.PI/2,Math.PI,0],vertical=[Math.PI/2,Math.PI/2,0];

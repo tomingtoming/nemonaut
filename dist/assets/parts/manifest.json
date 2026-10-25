@@ -188,5 +188,17 @@
     ],
     "coordinates": "Y up / nose +Y; meters",
     "origin": "center"
+  },
+  "parachute": {
+    "file": "parachute.glb",
+    "dimensions": [
+      0.8,
+      0.4,
+      0.8
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center",
+    "deployedFile": "parachute-open.glb",
+    "source": "assets-source/recovery-parachute.blend"
   }
 }
