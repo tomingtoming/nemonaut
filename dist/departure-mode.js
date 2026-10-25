@@ -9,6 +9,7 @@ export function departureMode(environment){
  const [mode,label]=environments[environment];return {mode,label};
 }
 export function historyActionLabel(event){
+ if(event.type==='orbit')return '母星軌道投入 · 近点 '+(event.orbit.periapsis/1000).toFixed(1)+' km / 遠点 '+(event.orbit.apoapsis/1000).toFixed(1)+' km';
  if(event.type!=='launch')return {recover:'回収',terminate:'運用終了'}[event.type];
  if(event.environment===undefined)return '出発（開始条件の記録なし）';
  const {mode,label}=departureMode(event.environment);
