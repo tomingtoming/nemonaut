@@ -35,6 +35,7 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
  if(kind==='rcs'){add('probe',[0,0,0]);a[0].reactionEnabled=false;add('truss',[0,-.7,0]);for(const x of [-.74,.74])for(const y of [-1.2,.4])add('rcs',[x,y,0],[0,0,0],1);}
  if(kind==='orbiter'){add('probe',[0,2.5,0]);add('tank',[0,1.3,0]);add('engine',[0,-.3,0],[0,0,0],1);add('solar',[1.6,2.5,0],[0,0,0]);add('solar',[-1.6,2.5,0],[0,0,0]);}
  if(kind==='twin'){add('probe',[0,2.5,0]);add('tank',[0,1.3,0]);add('engine',[0,-.3,0],[0,0,0],1,0);add('decoupler',[0,-1.01,0],[0,0,0],2,1);add('probe',[0,-1.35,0],[0,0,0],3);add('tank',[0,-2.55,0],[0,0,0],4);add('engine',[0,-4.15,0],[0,0,0],5,2);add('solar',[1.6,2.5,0]);add('solar',[-1.6,2.5,0]);add('solar',[1.6,-1.35,0],[0,0,0],4);add('solar',[-1.6,-1.35,0],[0,0,0],4);}
+ if(kind==='rendezvous'){a=preset('twin');for(const core of a.filter(p=>p.type==='probe')){core.reactionEnabled=false;for(const x of [-.9,.9])for(const y of [-1.2,1.2])a.push(part('rcs',[x,core.p[1]-1.3+y,0],[0,0,0],core.id));}}
  if(kind==='plane'){
  const r=[Math.PI/2,0,0],left=[Math.PI/2,Math.PI,0],vertical=[Math.PI/2,Math.PI/2,0];
  add('cockpit',[0,1.3,2.2],r);add('tank',[0,1.3,.2],r);add('jet',[0,1.3,-1.4],r,1);
