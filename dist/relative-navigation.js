@@ -3,7 +3,7 @@ import {partCenter,partMass} from './aero.js';
 import {PARTS} from './catalog.js';
 import {fleet} from './fleet.js';
 export const TARGET_MODES=['target','relativeRetrograde','dock'];
-export function centerOfVessel(v){const center=new T.Vector3();let mass=0;for(const p of v.parts){const m=partMass(p,v.fuel,v.ballast);mass+=m;center.addScaledVector(partCenter(p),m);}return center.divideScalar(mass||1).applyQuaternion(v.q).add(v.pos);}
+export function centerOfVessel(v){const center=new T.Vector3();let mass=0;for(const p of v.parts){const m=partMass(p,v.fuel,v.ballast,v.thermal);mass+=m;center.addScaledVector(partCenter(p),m);}return center.divideScalar(mass||1).applyQuaternion(v.q).add(v.pos);}
 export function relativeState(v,target){
  if(!target||v===target)return null;
  const offset=centerOfVessel(target).sub(centerOfVessel(v)),velocity=target.vel.clone().sub(v.vel),distance=offset.length(),speed=velocity.length(),direction=distance>1e-6?offset.clone().divideScalar(distance):null;

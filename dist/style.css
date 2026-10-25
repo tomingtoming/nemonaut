@@ -26,3 +26,5 @@
 #dockingPanel small{display:block;line-height:1.6;margin:8px 0}#dockBonds button{margin:6px 0}#dockButton{display:block;margin:8px 0}
 
 #portGuide label{display:block;margin:8px 0}#portGuide select{max-width:100%}#portCrosshair{width:100%;height:auto;border:1px solid #3a515a;margin-top:8px}
+
+#thermalPanel{margin:12px 0;padding:10px;border:1px solid #43565f;border-radius:5px}#thermalPanel small{display:block;color:#91a9b5;font-size:11px;line-height:1.5}.thermalRow{font-size:11px;padding:3px 0;color:#b9cbd2}.thermalRow.hot{color:#f1bc62}.thermalRow.failed{color:#ff7569}
