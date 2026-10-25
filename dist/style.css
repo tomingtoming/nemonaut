@@ -89,7 +89,7 @@
 .flying .flightbottom button{padding:8px;font-size:11px}
 .flying .throttle{width:140px;flex:1;min-width:100px}
 .flying #viewport>button{top:178px!important;right:16px!important;font-size:10px}
-.flying #recordingDownload{top:215px!important}
+
 @media(max-width:900px){
  body.flying{overflow:auto}
  .flying main{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:max(680px,calc(100dvh - 78px)) auto}
@@ -107,10 +107,38 @@
  .flying .navpanel canvas{width:115px;height:115px}
  .flying .flightbottom{left:155px;right:10px;max-height:245px}
  .flying .throttle{flex-basis:100%}
- .flying #recordingDownload{top:235px!important}
+
 }
 #departurePanel{padding:12px;border:1px solid #527477;border-radius:9px;background:#243336;margin-bottom:12px}#departurePanel summary{cursor:pointer;color:#bce7df}#departurePanel button{margin:4px 2px;padding:8px;font-size:11px}#departurePanel p,#departurePanel small{font-size:12px;line-height:1.6}#departurePanel small{display:block;margin:8px 0}
 #designDiagnostics>label{display:flex;flex-direction:column;gap:5px;margin:10px 0}#designDiagnostics select{max-width:100%;width:100%}#designDiagnostics .stagingRow p{line-height:1.6;overflow-wrap:anywhere}#designDiagnostics .designEquipmentRows>div{border-top:1px solid var(--line,#34434b);padding:6px 0}#designDiagnostics .designEquipmentRows button{margin:2px;max-width:100%}
 #designDiagnostics>label.thrustVisualToggle{flex-direction:row;align-items:center} #designDiagnostics .thrustVisual{width:auto;flex:0 0 auto}
 
 #designDiagnostics .stageVisual{width:auto;flex:0 0 auto}
+
+/* Compact assembly console: reserve the central view for the vehicle. */
+header{height:48px;padding:0 12px;gap:12px;background:#292e31;border-bottom:1px solid #555b5f}
+header nav{display:flex;gap:4px}header nav button{padding:7px 14px}
+.headright{margin-left:auto;gap:6px}
+main{height:calc(100dvh - 48px)}
+body{--orange:#b7d783;--line:#454d51}
+button,select,input{border-radius:3px}button.primary{background:#52673c;color:#f3f7eb;border-color:#8aab62}
+#library,#inspector{background:#272d30}
+.panelhead{padding:12px 14px}.panelhead h2{font-size:14px;margin:0}
+#inspector .panelhead{padding-left:0;padding-right:0}
+.viewtop{top:12px;left:14px;right:14px;align-items:center}
+.viewtop input{font-size:18px;width:240px;background:#252c30e8;border:1px solid #60696e;padding:7px 10px;border-radius:3px}
+.viewactions{gap:4px}.viewactions button{padding:7px 9px;background:#272e32ec}
+#toolbar{bottom:38px;padding:5px;border-radius:3px;background:#292f33f2;box-shadow:0 2px 6px #0006}
+.viewbottom{height:25px;padding:0 12px;background:#292f33e8}
+.metrics{gap:8px;padding:10px 0}.metrics b{font-size:22px}.metrics span{margin-bottom:3px}
+.sectionlabel{padding-top:10px;margin-bottom:8px;font-size:11px;letter-spacing:0;color:#c8d0d3}
+#placement{top:65px}#toast{top:65px}
+.centerSidebar .centerSession>small:last-child{font-size:11px}
+@media(max-width:760px){header{height:48px;padding:0 6px;gap:4px}header nav{display:flex}header nav button{padding:6px 8px}.headright{gap:4px}.headright button{padding:6px;font-size:10px}main{height:calc(100dvh - 48px)}.viewtop input{width:150px;font-size:15px}}
+
+header>#craftName{min-width:80px;max-width:240px;width:22vw;padding:7px 10px;font-size:14px;background:#202629;border:1px solid #555f64;color:#eef0ed}
+.craftFiles{display:flex;gap:4px}.craftFiles button{width:auto;margin:0;white-space:nowrap;padding:7px 10px;font-size:11px}.craftFiles #examples span{display:none}
+.viewtop{justify-content:flex-end;pointer-events:none}.viewactions{pointer-events:auto}
+.flying .craftFiles,.flying header>#craftName{display:none}
+@media(max-width:900px){.craftFiles #examples{display:none}header>#craftName{width:16vw}.craftFiles button{padding:6px}}
+@media(max-width:600px){.craftFiles{display:none}header>#craftName{flex:1;width:80px}.headright #help{display:none}}

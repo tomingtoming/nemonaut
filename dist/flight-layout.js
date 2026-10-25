@@ -1,5 +1,11 @@
 // Reuse the existing controls and event handlers across workshop/flight views.
 export function mountFlightLayout(){
+ const header=document.querySelector('header'),right=header.querySelector('.headright');
+ const name=document.querySelector('#craftName');header.insertBefore(name,right);
+ const files=document.createElement('div');files.className='craftFiles';
+ for(const id of ['save','load','examples'])files.append(document.getElementById(id));
+ header.insertBefore(files,right);
+
  const inspector=document.querySelector('#inspector'),orbit=document.querySelector('.orbitpanel');
  orbit.classList.add('flightNavigation');
  inspector.querySelector('.panelhead').after(orbit);
