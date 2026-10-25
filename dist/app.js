@@ -1,3 +1,4 @@
+import {mountStageVisibility} from './stage-visibility.js';
 import {mountThrustOverlay} from './thrust-overlay.js';
 import {mountDesignDiagnostics} from './design-diagnostics-panel.js';
 import {PhysicsClock,physicalWarpStop} from './physics-clock.js';
@@ -263,7 +264,8 @@ const descentPanel=mountDescentPanel(document.querySelector('#capturePanel'),()=
 mountFlightLayout();
 const ascentPanel=mountAscentPanel(document.querySelector('#descentPanel'),()=>flight,()=>syncFlightControls());
 const departurePanel=mountDeparturePanel(document.querySelector('#ascentPanel'),()=>flight,message=>{syncFlightControls();if(message)notify(message);});
-const designDiagnostics=mountDesignDiagnostics($('#checks'),()=>({parts,flight}),id=>{cancelPlacement();select(id);$('#selection').scrollIntoView({block:'nearest'});},balance=>thrustOverlay.update(balance));
+const stageVisibility=mountStageVisibility(()=>objects);
+const designDiagnostics=mountDesignDiagnostics($('#checks'),()=>({parts,flight}),id=>{cancelPlacement();select(id);$('#selection').scrollIntoView({block:'nearest'});},balance=>thrustOverlay.update(balance),ids=>stageVisibility.update(ids));
 const returnPanel=mountReturnPanel(document.querySelector('#ascentPanel'),()=>flight,message=>{syncFlightControls();if(message)notify(message);});
 const trajectoryPanel=mountTrajectoryPanel(document.querySelector('.mapContent'),()=>{
  if(!flight)return null;let burn=null,note='';const time=flight.universalTime;
