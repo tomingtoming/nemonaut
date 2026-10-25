@@ -1,4 +1,4 @@
-import {surfaceRelativeVelocity,surfaceAngularVelocity,surfaceOrientation,surfaceVelocity} from './surface-frame.js';
+import {frozenSurfaceState,surfaceRelativeVelocity,surfaceAngularVelocity,surfaceOrientation,surfaceVelocity} from './surface-frame.js';
 import {pendingBurns} from './burn-schedule.js';
 import * as T from 'three';
 import {PARTS} from './catalog.js';
@@ -94,7 +94,7 @@ export function advanceCoastFleet(root,requested,{input=false,maxSteps=64}={}){
   if(end===time){reason='時刻の計算精度の上限';blocked=blocker(reason,root,'precision');break;}
   // Compute on copies first: a failed propagation cannot split fleet clocks.
   const updates=vessels.map(v=>{
-   if(v.crashed){const body=referenceBody(v.pos,time),a=bodyState(body,time),b=bodyState(body,end);return {v,pos:v.pos.clone().add(b.position).sub(a.position),vel:v.vel.clone().add(b.velocity).sub(a.velocity)};}
+   if(v.crashed)return {v,...frozenSurfaceState(v,time,dt)};
    const c=center(v),parked=isParked(v),body=referenceBody(c,time),start=bodyState(body,time);
    const drift=duration=>{if(!parked)return coastDrift(c,v.vel,time,duration);const end=bodyState(body,time+duration),turn=surfaceOrientation(duration,body),position=c.clone().sub(start.position).applyQuaternion(turn).add(end.position),velocity=surfaceRelativeVelocity(c,v.vel,time,body).applyQuaternion(turn).add(surfaceVelocity(position,time+duration,body));return {position,velocity};};
    const next=drift(dt),mid=drift(dt/2),turn=parked?surfaceOrientation(dt,body):new T.Quaternion(),q=v.q.clone().premultiply(turn),midQ=parked?v.q.clone().premultiply(surfaceOrientation(dt/2,body)):q,air=parked&&body.id==='planet'?atmosphere(c.distanceTo(start.position)-body.radius):{density:0,pressure:0,temperature:3};
@@ -105,7 +105,7 @@ export function advanceCoastFleet(root,requested,{input=false,maxSteps=64}={}){
   });
   for(const u of updates){
    const v=u.v;v.pos.copy(u.pos);v.vel.copy(u.vel);v.universalTime=end;
-   if(v.crashed)continue;
+   if(v.crashed){v.q.copy(u.q);v.omega.copy(u.omega);if(v.holdQ)v.holdQ.premultiply(u.turn).normalize();v.orbit=bodyOrbitState(center(v),v.vel,end);continue;}
    v.time+=dt;v.q.copy(u.q);if(u.parked){v.omega.applyQuaternion(u.turn);if(v.holdQ)v.holdQ.premultiply(u.turn);}v.charge=u.charge;v.thermal=u.thermal;v.orbit=u.orbit;
    v.landed=u.parked;v.landedTime=u.parked?Math.max(.500001,v.landedTime)+dt:0;v.lastThrust=0;v.engineThrust.clear();v.rcsJets=[];
    v.maxAltitude=Math.max(v.maxAltitude,u.orbit.altitude);

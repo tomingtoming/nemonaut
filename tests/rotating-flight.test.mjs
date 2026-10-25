@@ -32,3 +32,23 @@ test('rocket transitions from rotating ground contact into inertial free flight'
   assert.ok(bodyAltitude(com(f),f.universalTime)>80);assert.ok(speed(f)>10);assert.equal(f.crashed,false);assert.ok(f.vel.length()>100);assert.ok(f.fuelRatio<1);
  }finally{f.dispose();}}
 });
+
+
+test('damaged vessels preserve body-fixed pose under normal and coast time advancement',async()=>{
+ const {advanceCoastFleet}=await import('../dist/coast-flight.js');
+ const {surfaceOrientation}=await import('../dist/surface-frame.js');
+ for(const environment of ['land','orbit','moon-orbit']){
+  const a=new Flight(preset('rocket'),environment,4000),b=new Flight(preset('rocket'),environment,4000);
+  try{
+   a.crashed=b.crashed=true;
+   const fixed=inertialToFixed(a.pos,a.universalTime),q=a.q.clone(),time=a.time,fuel=[...a.fuel],charge=[...a.charge];
+   run(a,10);const result=advanceCoastFleet(b,10);assert.equal(result.advanced,10);
+   assert.ok(inertialToFixed(a.pos,a.universalTime).distanceTo(fixed)<1e-6);
+   assert.ok(a.pos.distanceTo(b.pos)<1e-6);assert.ok(a.vel.distanceTo(b.vel)<1e-7);
+   assert.ok(a.q.angleTo(b.q)<1e-6);assert.ok(speed(a)<1e-7);
+   assert.equal(a.time,time);assert.deepEqual([...a.fuel],fuel);assert.deepEqual([...a.charge],charge);
+   if(environment==='moon-orbit')assert.ok(a.q.angleTo(q)<1e-7);
+   else assert.ok(a.q.angleTo(q.premultiply(surfaceOrientation(10)))<1e-6);
+  }finally{a.dispose();b.dispose();}
+ }
+});

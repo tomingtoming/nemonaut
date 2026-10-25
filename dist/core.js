@@ -1,4 +1,4 @@
-import {surfaceAngularVelocity,surfaceOrientation,surfaceVelocity,surfaceRelativeVelocity,rotatingFrameCorrection} from './surface-frame.js';
+import {frozenSurfaceState,surfaceAngularVelocity,surfaceOrientation,surfaceVelocity,surfaceRelativeVelocity,rotatingFrameCorrection} from './surface-frame.js';
 import {lunarTransferSeed,createTransferGuide,advanceTransferGuide} from './lunar-transfer.js';
 import {validateAttachments} from './attachment-nodes.js';
 import {createThermal,thermalStep} from './thermal.js';
@@ -43,8 +43,8 @@ export class Flight {
  if(!this.parts.some(p=>PARTS[p.type].control))input={};
  if(root===this)resolveTargets(this);
  for(const child of this.detached)child.step(dt,{},root);
- const startTime=this.universalTime-dt,reference=referenceBody(this.pos,startTime),startBody=bodyState(reference,startTime),endBody=bodyState(reference,this.universalTime),bodyShift=endBody.position.clone().sub(startBody.position);
- if(this.crashed){this.pos.add(bodyShift);this.vel.add(endBody.velocity.clone().sub(startBody.velocity));return;}if(!this.parts.length)return;this.time+=dt;
+ const startTime=this.universalTime-dt,reference=referenceBody(this.pos,startTime),startBody=bodyState(reference,startTime),endBody=bodyState(reference,this.universalTime);
+ if(this.crashed){const frozen=frozenSurfaceState(this,startTime,dt);this.pos.copy(frozen.pos);this.q.copy(frozen.q);this.vel.copy(frozen.vel);this.omega.copy(frozen.omega);if(this.holdQ)this.holdQ.premultiply(frozen.turn).normalize();this.orbit=bodyOrbitState(this.pos.clone().add(this.stats.com.clone().applyQuaternion(this.q)),this.vel,this.universalTime);return;}if(!this.parts.length)return;this.time+=dt;
  const altitude=p=>bodyAltitude(p,startTime,reference),localUp=p=>bodyUp(p,startTime,reference),gravity=p=>bodyGravity(p,startTime,reference),startCOM=this.pos.clone().add(statistics(this.parts,this.fuel,this.ballast,this.thermal).com.applyQuaternion(this.q)),spin=surfaceAngularVelocity(reference),relativeOmega=this.omega.clone().sub(spin),relativeVelocity=surfaceRelativeVelocity(startCOM,this.vel,startTime,reference),water=this.environment==='water'&&reference.id==='planet';
  // Floating local physics origin: the solver never sees planet-scale coordinates.
  const normal=localUp(this.pos),height=altitude(this.pos),freeFlight=height>this.parts.reduce((m,p)=>Math.max(m,new T.Vector3(...p.p).length()+Math.max(...PARTS[p.type].size)),0)+25;

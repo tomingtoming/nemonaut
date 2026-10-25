@@ -34,3 +34,13 @@ export function rotatingFrameCorrection(point,relativeVelocity,time=0,body=refer
  const omega=surfaceAngularVelocity(body),r=point.clone().sub(bodyState(body,time).position);
  return omega.clone().cross(relativeVelocity).multiplyScalar(-2).sub(omega.clone().cross(omega.clone().cross(r)));
 }
+
+// Damaged vessels retain their body-fixed pose, including airborne wrecks.
+// They are suspended records, not falling debris, until recovery/termination.
+export function frozenSurfaceState(v,time,dt){
+ const body=referenceBody(v.pos,time),turn=surfaceOrientation(dt,body);
+ const pos=fixedToInertial(inertialToFixed(v.pos,time,body),time+dt,body);
+ const q=v.q.clone().premultiply(turn).normalize();
+ const com=pos.clone().add(v.stats.com.clone().applyQuaternion(q));
+ return {pos,q,vel:surfaceVelocity(com,time+dt,body),omega:surfaceAngularVelocity(body),turn};
+}
