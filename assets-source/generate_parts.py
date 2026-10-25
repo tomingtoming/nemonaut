@@ -35,12 +35,13 @@ def cyl(name,p,r,h,m,axis='Y',verts=40):
  if axis=='X':o.rotation_euler[1]=math.pi/2
  elif axis=='Z':o.rotation_euler[0]=math.pi/2
  return finish(o,name,m,.008)
-def lathe(name,profile,m,n=48):
+def lathe(name,profile,m,n=64,cap=True):
  vs=[P((r*math.cos(i*2*math.pi/n),y,r*math.sin(i*2*math.pi/n))) for y,r in profile for i in range(n)]
  fs=[]
  for j in range(len(profile)-1):
   for i in range(n):a=j*n+i;b=j*n+(i+1)%n;fs.append((a,b,b+n,a+n))
- fs.extend([tuple(reversed(range(n))),tuple((len(profile)-1)*n+i for i in range(n))])
+ if cap:fs.extend([tuple(reversed(range(n))),tuple((len(profile)-1)*n+i for i in range(n))])
+ fs=[tuple(reversed(f)) for f in fs]
  mesh=bpy.data.meshes.new(name);mesh.from_pydata(vs,[],fs);mesh.update();o=bpy.data.objects.new(name,mesh);bpy.context.collection.objects.link(o);return finish(o,name,m)
 def ring(y,r=.605,h=.065,m=silver):return cyl('Attachment flange',(0,y,0),r,h,m)
 def bolts(y,r=.54,n=12):
@@ -54,6 +55,7 @@ def ports(y):
 def build(id,dim):
  global current;current=[];parts[id]={'objects':current,'dimensions':dim}
 def finalize(id):
+ bpy.context.view_layer.update()
  objs=parts[id]['objects'];dim=parts[id]['dimensions'];vs=[o.matrix_world@v.co for o in objs for v in o.data.vertices]
  lo=Vector(tuple(min(v[i] for v in vs) for i in range(3)));hi=Vector(tuple(max(v[i] for v in vs) for i in range(3)));center=(lo+hi)/2
  if id=='wing':center.x=lo.x
@@ -65,7 +67,38 @@ def finalize(id):
   o.location=(0,0,0);o.rotation_euler=(0,0,0);o.scale=(1,1,1)
  bpy.ops.object.select_all(action='DESELECT')
  for o in objs:o.select_set(True)
+ bpy.context.view_layer.objects.active=objs[0];bpy.ops.object.join();parts[id]['objects']=[bpy.context.object]
  bpy.ops.export_scene.gltf(filepath=os.path.join(OUT,id+'.glb'),export_format='GLB',use_selection=True,export_yup=True)
+
+def hollow(name,profile,m):return lathe(name,profile,m,cap=False)
+def hoop(name,y,r,h,m):return hollow(name,[(y-h/2,r),(y+h/2,r),(y+h/2,r-.045),(y-h/2,r-.045),(y-h/2,r)],m)
+def ellipsoid(name,p,d,m):
+ bpy.ops.mesh.primitive_uv_sphere_add(segments=40,ring_count=24,radius=1,location=P(p));o=bpy.context.object;o.scale=(d[0],d[2],d[1]);bpy.ops.object.transform_apply(location=False,rotation=False,scale=True);finish(o,name,m)
+ for f in o.data.polygons:f.use_smooth=True
+ return o
+def path(name,points,r,m):
+ cu=bpy.data.curves.new(name,'CURVE');cu.dimensions='3D';cu.bevel_depth=r;cu.bevel_resolution=2;s=cu.splines.new('POLY');s.points.add(len(points)-1)
+ for v,p in zip(s.points,points):v.co=(*P(p),1)
+ o=bpy.data.objects.new(name,cu);bpy.context.collection.objects.link(o);bpy.ops.object.select_all(action='DESELECT');o.select_set(True);bpy.context.view_layer.objects.active=o;bpy.ops.object.convert(target='MESH');return finish(bpy.context.object,name,m)
+def swept_blade(a,y,rmax,m):
+ vs=[];fs=[]
+ for i in range(10):
+  t=i/9;r=.10+(rmax-.10)*t;theta=a+.60*t;w=.08*math.sin(math.pi*(.12+.8*t))
+  for side in [-1,1]:
+   ang=theta+side*w/r;vs.append(P((r*math.cos(ang),y+side*.028+.035*t,r*math.sin(ang))))
+ for i in range(9):fs.append((i*2,i*2+1,i*2+3,i*2+2))
+ me=bpy.data.meshes.new('Swept aerofoil blade');me.from_pydata(vs,[],fs);me.update();o=bpy.data.objects.new(me.name,me);bpy.context.collection.objects.link(o);finish(o,me.name,m);mod=o.modifiers.new('Metal thickness','SOLIDIFY');mod.thickness=.009;bpy.context.view_layer.objects.active=o;bpy.ops.object.modifier_apply(modifier=mod.name)
+def canopy(name,m,scale=1):
+ # Integrated blister: rear shoulder at y=-.34, low windscreen at +.65.
+ vs=[];fs=[];sections=[(-.68,.03,.50,.02),(-.52,.22,.52,.15),(-.30,.34,.53,.26),(-.02,.32,.48,.26),(.27,.24,.40,.19),(.52,.12,.28,.10),(.68,.012,.20,.01)]
+ for y,w,z,h in sections:
+  for i in range(17):
+   a=math.pi*i/16;vs.append(P((w*math.cos(a)*scale,y,z+(h*math.sin(a))*scale)))
+ for j in range(len(sections)-1):
+  for i in range(16):a=j*17+i;fs.append((a+17,a+18,a+1,a))
+ me=bpy.data.meshes.new(name);me.from_pydata(vs,[],fs);me.update();o=bpy.data.objects.new(name,me);bpy.context.collection.objects.link(o);finish(o,name,m)
+ for f in me.polygons:f.use_smooth=True
+ return sections
 
 build('tank',(1.25,2,1.25))
 lathe('Cryogenic vessel',[(-1,.54),(-.94,.60),(.94,.60),(1,.54)],white)
@@ -87,15 +120,14 @@ box('Hatch frame',(0,-.19,-.53),(.4,.37,.055),silver,.045);box('Hatch inset',(0,
 cyl('Docking cap',(0,.62,0),.18,.06,dark);finalize('capsule')
 
 build('engine',(1.25,1.2,1.25))
-ring(.55,.625,.1);bolts(.6);cyl('Turbopump housing',(0,.25,0),.28,.5,dark)
-lathe('Regeneratively cooled bell',[(-.6,.53),(-.52,.50),(-.25,.36),(.04,.21),(.14,.19),(.20,.23)],silver)
-lathe('Bell dark interior',[(-.61,.485),(-.5,.46),(-.24,.32),(.04,.17)],black)
-for i in range(20):
- a=i*math.tau/20;tube('Cooling channel',(.23*math.cos(a),.04,.23*math.sin(a)),(.50*math.cos(a),-.53,.50*math.sin(a)),.012,dark)
-for x in [-.42,.42]:
- cyl('Pump',(x,.25,0),.10,.34,orange);tube('Feed pipe',(x,.4,0),(x,-.1,0),.04,silver);tube('Engine strut',(x,.5,0),(x*.48,.0,0),.045,dark)
-finalize('engine')
-
+ring(.55,.625,.1);bolts(.6);cyl('Turbopump housing',(0,.28,0),.20,.40,dark)
+profile=[(-.6,.53),(-.48,.485),(-.29,.37),(-.10,.25),(.08,.17),(.18,.18),(.18,.14),(.08,.13),(-.10,.21),(-.29,.33),(-.48,.45),(-.6,.495),(-.6,.53)]
+hollow('Hollow regeneratively cooled bell',profile,silver);hoop('Nozzle lip',-.585,.535,.03,dark)
+for i in range(32):
+ a=i*math.tau/32;path('Curved cooling channel',[(r*math.cos(a),y,r*math.sin(a)) for y,r in profile[:6]],.009,gold if i%4==0 else dark)
+for x in [-.39,.39]:
+ ellipsoid('Turbopump casing',(x,.27,0),(.13,.17,.13),silver);path('Bent oxidizer feedline',[(x,.48,0),(x,.19,0),(x,-.02,0),(x*.82,-.13,0)],.037,orange);tube('Gimbal support',(x,.48,.22),(x*.4,.14,.12),.036,dark)
+hoop('Throat clamp',.12,.205,.06,gold);finalize('engine')
 build('nose',(1.25,1,1.25));lathe('Ogive fairing',[(-.5,.625),(-.3,.60),(.0,.45),(.27,.23),(.48,.035),(.5,.0)],white);ring(-.47,.625,.06,orange);bolts(-.42);finalize('nose')
 build('decoupler',(1.25,.22,1.25));cyl('Separation collar',(0,0,0),.60,.22,dark)
 for y in [-.085,.085]:ring(y,.625,.045,silver)
@@ -105,23 +137,55 @@ bolts(.105);finalize('decoupler')
 build('probe',(1.25,.4,1.25));cyl('Octagonal avionics',(0,0,0),.61,.35,gold,verts=8);ring(-.17);ring(.17);bolts(.2)
 for x in [-.25,.25]:box('Flight computer',(x,0,.53),(.28,.25,.12),dark);box('Computer plate',(x,0,.60),(.22,.19,.02),silver)
 finalize('probe')
-build('cockpit',(1.25,2,1.25));lathe('Aircraft nose',[(-1,.58),(-.65,.62),(.1,.55),(.6,.34),(1,.035)],white)
-box('Canopy frame',(0,.0,.50),(.80,.9,.18),dark,.13);box('Canopy glazing',(0,.04,.60),(.67,.76,.13),blue,.11)
-box('Canopy center bar',(0,.04,.68),(.045,.80,.025),silver);ring(-.95);ports(-.62);finalize('cockpit')
-build('jet',(1.25,1.2,1.25));lathe('Turbofan cowling',[(-.6,.44),(-.4,.56),(.48,.625),(.6,.6)],white);ring(.54,.625,.10,silver)
-cyl('Intake darkness',(0,.58,0),.55,.04,dark);cyl('Fan spinner',(0,.62,0),.12,.09,silver)
-for i in range(16):
- a=i*math.tau/16;o=box('Fan blade',(.31*math.cos(a),.61,.31*math.sin(a)),(.40,.025,.045),silver,.005);o.rotation_euler[1]=-a
-ring(-.53,.44,.12,dark);ring(-.31,.55,.06,orange);finalize('jet')
+build('cockpit',(1.25,2,1.25));lathe('Aircraft nose',[(-1,.56),(-.8,.59),(-.5,.58),(-.2,.55),(.15,.47),(.45,.34),(.72,.20),(.94,.06),(1,.018)],white)
+sections=canopy('Flush smoked canopy',blue)
+for sign in [-1,1]:path('Canopy perimeter seal',[(sign*w,y,z+.006) for y,w,z,h in sections],.018,dark)
+for idx in [1,4]:
+ y,w,z,h=sections[idx];path('Curved canopy hoop',[(w*math.cos(i*math.pi/24),y,z+h*math.sin(i*math.pi/24)+.008) for i in range(25)],.014,silver)
+path('Canopy rear spine',[(0,y,z+h+.006) for y,w,z,h in sections[:3]],.012,dark)
+ring(-.95);hoop('Airframe service seam',-.72,.585,.025,orange)
+for x in [-.39,.39]:path('Fuselage panel seam',[(x,-.65,.43),(x,-.2,.39),(x*.7,.3,.34)],.006,dark)
+finalize('cockpit')
+build('jet',(1.25,1.2,1.25))
+hollow('Open nacelle',[(-.6,.39),(-.35,.54),(.35,.61),(.54,.625),(.60,.60),(.60,.54),(.53,.52),(.28,.50),(-.3,.34),(-.6,.29),(-.6,.39)],white)
+hoop('Rounded intake lip',.565,.625,.075,silver);hoop('Exhaust ring',-.54,.40,.10,dark);hoop('Nacelle accent',-.28,.56,.065,orange)
+cyl('Recessed fan chamber',(0,.06,0),.485,.035,black)
+for i in range(18):swept_blade(i*math.tau/18,.25,.495,silver)
+lathe('Spinner cone',[(.22,.13),(.30,.125),(.40,.09),(.48,.015)],dark)
+for i in range(6):
+ a=i*math.tau/6;path('Nacelle panel joint',[(r*math.cos(a),y,r*math.sin(a)) for y,r in [(-.24,.564),(.1,.596),(.36,.615)]],.004,dark)
+finalize('jet')
 build('wing',(2,1.6,.12))
-vs=[(0,.8,-.05),(2,-.25,-.015),(1.8,-.8,-.015),(0,-.8,-.05),(0,.8,.05),(2,-.25,.015),(1.8,-.8,.015),(0,-.8,.05)]
-me=bpy.data.meshes.new('Swept airfoil');me.from_pydata([P(v) for v in vs],[],[(0,3,2,1),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)]);me.update();o=bpy.data.objects.new('Swept airfoil',me);bpy.context.collection.objects.link(o);finish(o,o.name,white)
-tube('Carbon leading edge',(0,.79,0),(1.99,-.25,0),.026,dark);tube('Aileron hinge',(.3,-.66,.047),(1.7,-.66,.023),.014,silver);box('Wing root spar',(.045,0,0),(.09,1.5,.12),dark)
-box('Identification stripe',(1.4,-.43,.03),(.22,.48,.018),orange,.002);finalize('wing')
-build('wheel',(.34,.7,.7));cyl('Tire',(0,0,0),.35,.30,black,'X')
-for x in [-.16,.16]:cyl('Wheel rim',(x,0,0),.23,.025,silver,'X');cyl('Hub',(x*1.05,0,0),.10,.04,orange,'X')
-for i in range(28):
- a=i*math.tau/28;o=box('Tread block',(0,.343*math.cos(a),.343*math.sin(a)),(.31,.065,.035),dark,.008);o.rotation_euler[0]=a
+# Swept tapered NACA-style closed cross sections, rounded leading edge and knife trailing edge.
+vs=[];fs=[];N=25
+for x in [0,.4,1.0,1.6,2.0]:
+ lead=.8-.53*x;chord=1.6-.52*x
+ for side in [1,-1]:
+  for i in range(N):
+   t=(1-math.cos(math.pi*i/(N-1)))/2;th=.12*(.2969*math.sqrt(t)-.126*t-.3516*t*t+.2843*t**3-.1036*t**4)*2.5*(1-.28*x)
+   vs.append(P((x,lead-t*chord,side*th)))
+for j in range(4):
+ for side in range(2):
+  for i in range(N-1):a=j*N*2+side*N+i;b=a+N*2;fs.append((a,b,b+1,a+1) if side==0 else (a,a+1,b+1,b))
+for j in [0,4]:fs.append(tuple(j*N*2+i for i in list(range(N))+list(range(2*N-1,N-1,-1))))
+me=bpy.data.meshes.new('Tapered airfoil');me.from_pydata(vs,[],fs);me.update();o=bpy.data.objects.new(me.name,me);bpy.context.collection.objects.link(o);finish(o,me.name,white)
+path('Leading edge metal',[(x,.8-.53*x,0) for x in [0,.4,1,1.6,2]],.012,silver)
+path('Inset aileron hinge',[(x,.8-.53*x-(1.6-.52*x)*.77,.022*(1-.28*x)) for x in [.35,.7,1.1,1.6,1.93]],.006,dark)
+for x in [.35,1.93]:path('Aileron end joint',[(x,.8-.53*x-(1.6-.52*x)*t,.022*(1-.28*x)*(1-(t-.77)/.23)) for t in [.77,.85,.95,1]],.005,dark)
+for x in [.20,1.70]:path('Wing panel seam',[(x,.8-.53*x-(1.6-.52*x)*t,.12*(.2969*math.sqrt(t)-.126*t-.3516*t*t+.2843*t**3-.1036*t**4)*2.5*(1-.28*x)+.003) for t in [.08,.15,.25,.4,.6,.75]],.004,silver)
+box('Wing root spar',(.035,-.0,0),(.07,1.53,.10),dark,.01)
+path('Tip safety stripe',[(1.84,.8-.53*1.84-(1.6-.52*1.84)*t,.035) for t in [.15,.3,.5,.7]],.026,orange)
+finalize('wing')
+build('wheel',(.34,.7,.7))
+o=hollow('Rounded pneumatic tire',[(-.145,.22),(-.16,.27),(-.14,.32),(-.09,.347),(.09,.347),(.14,.32),(.16,.27),(.145,.22),(-.145,.22)],black);o.rotation_euler[1]=math.pi/2
+for x in [-.145,.145]:
+ o=hoop('Forged rim',x,.23,.028,silver);o.rotation_euler[1]=math.pi/2
+ cyl('Axle hub',(x,0,0),.08,.035,orange,'X')
+ for i in range(8):
+  a=i*math.tau/8;tube('Forged wheel spoke',(x,.075*math.cos(a),.075*math.sin(a)),(x,.218*math.cos(a+.15),.218*math.sin(a+.15)),.024,silver)
+for i in range(36):
+ a=i*math.tau/36
+ for sign in [-1,1]:path('Chevron tread',[(sign*x,r*math.cos(a+t),r*math.sin(a+t)) for x,r,t in [(.0,.351,0),(.055,.351,.045),(.11,.336,.08)]],.011,dark)
 finalize('wheel')
 build('truss',(1,1,1))
 for x in [-.45,.45]:
@@ -146,7 +210,7 @@ for y in [-.25,.25]:ring(y,.59,.08,orange)
 ports(0);tube('Flood manifold',(-.35,-.42,.51),(-.35,.42,.51),.045,silver);finalize('ballast')
 build('propeller',(.8,.5,.8));cyl('Drive housing',(0,.1,0),.18,.3,dark);cyl('Prop shaft',(0,-.12,0),.08,.3,silver)
 for i in range(5):
- a=i*math.tau/5;o=box('Hydrodynamic blade',(.23*math.cos(a),-.19,.23*math.sin(a)),(.34,.045,.12),gold,.05);o.rotation_euler[1]=-a;o.rotation_euler[2]=.25
+ a=i*math.tau/5;o=box('Hydrodynamic blade',(.23*math.cos(a),-.19,.23*math.sin(a)),(.34,.045,.12),gold,.05);o.rotation_euler[2]=-a;o.rotation_euler[0]=.25
 cyl('Spinner',(0,-.22,0),.12,.08,orange);finalize('propeller')
 
 manifest={id:{'file':id+'.glb','dimensions':p['dimensions'],'coordinates':'Y up / nose +Y; meters','origin':'wing attachment at x=0; others centered' if id=='wing' else 'center'} for id,p in parts.items()}
@@ -161,6 +225,17 @@ world=bpy.context.scene.world;world.use_nodes=True;world.node_tree.nodes['Backgr
 for pos,power,size in [((2,-6,14),2600,9),((-8,-2,9),1800,8),((1,9,12),3000,8)]:
  bpy.ops.object.light_add(type='AREA',location=pos);o=bpy.context.object;o.data.energy=power;o.data.shape='DISK';o.data.size=size;o.rotation_euler=(-o.location).to_track_quat('-Z','Y').to_euler()
 bpy.ops.object.camera_add(location=(9,-16,20));cam=bpy.context.object;cam.rotation_euler=(Vector((0,0,1))-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.type='ORTHO';cam.data.ortho_scale=19;bpy.context.scene.camera=cam
-scene=bpy.context.scene;scene.render.engine='CYCLES';scene.cycles.samples=24;scene.render.resolution_x=1600;scene.render.resolution_y=1200;scene.render.resolution_percentage=100
+scene=bpy.context.scene;scene.render.engine='CYCLES';scene.cycles.samples=48;scene.render.resolution_x=1600;scene.render.resolution_y=1200;scene.render.resolution_percentage=100
 scene.render.filepath=os.path.join(ROOT,'assets-source','parts-preview.png');bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT,'assets-source','orbital-parts.blend'));bpy.ops.render.render(write_still=True)
+# Second camera: close inspection of canopy, open nozzle, turbine, and wheel.
+for p in parts.values():
+ for o in p['objects']:o.hide_render=True
+for o in bpy.data.objects:
+ if o.type=='FONT':o.hide_render=True
+for id,pos in [('cockpit',(-2.3,0,1.15)),('engine',(0,0,1.15)),('jet',(2.3,0,1.15)),('wheel',(0,-2.0,.65)),('wing',(2,-2.4,.85))]:
+ ob=parts[id]['objects'][0];ob.hide_render=False;ob.location=pos
+ if id=='engine':ob.rotation_euler[0]=math.pi*1.30
+ if id=='jet':ob.rotation_euler[0]=math.pi*.20
+cam.location=(6,-10,9);cam.rotation_euler=(Vector((.4,-.4,1))-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.ortho_scale=8.8
+scene.render.filepath=os.path.join(ROOT,'assets-source','detail-preview.png');bpy.ops.render.render(write_still=True)
 print('COMPLETE: 15 GLB parts, source blend, manifest, preview')

@@ -2,3 +2,4 @@ node_modules/
 .sites-runtime/
 artifacts/
 *.blend1
+assets-source/*.log
