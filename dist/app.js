@@ -1,3 +1,4 @@
+import {mountThrustOverlay} from './thrust-overlay.js';
 import {mountDesignDiagnostics} from './design-diagnostics-panel.js';
 import {PhysicsClock,physicalWarpStop} from './physics-clock.js';
 const physicsClock=new PhysicsClock();
@@ -72,7 +73,7 @@ const camera=new T.PerspectiveCamera(40,1,.05,50000000);camera.position.set(10,7
 const controls=new OrbitControls(camera,canvas);controls.target.set(0,2,0);controls.enableDamping=true;controls.minDistance=2;controls.maxDistance=80;controls.mouseButtons={LEFT:null,MIDDLE:T.MOUSE.PAN,RIGHT:T.MOUSE.ROTATE};
 const pmrem=new T.PMREMGenerator(renderer);scene.environment=pmrem.fromScene(new RoomEnvironment(),.04).texture;pmrem.dispose();
 scene.add(new T.HemisphereLight('#c7e8ff','#414346',.9));const sun=new T.DirectionalLight('#fff0d8',2.4);sun.position.set(12,24,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-18,right:18,top:18,bottom:-18,near:.1,far:100});sun.shadow.bias=-.0005;scene.add(sun);scene.add(sun.target);
-const bay=new T.Group(), testWorld=new T.Group(), craftRoot=new T.Group(), markers=new T.Group();scene.add(bay,testWorld,craftRoot,markers);testWorld.visible=false;
+const bay=new T.Group(), testWorld=new T.Group(), craftRoot=new T.Group(), markers=new T.Group();scene.add(bay,testWorld,craftRoot,markers);testWorld.visible=false;const thrustOverlay=mountThrustOverlay(scene);
 const mat=(c,metal=.1,rough=.7)=>new T.MeshStandardMaterial({color:c,metalness:metal,roughness:rough});
 function box(parent,size,pos,material){const m=new T.Mesh(new T.BoxGeometry(...size),material);m.position.set(...pos);m.receiveShadow=true;m.castShadow=true;parent.add(m);return m;}
 const room=new T.Group(),workshopDeck=new T.Group();bay.add(room,workshopDeck);let workshopFloor=0,workshopGridSize=80;
@@ -262,7 +263,7 @@ const descentPanel=mountDescentPanel(document.querySelector('#capturePanel'),()=
 mountFlightLayout();
 const ascentPanel=mountAscentPanel(document.querySelector('#descentPanel'),()=>flight,()=>syncFlightControls());
 const departurePanel=mountDeparturePanel(document.querySelector('#ascentPanel'),()=>flight,message=>{syncFlightControls();if(message)notify(message);});
-const designDiagnostics=mountDesignDiagnostics($('#checks'),()=>({parts,flight}),id=>{cancelPlacement();select(id);$('#selection').scrollIntoView({block:'nearest'});});
+const designDiagnostics=mountDesignDiagnostics($('#checks'),()=>({parts,flight}),id=>{cancelPlacement();select(id);$('#selection').scrollIntoView({block:'nearest'});},balance=>thrustOverlay.update(balance));
 const returnPanel=mountReturnPanel(document.querySelector('#ascentPanel'),()=>flight,message=>{syncFlightControls();if(message)notify(message);});
 const trajectoryPanel=mountTrajectoryPanel(document.querySelector('.mapContent'),()=>{
  if(!flight)return null;let burn=null,note='';const time=flight.universalTime;

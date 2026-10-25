@@ -111,3 +111,4 @@
 }
 #departurePanel{padding:12px;border:1px solid #527477;border-radius:9px;background:#243336;margin-bottom:12px}#departurePanel summary{cursor:pointer;color:#bce7df}#departurePanel button{margin:4px 2px;padding:8px;font-size:11px}#departurePanel p,#departurePanel small{font-size:12px;line-height:1.6}#departurePanel small{display:block;margin:8px 0}
 #designDiagnostics>label{display:flex;flex-direction:column;gap:5px;margin:10px 0}#designDiagnostics select{max-width:100%;width:100%}#designDiagnostics .stagingRow p{line-height:1.6;overflow-wrap:anywhere}#designDiagnostics .designEquipmentRows>div{border-top:1px solid var(--line,#34434b);padding:6px 0}#designDiagnostics .designEquipmentRows button{margin:2px;max-width:100%}
+#designDiagnostics>label.thrustVisualToggle{flex-direction:row;align-items:center} #designDiagnostics .thrustVisual{width:auto;flex:0 0 auto}
