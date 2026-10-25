@@ -113,9 +113,32 @@ finalize('tank')
 build('capsule',(1.25,1.3,1.25))
 lathe('Reentry shell',[(-.65,.60),(-.48,.61),(.38,.31),(.57,.25),(.65,.20)],white)
 ring(-.6,.625,.11,black);ring(.55,.25,.09,orange);bolts(-.52)
-for x in [-.20,.20]:
- o=box('Window titanium surround',(x,.12,.445),(.29,.32,.055),dark,.045);o.rotation_euler[0]=-.32
- o=box('Blue laminated window',(x,.13,.48),(.23,.25,.024),blue,.035);o.rotation_euler[0]=-.32
+# Rounded window patches parameterized on the conical shell, not tilted boxes.
+def window_point(theta,y,offset):
+ r=.61-(y+.48)*(.30/.86)+offset
+ return (r*math.sin(theta),y,r*math.cos(theta))
+def curved_window(name,theta,width,height,offset,m):
+ N=64;R=12;vs=[P(window_point(theta,.12,offset+.006))];fs=[]
+ for j in range(1,R+1):
+  t=j/R
+  for i in range(N):
+   a=math.tau*i/N;c=math.cos(a);s=math.sin(a)
+   u=math.copysign(abs(c)**.5,c);v=math.copysign(abs(s)**.5,s)
+   vs.append(P(window_point(theta+t*width*u,.12+t*height*v,offset+.006*(1-t*t))))
+ for i in range(N):fs.append((0,1+i,1+(i+1)%N))
+ for j in range(R-1):
+  a=1+j*N;b=a+N
+  for i in range(N):k=(i+1)%N;fs.append((a+i,b+i,b+k,a+k))
+ me=bpy.data.meshes.new(name);me.from_pydata(vs,[],fs);me.update();ob=bpy.data.objects.new(name,me);bpy.context.collection.objects.link(ob);finish(ob,name,m)
+ for face in me.polygons:face.use_smooth=True
+for theta in [-.43,.43]:
+ curved_window('Conformal window gasket',theta,.325,.165,.007,dark)
+ curved_window('Curved laminated glazing',theta,.275,.139,.014,blue)
+ contour=[]
+ for i in range(65):
+  a=math.tau*i/64;c=math.cos(a);s=math.sin(a)
+  contour.append(window_point(theta+.303*math.copysign(abs(c)**.5,c),.12+.154*math.copysign(abs(s)**.5,s),.017))
+ path('Shell-following titanium window rim',contour,.005,silver)
 box('Hatch frame',(0,-.19,-.53),(.4,.37,.055),silver,.045);box('Hatch inset',(0,-.19,-.565),(.32,.30,.025),white,.035)
 cyl('Docking cap',(0,.62,0),.18,.06,dark);finalize('capsule')
 
@@ -232,7 +255,7 @@ for p in parts.values():
  for o in p['objects']:o.hide_render=True
 for o in bpy.data.objects:
  if o.type=='FONT':o.hide_render=True
-for id,pos in [('cockpit',(-2.3,0,1.15)),('engine',(0,0,1.15)),('jet',(2.3,0,1.15)),('wheel',(0,-2.0,.65)),('wing',(2,-2.4,.85))]:
+for id,pos in [('capsule',(-2.3,-1.8,1.0)),('cockpit',(-2.3,0,1.15)),('engine',(0,0,1.15)),('jet',(2.3,0,1.15)),('wheel',(0,-2.0,.65)),('wing',(2,-2.4,.85))]:
  ob=parts[id]['objects'][0];ob.hide_render=False;ob.location=pos
  if id=='engine':ob.rotation_euler[0]=math.pi*1.30
  if id=='jet':ob.rotation_euler[0]=math.pi*.20
