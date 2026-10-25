@@ -30,7 +30,9 @@ import {trackingList,trackedFlight} from './tracking.js';
 import {fleet} from './fleet.js';
 import {CENTER_FACILITIES,centerGuidance} from './center-facilities.js';
 import {SpaceCenter} from './space-center.js';
-import {WORKSPACE_KEY,workspaceRecord,validateWorkspace} from './workspace-save.js';
+import {gameRecord} from './game-save.js';
+import {worldFromFlight,flightFromWorld} from './world-save.js';
+import {readStoredGame,writeStoredGame,backupStoredGame} from './game-storage.js';
 import {portGuidance} from './port-navigation.js';
 import {dockingStatus,dockVessels,undockVessel} from './docking.js';
 import {setTarget,resolveTargets,relativeState,TARGET_MODES} from './relative-navigation.js';
@@ -221,8 +223,33 @@ function updateThermalInfo(){
 
 function flightRecord(){const pilot=launchPilot?{kind:launchPilot instanceof ReturnPilot?'return':'launch',done:launchPilot.done,released:!!launchPilot.released}:null;return saveFlight(flight,{blueprint:parts.length?parts:flight.parts,name:flight.vesselName||activeFlightName||$('#craftName').value,pilot});}
 function parkFlight(){if(flight){universalTime=flight.universalTime;parkedFlight=flightRecord();}keys.clear();physicsClock.reset();}
-function persistWorkspace(){if(workspaceError)return false;try{localStorage.setItem(WORKSPACE_KEY,JSON.stringify(workspaceRecord({parts,name:$('#craftName').value,bay:bayMode,environment:$('#environment').value,universalTime:flight?.universalTime??universalTime,flight:flight?flightRecord():parkedFlight})));return true;}catch(e){$('#centerNotice').textContent='ブラウザへの保存に失敗しました。ページを閉じず、機体JSON出力・飛行保存を確認してください。';return false;}}
-function restoreWorkspace(){try{const raw=localStorage.getItem(WORKSPACE_KEY);if(!raw)return;if(raw.length>4000000)throw Error('保存データが大きすぎます');const parsed=JSON.parse(raw),w=validateWorkspace(parsed);if(needsPhysicsMigration(parsed.flight))localStorage.setItem(WORKSPACE_KEY+'-before-rotation-'+Date.now(),raw);if(w.flight?.physicsMigration)$('#centerNotice').textContent=physicsMigrationMessage(w.flight.physicsMigration);universalTime=w.universalTime;if(parsed.universalTime===undefined)$('#centerNotice').textContent='旧保存の共通時刻を保持機体の最大T+から設定しました。';parts=w.parts;$('#craftName').value=w.name;setBay(w.bay);$('#environment').value=w.environment;parkedFlight=w.flight;}catch(e){workspaceError=true;$('#centerNotice').textContent='保存を復元できませんでした。元データを残して自動保存を停止しています。'+e.message;const reset=document.createElement('button');reset.textContent='元データを退避して新しく始める';reset.onclick=()=>{try{const raw=localStorage.getItem(WORKSPACE_KEY);if(raw)localStorage.setItem(WORKSPACE_KEY+'-backup-'+Date.now(),raw);workspaceError=false;persistWorkspace();$('#centerNotice').textContent='以前の保存をブラウザ内のバックアップへ退避しました。';reset.remove();}catch{reset.textContent='退避に失敗しました。保存容量を確認してください';}};$('#centerNotice').after(reset);}}
+function persistWorkspace(){
+ if(workspaceError)return false;
+ try{
+  const world=worldFromFlight(flight?flightRecord():parkedFlight,{universalTime:flight?.universalTime??universalTime});
+  writeStoredGame(localStorage,gameRecord({world,draft:{parts,name:$('#craftName').value,bay:bayMode,environment:$('#environment').value}}));
+  return true;
+ }catch(e){$('#centerNotice').textContent='ブラウザへの保存に失敗しました。ページを閉じず、機体JSON出力・飛行保存を確認してください。';return false;}
+}
+function restoreWorkspace(){
+ try{
+  const saved=readStoredGame(localStorage);if(!saved)return;
+  const {game,migrated}=saved,w=game.workshop,record=flightFromWorld(game.world),notices=[];
+  if(migrated)notices.push('旧保存を読み込みました。次の自動保存から世界と設計を分けて記録します。旧保存はブラウザ内に残します。');
+  if(record?.physicsMigration)notices.push(physicsMigrationMessage(record.physicsMigration));
+  $('#centerNotice').textContent=notices.join(' ');
+  universalTime=game.world.universalTime;parts=w.parts;$('#craftName').value=w.name;setBay(w.bay);$('#environment').value=w.environment;parkedFlight=record;
+ }catch(e){
+  workspaceError=true;$('#centerNotice').textContent='保存を復元できませんでした。元データを残して自動保存を停止しています。'+e.message;
+  const reset=document.createElement('button');reset.textContent='元データを退避して新しく始める';
+  reset.onclick=()=>{try{
+   backupStoredGame(localStorage);workspaceError=false;
+   if(!persistWorkspace()){workspaceError=true;throw Error('新しい保存を作成できませんでした');}
+   $('#centerNotice').textContent='以前の保存をブラウザ内のバックアップへ退避しました。';reset.remove();
+  }catch{workspaceError=true;reset.textContent='退避または保存に失敗しました。保存容量を確認してください';}};
+  $('#centerNotice').after(reset);
+ }
+}
 function refreshCenter(){$('#centerTime').textContent=formatUniversalTime(universalTime)+' · 共通時刻は停止中';let designCount=0,libraryError=false;try{designCount=loadDesigns().designs.length;}catch{libraryError=true;}const guide=$('#centerGuide');guide.replaceChildren();for(const item of centerGuidance({partCount:parts.length,designCount,vesselCount:parkedFlight?trackingList(parkedFlight).length:0,libraryError})){const row=document.createElement('li'),title=document.createElement('b'),text=document.createElement('span');title.textContent=item.title;text.textContent=item.text;row.append(title,text);guide.append(row);}const name=$('#craftName').value;$('#centerDraft').textContent=name+' · '+parts.length+'部品 · '+bayMode.toUpperCase();$('#centerResume').disabled=!centerReady||!parkedFlight;$('#centerFlightInfo').textContent=parkedFlight?(parkedFlight.meta?.name||'機体')+' · T+ '+parkedFlight.state.time.toFixed(1)+'s · '+parkedFlight.parts.length+'部品 · 保持 '+trackingList(parkedFlight).length+'機 · 一時停止中':'進行中の飛行はありません。';}
 function showCenter(){parkFlight();if(flight)endFlight();cancelPlacement();$('#orbitOverlay').hidden=true;atCenter=true;document.title='Orbital Foundry · 宇宙センター';document.body.classList.add('at-center');$('#spaceCenter').hidden=false;keys.clear();persistWorkspace();refreshCenter();centerView?.resize();}
 function enterWorkshop(bay){if(!centerReady)return;atCenter=false;document.title='Orbital Foundry · '+bay.toUpperCase();$('#spaceCenter').hidden=true;document.body.classList.remove('at-center');if(bay!==bayMode){setBay(bay);$('#environment').value=bay==='sph'?'runway':'land';}else setBay(bay);keys.clear();last=performance.now();resize();frame();persistWorkspace();}
