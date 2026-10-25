@@ -28,7 +28,7 @@ test('actual launch conditions distinguish direct practice placement from a save
  for(const environment of ['drop','entry','orbit','moon-orbit','moon-surface','transfer'])assert.equal(departureMode(environment).mode,'practice');
  const elements=new Map([['#launch',{}],['#departureNotice',{}]]),root={querySelector:id=>elements.get(id)};
  updateDepartureButton(root,'orbit');assert.equal(elements.get('#launch').textContent,'練習配置へ ↗');
- assert.match(elements.get('#departureNotice').textContent,/現在の世界に追加/);
+ assert.match(elements.get('#departureNotice').textContent,/通常世界から独立/);
  updateDepartureButton(root,'land');assert.equal(elements.get('#launch').textContent,'出発 ↗');
  assert.match(elements.get('#departureNotice').textContent,/地表から出発/);
 });

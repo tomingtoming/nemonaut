@@ -17,8 +17,8 @@ export function historyActionLabel(event){
 export function updateDepartureButton(root,environment){
  const {mode,label}=departureMode(environment),button=root.querySelector('#launch');
  button.textContent=mode==='practice'?'練習配置へ ↗':'出発 ↗';
- button.title=label+'から現在の世界に機体を追加します';
+ button.title=label+(mode==='practice'?'から独立した練習を開始します':'から現在の世界に機体を追加します');
  root.querySelector('#departureNotice').textContent=mode==='practice'
-  ?'練習用の開始位置に直接配置します。現在の世界に追加され、飛行中は他の機体の時間も進みます。'
+  ?'通常世界から独立した練習です。通常の機体・時刻・履歴は変わりません。組立棟・センターへの移動や再読込で練習を終了します。'
   :'地表から出発します。現在の世界の他の機体は保持されます。';
 }
