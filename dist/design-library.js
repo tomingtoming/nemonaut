@@ -1,6 +1,6 @@
 import {validateCraft} from './core.js';
 export const DESIGN_LIBRARY_KEY='orbital-foundry-design-library-v1';
-const environments=['land','runway','water','drop','orbit','entry','moon-orbit','transfer'];
+const environments=['land','runway','water','drop','orbit','entry','moon-orbit','moon-surface','transfer'];
 export function readDesignLibrary(value){
  if(!value||value.version!==1||!Array.isArray(value.designs)||value.designs.length>100)throw Error('設計一覧の形式が不正です');
  const ids=new Set();const designs=value.designs.map(d=>{if(typeof d.id!=='string'||!d.id||ids.has(d.id)||typeof d.name!=='string'||d.name.length>80||!['vab','sph'].includes(d.bay)||!environments.includes(d.environment)||!Number.isFinite(d.savedAt)||d.savedAt<0)throw Error('設計一覧の項目が不正です');ids.add(d.id);return {id:d.id,name:d.name,bay:d.bay,environment:d.environment,savedAt:d.savedAt,parts:validateCraft({version:1,parts:d.parts})};});return {version:1,designs};

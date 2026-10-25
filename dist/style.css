@@ -60,6 +60,7 @@
 #descentPanel{border:1px solid #839b77;background:#2c352c;padding:12px;margin:12px 0;border-radius:8px}#descentPanel strong{color:#c5ddaf}#descentPanel p{line-height:1.6}#descentPanel button{margin:3px 2px}#descentPanel small{display:block;line-height:1.6;margin-top:8px}
 
 /* Flight instruments occupy the edges; assembly tools return on leaving flight. */
+#ascentPanel{border:1px solid #ac945f;background:#353128;padding:12px;margin:12px 0;border-radius:8px}#ascentPanel>summary{cursor:pointer;color:#f2d8a2;font-weight:600}#ascentPanel p{line-height:1.7;font-size:12px}#ascentPanel button{margin:3px 2px;font-size:11px}#ascentPanel[hidden]{display:none}
 .flying main{grid-template-columns:minmax(0,1fr) 300px}
 .flying #library,.flying header nav,.flying #launch,.flying header .status{display:none}
 .flying #inspector{display:block;padding:0 16px}
