@@ -65,9 +65,20 @@ def finalize(id):
   for v in o.data.vertices:
    p=mw@v.co-center;v.co=Vector((p.x*scale.x,p.y*scale.y,p.z*scale.z))
   o.location=(0,0,0);o.rotation_euler=(0,0,0);o.scale=(1,1,1)
+ groups=[objs]
+ if id=='engine':
+  moving=[o for o in objs if any(o.name.startswith(n) for n in ['Hollow regeneratively','Nozzle lip','Curved cooling','Throat clamp'])]
+  groups=[[o for o in objs if o not in moving],moving]
+ joined=[]
+ for index,group in enumerate(groups):
+  bpy.ops.object.select_all(action='DESELECT')
+  for o in group:o.select_set(True)
+  bpy.context.view_layer.objects.active=group[0];bpy.ops.object.join();ob=bpy.context.object
+  if id=='engine':ob.name='EngineMount' if index==0 else 'GimbalNozzle'
+  joined.append(ob)
+ parts[id]['objects']=joined
  bpy.ops.object.select_all(action='DESELECT')
- for o in objs:o.select_set(True)
- bpy.context.view_layer.objects.active=objs[0];bpy.ops.object.join();parts[id]['objects']=[bpy.context.object]
+ for ob in joined:ob.select_set(True)
  bpy.ops.export_scene.gltf(filepath=os.path.join(OUT,id+'.glb'),export_format='GLB',use_selection=True,export_yup=True)
 
 def hollow(name,profile,m):return lathe(name,profile,m,cap=False)
@@ -271,9 +282,10 @@ for p in parts.values():
 for o in bpy.data.objects:
  if o.type=='FONT':o.hide_render=True
 for id,pos in [('capsule',(-2.3,-1.8,1.0)),('cockpit',(-2.3,0,1.15)),('engine',(0,0,1.15)),('jet',(2.3,0,1.15)),('wheel',(0,-2.0,.65)),('wing',(2,-2.4,.85))]:
- ob=parts[id]['objects'][0];ob.hide_render=False;ob.location=pos
- if id=='engine':ob.rotation_euler[0]=math.pi*1.30
- if id=='jet':ob.rotation_euler[0]=math.pi*.20
+ for ob in parts[id]['objects']:
+  ob.hide_render=False;ob.location=pos
+  if id=='engine':ob.rotation_euler[0]=math.pi*1.30
+  if id=='jet':ob.rotation_euler[0]=math.pi*.20
 cam.location=(6,-10,9);cam.rotation_euler=(Vector((.4,-.4,1))-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.ortho_scale=8.8
 scene.render.filepath=os.path.join(ROOT,'assets-source','detail-preview.png');bpy.ops.render.render(write_still=True)
 print('COMPLETE: 19 GLB parts, source blend, manifest, preview')
