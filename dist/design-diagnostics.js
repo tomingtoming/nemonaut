@@ -23,7 +23,7 @@ export function thrustBalance(parts,active,fuel=createFuel(parts),density=1.225)
 
 // Follow the component containing the selected control as separator edges open.
 // Sequential reference burns empty only tanks feeding the active engines.
-export function stageThrustDiagnostics(parts,referenceId=null,{density=1.225}={}){
+export function stageThrustDiagnostics(parts,referenceId=null,{density=1.225,includeInactive=false}={}){
  const reference=parts.find(p=>p.id===referenceId&&PARTS[p.type].control)||parts.find(p=>PARTS[p.type].control);
  if(!reference)return {referenceId:null,stages:[]};
  let retained=structuredClone(parts);const fuel=createFuel(parts),active=new Set(),stages=[];
@@ -36,7 +36,15 @@ export function stageThrustDiagnostics(parts,referenceId=null,{density=1.225}={}
   const networks=fuelNetworks(retained),full=thrustBalance(retained,active,fuel,density),lowFuel=new Map(fuel);
   const fed=networks.groups.filter(g=>g.engines.some(p=>full.engineIds.includes(p.id)));
   for(const g of fed)for(const tank of g.tanks)lowFuel.set(tank.id,(fuel.get(tank.id)||0)*.1);
-  if(full.engineIds.length)stages.push({stage:slot.stage,full,low:thrustBalance(retained,active,lowFuel,density),partIds:retained.map(p=>p.id)});
+  const engineStates=retained.filter(p=>PARTS[p.type].thrust).map(p=>{
+   const d=PARTS[p.type],reasons=[];
+   if(d.water)reasons.push('water');
+   if(!active.has(p.id))reasons.push('not-ignited');
+   if(d.air&&density<=0)reasons.push('atmosphere');
+   if(!d.water&&!(networks.network.get(p.id)?.tanks.some(t=>(fuel.get(t.id)||0)>0)))reasons.push('fuel');
+   return {id:p.id,reasons};
+  });
+  if(includeInactive||full.engineIds.length)stages.push({stage:slot.stage,full,low:thrustBalance(retained,active,lowFuel,density),partIds:retained.map(p=>p.id),equipment:equipmentDiagnostics(retained),engineStates,actions:slot.actions.map(a=>({...a,retained:ids.has(a.id)}))});
   for(const g of fed)for(const tank of g.tanks)fuel.set(tank.id,0);
  }
  return {referenceId:reference.id,stages};
