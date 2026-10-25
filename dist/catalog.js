@@ -2,7 +2,7 @@ export const PARTS = {
  capsule:{name:'コマンドポッド',code:'CP-1',cat:'指令',mass:620,size:[1.25,1.3,1.25],control:true,reactionTorque:7000,desc:'耐熱外殻と姿勢制御を備える有人カプセル。'},
  probe:{name:'探査コア',code:'OC-4',cat:'指令',mass:90,size:[1.25,.4,1.25],control:true,reactionTorque:1200,desc:'小型無人機のための軽量制御ユニット。'},
  cockpit:{name:'コックピット',code:'FC-2',cat:'指令',mass:510,size:[1.25,2,1.25],control:true,desc:'航空機・ローバー向けの広視界キャノピー。'},
- tank:{name:'推進剤タンク',code:'FT-200',cat:'燃料',mass:150,fuel:1800,size:[1.25,2,1.25],desc:'共通推進剤を供給。消費に応じて機体の重心も変化。'},
+ tank:{name:'推進剤タンク',code:'FT-200',cat:'燃料',mass:150,fuel:1800,size:[1.25,2,1.25],desc:'同じ燃料系統へ推進剤を供給。分離リングを越えては流れません。'},
  engine:{name:'液体燃料エンジン',code:'RE-45',cat:'推進',mass:270,thrust:45000,isp:300,size:[1.25,1.2,1.25],gimbal:6,gimbalPivot:[0,.16,0],desc:'45 kN・最大6度のジンバル。ノズルを傾けて推力方向を制御。'},
  jet:{name:'ターボジェット',code:'TJ-18',cat:'推進',mass:230,thrust:18000,isp:1800,air:true,size:[1.25,1.2,1.25],desc:'大気中専用。高度とともに推力が低下する。'},
  propeller:{name:'スクリュー',code:'MP-6',cat:'推進',mass:60,thrust:6000,isp:3000,water:true,size:[.8,.5,.8],desc:'水中専用推進器。船・潜水艇の推進に。'},
@@ -27,6 +27,7 @@ export function nodes(type){const d=PARTS[type], [x,y,z]=d.size;if(type==='wing'
 export function part(type,p=[0,0,0],r=[0,0,0],parent=null,stage=0){return {id:crypto.randomUUID(),type,p,r,parent,stage};}
 export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{const o=part(t,p,r,a[par]?.id??null,stage);a.push(o);return a.length-1;};
  if(kind==='rocket'){add('capsule',[0,3.6,0]);add('tank',[0,1.95,0]);add('engine',[0,.35,0],[0,0,0],1);for(let i=0;i<4;i++){const t=i*Math.PI/2;add('fin',[.625*Math.cos(t),.8,-.625*Math.sin(t)],[0,t,0],1);} }
+ if(kind==='launcher'){add('capsule',[0,5.6,0]);add('tank',[0,3.95,0]);add('tank',[0,1.95,0],[0,0,0],1);add('engine',[0,.35,0],[0,0,0],2,1);add('decoupler',[0,-.36,0],[0,0,0],3,1);add('tank',[0,-1.47,0],[0,0,0],4);add('tank',[0,-3.47,0],[0,0,0],5);add('tank',[0,-5.47,0],[0,0,0],6);for(const x of [-.7,.7])for(const z of [-.7,.7])add('engine',[x,-7.07,z],[0,0,0],7);for(let i=0;i<4;i++){const t=i*Math.PI/2;add('fin',[.625*Math.cos(t),-5.5,-.625*Math.sin(t)],[0,t,0],7);}}
  if(kind==='orbiter'){add('probe',[0,2.5,0]);add('tank',[0,1.3,0]);add('engine',[0,-.3,0],[0,0,0],1);add('solar',[1.6,2.5,0],[0,0,0]);add('solar',[-1.6,2.5,0],[0,0,0]);}
  if(kind==='plane'){
  const r=[Math.PI/2,0,0],left=[Math.PI/2,Math.PI,0],vertical=[Math.PI/2,Math.PI/2,0];
