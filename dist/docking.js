@@ -12,7 +12,7 @@ export const DOCK_LIMITS={distance:.15,angle:8*Math.PI/180,speed:.3,angularSpeed
 export function dockingStatus(a,aId,b,bId){
  const invalid=reason=>({ready:false,reason});
  if(a===b)return invalid('同じ機体です');if(a.crashed||b.crashed)return invalid('損傷した機体です');
- if(a.environment!==b.environment)return invalid('試験環境が異なります');
+ if((a.environment==='water')!==(b.environment==='water'))return invalid('海面と地上の環境は結合できません');
  if(a.ballast!==b.ballast&&[...a.parts,...b.parts].some(p=>PARTS[p.type].ballast))return invalid('結合前に両機のバラスト設定を合わせてください');
  const pa=portPose(a,aId),pb=portPose(b,bId);if(!pa||!pb)return invalid('ポートが見つかりません');
  if(pa.part.dockPartner||pb.part.dockPartner)return invalid('使用中のポートです');
@@ -27,7 +27,7 @@ export function combinedMotion(a,b){const vessels=[a,b],masses=vessels.map(v=>v.
 
 function rebuilt(source,parts,sources=[source]){
  validateCraft({version:1,parts});const out=new Flight(parts,source.environment),ids=new Set(parts.map(p=>p.id));
- for(const key of ['time','stage','started','ballast','trim','brake','reactionEnabled','steeringEnabled','driveEnabled','rcsEnabled','maxAltitude'])out[key]=source[key];
+ for(const key of ['vesselName','time','stage','started','ballast','trim','brake','reactionEnabled','steeringEnabled','driveEnabled','rcsEnabled','maxAltitude'])out[key]=source[key];
  out.pos.copy(source.pos);out.q.copy(source.q);out.vel.copy(source.vel);out.omega.copy(source.omega);out.holdQ=source.q.clone();out.sas=parts.some(p=>PARTS[p.type].control)&&source.sas;out.sasMode='hold';out.throttle=0;out.maneuver=null;out.targetPartId=source.targetPartId;
  for(const key of ['fuel','charge','thermal','chutes','deflections','gimbals','wheelMotion'])out[key]=new Map(sources.flatMap(v=>[...v[key]]).filter(([id])=>ids.has(id)).map(([id,value])=>[id,value?.isVector3?value.clone():structuredClone(value)]));
  out.active=new Set(sources.flatMap(v=>[...v.active]).filter(id=>ids.has(id)));out.networks=fuelNetworks(out.parts);out.stats=statistics(out.parts,out.fuel,out.ballast,out.thermal);out.buildColliders();return out;
