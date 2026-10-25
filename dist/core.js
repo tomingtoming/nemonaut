@@ -3,6 +3,7 @@ import {PARTS} from './catalog.js';
 import RAPIER from './vendor/rapier/rapier.mjs';
 import {partRotation,partMass,partCenter,aeroPoint,aeroAnalysis,surfaceForce,controlDeflection} from './aero.js';
 import {PLANET,center,altitude,localUp,gravity,atmosphere,orbitState,advanceOrbit} from './planet.js';
+import {navDirections,attitudeTarget} from './navigation.js';
 import {createFuel,fuelNetworks,engineBurn} from './resources.js';
 await RAPIER.init();
 export function validateCraft(value){if(!value||value.version!==1||!Array.isArray(value.parts)||!value.parts.length||value.parts.length>400)throw Error('機体形式または部品数が不正です（1〜400部品）。');const ids=new Set();for(const p of value.parts){if(!PARTS[p.type]||typeof p.id!=='string'||ids.has(p.id)||!['p','r'].every(k=>Array.isArray(p[k])&&p[k].length===3&&p[k].every(n=>Number.isFinite(n)&&Math.abs(n)<10000))||!Number.isInteger(p.stage)||p.stage<0||p.stage>9)throw Error('部品データが不正です。');for(const key of ['reactionEnabled','steeringEnabled','driveEnabled'])if(p[key]!==undefined&&typeof p[key]!=='boolean')throw Error('部品の操作設定が不正です。');ids.add(p.id);}for(const p of value.parts){if(p.parent&&!ids.has(p.parent))throw Error('接続先が見つかりません。');const seen=new Set([p.id]);let n=p;while(n.parent){if(seen.has(n.parent))throw Error('接続に循環があります。');seen.add(n.parent);n=value.parts.find(x=>x.id===n.parent);}}return structuredClone(value.parts);}
@@ -11,7 +12,7 @@ export function statistics(parts,fuelRatio=1,ballast=0){let mass=0,dry=0,fuel=0,
 const up=new T.Vector3(0,1,0);
 function extentY(p,q=new T.Quaternion()){const d=PARTS[p.type],e=new T.Matrix4().makeRotationFromQuaternion(q.clone().multiply(partRotation(p))).elements;return (Math.abs(e[1])*d.size[0]+Math.abs(e[5])*d.size[1]+Math.abs(e[9])*d.size[2])/2;}
 export class Flight {
- constructor(parts,environment){this.parts=structuredClone(parts);this.environment=environment;this.q=new T.Quaternion();this.pos=new T.Vector3();this.vel=new T.Vector3();this.omega=new T.Vector3();this.fuel=createFuel(this.parts);this.networks=fuelNetworks(this.parts);this.engineThrust=new Map();this.ballast=0;this.throttle=0;this.sas=true;this.brake=true;this.time=0;this.stage=-1;this.crashed=false;this.started=false;this.maxAltitude=0;this.stats=statistics(parts);this.floor=-Math.min(...parts.map(p=>partCenter(p).y-extentY(p)));this.pos.y=environment==='water'?-.35:this.floor+.10;this.active=new Set();this.lastThrust=0;this.detached=[];this.deflections=new Map();this.wheelMotion=new Map();this.gimbals=new Map();this.rocketAxes=parts.some(p=>['capsule','probe'].includes(p.type))&&parts.some(p=>p.type==='engine')&&!parts.some(p=>p.type==='cockpit');this.telemetry={};this.trim=0;this.reactionEnabled=true;this.steeringEnabled=true;this.driveEnabled=true;this.world=new RAPIER.World({x:0,y:-9.81,z:0});this.world.numSolverIterations=8;
+ constructor(parts,environment){this.parts=structuredClone(parts);this.environment=environment;this.q=new T.Quaternion();this.pos=new T.Vector3();this.vel=new T.Vector3();this.omega=new T.Vector3();this.fuel=createFuel(this.parts);this.networks=fuelNetworks(this.parts);this.engineThrust=new Map();this.ballast=0;this.throttle=0;this.sas=true;this.sasMode='hold';this.brake=true;this.time=0;this.stage=-1;this.crashed=false;this.started=false;this.maxAltitude=0;this.stats=statistics(parts);this.floor=-Math.min(...parts.map(p=>partCenter(p).y-extentY(p)));this.pos.y=environment==='water'?-.35:this.floor+.10;this.active=new Set();this.lastThrust=0;this.detached=[];this.deflections=new Map();this.wheelMotion=new Map();this.gimbals=new Map();this.rocketAxes=parts.some(p=>['capsule','probe'].includes(p.type))&&parts.some(p=>p.type==='engine')&&!parts.some(p=>p.type==='cockpit');this.telemetry={};this.trim=0;this.reactionEnabled=true;this.steeringEnabled=true;this.driveEnabled=true;this.world=new RAPIER.World({x:0,y:-9.81,z:0});this.world.numSolverIterations=8;
  // Rapier JS 0.21 does not expose normalized_max_linear_velocity (default 400).
  // Raise its velocity scale to 40 km/s, preserving meter-sized contact tolerances.
  this.world.integrationParameters.lengthUnit=100;this.world.integrationParameters.normalizedAllowedLinearError=.005/100;this.world.integrationParameters.normalizedPredictionDistance=.02/100;
@@ -35,7 +36,7 @@ export class Flight {
  this.body.resetForces(true);this.body.resetTorques(true);const force=new T.Vector3(),torque=new T.Vector3();
  const apply=(f,point)=>{force.add(f);torque.add(point.clone().sub(com).cross(f));this.body.addForceAtPoint(f,point.clone().sub(origin),true);};
  const commands={pitch:input.pitch||0,yaw:(this.rocketAxes?input.roll:input.yaw)||0,roll:(this.rocketAxes?input.yaw:input.roll)||0};const steering=new T.Vector3(commands.pitch,commands.yaw,commands.roll);
- if(!this.holdQ||steering.lengthSq()>.0001||!this.sas)this.holdQ=this.q.clone();
+ if(steering.lengthSq()>.0001)this.sasMode='hold';if(!this.holdQ||steering.lengthSq()>.0001||!this.sas)this.holdQ=this.q.clone();if(this.sas&&this.sasMode!=='hold'){const target=navDirections(com,this.vel)[this.sasMode],forward=new T.Vector3(0,this.rocketAxes?1:0,this.rocketAxes?0:1);if(target)this.holdQ=attitudeTarget(this.q,forward,target);}
  if(this.sas){const error=this.holdQ.clone().multiply(this.q.clone().invert());if(error.w<0){error.x*=-1;error.y*=-1;error.z*=-1;}const correction=new T.Vector3(error.x,error.y,error.z).multiplyScalar(4).addScaledVector(this.omega,-1.5).applyQuaternion(this.q.clone().invert());for(const [name,axis]of [['pitch','x'],['yaw','y'],['roll','z']])commands[name]=T.MathUtils.clamp(commands[name]+correction[axis],-1,1);}
  commands.pitch=T.MathUtils.clamp(commands.pitch+this.trim,-1,1);
  this.engineThrust=engineBurn(this.networks,this.fuel,this.started?this.active:new Set(),this.throttle,density,dt);let stallCount=0,contacts=0;this.lastThrust=0;const wheelCount=this.parts.filter(p=>PARTS[p.type].wheel).length;
@@ -52,7 +53,7 @@ export class Flight {
  // Body drag at COM; wing drag and lift above act at individual aerodynamic centers.
  apply(this.vel.clone().multiplyScalar(-.5*density*.4*Math.max(1,this.parts.length*.12)*this.vel.length()),com);
  const reaction=this.parts.reduce((s,p)=>s+(p.reactionEnabled===false?0:(PARTS[p.type].reactionTorque||0)),0);
- if(this.reactionEnabled&&reaction&&this.started)this.body.addTorque(new T.Vector3(commands.pitch,commands.yaw,commands.roll).multiplyScalar(reaction).applyQuaternion(this.q),true);
+ if(this.reactionEnabled&&reaction)this.body.addTorque(new T.Vector3(commands.pitch,commands.yaw,commands.roll).multiplyScalar(reaction).applyQuaternion(this.q),true);
 
  this.telemetry={force,torque,stallCount,contacts,commands,engine:'Rapier 0.21'};const impactSpeed=this.vel.dot(normal);
  this.world.timestep=dt;this.world.step();this.q.copy(this.body.rotation());this.omega.copy(this.body.angvel());

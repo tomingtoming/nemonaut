@@ -9,7 +9,7 @@ export class LaunchPilot{
  const com=f.stats.com.clone().applyQuaternion(f.q).add(f.pos),o=orbitState(com,f.vel),up=localUp(com),tangent=new T.Vector3(0,0,1).addScaledVector(up,-up.z).normalize();if(f.vel.clone().addScaledVector(up,-o.vertical).length()>50)tangent.copy(f.vel).addScaledVector(up,-o.vertical).normalize();let angle;
  if(o.altitude<35000){angle=T.MathUtils.clamp((o.altitude-800)/34200,0,1)*Math.PI/3;this.phase='重力ターン';}
  else{const thrust=f.parts.filter(p=>f.active.has(p.id)).reduce((s,p)=>s+(PARTS[p.type].thrust||0),0),a=thrust/f.stats.mass,vt=f.vel.dot(tangent),target=T.MathUtils.clamp((90000-o.altitude)/100,-100,220),ar=(target-o.vertical)/12+o.gravity-vt*vt/o.radius;angle=Math.acos(T.MathUtils.clamp(ar/Math.max(a,.01),-.7,.95));this.phase='軌道投入';}
- f.holdQ=new T.Quaternion().setFromUnitVectors(Y,up.clone().multiplyScalar(Math.cos(angle)).addScaledVector(tangent,Math.sin(angle)));f.sas=true;f.throttle=1;
+ f.holdQ=new T.Quaternion().setFromUnitVectors(Y,up.clone().multiplyScalar(Math.cos(angle)).addScaledVector(tangent,Math.sin(angle)));f.sas=true;f.sasMode='hold';f.throttle=1;
  if(o.periapsis>75000&&o.altitude>70000&&o.energy<0){f.throttle=0;this.done=true;this.phase='周回達成';}
  this.message='自動実演：'+this.phase;
  }

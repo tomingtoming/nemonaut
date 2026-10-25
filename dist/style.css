@@ -8,3 +8,5 @@
 .orbitpanel{position:absolute;left:26px;top:177px;display:flex;flex-direction:column;gap:7px;font-size:12px;color:#e5f3f5;text-shadow:0 1px 3px #000;pointer-events:auto}.orbitpanel small{font-size:10px}.orbitpanel select{padding:3px;color:white;background:#223543;border:1px solid #60747b}
 
 #orbitMap{position:absolute;right:18px;top:167px;width:130px;height:130px;background:#0a1822bb;border-radius:50%;pointer-events:none}
+
+.navpanel{position:absolute;right:160px;top:167px;width:130px;display:flex;flex-direction:column;align-items:center;gap:3px;background:#10212bd9;border-radius:7px;padding:5px;pointer-events:auto}.navpanel canvas{width:120px;height:120px}.navpanel small{font-size:9px;color:#c9dce3;white-space:nowrap}.navpanel label{font-size:10px;color:#dce7ec}.navpanel select{font-size:11px;padding:2px;background:#213744;color:#fff;border:1px solid #60747b}
