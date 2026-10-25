@@ -193,8 +193,6 @@ for j in range(4):
 for j in [0,4]:fs.append(tuple(j*N*2+i for i in list(range(N))+list(range(2*N-1,N-1,-1))))
 me=bpy.data.meshes.new('Tapered airfoil');me.from_pydata(vs,[],fs);me.update();o=bpy.data.objects.new(me.name,me);bpy.context.collection.objects.link(o);finish(o,me.name,white)
 path('Leading edge metal',[(x,.8-.53*x,0) for x in [0,.4,1,1.6,2]],.012,silver)
-path('Inset aileron hinge',[(x,.8-.53*x-(1.6-.52*x)*.77,.022*(1-.28*x)) for x in [.35,.7,1.1,1.6,1.93]],.006,dark)
-for x in [.35,1.93]:path('Aileron end joint',[(x,.8-.53*x-(1.6-.52*x)*t,.022*(1-.28*x)*(1-(t-.77)/.23)) for t in [.77,.85,.95,1]],.005,dark)
 for x in [.20,1.70]:path('Wing panel seam',[(x,.8-.53*x-(1.6-.52*x)*t,.12*(.2969*math.sqrt(t)-.126*t-.3516*t*t+.2843*t**3-.1036*t**4)*2.5*(1-.28*x)+.003) for t in [.08,.15,.25,.4,.6,.75]],.004,silver)
 box('Wing root spar',(.035,-.0,0),(.07,1.53,.10),dark,.01)
 path('Tip safety stripe',[(1.84,.8-.53*1.84-(1.6-.52*1.84)*t,.035) for t in [.15,.3,.5,.7]],.026,orange)
@@ -236,18 +234,35 @@ for i in range(5):
  a=i*math.tau/5;o=box('Hydrodynamic blade',(.23*math.cos(a),-.19,.23*math.sin(a)),(.34,.045,.12),gold,.05);o.rotation_euler[2]=-a;o.rotation_euler[0]=.25
 cyl('Spinner',(0,-.22,0),.12,.08,orange);finalize('propeller')
 
+# Independent fixed tailplane and movable aerodynamic surfaces. Centered origins.
+for ident,span,chord,thickness in [('stabilizer',1.8,.65,.09),('elevator',1.8,.4,.08),('aileron',1.4,.3,.07),('rudder',.8,.4,.07)]:
+ build(ident,(span,chord,thickness))
+ # Closed lenticular section; chord +Y, span X, hinge along leading edge.
+ section=[(.5,0),(.38,.35),(.12,.5),(-.22,.30),(-.5,.02),(-.5,-.02),(-.22,-.30),(.12,-.5),(.38,-.35)]
+ vs=[]
+ for x in [-span/2,span/2]:
+  for y,z in section:vs.append(P((x,y*chord,z*thickness)))
+ n=len(section);faces=[tuple(reversed(range(n))),tuple(n+j for j in range(n))]
+ for j in range(n):k=(j+1)%n;faces.append((j,k,n+k,n+j))
+ me=bpy.data.meshes.new(ident+' aerodynamic shell');me.from_pydata(vs,[],faces);me.update();ob=bpy.data.objects.new(me.name,me);bpy.context.collection.objects.link(ob);finish(ob,me.name,white)
+ if ident!='stabilizer':
+  tube('Hinge barrel',(-span*.45,chord*.47,0),(span*.45,chord*.47,0),thickness*.18,silver)
+  for x in [-span*.3,0,span*.3]:box('Actuator clevis',(x,chord*.34,0),(span*.045,chord*.2,thickness*.65),dark,.004)
+  box('Control surface stripe',(span*.38,-chord*.22,thickness*.32),(span*.07,chord*.25,thickness*.06),orange,.002)
+ finalize(ident)
+
 manifest={id:{'file':id+'.glb','dimensions':p['dimensions'],'coordinates':'Y up / nose +Y; meters','origin':'wing attachment at x=0; others centered' if id=='wing' else 'center'} for id,p in parts.items()}
 with open(os.path.join(OUT,'manifest.json'),'w') as f:json.dump(manifest,f,indent=2)
 # Preserve editable geometry and provide a studio contact sheet.
 for i,(id,p) in enumerate(parts.items()):
- x=(i%5-2)*3.1;y=(i//5-1)*3.4
+ x=(i%5-2)*3.1;y=(i//5-1.5)*3.4
  for o in p['objects']:o.location+=Vector((x,y,1.65))
  font=bpy.data.curves.new(id+' label','FONT');font.body=id.upper();font.align_x='CENTER';font.size=.23;ob=bpy.data.objects.new(id+' label',font);bpy.context.collection.objects.link(ob);ob.location=(x,y-1.25,.03);ob.data.materials.append(white)
 bpy.ops.mesh.primitive_plane_add(size=200);floor=bpy.context.object;floor.data.materials.append(mat('Studio slate',(.022,.035,.052),.15,.5))
 world=bpy.context.scene.world;world.use_nodes=True;world.node_tree.nodes['Background'].inputs[0].default_value=(.16,.21,.29,1);world.node_tree.nodes['Background'].inputs[1].default_value=.5
 for pos,power,size in [((2,-6,14),2600,9),((-8,-2,9),1800,8),((1,9,12),3000,8)]:
  bpy.ops.object.light_add(type='AREA',location=pos);o=bpy.context.object;o.data.energy=power;o.data.shape='DISK';o.data.size=size;o.rotation_euler=(-o.location).to_track_quat('-Z','Y').to_euler()
-bpy.ops.object.camera_add(location=(9,-16,20));cam=bpy.context.object;cam.rotation_euler=(Vector((0,0,1))-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.type='ORTHO';cam.data.ortho_scale=19;bpy.context.scene.camera=cam
+bpy.ops.object.camera_add(location=(9,-16,20));cam=bpy.context.object;cam.rotation_euler=(Vector((0,0,1))-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.type='ORTHO';cam.data.ortho_scale=22;bpy.context.scene.camera=cam
 scene=bpy.context.scene;scene.render.engine='CYCLES';scene.cycles.samples=48;scene.render.resolution_x=1600;scene.render.resolution_y=1200;scene.render.resolution_percentage=100
 scene.render.filepath=os.path.join(ROOT,'assets-source','parts-preview.png');bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT,'assets-source','orbital-parts.blend'));bpy.ops.render.render(write_still=True)
 # Second camera: close inspection of canopy, open nozzle, turbine, and wheel.
@@ -261,4 +276,4 @@ for id,pos in [('capsule',(-2.3,-1.8,1.0)),('cockpit',(-2.3,0,1.15)),('engine',(
  if id=='jet':ob.rotation_euler[0]=math.pi*.20
 cam.location=(6,-10,9);cam.rotation_euler=(Vector((.4,-.4,1))-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.ortho_scale=8.8
 scene.render.filepath=os.path.join(ROOT,'assets-source','detail-preview.png');bpy.ops.render.render(write_still=True)
-print('COMPLETE: 15 GLB parts, source blend, manifest, preview')
+print('COMPLETE: 19 GLB parts, source blend, manifest, preview')

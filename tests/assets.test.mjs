@@ -7,7 +7,7 @@ import {PARTS} from '../dist/catalog.js';
 
 test('Blender exports preserve assembly dimensions, origins and finite mesh data',async()=>{
   for(const [id,part] of Object.entries(PARTS)){
-    const data=await readFile(new URL(`../dist/assets/parts/${id}.glb`,import.meta.url));
+    const data=await readFile(new URL(`../dist/assets/parts/${part.model||id}.glb`,import.meta.url));
     const gltf=await new GLTFLoader().parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');
     const bounds=new Box3().setFromObject(gltf.scene),size=bounds.getSize(new Vector3()),center=bounds.getCenter(new Vector3());
     for(let axis=0;axis<3;axis++)assert.ok(Math.abs(size.getComponent(axis)-part.size[axis])<.002,`${id}: dimension ${axis}`);

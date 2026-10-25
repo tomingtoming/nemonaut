@@ -148,5 +148,45 @@
     ],
     "coordinates": "Y up / nose +Y; meters",
     "origin": "center"
+  },
+  "stabilizer": {
+    "file": "stabilizer.glb",
+    "dimensions": [
+      1.8,
+      0.65,
+      0.09
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "elevator": {
+    "file": "elevator.glb",
+    "dimensions": [
+      1.8,
+      0.4,
+      0.08
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "aileron": {
+    "file": "aileron.glb",
+    "dimensions": [
+      1.4,
+      0.3,
+      0.07
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "rudder": {
+    "file": "rudder.glb",
+    "dimensions": [
+      0.8,
+      0.4,
+      0.07
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
   }
 }
