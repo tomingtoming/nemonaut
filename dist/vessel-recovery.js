@@ -3,15 +3,15 @@ import {loadFlight,saveFlight} from './flight-save.js';
 import {fleet,canControl} from './fleet.js';
 import {resolveTargets} from './relative-navigation.js';
 import {partCenter,partRotation} from './aero.js';
-import {altitude,localUp} from './planet.js';
+import {bodyAltitude,bodyUp,relativeMotion} from './celestial.js';
 import {PARTS} from './catalog.js';
 
 export function recoveryStatus(v){
- const quiet=v.vel.length()<.8&&v.omega.length()<.15&&v.throttle===0;
- const afloat=v.environment==='water'&&v.parts.some(p=>{
-  const center=partCenter(p).applyQuaternion(v.q).add(v.pos),normal=localUp(center),q=v.q.clone().multiply(partRotation(p)),size=PARTS[p.type].size;
+ const motion=relativeMotion(v.pos,v.vel,v.universalTime),quiet=motion.velocity.length()<.8&&v.omega.length()<.15&&v.throttle===0;
+ const afloat=v.environment==='water'&&motion.body.id==='planet'&&v.parts.some(p=>{
+  const center=partCenter(p).applyQuaternion(v.q).add(v.pos),normal=bodyUp(center,v.universalTime),q=v.q.clone().multiply(partRotation(p)),size=PARTS[p.type].size;
   const extent=[[1,0,0],[0,1,0],[0,0,1]].reduce((sum,axis,i)=>sum+Math.abs(new T.Vector3(...axis).applyQuaternion(q).dot(normal))*size[i]/2,0);
-  return Math.abs(altitude(center))<=extent+.1;
+  return Math.abs(bodyAltitude(center,v.universalTime))<=extent+.1;
  });
  const recoverable=!v.crashed&&quiet&&v.time>.5&&(v.landed||afloat);
  return {recoverable,action:recoverable?'回収':'運用終了',reason:v.crashed?'機体損傷':recoverable?(v.environment==='water'?'着水・静止':'着地・静止'):'飛行中または移動中'};

@@ -22,7 +22,7 @@ export const PARTS = {
  maingear:{name:'主脚',code:'MG-1',cat:'走行',mass:45,size:[.34,.7,.7],wheel:true,model:'wheel',desc:'航空機の自由転動する主脚。ブレーキ付き。'},
  wheel:{name:'駆動輪',code:'RW-7',cat:'走行',mass:45,size:[.34,.7,.7],wheel:true,steer:true,desc:'接地中に駆動・ブレーキ・操舵できるサスペンション輪。'},
  parachute:{name:'回収パラシュート',code:'RC-14',cat:'装備',mass:80,size:[.8,.4,.8],parachute:154,maxTemperature:500,desc:'耐熱限界500 K。再突入中は熱シールドの背後に。Hで待機。高度5 km以下・250 m/s未満で縮帆、1.5 km以下・80 m/s未満で全開。'},
- solar:{name:'ソーラーパネル',code:'SP-2',cat:'装備',mass:22,size:[2,1,.08],solarPower:.8,desc:'最大0.8 EC/s。表面の向きと惑星の影で発電量が変化。'},
+ solar:{name:'ソーラーパネル',code:'SP-2',cat:'装備',mass:22,size:[2,1,.08],solarPower:.8,desc:'最大0.8 EC/s。表面の向きと天体の影で発電量が変化。'},
  pontoon:{name:'フロート',code:'FL-3',cat:'船舶',mass:85,size:[1,3,.8],volume:1.9,desc:'水密の浮体。水没体積に応じた浮力を生む。'},
  ballast:{name:'バラストタンク',code:'BT-1',cat:'船舶',mass:110,size:[1.25,1,1.25],volume:1.05,ballast:1050,desc:'注排水で質量を変え、浮上・潜航を調整する。'}
 };

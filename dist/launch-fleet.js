@@ -8,12 +8,12 @@ export function freshLaunchParts(parts,used=new Set(),makeId=()=>crypto.randomUU
 // Returns a new owned fleet. The serialized prior world is never mutated, even
 // on failure. Callers dispose this returned root if they do not adopt it.
 export function launchIntoFleet(record,{parts,environment,name,universalTime}){
- if(!['land','runway','water','drop','orbit','entry'].includes(environment)||typeof name!=='string')throw Error('出発条件が不正です');
+ if(!['land','runway','water','drop','orbit','entry','moon-orbit'].includes(environment)||typeof name!=='string')throw Error('出発条件が不正です');
  const checked=validateCraft({version:1,parts});if(checked.filter(p=>!p.parent).length!==1||!checked.some(p=>PARTS[p.type].control))throw Error('出発には接続済みの機体と制御装置が必要です');
  let previous=null,launched=null;try{
   previous=record?loadFlight(record):null;const others=previous?fleet(previous):[],used=new Set(others.flatMap(v=>v.parts.map(p=>p.id)));if(used.size+checked.length>400)throw Error('飛行中の合計部品数が400を超えます。既存の飛行は保持されています。');
-  const fresh=freshLaunchParts(checked,used);launched=new Flight(fresh,environment);const base=name.trim().slice(0,70)||'新しい機体',names=new Set(others.map(v=>v.vesselName));let candidate=base,index=2;while(names.has(candidate))candidate=base+' / '+index++;launched.vesselName=candidate;
+  const time=validUniversalTime(universalTime??previous?.universalTime??0);if(previous&&time!==previous.universalTime)throw Error('出発時の共通時刻が保存と一致しません');const fresh=freshLaunchParts(checked,used);launched=new Flight(fresh,environment,time);const base=name.trim().slice(0,70)||'新しい機体',names=new Set(others.map(v=>v.vesselName));let candidate=base,index=2;while(names.has(candidate))candidate=base+' / '+index++;launched.vesselName=candidate;
   // Flatten older launch groups: the depth limit must not become a launch limit.
-  const time=validUniversalTime(universalTime??previous?.universalTime??0);if(previous&&time!==previous.universalTime)throw Error('出発時の共通時刻が保存と一致しません');for(const v of others)v.detached=[];launched.detached=others;setUniversalTime(launched,time);return launched;
+  for(const v of others)v.detached=[];launched.detached=others;setUniversalTime(launched,time);return launched;
  }catch(e){if(launched)launched.dispose();if(previous)previous.dispose();throw e;}
 }

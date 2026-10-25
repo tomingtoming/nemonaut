@@ -7,7 +7,7 @@ import {centerOfVessel,resolveTargets} from './relative-navigation.js';
 import {Flight,statistics,descendants,validateCraft} from './core.js';
 import {fleet} from './fleet.js';
 import {fuelNetworks} from './resources.js';
-import {orbitState} from './planet.js';
+import {bodyOrbitState} from './celestial.js';
 export const DOCK_LIMITS={distance:.15,angle:8*Math.PI/180,speed:.3,angularSpeed:.15};
 export function dockingStatus(a,aId,b,bId){
  const invalid=reason=>({ready:false,reason});
@@ -32,7 +32,7 @@ function rebuilt(source,parts,sources=[source]){
  for(const key of ['fuel','charge','thermal','chutes','deflections','gimbals','wheelMotion'])out[key]=new Map(sources.flatMap(v=>[...v[key]]).filter(([id])=>ids.has(id)).map(([id,value])=>[id,value?.isVector3?value.clone():structuredClone(value)]));
  out.active=new Set(sources.flatMap(v=>[...v.active]).filter(id=>ids.has(id)));out.networks=fuelNetworks(out.parts);out.stats=statistics(out.parts,out.fuel,out.ballast,out.thermal);out.buildColliders();return out;
 }
-function updateOrbit(v){v.orbit=orbitState(centerOfVessel(v),v.vel);}
+function updateOrbit(v){v.orbit=bodyOrbitState(centerOfVessel(v),v.vel,v.universalTime);}
 function replaceFleet(root,removed,replacement,extras=[]){const others=fleet(root).filter(v=>!removed.includes(v));for(const v of [...others,...removed])v.detached=[];replacement.detached=[...others,...extras];resolveTargets(replacement);for(const v of removed)v.dispose();return replacement;}
 
 export function dockVessels(root,target,rootPort,targetPort){
