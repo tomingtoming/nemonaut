@@ -1,0 +1,38 @@
+import * as T from 'three';
+import {loadFlight,saveFlight} from './flight-save.js';
+import {fleet,canControl} from './fleet.js';
+import {resolveTargets} from './relative-navigation.js';
+import {partCenter,partRotation} from './aero.js';
+import {altitude,localUp} from './planet.js';
+import {PARTS} from './catalog.js';
+
+export function recoveryStatus(v){
+ const quiet=v.vel.length()<.8&&v.omega.length()<.15&&v.throttle===0;
+ const afloat=v.environment==='water'&&v.parts.some(p=>{
+  const center=partCenter(p).applyQuaternion(v.q).add(v.pos),normal=localUp(center),q=v.q.clone().multiply(partRotation(p)),size=PARTS[p.type].size;
+  const extent=[[1,0,0],[0,1,0],[0,0,1]].reduce((sum,axis,i)=>sum+Math.abs(new T.Vector3(...axis).applyQuaternion(q).dot(normal))*size[i]/2,0);
+  return Math.abs(altitude(center))<=extent+.1;
+ });
+ const recoverable=!v.crashed&&quiet&&v.time>.5&&(v.landed||afloat);
+ return {recoverable,action:recoverable?'回収':'運用終了',reason:v.crashed?'機体損傷':recoverable?(v.environment==='water'?'着水・静止':'着地・静止'):'飛行中または移動中'};
+}
+
+// Work on an independent copy: rejection never mutates the caller's world.
+export function retireVessel(record,partId,mode){
+ const root=loadFlight(record);let vessels=[];
+ try{
+  vessels=fleet(root);const target=vessels.find(v=>v.parts.some(p=>p.id===partId));
+  if(!target)throw Error('対象の機体が見つかりません');
+  if(!['recover','terminate'].includes(mode))throw Error('運用終了の操作が不正です');
+  const status=recoveryStatus(target);
+  if(mode==='recover'&&!status.recoverable)throw Error('回収には損傷のない着地・着水状態と停止が必要です');
+  const remaining=vessels.filter(v=>v!==target),next=remaining.includes(root)?root:remaining.find(canControl)||remaining[0];
+  for(const v of vessels)v.detached=[];
+  if(next){next.detached=remaining.filter(v=>v!==next);resolveTargets(next);}
+  const result=next?saveFlight(next,{...record.meta,name:next.vesselName||record.meta?.name,pilot:null}):null;
+  return {record:result,removed:{name:target.vesselName||'機体',parts:target.parts.length,action:mode==='recover'?'回収':'運用終了'}};
+ }finally{
+  // Dispose each physics world exactly once after detaching the ownership tree.
+  if(vessels.length){for(const v of vessels)v.detached=[];for(const v of vessels)v.dispose();}else root.dispose();
+ }
+}
