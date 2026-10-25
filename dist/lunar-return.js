@@ -72,11 +72,11 @@ export function predictReturnBurn(vessel,plan){
  const exit=lunarEscape(pos,vel,time);return exit?{exit,duration:time-start,remainingFuel:[...fuel.values()].reduce((a,b)=>a+b,0)}:null;
 }
 
-export function lunarReturnPlan(vessel){
+export function lunarReturnPlan(vessel,options={}){
  if(vessel.throttle!==0)throw Error('噴射を停止してから帰還計画を作成してください');
  // Check the propulsion configuration before spending work on a search.
  captureBurnEstimate(vessel,1);
- const plan=searchLunarReturn(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime);
+ const plan=searchLunarReturn(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,options);
  plan.burn=captureBurnEstimate(vessel,plan.deltaV);plan.startTime=plan.time-plan.burn.duration/2;plan.warnings=[];
  if(!plan.burn.enough)plan.warnings.push('現在の点火段では推進剤が不足しています');
  if(plan.startTime-vessel.universalTime<60)plan.warnings.push('姿勢調整の60秒を確保できません');
@@ -90,5 +90,5 @@ export function lunarReturnPlan(vessel){
 export function lunarReturnNode(plan,vessel){
  if(!plan.ready)throw Error(plan.warnings.join(' / '));
  if(plan.plannedAt!==vessel.universalTime)throw Error('時刻が進んだため帰還案を再計算してください');
- return {universalTime:plan.startTime,time:vessel.time+plan.startTime-vessel.universalTime,position:plan.position.toArray(),velocity:plan.afterVelocity.toArray(),impulse:plan.impulse.toArray(),remaining:plan.impulse.toArray(),complete:false,returnPlan:{midTime:plan.time,duration:plan.burn.duration,deltaV:plan.deltaV,predictedPeriapsis:plan.finite.exit.orbit.periapsis,exitTime:plan.finite.exit.time}};
+ return {universalTime:plan.startTime,time:vessel.time+plan.startTime-vessel.universalTime,position:plan.position.toArray(),velocity:plan.afterVelocity.toArray(),impulse:plan.impulse.toArray(),remaining:plan.impulse.toArray(),complete:false,returnPlan:{targetPeriapsis:plan.targetPeriapsis,midTime:plan.time,duration:plan.burn.duration,deltaV:plan.deltaV,predictedPeriapsis:plan.finite.exit.orbit.periapsis,exitTime:plan.finite.exit.time}};
 }
