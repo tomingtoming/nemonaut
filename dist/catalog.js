@@ -32,6 +32,7 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
  if(kind==='returner'){for(let i=1;i<a.length;i++)a[i].p[1]-=.22;const separator=part('decoupler',[0,4.84,0],[0,0,0],a[0].id,2);a[1].parent=separator.id;a.push(separator);a.push(part('parachute',[0,6.45,0],[0,0,0],a[0].id,3));}
  if(kind==='recovery'){add('capsule',[0,0,0]);add('parachute',[0,.85,0]);}
  if(kind==='orbiter'){add('probe',[0,2.5,0]);add('tank',[0,1.3,0]);add('engine',[0,-.3,0],[0,0,0],1);add('solar',[1.6,2.5,0],[0,0,0]);add('solar',[-1.6,2.5,0],[0,0,0]);}
+ if(kind==='twin'){add('probe',[0,2.5,0]);add('tank',[0,1.3,0]);add('engine',[0,-.3,0],[0,0,0],1,0);add('decoupler',[0,-1.01,0],[0,0,0],2,1);add('probe',[0,-1.35,0],[0,0,0],3);add('tank',[0,-2.55,0],[0,0,0],4);add('engine',[0,-4.15,0],[0,0,0],5,2);add('solar',[1.6,2.5,0]);add('solar',[-1.6,2.5,0]);add('solar',[1.6,-1.35,0],[0,0,0],4);add('solar',[-1.6,-1.35,0],[0,0,0],4);}
  if(kind==='plane'){
  const r=[Math.PI/2,0,0],left=[Math.PI/2,Math.PI,0],vertical=[Math.PI/2,Math.PI/2,0];
  add('cockpit',[0,1.3,2.2],r);add('tank',[0,1.3,.2],r);add('jet',[0,1.3,-1.4],r,1);
