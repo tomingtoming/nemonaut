@@ -5,6 +5,33 @@ import {saveFlight,loadFlight} from '../dist/flight-save.js';
 import {worldFromFlight,flightFromWorld,validateWorld} from '../dist/world-save.js';
 import {launchWorld,selectWorldVessel,retireWorldVessel} from '../dist/world-operations.js';
 import {gameRecord,validateGame} from '../dist/game-save.js';
+import {historyActionLabel,departureMode,updateDepartureButton} from '../dist/departure-mode.js';
+import {appendDesign,designForLaunch} from '../dist/design-library.js';
+
+test('actual launch conditions distinguish direct practice placement from a saved design launched at a facility',()=>{
+ const draft={parts:preset('rocket'),name:'Orbit practice',bay:'vab',environment:'orbit'};
+ const library=appendDesign({version:1,designs:[]},draft,'orbit-design',0);
+ let world=launchWorld(worldFromFlight(null),draft);
+ world=launchWorld(world,designForLaunch(library,'orbit-design','pad'));
+ assert.deepEqual(world.history.map(e=>e.environment),['orbit','land']);
+ assert.match(historyActionLabel(world.history[0]),/^練習配置/);
+ assert.match(historyActionLabel(world.history[1]),/^出発 · 発射台/);
+ const restored=validateGame(JSON.parse(JSON.stringify(gameRecord({world,draft}))));
+ assert.deepEqual(restored.world.history,world.history);
+ assert.equal(restored.workshop.environment,'orbit');
+ const legacy=structuredClone(world);for(const e of legacy.history)delete e.environment;
+ assert.match(historyActionLabel(validateWorld(legacy).history[0]),/開始条件の記録なし/);
+ for(const environment of [null,'typo','toString']){
+  const bad=structuredClone(world);bad.history[0].environment=environment;assert.throws(()=>validateWorld(bad));
+ }
+ for(const environment of ['land','runway','water'])assert.equal(departureMode(environment).mode,'surface');
+ for(const environment of ['drop','entry','orbit','moon-orbit','moon-surface','transfer'])assert.equal(departureMode(environment).mode,'practice');
+ const elements=new Map([['#launch',{}],['#departureNotice',{}]]),root={querySelector:id=>elements.get(id)};
+ updateDepartureButton(root,'orbit');assert.equal(elements.get('#launch').textContent,'練習配置へ ↗');
+ assert.match(elements.get('#departureNotice').textContent,/現在の世界に追加/);
+ updateDepartureButton(root,'land');assert.equal(elements.get('#launch').textContent,'出発 ↗');
+ assert.match(elements.get('#departureNotice').textContent,/地表から出発/);
+});
 
 test('launch and recovery records survive flight capture and recovery of the last vessel',()=>{
  let world=launchWorld(worldFromFlight(null,{universalTime:100}),{parts:preset('rover'),name:'Survey',environment:'land'});
