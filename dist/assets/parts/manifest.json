@@ -1,0 +1,152 @@
+{
+  "tank": {
+    "file": "tank.glb",
+    "dimensions": [
+      1.25,
+      2,
+      1.25
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "capsule": {
+    "file": "capsule.glb",
+    "dimensions": [
+      1.25,
+      1.3,
+      1.25
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "engine": {
+    "file": "engine.glb",
+    "dimensions": [
+      1.25,
+      1.2,
+      1.25
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "nose": {
+    "file": "nose.glb",
+    "dimensions": [
+      1.25,
+      1,
+      1.25
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "decoupler": {
+    "file": "decoupler.glb",
+    "dimensions": [
+      1.25,
+      0.22,
+      1.25
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "probe": {
+    "file": "probe.glb",
+    "dimensions": [
+      1.25,
+      0.4,
+      1.25
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "cockpit": {
+    "file": "cockpit.glb",
+    "dimensions": [
+      1.25,
+      2,
+      1.25
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "jet": {
+    "file": "jet.glb",
+    "dimensions": [
+      1.25,
+      1.2,
+      1.25
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "wing": {
+    "file": "wing.glb",
+    "dimensions": [
+      2,
+      1.6,
+      0.12
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "wing attachment at x=0; others centered"
+  },
+  "wheel": {
+    "file": "wheel.glb",
+    "dimensions": [
+      0.34,
+      0.7,
+      0.7
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "truss": {
+    "file": "truss.glb",
+    "dimensions": [
+      1,
+      1,
+      1
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "solar": {
+    "file": "solar.glb",
+    "dimensions": [
+      2,
+      1,
+      0.08
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "pontoon": {
+    "file": "pontoon.glb",
+    "dimensions": [
+      1,
+      3,
+      0.8
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "ballast": {
+    "file": "ballast.glb",
+    "dimensions": [
+      1.25,
+      1,
+      1.25
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  },
+  "propeller": {
+    "file": "propeller.glb",
+    "dimensions": [
+      0.8,
+      0.5,
+      0.8
+    ],
+    "coordinates": "Y up / nose +Y; meters",
+    "origin": "center"
+  }
+}
