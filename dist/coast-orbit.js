@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {MOON,MOON_RATE,bodyState,relativeMotion} from './celestial.js';
 
-function stumpff(z){
+export function stumpff(z){
  if(Math.abs(z)<.01){
   let c=.5,s=1/6,ct=c,st=s;
   for(let k=1;k<12;k++){ct*=-z/((2*k+1)*(2*k+2));st*=-z/((2*k+2)*(2*k+3));c+=ct;s+=st;}

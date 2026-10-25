@@ -5,7 +5,7 @@ const Y=new T.Vector3(0,1,0);
 // Optional demonstration pilot: commands the same throttle, staging and attitude actuators as the player.
 export class LaunchPilot{
  constructor(){this.phase='離昇';this.done=false;this.message='自動実演：離昇';}
- update(f){if(this.done||f.crashed){f.throttle=0;return;}if(!f.started)f.stageNext();const active=[...f.active].filter(id=>f.parts.some(p=>p.id===id));if(active.length&&active.every(id=>{const g=f.networks.network.get(id);return !g||g.tanks.every(p=>(f.fuel.get(p.id)||0)<.001);})){f.stageNext();}
+ update(f){if(this.done||f.crashed){f.throttle=0;return;}if(!f.started)f.stageNext();const active=[...f.active].filter(id=>f.parts.some(p=>p.id===id));if(active.length&&active.every(id=>{const g=f.networks.network.get(id);return !g||g.tanks.every(p=>(f.fuel.get(p.id)||0)<.001);})){f.throttle=0;f.stageNext();}
  const com=f.stats.com.clone().applyQuaternion(f.q).add(f.pos),o=orbitState(com,f.vel),up=localUp(com),tangent=new T.Vector3(0,0,1).addScaledVector(up,-up.z).normalize();if(f.vel.clone().addScaledVector(up,-o.vertical).length()>50)tangent.copy(f.vel).addScaledVector(up,-o.vertical).normalize();let angle;
  if(o.altitude<35000){angle=T.MathUtils.clamp((o.altitude-800)/34200,0,1)*Math.PI/3;this.phase='重力ターン';}
  else{const thrust=f.parts.filter(p=>f.active.has(p.id)).reduce((s,p)=>s+(PARTS[p.type].thrust||0),0),a=thrust/f.stats.mass,vt=f.vel.dot(tangent),target=T.MathUtils.clamp((90000-o.altitude)/100,-100,220),ar=(target-o.vertical)/12+o.gravity-vt*vt/o.radius;angle=Math.acos(T.MathUtils.clamp(ar/Math.max(a,.01),-.7,.95));this.phase='軌道投入';}

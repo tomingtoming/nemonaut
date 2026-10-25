@@ -36,6 +36,16 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
  if(kind==='returner'){for(let i=1;i<a.length;i++)a[i].p[1]-=.50;const shield=part('heatShield',[0,4.81,0],[0,0,0],a[0].id);const separator=part('decoupler',[0,4.56,0],[0,0,0],shield.id,2);a.push(shield);a[1].parent=separator.id;a.push(separator);a.push(part('parachute',[0,6.45,0],[0,0,0],a[0].id,3));}
  if(kind==='reentry'){add('capsule',[0,0,0]);add('heatShield',[0,-.79,0]);add('parachute',[0,.85,0]);}
  if(kind==='lunar-return'){add('capsule',[0,0,0]);add('heatShield',[0,-.79,0]);add('parachute',[0,.85,0],[0,0,0],0,2);const separator=add('decoupler',[0,-1.04,0],[0,0,0],1,1);const tank=add('tank',[0,-2.15,0],[0,0,0],separator);add('engine',[0,-3.75,0],[0,0,0],tank);for(const x of [-1.6,1.6])add('solar',[x,-2.15,0],[0,0,0],tank);}
+ if(kind==='lunar-expedition'){
+  a=preset('lunar-return');for(const p of a){if(p.type==='engine')p.stage=2;else if(p.type==='decoupler')p.stage=3;else if(p.type==='parachute')p.stage=4;}
+  const upper=a.findIndex(p=>p.type==='engine'),middleSeparator=add('decoupler',[0,-4.46,0],[0,0,0],upper,2);
+  const middleTop=add('tank',[0,-5.57,0],[0,0,0],middleSeparator),middleBottom=add('tank',[0,-7.57,0],[0,0,0],middleTop);
+  for(const x of [-.7,.7])add('engine',[x,-9.17,0],[0,0,0],middleBottom,1);
+  const lowerSeparator=add('decoupler',[0,-9.88,0],[0,0,0],middleBottom,1);let tank=lowerSeparator;
+  for(let i=0;i<5;i++)tank=add('tank',[0,-10.99-2*i,0],[0,0,0],tank);
+  for(let i=0;i<6;i++){const angle=i*Math.PI/3;add('engine',[1.25*Math.cos(angle),-20.59,1.25*Math.sin(angle)],[0,0,0],tank);}
+  for(let i=0;i<4;i++){const angle=i*Math.PI/2;add('fin',[.625*Math.cos(angle),-18.99,-.625*Math.sin(angle)],[0,angle,0],tank);}
+ }
  if(kind==='recovery'){add('capsule',[0,0,0]);add('parachute',[0,.85,0]);}
  if(kind==='rcs'){add('probe',[0,0,0]);a[0].reactionEnabled=false;add('truss',[0,-.7,0]);for(const x of [-.74,.74])for(const y of [-1.2,.4])add('rcs',[x,y,0],[0,0,0],1);}
  if(kind==='orbiter'||kind==='transfer'){add('probe',[0,2.5,0]);add('tank',[0,1.3,0]);add('engine',[0,-.3,0],[0,0,0],1);add('solar',[1.6,2.5,0],[0,0,0]);add('solar',[-1.6,2.5,0],[0,0,0]);}
