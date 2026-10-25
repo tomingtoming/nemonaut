@@ -1,3 +1,4 @@
+import {appendHistory} from './world-history.js';
 import {validateWorld,worldFromFlight,flightFromWorld} from './world-save.js';
 import {launchIntoFleet} from './launch-fleet.js';
 import {saveFlight} from './flight-save.js';
@@ -16,7 +17,7 @@ export function launchWorld(value,design){
  const world=validateWorld(value);
  if(design.universalTime!==undefined&&design.universalTime!==world.universalTime)throw Error('出発時刻が世界と一致しません');
  const launched=launchIntoFleet(flightFromWorld(world),{...design,universalTime:world.universalTime});
- try{return worldFromFlight(saveFlight(launched,{name:launched.vesselName,pilot:null}));}
+ try{const next=worldFromFlight(saveFlight(launched,{name:launched.vesselName,pilot:null}),{history:world.history});next.history=appendHistory(next,'launch',next.vessels.find(v=>v.vesselId===next.activeVesselId));return next;}
  finally{launched.dispose();}
 }
 export function selectWorldVessel(value,id,{observe=false}={}){
@@ -34,7 +35,7 @@ export function worldTrackingList(value,options){
 export function retireWorldVessel(value,id,mode){
  const world=validateWorld(value),target=vessel(world,id);
  const result=retireVessel(flightFromWorld(world),target.parts[0].id,mode);
- const next=worldFromFlight(result.record,{universalTime:world.universalTime});
- if(world.activeVesselId===null)next.activeVesselId=null;
+ const next=worldFromFlight(result.record,{universalTime:world.universalTime,history:world.history});
+ next.history=appendHistory(next,mode,target);if(world.activeVesselId===null)next.activeVesselId=null;
  return {world:next,removed:{...result.removed,vesselId:id}};
 }

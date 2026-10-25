@@ -142,3 +142,5 @@ header>#craftName{min-width:80px;max-width:240px;width:22vw;padding:7px 10px;fon
 .flying .craftFiles,.flying header>#craftName{display:none}
 @media(max-width:900px){.craftFiles #examples{display:none}header>#craftName{width:16vw}.craftFiles button{padding:6px}}
 @media(max-width:600px){.craftFiles{display:none}header>#craftName{flex:1;width:80px}.headright #help{display:none}}
+
+#worldHistory{margin-top:16px;font-size:12px;line-height:1.6}#worldHistory summary{cursor:pointer}#worldHistoryRows{padding-left:18px}#worldHistoryRows li{margin:8px 0}#worldHistoryRows p{color:#a9b8bf}
