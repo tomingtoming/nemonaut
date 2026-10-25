@@ -24,3 +24,5 @@
 #activeVessel{position:absolute;top:43px;left:0;font-size:10px;color:#9fd5d4}#debrisList>div{flex-wrap:wrap}#debrisList small{width:100%}#debrisList button{flex:1}
 
 #dockingPanel small{display:block;line-height:1.6;margin:8px 0}#dockBonds button{margin:6px 0}#dockButton{display:block;margin:8px 0}
+
+#portGuide label{display:block;margin:8px 0}#portGuide select{max-width:100%}#portCrosshair{width:100%;height:auto;border:1px solid #3a515a;margin-top:8px}

@@ -1,3 +1,5 @@
+import {portPose} from './port-navigation.js';
+export {portPose} from './port-navigation.js';
 import * as T from 'three';
 import {PARTS} from './catalog.js';
 import {partRotation,partMass,partCenter} from './aero.js';
@@ -7,7 +9,6 @@ import {fleet} from './fleet.js';
 import {fuelNetworks} from './resources.js';
 import {orbitState} from './planet.js';
 export const DOCK_LIMITS={distance:.15,angle:8*Math.PI/180,speed:.3,angularSpeed:.15};
-export function portPose(v,id){const p=v.parts.find(p=>p.id===id);if(!p||!PARTS[p.type].docking)return null;const q=v.q.clone().multiply(partRotation(p)),position=new T.Vector3(0,PARTS[p.type].dockFace,0).applyQuaternion(q).add(new T.Vector3(...p.p).applyQuaternion(v.q)).add(v.pos),normal=new T.Vector3(0,1,0).applyQuaternion(q),velocity=v.vel.clone().add(v.omega.clone().cross(position.clone().sub(centerOfVessel(v))));return {part:p,position,normal,velocity};}
 export function dockingStatus(a,aId,b,bId){
  const invalid=reason=>({ready:false,reason});
  if(a===b)return invalid('同じ機体です');if(a.crashed||b.crashed)return invalid('損傷した機体です');

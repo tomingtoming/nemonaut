@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {localUp} from './planet.js';
-export const SAS_MODES={target:'目標方向',relativeRetrograde:'相対速度を減らす方向',maneuver:'予定噴射',hold:'姿勢保持',prograde:'順行',retrograde:'逆行',radial:'天頂',antiradial:'天底',normal:'軌道面＋',antinormal:'軌道面−'};
+export const SAS_MODES={dock:'ポート面を整列',target:'目標方向',relativeRetrograde:'相対速度を減らす方向',maneuver:'予定噴射',hold:'姿勢保持',prograde:'順行',retrograde:'逆行',radial:'天頂',antiradial:'天底',normal:'軌道面＋',antinormal:'軌道面−'};
 export function navDirections(pos,vel){const radial=localUp(pos),prograde=vel.length()>.5?vel.clone().normalize():null,normal=prograde?radial.clone().cross(prograde):null;if(normal&&normal.lengthSq()>1e-8)normal.normalize();else if(normal)normal.set(0,0,0);return {radial,antiradial:radial.clone().negate(),prograde,retrograde:prograde?.clone().negate(),normal:normal?.lengthSq()?normal:null,antinormal:normal?.lengthSq()?normal.clone().negate():null};}
 export function attitudeTarget(q,forward,target){if(!target)return null;return new T.Quaternion().setFromUnitVectors(forward.clone().applyQuaternion(q).normalize(),target.clone().normalize()).multiply(q).normalize();}
 export function navFrame(q,rocket){const forward=new T.Vector3(0,rocket?1:0,rocket?0:1).applyQuaternion(q),right=new T.Vector3(1,0,0).applyQuaternion(q),top=forward.clone().cross(right);return {forward,right,top};}
