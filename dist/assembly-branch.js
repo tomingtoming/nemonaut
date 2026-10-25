@@ -27,3 +27,20 @@ export function placeBranch(parts,branch,{position,rotation,parent=null},makeId=
  const created=source.map(p=>{const transform=delta.clone().multiply(matrix(p)),position=new T.Vector3(),q=new T.Quaternion(),scale=new T.Vector3();transform.decompose(position,q,scale);const e=new T.Euler().setFromQuaternion(q),copy={...p,id:ids.get(p.id),parent:p.id===root.id?parent:ids.get(p.parent),p:position.toArray(),r:[e.x,e.y,e.z]};if(p.dockPartner)copy.dockPartner=ids.get(p.dockPartner);return copy;});
  const result=validateCraft({version:1,parts:[...parts,...created]});return {parts:result,rootId:ids.get(root.id),count:created.length};
 }
+
+export function moveBranch(parts,id,{position,rotation,parent=null}){
+ const checked=validateCraft({version:1,parts}),root=checked.find(p=>p.id===id);
+ if(!root)throw Error('付け替える部品が見つかりません');
+ const ids=descendants(checked,id);
+ if(parent!==null&&(!checked.some(p=>p.id===parent)||ids.has(parent)))throw Error('自分や子部品には接続できません。別の取付先を選んでください');
+ if(![position,rotation].every(a=>Array.isArray(a)&&a.length===3&&a.every(Number.isFinite)))throw Error('配置位置・回転が不正です');
+ const delta=matrix({p:position,r:rotation}).multiply(matrix(root).invert());
+ for(const p of checked){
+  // The old boundary docking bond must be removed on both sides.
+  if(p.dockPartner&&ids.has(p.id)!==ids.has(p.dockPartner))delete p.dockPartner;
+  if(!ids.has(p.id))continue;
+  const transform=delta.clone().multiply(matrix(p)),pos=new T.Vector3(),q=new T.Quaternion(),scale=new T.Vector3();transform.decompose(pos,q,scale);
+  const e=new T.Euler().setFromQuaternion(q);p.p=pos.toArray();p.r=[e.x,e.y,e.z];if(p.id===id)p.parent=parent;
+ }
+ return {parts:validateCraft({version:1,parts:checked}),rootId:id,count:ids.size};
+}
