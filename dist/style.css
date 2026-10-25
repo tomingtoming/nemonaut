@@ -4,3 +4,7 @@
 .flightbottom>label{font-size:10px;color:#a7bfc8}.flightbottom>label input{display:block;width:110px;margin-top:6px}#aeroFlight{font-size:9px;color:#a7bfc8}#aeroInfo{line-height:1.7}
 
 #actuatorControls{display:flex;flex-wrap:wrap;gap:8px 14px;flex-basis:100%;font-size:10px;color:#b7cbd3}#actuatorControls label{display:flex;align-items:center;gap:4px}#actuatorControls label[hidden]{display:none}
+
+.orbitpanel{position:absolute;left:26px;top:177px;display:flex;flex-direction:column;gap:7px;font-size:12px;color:#e5f3f5;text-shadow:0 1px 3px #000;pointer-events:auto}.orbitpanel small{font-size:10px}.orbitpanel select{padding:3px;color:white;background:#223543;border:1px solid #60747b}
+
+#orbitMap{position:absolute;right:18px;top:167px;width:130px;height:130px;background:#0a1822bb;border-radius:50%;pointer-events:none}
