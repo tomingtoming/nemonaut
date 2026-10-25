@@ -22,3 +22,5 @@
 #debrisPanel{display:none;margin:14px 0;border-top:1px solid #45616d;padding-top:10px}.flying #debrisPanel{display:block}#debrisList>div{display:flex;align-items:center;gap:6px;margin:10px 0}#debrisList small{line-height:1.8}#debrisList button,#trackPrimary{padding:4px 7px;font-size:10px}#debrisPanel>small{color:#9bacb6;font-size:9px}
 
 #activeVessel{position:absolute;top:43px;left:0;font-size:10px;color:#9fd5d4}#debrisList>div{flex-wrap:wrap}#debrisList small{width:100%}#debrisList button{flex:1}
+
+#dockingPanel small{display:block;line-height:1.6;margin:8px 0}#dockBonds button{margin:6px 0}#dockButton{display:block;margin:8px 0}
