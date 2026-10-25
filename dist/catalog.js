@@ -1,7 +1,7 @@
 export const PARTS = {
- capsule:{name:'コマンドポッド',code:'CP-1',cat:'指令',mass:620,size:[1.25,1.3,1.25],control:true,reactionTorque:7000,desc:'耐熱外殻と姿勢制御を備える有人カプセル。'},
- probe:{name:'探査コア',code:'OC-4',cat:'指令',mass:90,size:[1.25,.4,1.25],control:true,reactionTorque:1200,desc:'小型無人機のための軽量制御ユニット。'},
- cockpit:{name:'コックピット',code:'FC-2',cat:'指令',mass:510,size:[1.25,2,1.25],control:true,desc:'航空機・ローバー向けの広視界キャノピー。'},
+ capsule:{name:'コマンドポッド',code:'CP-1',cat:'指令',mass:620,size:[1.25,1.3,1.25],control:true,reactionTorque:7000,battery:1000,desc:'耐熱外殻と姿勢制御を備える有人カプセル。'},
+ probe:{name:'探査コア',code:'OC-4',cat:'指令',mass:90,size:[1.25,.4,1.25],control:true,reactionTorque:1200,battery:200,desc:'小型無人機のための軽量制御ユニット。'},
+ cockpit:{name:'コックピット',code:'FC-2',cat:'指令',mass:510,size:[1.25,2,1.25],control:true,battery:500,desc:'航空機・ローバー向けの広視界キャノピー。'},
  tank:{name:'推進剤タンク',code:'FT-200',cat:'燃料',mass:150,fuel:1800,size:[1.25,2,1.25],desc:'同じ燃料系統へ推進剤を供給。分離リングを越えては流れません。'},
  engine:{name:'液体燃料エンジン',code:'RE-45',cat:'推進',mass:270,thrust:45000,isp:300,size:[1.25,1.2,1.25],gimbal:6,gimbalPivot:[0,.16,0],desc:'45 kN・最大6度のジンバル。ノズルを傾けて推力方向を制御。'},
  jet:{name:'ターボジェット',code:'TJ-18',cat:'推進',mass:230,thrust:18000,isp:1800,air:true,size:[1.25,1.2,1.25],desc:'大気中専用。高度とともに推力が低下する。'},
@@ -19,7 +19,7 @@ export const PARTS = {
  maingear:{name:'主脚',code:'MG-1',cat:'走行',mass:45,size:[.34,.7,.7],wheel:true,model:'wheel',desc:'航空機の自由転動する主脚。ブレーキ付き。'},
  wheel:{name:'駆動輪',code:'RW-7',cat:'走行',mass:45,size:[.34,.7,.7],wheel:true,steer:true,desc:'接地中に駆動・ブレーキ・操舵できるサスペンション輪。'},
  parachute:{name:'回収パラシュート',code:'RC-14',cat:'装備',mass:80,size:[.8,.4,.8],parachute:154,desc:'Hで待機。高度5 km以下・250 m/s未満で縮帆展開、1.5 km以下・80 m/s未満で全開。'},
- solar:{name:'ソーラーパネル',code:'SP-2',cat:'装備',mass:22,size:[2,1,.08],desc:'展開済みの太陽電池パネル。現版では電力系は未実装。'},
+ solar:{name:'ソーラーパネル',code:'SP-2',cat:'装備',mass:22,size:[2,1,.08],solarPower:.8,desc:'最大0.8 EC/s。表面の向きと惑星の影で発電量が変化。'},
  pontoon:{name:'フロート',code:'FL-3',cat:'船舶',mass:85,size:[1,3,.8],volume:1.9,desc:'水密の浮体。水没体積に応じた浮力を生む。'},
  ballast:{name:'バラストタンク',code:'BT-1',cat:'船舶',mass:110,size:[1.25,1,1.25],volume:1.05,ballast:1050,desc:'注排水で質量を変え、浮上・潜航を調整する。'}
 };
