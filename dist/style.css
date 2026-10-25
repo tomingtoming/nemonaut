@@ -48,3 +48,5 @@
 .stagingRow{display:grid;gap:6px;background:#1c2b33;border:1px solid #30444e;border-radius:4px;margin:8px 0;padding:9px}.stagingRow>b{color:var(--orange);font-size:12px}.stagingRow>small{color:var(--muted);font-size:10px}.stagingRow>button{font-size:10px;text-align:left;padding:6px;line-height:1.6}.stageMoves{display:flex;gap:6px}.stageMoves button{flex:1;padding:6px;font-size:10px}.stagingRow button:disabled{cursor:default;opacity:.55}
 
 .stageReference{display:grid;gap:6px;font-size:10px;color:var(--muted);margin:10px 0}.stageReference select{width:100%;font-size:11px}.stageScope{display:block;color:var(--muted);font-size:9px;line-height:1.8}.stagingRow .stageDiagnostic{padding:6px;border-left:2px solid var(--orange);color:#edb58c;background:#332d25;line-height:1.8}.stagingRow .stageDiagnostic.switch{border-color:var(--cyan);color:var(--cyan);background:#20333a}
+
+.universalClock{position:absolute;right:24px;top:116px;font:12px monospace;color:#e0ecef;text-shadow:0 2px 4px #000;background:#162831b8;padding:5px 8px;border-radius:4px;pointer-events:none}#centerTime{font:12px monospace;color:var(--cyan)}
