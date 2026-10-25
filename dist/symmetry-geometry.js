@@ -1,3 +1,4 @@
+import {releaseDisplacedAttachments} from './attachment-nodes.js';
 import * as T from 'three';
 import {validateCraft,descendants} from './core.js';
 import {symmetryTargets,hasSymmetryGeometry,transformSymmetryFrames} from './symmetry.js';
@@ -22,5 +23,5 @@ export function editSymmetryPose(parts,id,{position,rotation},linked=true){
    if(!targetIds.has(q.id))transformSymmetryFrames([q],change);
   }
  }
- return validateCraft({version:1,parts:copy});
+ return validateCraft({version:1,parts:releaseDisplacedAttachments(copy)});
 }

@@ -1,3 +1,4 @@
+import {assertNodeAttachments,releaseDisplacedAttachments} from './attachment-nodes.js';
 import {normalizeSymmetry,transformSymmetryFrames} from './symmetry.js';
 import * as T from 'three';
 import {validateCraft,descendants} from './core.js';
@@ -13,10 +14,10 @@ export function assemblyTree(parts){
 export function extractBranch(parts,id){
  const checked=validateCraft({version:1,parts});if(!checked.some(p=>p.id===id))throw Error('複製する部品が見つかりません');
  const ids=descendants(checked,id),branch=checked.filter(p=>ids.has(p.id));
- for(const p of branch){if(p.id===id)p.parent=null;if(p.dockPartner&&!ids.has(p.dockPartner))delete p.dockPartner;}
+ for(const p of branch){if(p.id===id){p.parent=null;p.attachment={mode:'free'};}if(p.dockPartner&&!ids.has(p.dockPartner))delete p.dockPartner;}
  return {rootId:id,parts:validateCraft({version:1,parts:branch})};
 }
-export function placeBranch(parts,branch,{position,rotation,parent=null},makeId=()=>crypto.randomUUID()){
+export function placeBranch(parts,branch,{position,rotation,parent=null,attachment={mode:'free'}},makeId=()=>crypto.randomUUID()){
  if(parts.length)validateCraft({version:1,parts});
  const source=validateCraft({version:1,parts:branch.parts}),root=source.find(p=>p.id===branch.rootId);
  if(!root||root.parent||source.some(p=>p.id!==root.id&&!p.parent))throw Error('枝の接続が不正です');
@@ -26,10 +27,10 @@ export function placeBranch(parts,branch,{position,rotation,parent=null},makeId=
  const delta=matrix({p:position,r:rotation}).multiply(matrix(root).invert()),used=new Set([...parts,...source].map(p=>p.id)),ids=new Map();
  for(const p of source){const id=makeId();if(typeof id!=='string'||!id||used.has(id))throw Error('新しい部品IDが重複しています');used.add(id);ids.set(p.id,id);}
  const created=source.map(p=>{const transform=delta.clone().multiply(matrix(p)),position=new T.Vector3(),q=new T.Quaternion(),scale=new T.Vector3();transform.decompose(position,q,scale);const e=new T.Euler().setFromQuaternion(q),copy={...p,id:ids.get(p.id),parent:p.id===root.id?parent:ids.get(p.parent),p:position.toArray(),r:[e.x,e.y,e.z]};if(p.dockPartner)copy.dockPartner=ids.get(p.dockPartner);return copy;});
- transformSymmetryFrames(created,delta);normalizeSymmetry(created,{fresh:true});const result=validateCraft({version:1,parts:[...parts,...created]});return {parts:result,rootId:ids.get(root.id),count:created.length};
+ created.find(p=>p.id===ids.get(root.id)).attachment=structuredClone(attachment);assertNodeAttachments([...parts,...created],[ids.get(root.id)]);transformSymmetryFrames(created,delta);normalizeSymmetry(created,{fresh:true});const result=validateCraft({version:1,parts:[...parts,...created]});return {parts:result,rootId:ids.get(root.id),count:created.length};
 }
 
-export function moveBranch(parts,id,{position,rotation,parent=null}){
+export function moveBranch(parts,id,{position,rotation,parent=null,attachment={mode:'free'}}){
  const checked=validateCraft({version:1,parts}),root=checked.find(p=>p.id===id);
  if(!root)throw Error('付け替える部品が見つかりません');
  const ids=descendants(checked,id);
@@ -43,5 +44,5 @@ export function moveBranch(parts,id,{position,rotation,parent=null}){
   const transform=delta.clone().multiply(matrix(p)),pos=new T.Vector3(),q=new T.Quaternion(),scale=new T.Vector3();transform.decompose(pos,q,scale);
   const e=new T.Euler().setFromQuaternion(q);p.p=pos.toArray();p.r=[e.x,e.y,e.z];if(p.id===id)p.parent=parent;
  }
- transformSymmetryFrames(checked.filter(p=>ids.has(p.id)),delta);normalizeSymmetry(checked.filter(p=>ids.has(p.id)),{fresh:true});normalizeSymmetry(checked.filter(p=>!ids.has(p.id)));return {parts:validateCraft({version:1,parts:checked}),rootId:id,count:ids.size};
+ root.attachment=structuredClone(attachment);assertNodeAttachments(checked,[id]);releaseDisplacedAttachments(checked);transformSymmetryFrames(checked.filter(p=>ids.has(p.id)),delta);normalizeSymmetry(checked.filter(p=>ids.has(p.id)),{fresh:true});normalizeSymmetry(checked.filter(p=>!ids.has(p.id)));return {parts:validateCraft({version:1,parts:checked}),rootId:id,count:ids.size};
 }
