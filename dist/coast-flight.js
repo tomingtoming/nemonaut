@@ -1,3 +1,4 @@
+import {pendingBurns} from './burn-schedule.js';
 import * as T from 'three';
 import {PARTS} from './catalog.js';
 import {fleet} from './fleet.js';
@@ -37,12 +38,7 @@ export function isParked(v){
  return contact&&v.environment!=='water'&&v.vel.clone().sub(bodyState(body,v.universalTime).velocity).length()<.1&&v.omega.length()<.01;
 }
 
-function deadline(v){
- let result=Infinity;
- if(v.transferGuide?.firstBurnTime===null)result=v.transferGuide.startTime;
- if(v.maneuver&&!v.maneuver.complete)result=Math.min(result,(v.maneuver.universalTime??v.universalTime+v.maneuver.time-v.time)-((v.maneuver.capture||v.maneuver.returnPlan||v.maneuver.departure)?45:0));
- return result;
-}
+function deadline(v){const burn=pendingBurns(v)[0];return burn?burn.cutoff+15:Infinity;}
 
 export function coastSurfaceMargin(v){
  const o=bodyOrbitState(center(v),v.vel,v.universalTime),fall=Math.max(0,-o.vertical);
@@ -53,19 +49,26 @@ export function coastSurfaceMargin(v){
  return net>0?1000+fall*10+1.5*fall*fall/(2*net):1000+fall*20;
 }
 
-export function coastEligibility(root,{input=false}={}){
- if(input)return '操作中';
+function blocker(reason,v,code=null,other=null){
+ const anchor=x=>(x.parts.find(p=>PARTS[p.type].control)||x.parts[0])?.id??null;
+ const scheduled=pendingBurns(v)[0]?.time??null;
+ return {reason,code,vesselId:anchor(v),vesselName:v.vesselName||'名称未設定の機体',otherVesselId:other?anchor(other):null,otherVesselName:other?.vesselName||null,overdue:code==='maneuver'&&scheduled!==null&&scheduled<v.universalTime,scheduledTime:code==='maneuver'?scheduled:null};
+}
+export function coastBlocker(root,{input=false}={}){
+ if(input)return blocker('操作中',root,'input');
  for(const v of fleet(root)){
-  if(v.universalTime!==root.universalTime)return '機体の共通時刻が不一致';
+  if(v.universalTime!==root.universalTime)return blocker('機体の共通時刻が不一致',v,'clock');
   if(v.crashed)continue;
-  if(v.throttle!==0)return '推力設定のある機体';
-  if([...v.thermal.values()].some(s=>s.failed||!Number.isFinite(s.temperature)||s.temperature<3))return '熱状態を確認してください';
+  if(v.throttle!==0)return blocker('推力設定のある機体',v,'thrust');
+  if([...v.thermal.values()].some(s=>s.failed||!Number.isFinite(s.temperature)||s.temperature<3))return blocker('熱状態を確認してください',v,'thermal');
   if(isParked(v))continue;
   const limit=coastStepLimit(center(v),v.vel,v.universalTime,{deadline:deadline(v),surfaceMargin:coastSurfaceMargin(v)});
-  if(limit.dt<.05)return {surface:'大気・地表への接近',soi:'月重力圏の境界',maneuver:'予定噴射の直前'}[limit.reason]||'通常物理が必要';
+  if(limit.dt<.05)return blocker({surface:'大気・地表への接近',soi:'月重力圏の境界',maneuver:'予定噴射の直前'}[limit.reason]||'通常物理が必要',v,limit.reason);
  }
  return null;
 }
+
+export function coastEligibility(root,options){return coastBlocker(root,options)?.reason??null;}
 
 // All vessels advance together or none do. SAS/RCS torques are suspended in
 // this coast mode. Attitude is frozen; stored angular velocity is retained for
@@ -73,21 +76,21 @@ export function coastEligibility(root,{input=false}={}){
 // Max 5 seconds per resource sample bounds eclipse/solar sampling error.
 export function advanceCoastFleet(root,requested,{input=false,maxSteps=64}={}){
  if(!Number.isFinite(requested)||requested<=0||!Number.isInteger(maxSteps)||maxSteps<1||maxSteps>10000)throw Error('時間加速の要求が不正です');
- let advanced=0,steps=0,reason=coastEligibility(root,{input});
+ let advanced=0,steps=0,blocked=coastBlocker(root,{input}),reason=blocked?.reason??null;
  const vessels=fleet(root);
  while(!reason&&advanced<requested&&steps<maxSteps){
-  let dt=Math.min(5,requested-advanced),limiting=null;
-  for(const v of vessels){if(v.crashed||isParked(v))continue;const limit=coastStepLimit(center(v),v.vel,v.universalTime,{requested:dt,deadline:deadline(v),surfaceMargin:coastSurfaceMargin(v)});if(limit.dt<dt){dt=limit.dt;limiting=limit.reason;}}
+  let dt=Math.min(5,requested-advanced),limiting=null,limitingVessel=null,nearby=null;
+  for(const v of vessels){if(v.crashed||isParked(v))continue;const limit=coastStepLimit(center(v),v.vel,v.universalTime,{requested:dt,deadline:deadline(v),surfaceMargin:coastSurfaceMargin(v)});if(limit.dt<dt){dt=limit.dt;limiting=limit.reason;limitingVessel=v;nearby=null;}}
   // Guard encounters between retained vehicles, including a fast fly-through.
   for(let i=0;i<vessels.length;i++)for(let j=i+1;j<vessels.length;j++){
    const a=vessels[i],b=vessels[j];if(a.crashed||b.crashed||(isParked(a)&&isParked(b)))continue;
    const clearance=center(a).distanceTo(center(b))-100;
    const safe=Math.max(0,clearance)/(a.vel.clone().sub(b.vel).length()+100)*.5;
-   if(safe<dt){dt=safe;limiting='proximity';}
+   if(safe<dt){dt=safe;limiting='proximity';limitingVessel=a;nearby=b;}
   }
-  if(dt<.05&&dt<requested-advanced){reason={surface:'大気・地表への接近',soi:'月重力圏の境界',maneuver:'予定噴射の直前',proximity:'他機体への接近'}[limiting]||'通常物理が必要';break;}
+  if(dt<.05&&dt<requested-advanced){reason={surface:'大気・地表への接近',soi:'月重力圏の境界',maneuver:'予定噴射の直前',proximity:'他機体への接近'}[limiting]||'通常物理が必要';blocked=blocker(reason,limitingVessel||root,limiting,nearby);break;}
   const time=root.universalTime,end=time+dt;
-  if(end===time){reason='時刻の計算精度の上限';break;}
+  if(end===time){reason='時刻の計算精度の上限';blocked=blocker(reason,root,'precision');break;}
   // Compute on copies first: a failed propagation cannot split fleet clocks.
   const updates=vessels.map(v=>{
    if(v.crashed){const body=referenceBody(v.pos,time),a=bodyState(body,time),b=bodyState(body,end);return {v,pos:v.pos.clone().add(b.position).sub(a.position),vel:v.vel.clone().add(b.velocity).sub(a.velocity)};}
@@ -107,7 +110,7 @@ export function advanceCoastFleet(root,requested,{input=false,maxSteps=64}={}){
    v.maxAltitude=Math.max(v.maxAltitude,u.orbit.altitude);
    v.telemetry={power:u.power,force:zero.clone(),torque:zero.clone(),engineForce:zero.clone(),commands:{...commands},stallCount:0,contacts:0,atmosphere:u.air,engine:'Kepler coast'};
   }
-  advanced+=dt;steps++;reason=coastEligibility(root);
+  advanced+=dt;steps++;blocked=coastBlocker(root);reason=blocked?.reason??null;
  }
- return {advanced,steps,reason,remaining:Math.max(0,requested-advanced)};
+ return {advanced,steps,reason,blocker:blocked,remaining:Math.max(0,requested-advanced)};
 }
