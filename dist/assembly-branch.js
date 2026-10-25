@@ -1,3 +1,4 @@
+import {normalizeSymmetry} from './symmetry.js';
 import * as T from 'three';
 import {validateCraft,descendants} from './core.js';
 
@@ -25,7 +26,7 @@ export function placeBranch(parts,branch,{position,rotation,parent=null},makeId=
  const delta=matrix({p:position,r:rotation}).multiply(matrix(root).invert()),used=new Set([...parts,...source].map(p=>p.id)),ids=new Map();
  for(const p of source){const id=makeId();if(typeof id!=='string'||!id||used.has(id))throw Error('新しい部品IDが重複しています');used.add(id);ids.set(p.id,id);}
  const created=source.map(p=>{const transform=delta.clone().multiply(matrix(p)),position=new T.Vector3(),q=new T.Quaternion(),scale=new T.Vector3();transform.decompose(position,q,scale);const e=new T.Euler().setFromQuaternion(q),copy={...p,id:ids.get(p.id),parent:p.id===root.id?parent:ids.get(p.parent),p:position.toArray(),r:[e.x,e.y,e.z]};if(p.dockPartner)copy.dockPartner=ids.get(p.dockPartner);return copy;});
- const result=validateCraft({version:1,parts:[...parts,...created]});return {parts:result,rootId:ids.get(root.id),count:created.length};
+ normalizeSymmetry(created,{fresh:true});const result=validateCraft({version:1,parts:[...parts,...created]});return {parts:result,rootId:ids.get(root.id),count:created.length};
 }
 
 export function moveBranch(parts,id,{position,rotation,parent=null}){
@@ -42,5 +43,5 @@ export function moveBranch(parts,id,{position,rotation,parent=null}){
   const transform=delta.clone().multiply(matrix(p)),pos=new T.Vector3(),q=new T.Quaternion(),scale=new T.Vector3();transform.decompose(pos,q,scale);
   const e=new T.Euler().setFromQuaternion(q);p.p=pos.toArray();p.r=[e.x,e.y,e.z];if(p.id===id)p.parent=parent;
  }
- return {parts:validateCraft({version:1,parts:checked}),rootId:id,count:ids.size};
+ normalizeSymmetry(checked.filter(p=>ids.has(p.id)),{fresh:true});normalizeSymmetry(checked.filter(p=>!ids.has(p.id)));return {parts:validateCraft({version:1,parts:checked}),rootId:id,count:ids.size};
 }
