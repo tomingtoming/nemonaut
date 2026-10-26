@@ -248,3 +248,4 @@ body:not(.flying) #toolbar{left:246px;transform:none;bottom:12px;border-radius:2
 @media(max-width:600px){#practiceNotice{top:258px;font-size:9px}.flying #stageDock{max-height:25dvh}}
 .flying .navpanel{transform:translateX(-50%) scale(.88);transform-origin:bottom center}
 @media(max-width:600px){.flying .navpanel{transform:translateX(-50%)}.navSwitches{right:-63px;width:60px}}
+.stageFuel{grid-column:1/-1;display:flex;align-items:center;gap:4px;min-width:0}.stageFuel meter{width:100%;min-width:0;height:12px;accent-color:#aace63}.stageFuel span{font:9px monospace;color:#c4e29a;min-width:27px;text-align:right}.stageFuel.empty span{color:#ffb18a}.stageStackRow.spent.engaged{opacity:1;border-color:#b8c793}
