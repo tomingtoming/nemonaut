@@ -1,3 +1,4 @@
+import {engineMedium} from './engine-medium.js';
 import {fuelNetworks} from './resources.js';
 import {partSettings} from './part-settings.js';
 import {PARTS} from './catalog.js';
@@ -39,8 +40,8 @@ export function setParachuteAction(f,id,key){
 
 export function engineState(f,id){
  const p=f?.parts.find(p=>p.id===id);if(!p||!PARTS[p.type].thrust)return null;
- const active=f.active.has(id),failed=!!f.thermal.get(id)?.failed;
+ const active=f.active.has(id),failed=!!f.thermal.get(id)?.failed,d=PARTS[p.type],medium=engineMedium(f,p);
  const tanks=f.networks.network.get(id)?.tanks||[],fuel=tanks.reduce((sum,p)=>sum+(f.fuel.get(p.id)||0),0);
- const status=failed?'損傷':!active?'停止中':f.throttle===0?'スロットル待ち':(p.thrustLimit??1)===0?'推力上限 0%':!PARTS[p.type].water&&fuel<=0?'燃料供給なし':(f.engineThrust.get(id)||0)>0?'燃焼中':PARTS[p.type].water?'出力要求中':'推力待ち';
+ const status=failed?'損傷':!active?'停止中':f.throttle===0?'スロットル待ち':(p.thrustLimit??1)===0?'推力上限 0%':d.air&&medium.density<=0?'大気なし':d.water&&medium.submersion<=0?'水中でのみ作動':!d.water&&fuel<=0?'燃料供給なし':(f.engineThrust.get(id)||0)>0?(d.water?'推進中':'燃焼中'):'推力待ち';
  return {active,status,enabled:canControl(f)&&(!failed||active)};
 }
