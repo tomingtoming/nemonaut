@@ -13,6 +13,18 @@ import {selectVessel,fleet} from '../dist/fleet.js';
 
 const center=f=>f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
 
+test('Sub-ULP remainder after a completed coast is not a flight hazard, but an unadvanceable request is rejected',()=>{
+ const f=new Flight(preset('rover'),'land',105093.8);
+ try{
+  for(let i=0;i<240;i++)f.step(1/120);assert.ok(isParked(f));
+  const start=f.universalTime,r=advanceCoastFleet(f,30+1e-12,{maxSteps:100});
+  assert.equal(r.reason,null);assert.equal(r.blocker,null);assert.equal(r.advanced,30);
+  assert.ok(r.remaining>0&&r.remaining<1e-10);assert.equal(f.universalTime,start+30);
+  const saved=saveFlight(f),tiny=advanceCoastFleet(f,1e-20);
+  assert.equal(tiny.blocker.code,'precision');assert.equal(tiny.advanced,0);assert.deepEqual(saveFlight(f),saved);
+ }finally{f.dispose();}
+});
+
 test('Coast matches nonrotating unpowered Flight with SAS off, including energy and cooling',()=>{
  const f=new Flight(preset('orbiter'),'moon-orbit',40000);let slow;
  try{

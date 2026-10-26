@@ -1,8 +1,24 @@
 import test from 'node:test';import assert from 'node:assert/strict';import * as T from 'three';
 import {Flight} from '../dist/core.js';import {preset} from '../dist/catalog.js';
 import {MOON,bodyState} from '../dist/celestial.js';
-import {descentTelemetry} from '../dist/descent.js';
+import {descentTelemetry,descentGuidance} from '../dist/descent.js';
 import {advanceCoastFleet,coastSurfaceMargin} from '../dist/coast-flight.js';
+
+test('Descent warnings distinguish orbital, outbound, inbound and landed motion from real geometry',()=>{
+ const f=new Flight(preset('lunar-return'),'moon-orbit',40000);try{
+  f.stageNext();let d=descentTelemetry(f);assert.match(descentGuidance(d),/月周回中/);
+  const moon=bodyState(MOON,f.universalTime);
+  f.pos.copy(moon.position).add(new T.Vector3(0,MOON.radius+22000,0));
+  f.vel.copy(moon.velocity).add(new T.Vector3(0,84,805));
+  d=descentTelemetry(f);assert.ok(d.energy>0);assert.match(descentGuidance(d),/離脱中/);assert.doesNotMatch(descentGuidance(d),/直ちに減速/);
+  f.vel.copy(moon.velocity).add(new T.Vector3(0,-400,100));
+  d=descentTelemetry(f);assert.ok(d.periapsis<1000);assert.match(descentGuidance(d),/降下進入中|直ちに減速/);
+  f.vel.copy(moon.velocity).add(new T.Vector3(0,20,0));
+  assert.match(descentGuidance(descentTelemetry(f)),/上昇中/);
+  f.landed=true;assert.match(descentGuidance(descentTelemetry(f),.2),/噴射を停止/);
+  f.crashed=true;assert.equal(descentGuidance(descentTelemetry(f)),'機体損傷');
+ }finally{f.dispose();}
+});
 
 test('Four-legged lander settles on the moving lunar surface with the engine clear',()=>{
  for(const epoch of [0,40000])for(const direction of [new T.Vector3(0,1,0),new T.Vector3(1,0,0),new T.Vector3(1,-1,1).normalize()]){const f=new Flight(preset('lander'),'moon-orbit',epoch);try{

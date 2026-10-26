@@ -96,7 +96,12 @@ export function advanceWorldCoast(vessels,universalTime,activeVesselId,requested
   }
   if(dt<.05&&dt<requested-advanced){reason={surface:'大気・地表への接近',soi:'月重力圏の境界',maneuver:'予定噴射の直前',proximity:'他機体への接近'}[limiting]||'通常物理が必要';blocked=blocker(reason,limitingVessel||active,limiting,nearby);break;}
   const time=universalTime,end=time+dt;
-  if(end===time){reason='時刻の計算精度の上限';blocked=blocker(reason,active,'precision');break;}
+  if(end===time){
+   // A completed multi-step request can leave a sub-ULP subtraction residue.
+   // Keep the actual clock/advanced amount, without turning this into a hazard.
+   if(steps>0&&dt===requested-advanced&&dt<=Number.EPSILON*Math.max(1,Math.abs(time)))break;
+   reason='時刻の計算精度の上限';blocked=blocker(reason,active,'precision');break;
+  }
   // Compute on copies first: a failed propagation cannot split fleet clocks.
   const updates=vessels.map(v=>{
    if(v.crashed)return {v,...frozenSurfaceState(v,time,dt)};
