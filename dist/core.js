@@ -1,3 +1,4 @@
+import {angularMomentum,angularVelocity} from './angular-momentum.js';
 import {transferFuel} from './fuel-transfer.js';
 import {advanceWorldPhysics} from './world-physics.js';
 import {fleet} from './fleet.js';
@@ -39,11 +40,14 @@ export class Flight {
  set fuelRatio(value){for(const p of this.parts)if(PARTS[p.type].fuel)this.fuel.set(p.id,PARTS[p.type].fuel*Math.max(0,Math.min(1,value)));}
  buildColliders(){for(const c of this.colliders.values())this.world.removeCollider(c,true);this.colliders.clear();for(const p of this.parts){const d=PARTS[p.type],center=partCenter(p),rot=partRotation(p);const shape=d.wheel?RAPIER.ColliderDesc.ball(.35):RAPIER.ColliderDesc.cuboid(...d.size.map(n=>Math.max(.02,n/2)));shape.setTranslation(...center.toArray()).setRotation(rot).setMass(partMass(p,this.fuel,this.ballast,this.thermal)).setFriction(d.wheel?.015:.35).setRestitution(0);this.colliders.set(p.id,this.world.createCollider(shape,this.body));}this.body.recomputeMassPropertiesFromColliders();}
  transferFuel(from,to,amount){
- const before=statistics(this.parts,this.fuel,this.ballast,this.thermal),moved=transferFuel(this,from,to,amount);if(!moved)return 0;
+ const before=statistics(this.parts,this.fuel,this.ballast,this.thermal);
+ for(const p of this.parts)this.colliders.get(p.id).setMass(partMass(p,this.fuel,this.ballast,this.thermal));this.body.recomputeMassPropertiesFromColliders();
+ const momentum=angularMomentum(this.body,this.q,this.omega),moved=transferFuel(this,from,to,amount);if(!moved)return 0;
  this.stats=statistics(this.parts,this.fuel,this.ballast,this.thermal);
  // In free flight internal redistribution must not teleport the world-space COM.
  if(!this.landed)this.pos.add(before.com.clone().sub(this.stats.com).applyQuaternion(this.q));
  for(const p of this.parts)this.colliders.get(p.id).setMass(partMass(p,this.fuel,this.ballast,this.thermal));this.body.recomputeMassPropertiesFromColliders();
+ if(!this.landed)this.omega.copy(angularVelocity(this.body,this.q,momentum));
  this.orbit=bodyOrbitState(this.pos.clone().add(this.stats.com.clone().applyQuaternion(this.q)),this.vel,this.universalTime);return moved;
  }
  armParachutes(){for(const state of this.chutes.values())if(state.status==='stowed')state.status='armed';}
