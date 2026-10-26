@@ -5,10 +5,10 @@ export function audioSettings(value={}){
  const level=(v,fallback)=>Number.isFinite(v)?Math.max(0,Math.min(1,v)):fallback;
  return {music:level(value?.music,.28),effects:level(value?.effects,.55),muted:value?.muted===true};
 }
-export function soundState(flight,center=false){
+export function soundState(flight,center=false,paused=false){
  return {scene:center?'center':!flight?'workshop':(flight.orbit?.altitude||0)>=70000?'space':'flight',
-  thrust:flight&&!flight.crashed?Math.min(1,Math.sqrt(Math.max(0,flight.lastThrust||0)/180000)):0,
-  jets:flight&&!flight.crashed&&flight.rcsJets?.some(j=>j.level>.01)?1:0,crashed:!!flight?.crashed};
+  thrust:flight&&!flight.crashed&&!paused?Math.min(1,Math.sqrt(Math.max(0,flight.lastThrust||0)/180000)):0,
+  jets:flight&&!flight.crashed&&!paused&&flight.rcsJets?.some(j=>j.level>.01)?1:0,crashed:!!flight?.crashed};
 }
 // Original four-bar motifs: MIDI pitches, one bar per chord. No external audio assets.
 export const scores={
@@ -66,8 +66,8 @@ export function mountGameAudio(){
  }
  document.addEventListener('click',e=>{if(e.target.closest('button')&&!e.target.closest('.audioWindow'))play('click');});
  refresh();
- return {play,update(flight,center){
-  const state=soundState(flight,center);
+ return {play,update(flight,center,paused=false){
+  const state=soundState(flight,center,paused);
   if(previous?.flight===flight&&state.crashed&&!previous.crashed)play('crash');previous={flight,crashed:state.crashed};
   if(!ctx||ctx.state!=='running'||document.hidden)return;
   const t=ctx.currentTime;
