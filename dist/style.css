@@ -188,3 +188,14 @@ body.library-closed #library,body.inspector-closed #inspector{display:none}
 #flightQuickNav>small:empty{display:none}
 #flightQuickNav button{padding:7px;font-size:10px}
 @media(max-width:760px){#flightQuickNav{top:285px;right:10px;width:min(340px,calc(100vw - 20px));max-height:160px;overflow:auto}}
+
+@media(min-width:761px) and (max-width:900px){
+ .flying .hudreadings{right:auto;width:calc(50vw - 30px);gap:10px;padding:10px}
+ .flying .universalClock{top:220px!important}
+}
+@media(max-width:760px){.flying .universalClock{top:245px!important}}
+@media(max-width:480px){
+ .flying .hudreadings{top:195px}
+ .flying .universalClock{top:270px!important}
+ #flightQuickNav{top:310px}
+}
