@@ -199,3 +199,4 @@ body.library-closed #library,body.inspector-closed #inspector{display:none}
  .flying .universalClock{top:270px!important}
  #flightQuickNav{top:310px}
 }
+#fuelNetwork[aria-pressed=true]{border-color:#55dce8;color:#a9f3ed}
