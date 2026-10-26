@@ -5,10 +5,21 @@ export const CENTER_FACILITIES={
  runway:{name:'滑走路',description:'保存した設計を選んで地上から出発します。組立棟へ戻って調整できます。',button:'centerRunway'},
  tracking:{name:'追跡施設',description:'飛行中の機体と軌道を確認して、操縦・観察を再開します。',button:'centerTracking'}
 };
-export function centerGuidance({partCount,designCount,vesselCount,libraryError=false}){
+export function explorationProgress(history=[]){
+ return {
+  departure:history.find(e=>e.type==='launch'&&['land','runway','water'].includes(e.environment))??null,
+  orbit:history.find(e=>e.type==='orbit')??null,
+  returned:history.find(e=>e.type==='recover'&&e.orbitEventIds?.length)??null
+ };
+}
+export function centerGuidance({partCount,designCount,vesselCount,libraryError=false,history=[]}){
+ const progress=explorationProgress(history);
+ const build=libraryError?'保存設計を確認できません。発射台・滑走路で詳細を確認できます。':designCount?`保存済み ${designCount} 設計。発射台・滑走路で選んで出発できます。`:partCount?`作業中 ${partCount} 部品。組立棟で設計を保存して、発射台・滑走路へ。`:'VAB/SPHで機体を作り、設計を保存して地表から出発しましょう。';
+ const title=(name,event)=>name+(event?' · 記録済み':' · 記録なし');
+ const evidence=event=>event.name+' · UT '+event.universalTime.toFixed(1)+' s';
  return [
-  {title:'造る',text:partCount?`作業中 ${partCount} 部品。VAB/SPHで調整し「保存」で出発用の設計を残します。`:'VAB/SPHへ入り、部品を組み合わせて機体を作りましょう。'},
-  {title:'出発する',text:libraryError?'保存設計を確認できません。発射台・滑走路で詳細を確認できます。':designCount?`保存済み ${designCount} 設計。発射台・滑走路で版を選んで出発できます。`:'保存設計はまだありません。組立棟の「保存」、または発射台の「一覧に保存」から始めます。'},
-  {title:'追跡・再開',text:vesselCount?`保持中 ${vesselCount} 機。追跡施設で機体を選び、操縦や観察へ戻れます。`:'出発後は追跡施設で機体と軌道を確認できます。センターへ戻っても飛行は残ります。'}
+  {title:title('地表出発',progress.departure),completed:!!progress.departure,text:progress.departure?evidence(progress.departure)+'。'+build:build},
+  {title:title('母星軌道投入',progress.orbit),completed:!!progress.orbit,text:progress.orbit?evidence(progress.orbit)+`。近点 ${(progress.orbit.orbit.periapsis/1000).toFixed(1)} km / 遠点 ${(progress.orbit.orbit.apoapsis/1000).toFixed(1)} km。`: '地表から打ち上げ、母星に束縛された軌道で近点を70 kmより高くします。練習・旧保存の未記録の飛行は達成数に含めません。'},
+  {title:title('軌道から帰還・回収',progress.returned),completed:!!progress.returned,text:progress.returned?evidence(progress.returned)+'。次は衛星の運用や月への探査へ。':(vesselCount?`保持中 ${vesselCount} 機は追跡施設で確認できます。`:'帰還装備を備えた機体を設計しましょう。')+'軌道から逆噴射し、無損傷で着地・静止した機体を回収します。'}
  ];
 }
