@@ -14,7 +14,7 @@ function fixture(mode='4',bay='vab',type='wheel',base=[2,1,0]){
  }return parts;
 }
 test('Radial position and rotation follow the saved axis in VAB and SPH, including child branches',()=>{
- for(const bay of ['vab','sph'])for(const count of ['2','4','6']){
+ for(const bay of ['vab','sph'])for(const count of ['2','3','4','6','8']){
   const original=fixture(count,bay),before=structuredClone(original),next=editSymmetryPose(original,'m0',{position:[3,2,1],rotation:[.3,.5,.7]});
   assert.deepEqual(original,before);const canonical=pose(next.find(p=>p.id==='m0'));
   for(let i=0;i<+count;i++){
