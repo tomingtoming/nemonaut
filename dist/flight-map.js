@@ -60,7 +60,7 @@ export function mountFlightMap(canvas,onTarget=()=>{},getFlight=()=>null){
    ctx.fillStyle='#bdc8d5';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText(b.name,x,y+Math.max(2,r)+18);
   }
   for(const vessel of vessels)if(!vessel.stopped)path(mapConic(vessel.orbit,6e7),vessel.target?'#ee95e8':'#526e78',true);
-  orbitHits=[];path(moonOrbit,'#49515c');path(mapConic(o,6e7),'#e5a45b',false,true);if(preview)path(mapConic(preview.orbit,6e7),'#7de6ef',true);
+  orbitHits=[];path(moonOrbit,'#49515c');path(mapConic(o,6e7),'#e5a45b',false,true);if(preview)path(mapConic(preview.orbit,6e7),'#7de6ef',true);if(preview?.finite){path(preview.finite.points,'#9be888');path(mapConic(preview.finite.orbit,6e7),'#9be888',true);}
   const marker=(pos,label,color,key)=>{const [x,y,z]=project(pos);if(x<10||y<65||x>w-10||y>h-20)return;ctx.fillStyle=color;ctx.strokeStyle='#03070e';ctx.lineWidth=3;ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();const ly=label==='AN'||label==='DN'?y+24:y-13;ctx.strokeText(label,x,ly);ctx.fillText(label,x,ly);if(key)markers.push({x,y,key});};
   markers=[];for(const [i,v]of vessels.entries())marker(v.position,v.target?'◎ '+v.name:String(i+1),v.target?'#ee95e8':'#8fa7b0','vessel:'+v.id);
   if(o.eccentricity>1e-4&&o.normal.lengthSq()>.5){const axis=o.evec.clone().normalize();for(const [key,label,r,sign]of [['apoapsis','Ap',body.radius+o.apoapsis,-1],['periapsis','Pe',body.radius+o.periapsis,1]])if(Number.isFinite(r)&&r>=body.radius&&r<(body.sphereOfInfluence??Infinity))marker(axis.clone().multiplyScalar(r*sign).add(o.center),label+' '+((r-body.radius)/1000).toFixed(1)+' km','#b9dcff',key);}

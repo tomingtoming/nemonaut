@@ -1,3 +1,4 @@
+import {finiteBurnPreview} from '../dist/finite-burn.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';
@@ -18,13 +19,16 @@ for(const power of [.1,.01])test(`centering the return burn reduces but does not
    const duration=captureBurnEstimate(f,plan.preview.impulse.length()).duration/power;
    const start=360-(centered?duration/2:0);
    assert.ok(start>60,'attitude alignment lead time');
+   const before={fuel:[...f.fuel],pos:f.pos.toArray(),vel:f.vel.toArray(),time:f.universalTime},prediction=finiteBurnPreview(f,plan.preview.impulse,start,{throttle:power});
+   assert.deepEqual({fuel:[...f.fuel],pos:f.pos.toArray(),vel:f.vel.toArray(),time:f.universalTime},before);
    f.maneuver=createManeuverNode(plan.preview,0);f.maneuver.stopAtTarget=true;f.maneuver.tolerance=.05;
    f.sas=true;f.sasMode='maneuver';
    while(f.universalTime<start)f.step(1/120);
    const began=f.universalTime;
    for(let i=0;i<120*800&&!f.maneuver.complete&&!f.crashed;i++){f.throttle=power;f.step(1/120);}
    assert.equal(f.maneuver.complete,true);assert.equal(f.crashed,false);
-   results.push({centered,start:began,duration:f.universalTime-began,periapsis:f.orbit.periapsis,error:Math.abs(f.orbit.periapsis-25000)});
+   assert.ok(Math.abs(f.orbit.periapsis-prediction.orbit.periapsis)<10,'finite prediction agrees with physical flight within 10 m in this case');
+   results.push({predictedPeriapsis:prediction.orbit.periapsis,centered,start:began,duration:f.universalTime-began,periapsis:f.orbit.periapsis,error:Math.abs(f.orbit.periapsis-25000)});
   }finally{f.dispose();}
  }
  assert.ok(results[1].error<results[0].error*.5,'centering must materially improve this case');
