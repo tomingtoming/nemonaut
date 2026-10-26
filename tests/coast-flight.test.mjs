@@ -45,7 +45,7 @@ test('Coast shares UT with retained vessels and survives saving and switching co
  let a=new Flight(preset('orbiter'),'orbit',100);const b=new Flight(preset('orbiter'),'moon-orbit',100);let restored;
  try{
   // Give the independently constructed craft unique part IDs, as launch does.
-  for(const p of b.parts){const old=p.id;p.id='moon-'+old;if(p.parent)p.parent='moon-'+p.parent;for(const map of [b.fuel,b.charge,b.thermal])if(map.has(old)){map.set(p.id,map.get(old));map.delete(old);}}
+  for(const p of b.parts){const old=p.id;p.id='moon-'+old;if(p.parent)p.parent='moon-'+p.parent;for(const map of [b.fuel,b.charge,b.thermal,b.observations])if(map.has(old)){map.set(p.id,map.get(old));map.delete(old);}}
   a.detached.push(b);const result=advanceCoastFleet(a,60);assert.equal(result.advanced,60);
   assert.ok(fleet(a).every(v=>v.universalTime===160&&v.time===60));
   restored=loadFlight(saveFlight(a));restored=selectVessel(restored,restored.detached[0]);

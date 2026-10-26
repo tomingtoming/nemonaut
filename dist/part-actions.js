@@ -5,11 +5,12 @@ import {PARTS} from './catalog.js';
 import {canControl} from './fleet.js';
 export function partActions(f,id){
  const p=f?.parts.find(p=>p.id===id);if(!p)return [];const d=PARTS[p.type];
- return [...(d.thrust?[{key:'engine',label:'エンジン',on:f.active.has(id),globalOff:false}]:[]),...partSettings(p).filter(s=>s.type==='boolean').map(s=>({key:s.key,label:s.label,on:s.value,globalOff:['reactionEnabled','steeringEnabled','driveEnabled'].includes(s.key)&&!f[s.key]}))];
+ return [...(p.type==='probe'?[{key:'observation',label:'北観測点の観測 · 0.1 EC/s',on:f.observations.get(id)?.enabled??false,globalOff:false}]:[]),...(d.thrust?[{key:'engine',label:'エンジン',on:f.active.has(id),globalOff:false}]:[]),...partSettings(p).filter(s=>s.type==='boolean').map(s=>({key:s.key,label:s.label,on:s.value,globalOff:['reactionEnabled','steeringEnabled','driveEnabled'].includes(s.key)&&!f[s.key]}))];
 }
 export function setPartAction(f,id,key,on){
  if(!f||!canControl(f)||typeof on!=='boolean'||!partActions(f,id).some(a=>a.key===key))return false;
  const p=f.parts.find(p=>p.id===id);
+ if(key==='observation'){if(on&&f.thermal.get(id)?.failed)return false;f.observations.get(id).enabled=on;return true;}
  if(key==='engine'){if(on&&f.thermal.get(id)?.failed)return false;if(on){f.active.add(id);f.started=true;}else f.active.delete(id);}else p[key]=on;
  if(key==='fuelCrossfeed'||key==='fuelEnabled')f.networks=fuelNetworks(f.parts);
  return true;
