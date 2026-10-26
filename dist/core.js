@@ -91,7 +91,9 @@ export class Flight {
  if(this.reactionEnabled&&reaction)this.body.addTorque(new T.Vector3(commands.pitch,commands.yaw,commands.roll).multiplyScalar(reaction*power.ratio).applyQuaternion(this.q),true);
 
  advanceTransferGuide(this.transferGuide,engineForce,this.vel.clone().sub(startBody.velocity),mass,dt,startTime);
+ const maneuverWasComplete=this.maneuver?.complete;
  advanceManeuver(this.maneuver,engineForce.clone().multiplyScalar(dt/mass));
+ if(!maneuverWasComplete&&this.maneuver?.complete&&this.maneuver.stopAtTarget===true)this.throttle=0;
  const thermal=thermalStep(this.parts,this.thermal,this.q,relativeVelocity,air,dt);
  this.telemetry={thermal,force,torque,engineForce,power,stallCount,contacts,commands,engine:'Rapier 0.21'};const impactSpeed=relativeVelocity.dot(normal);
  this.world.timestep=dt;this.world.step();this.q.copy(this.body.rotation()).normalize();this.omega.copy(this.body.angvel());

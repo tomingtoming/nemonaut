@@ -1,3 +1,4 @@
+import {mountManeuverStop} from './maneuver-stop.js';
 import {maneuverBurnAvailable} from './maneuver-controls.js';
 import * as T from 'three';
 import {lunarDeparturePlan,lunarDepartureNode} from './lunar-departure.js';
@@ -7,10 +8,10 @@ import {formatDuration} from './orbit-plan.js';
 export function mountDeparturePanel(host,getFlight,changed){
  const panel=document.createElement('details');panel.id='departurePanel';panel.hidden=true;
  panel.innerHTML='<summary>現在の軌道から月へ</summary><p class="departureStatus" role="status"></p><p class="departureNumbers"></p><button class="departurePlan">月遷移を計画・SAS整列</button><div><button class="departureFull">月遷移噴射100%</button><button class="departureFine">月遷移微調整10%</button><button class="departurePrecise">月遷移微調整1%</button><button class="departureStop">月遷移噴射を停止</button></div><details class="flightHelp"><summary>月往復の手順</summary><small>Luna Expeditionは発射台から開始。自動軌道投入の実演または手動操作で周回へ。点火済みの上段を停止して計画します。落下中の分離段がある間は高速航行できません。</small><small>開始60秒前に通常速度へ戻ります。SAS予定噴射で方向差を小さくし、開始時刻に100%。残り10 m/sで10%、2 m/sで1%、到達表示で停止。有限予測もこの操作が前提です。月重力圏へ入ったら「月周回計画を固定・SAS整列」を使い、周回後は帰還計画の15 kmを選択。母星接近後にSpaceで推進部を分離、SAS逆行、SpaceまたはHでパラシュート待機。</small><small>探索は現在軌道の2周分に限定します。候補が見つからない場合や燃料不足の場合は軌道・機体設計を見直してください。計画は自動噴射ではありません。</small></details>';
- host.before(panel);let message='',vessel=null;
+ host.before(panel);const stopAssist=mountManeuverStop(panel,getFlight,'departure');let message='',vessel=null;
  panel.querySelector('.departurePlan').onclick=()=>{const f=getFlight();if(!f||!canControl(f))return;try{const plan=lunarDeparturePlan(f);f.maneuver=lunarDepartureNode(plan,f);f.sas=true;f.sasMode='maneuver';message='';changed('月遷移計画を固定しました。噴射と停止は手動です。');}catch(e){message=e.message;}update();};
  for(const [name,throttle]of [['Full',1],['Fine',.1],['Precise',.01],['Stop',0]])panel.querySelector('.departure'+name).onclick=()=>{const f=getFlight();if(f?.maneuver?.departure&&canControl(f)&&(throttle===0||maneuverBurnAvailable(f,'departure'))){f.throttle=throttle;changed();update();}};
- function update(){const f=getFlight(),node=f?.maneuver,meta=node?.departure;panel.hidden=!f||(!meta&&(f.orbit?.bodyId!=='planet'||!f.orbit?.stable||!!f.transferGuide));if(panel.hidden)return;
+ function update(){stopAssist.update();const f=getFlight(),node=f?.maneuver,meta=node?.departure;panel.hidden=!f||(!meta&&(f.orbit?.bodyId!=='planet'||!f.orbit?.stable||!!f.transferGuide));if(panel.hidden)return;
   if(vessel!==f){vessel=f;message='';panel.open=!!meta;}
   panel.querySelector('.departurePlan').disabled=!canControl(f)||!!meta;
   for(const name of ['Full','Fine','Precise','Stop'])panel.querySelector('.departure'+name).disabled=name==='Stop'?(!canControl(f)||!meta):!maneuverBurnAvailable(f,'departure');

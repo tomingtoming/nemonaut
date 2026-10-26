@@ -1,6 +1,26 @@
 import test from 'node:test';import assert from 'node:assert/strict';import * as T from 'three';
 import {Flight} from '../dist/core.js';import {preset} from '../dist/catalog.js';import {maneuverPreview} from '../dist/maneuver.js';import {createManeuverNode,maneuverDirection,advanceManeuver} from '../dist/maneuver-node.js';import {saveFlight,loadFlight} from '../dist/flight-save.js';
 const plan=(f,dv=30)=>createManeuverNode(maneuverPreview(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.vel,'now',dv),f.time);
+
+test('Opt-in target cutoff survives save, never ignites, and stops actual fuel consumption on completion',()=>{
+ for(const dt of [1/120,1/30]){
+  let f=new Flight(preset('rocket'),'orbit');
+  try{
+   f.maneuver=plan(f,30);f.maneuver.stopAtTarget=true;f.sasMode='maneuver';
+   for(let i=0;i<2400;i++)f.step(1/120);
+   assert.equal(f.started,false);assert.equal(f.throttle,0);assert.equal(f.fuelRatio,1);
+   const saved=saveFlight(f);f.dispose();f=loadFlight(saved);assert.equal(f.maneuver.stopAtTarget,true);
+   const bad=structuredClone(saved);bad.maneuver.stopAtTarget='yes';assert.throws(()=>loadFlight(bad));
+   f.stageNext();f.throttle=.1;
+   for(let i=0;i<40/dt&&!f.maneuver.complete;i++)f.step(dt);
+   assert.ok(f.maneuver.complete);assert.equal(f.throttle,0);
+   assert.ok(new T.Vector3(...f.maneuver.remaining).length()<.5);
+   const fuel=[...f.fuel];for(let i=0;i<120;i++)f.step(dt);assert.deepEqual([...f.fuel],fuel);
+   // Completion is a one-shot cutoff, not a permanent lock on player controls.
+   f.throttle=.1;f.step(dt);assert.equal(f.throttle,.1);assert.ok(f.fuelRatio<1);
+  }finally{f.dispose();}
+ }
+});
 test('Fixed node survives coast and only engine acceleration changes remaining delta-v',()=>{const f=new Flight(preset('rocket'),'orbit');f.maneuver=plan(f);const before=structuredClone(f.maneuver);for(let i=0;i<1200;i++)f.step(1/120);assert.deepEqual(f.maneuver,before);f.dispose();});
 test('Manual burn following maneuver SAS reaches planned delta-v using real fuel and thrust',()=>{const f=new Flight(preset('rocket'),'orbit');f.maneuver=plan(f,30);f.sasMode='maneuver';for(let i=0;i<20*120;i++)f.step(1/120);assert.ok(new T.Vector3(0,1,0).applyQuaternion(f.q).dot(maneuverDirection(f.maneuver))>.999);const fuel=f.fuelRatio;f.stageNext();f.throttle=.1;for(let i=0;i<40*120&&!f.maneuver.complete;i++)f.step(1/120);assert.ok(f.maneuver.complete);assert.ok(f.fuelRatio<fuel);assert.equal(f.throttle,.1,'no automatic cutoff or ignition');assert.ok(new T.Vector3(...f.maneuver.remaining).length()<.5);f.throttle=0;f.dispose();});
 test('Off-axis and reverse impulses are retained in vector error rather than falsely counted as completion',()=>{const f=new Flight(preset('rocket'),'orbit'),n=plan(f,30),initial=new T.Vector3(...n.remaining),side=new T.Vector3(1,0,0);advanceManeuver(n,side.multiplyScalar(10));assert.ok(new T.Vector3(...n.remaining).length()>30);advanceManeuver(n,initial.clone().negate());assert.ok(new T.Vector3(...n.remaining).length()>60);assert.equal(n.complete,false);f.dispose();});

@@ -1,3 +1,4 @@
+import {mountManeuverStop} from './maneuver-stop.js';
 import {maneuverBurnAvailable} from './maneuver-controls.js';
 import {canControl} from './fleet.js';
 import * as T from 'three';
@@ -7,12 +8,12 @@ import {formatDuration} from './orbit-plan.js';
 
 export function mountCapturePanel(host,getFlight,notify){
  const panel=document.createElement('section');panel.className='transferPanel';panel.id='capturePanel';panel.hidden=true;
- panel.innerHTML='<strong>月周回・手動投入ガイド</strong><p class="captureStatus" role="status"></p><p class="captureNumbers"></p><button class="capturePlan">月周回計画を固定・SAS整列</button><div><button class="captureFull">全開で噴射</button><button class="captureFine">10%で微調整</button><button class="captureStop">噴射停止 X</button></div><small>開始60秒前に高速航行を解除。SAS「予定噴射」で方向差を確認し、開始時刻に手動で全開。残り30 m/sで10%へ絞り、目標到達で停止。近点での瞬間噴射を基にした案のため、実際の遠近点で周回を確認してください。自動点火・自動停止はしません。</small>';
- host.after(panel);
+ panel.innerHTML='<strong>月周回・手動投入ガイド</strong><p class="captureStatus" role="status"></p><p class="captureNumbers"></p><button class="capturePlan">月周回計画を固定・SAS整列</button><div><button class="captureFull">全開で噴射</button><button class="captureFine">10%で微調整</button><button class="captureStop">噴射停止 X</button></div><small>開始60秒前に高速航行を解除。SAS「予定噴射」で方向差を確認し、開始時刻に手動で全開。残り30 m/sで10%へ絞り、目標到達で停止。近点での瞬間噴射を基にした案のため、実際の遠近点で周回を確認してください。点火・推力調整は手動です。停止支援は下のチェックで選択できます。</small>';
+ host.after(panel);const stopAssist=mountManeuverStop(panel,getFlight,'capture');
  const status=panel.querySelector('.captureStatus'),numbers=panel.querySelector('.captureNumbers'),planButton=panel.querySelector('.capturePlan');let message='',vessel=null;
  planButton.onclick=()=>{const f=getFlight();if(!f||!canControl(f))return;try{const plan=lunarCapturePlan(f);f.maneuver=captureNode(plan,f);f.sas=true;f.sasMode='maneuver';message='';notify('月周回計画を固定しました。60秒の整列後、点火・停止は手動です。');}catch(e){message=e.message;}update();};
  for(const [name,throttle]of [['Full',1],['Fine',.1],['Stop',0]])panel.querySelector('.capture'+name).onclick=()=>{const f=getFlight();if(f&&canControl(f)&&f.maneuver?.capture&&(throttle===0||maneuverBurnAvailable(f,'capture')))f.throttle=throttle;update();};
- function update(){
+ function update(){stopAssist.update();
   const f=getFlight(),node=f?.maneuver,meta=node?.capture;panel.hidden=!f||(!meta&&(f.orbit?.bodyId!=='moon'||(f.orbit.energy<0&&(f.orbit.periapsis<1000||f.orbit.apoapsis+MOON.radius<MOON.sphereOfInfluence))));if(panel.hidden)return;
   if(vessel!==f){vessel=f;message='';}
   const o=f.orbit,closed=o?.bodyId==='moon'&&o.energy<0&&o.periapsis>1000&&o.apoapsis+MOON.radius<MOON.sphereOfInfluence;
