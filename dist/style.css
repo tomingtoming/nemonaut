@@ -261,3 +261,5 @@ body:not(.flying) #toolbar{left:246px;transform:none;bottom:12px;border-radius:2
 /* Flight actions must remain clickable above the inspector. */
 #flightMenu[open],#flightSystems[open]{z-index:9}
 body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
+#mapThrottle{position:fixed;left:14px;bottom:12px;display:flex;gap:4px;pointer-events:auto}#mapThrottle #mapCutoff{position:static}#mapThrottle button{padding:6px 9px}#mapThrottle button[aria-pressed=true]{background:#536d82}
+#mapFlightState{bottom:48px}#orbitCaution{bottom:86px}
