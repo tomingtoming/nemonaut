@@ -11,3 +11,22 @@ test('Disabled fin and gimbal return to neutral under continued pilot input, set
 test('Actions cannot target absent equipment, missing parts or an uncontrollable vessel',()=>{
  const f=new Flight(preset('rover'),'land');try{const wheel=f.parts.find(p=>p.type==='wheel'),core=f.parts.find(p=>PARTS[p.type].control);assert.ok(setPartAction(f,wheel.id,'driveEnabled',false));assert.ok(f.parts.filter(p=>p.type==='wheel'&&p.id!==wheel.id).every(p=>p.driveEnabled!==false));assert.equal(setPartAction(f,wheel.id,'reactionEnabled',false),false);assert.equal(setPartAction(f,'missing','engine',true),false);f.reactionEnabled=false;assert.equal(partActions(f,core.id).find(a=>a.key==='reactionEnabled').globalOff,true);f.crashed=true;assert.equal(setPartAction(f,wheel.id,'driveEnabled',true),false);}finally{f.dispose();}
 });
+import {engineState} from '../dist/part-actions.js';
+test('Engine window distinguishes shutdown, idle, thrust limit, fuel isolation and restarted burn',()=>{
+ const f=new Flight(preset('launcher'),'orbit');let saved;
+ try{
+  const engine=f.parts.find(p=>p.type==='engine'),id=engine.id,tanks=f.networks.network.get(id).tanks;
+  assert.equal(engineState(f,id).status,'停止中');assert.equal(engineState(f,f.parts[0].id),null);
+  setPartAction(f,id,'engine',true);assert.equal(engineState(f,id).status,'スロットル待ち');assert.equal(f.stage,-1);
+  f.throttle=.3;engine.thrustLimit=0;assert.equal(engineState(f,id).status,'推力上限 0%');engine.thrustLimit=1;
+  for(const tank of tanks)setPartAction(f,tank.id,'fuelEnabled',false);
+  run(f);assert.equal(engineState(f,id).status,'燃料供給なし');assert.equal(f.lastThrust,0);
+  for(const tank of tanks)setPartAction(f,tank.id,'fuelEnabled',true);
+  run(f);assert.equal(engineState(f,id).status,'燃焼中');assert.ok(f.lastThrust>0);
+  setPartAction(f,id,'engine',false);run(f);assert.equal(f.lastThrust,0);assert.equal(f.throttle,.3);
+  setPartAction(f,id,'engine',true);run(f);assert.ok(f.lastThrust>0);assert.equal(f.active.size,1);assert.equal(f.stage,-1);
+  saved=loadFlight(saveFlight(f));assert.ok(saved.active.has(id));assert.equal(saved.throttle,.3);
+  f.thermal.get(id).failed=true;assert.equal(engineState(f,id).status,'損傷');assert.ok(engineState(f,id).enabled);
+  assert.equal(setPartAction(f,id,'engine',false),true);assert.equal(engineState(f,id).enabled,false);assert.equal(setPartAction(f,id,'engine',true),false);
+ }finally{saved?.dispose();f.dispose();}
+});
