@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {Flight} from '../dist/core.js';import {preset} from '../dist/catalog.js';import {transferBurnTiming} from '../dist/timed-rendezvous.js';
+test('Burn timing uses active connected fuel without consuming live propellant and rejects unavailable propulsion',()=>{
+ const f=new Flight(preset('rocket'),'orbit');try{assert.throws(()=>transferBurnTiming(f,30));f.stageNext();const fuel=[...f.fuel],mass=f.stats.mass;const burn=transferBurnTiming(f,30);assert.ok(burn.offset>0&&burn.offset<burn.duration);assert.ok(burn.delivered>=29.95&&burn.delivered<=30.1);assert.deepEqual([...f.fuel],fuel);assert.equal(f.stats.mass,mass);f.throttle=.1;assert.throws(()=>transferBurnTiming(f,30));f.throttle=0;for(const id of f.fuel.keys())f.fuel.set(id,0);assert.throws(()=>transferBurnTiming(f,30));}finally{f.dispose();}
+});
