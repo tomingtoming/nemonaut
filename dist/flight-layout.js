@@ -1,3 +1,4 @@
+import {mountKspLayout} from './ksp-layout.js';
 // Reuse the existing controls and event handlers across workshop/flight views.
 export function mountFlightLayout(){
  const header=document.querySelector('header'),right=header.querySelector('.headright');
@@ -29,4 +30,5 @@ export function mountFlightLayout(){
  for(const el of [...bottom.children])if(el.tagName==='LABEL'||el.tagName==='SPAN'||el.id==='actuatorControls'||el.id==='aeroFlight')extra.lastElementChild.append(el);
  bottom.append(extra);
  document.querySelector('#thermalPanel').open=false;
+ mountKspLayout();
 }

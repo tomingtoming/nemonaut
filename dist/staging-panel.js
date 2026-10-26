@@ -1,9 +1,11 @@
+import {renderStageStack} from './ksp-layout.js';
 import {PARTS} from './catalog.js';
 import {stagePlan} from './staging.js';
 import {stagingDiagnostics} from './staging-diagnostics.js';
 const references=new WeakMap();
 
 export function renderStagingPanel(host,parts,{flight=null,onSelect,onMove}){
+ const stack=document.querySelector('#stageStack');if(stack)renderStageStack(stack,parts,{flight,onSelect,onMove});
  host.replaceChildren();
  const note=document.createElement('p');note.className='muted';
  note.textContent=flight?'現在の機体の作動段。飛行中は編集できません。':'上から順にSpaceで作動。同じ段は同時に作動。段の移動は隣の段と交換します。';host.append(note);
