@@ -61,7 +61,7 @@ test('surface-launched A survives B launch, orbit, return, recovery and whole-ga
   const returnEvent=game.world.history.at(-1),orbitEvent=game.world.history.find(e=>e.type==='orbit'&&e.vesselId===bId);
   assert.equal(returnEvent.bodyId,'planet');assert.deepEqual(returnEvent.orbitEventIds,[orbitEvent.id]);assert.equal(returnEvent.partIds.length,3);assert.match(historyActionLabel(returnEvent),/軌道から帰還/);
   const guide=centerGuidance({history:game.world.history,partCount:draft.parts.length,designCount:1,vesselCount:game.world.vessels.length});
-  assert.ok(guide.every(step=>step.completed));assert.match(guide[2].text,/Return B/);
+  assert.ok(guide.slice(0,3).every(step=>step.completed));assert.ok(guide.slice(3).every(step=>!step.completed));assert.match(guide[2].text,/Return B/);
   const aAfter=game.world.vessels.find(v=>v.vesselId===aId);
   for(const key of ['vesselId','pos','vel','fuel','charge','thermal','state','universalTime'])assert.deepEqual(aAfter[key],aBefore[key]);
   f=loadFlight(flightFromWorld(game.world));assert.ok(f.orbit.stable);assert.equal(f.vesselId,aId);

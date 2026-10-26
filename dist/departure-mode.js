@@ -9,6 +9,9 @@ export function departureMode(environment){
  const [mode,label]=environments[environment];return {mode,label};
 }
 export function historyActionLabel(event){
+ if(event.type==='recover'&&event.moonEventIds?.length)return '月探査から母星へ帰還・回収';
+ if(event.type==='moon-arrival')return '月の重力圏に到達';
+ if(event.type==='moon-landing')return '月面に着陸';
  if(event.type==='recover'&&event.orbitEventIds)return '母星軌道から帰還・回収';
  if(event.type==='orbit')return '母星軌道投入 · 近点 '+(event.orbit.periapsis/1000).toFixed(1)+' km / 遠点 '+(event.orbit.apoapsis/1000).toFixed(1)+' km';
  if(event.type!=='launch')return {recover:'回収',terminate:'運用終了'}[event.type];

@@ -13,7 +13,7 @@ test('center does not infer progress from existing craft, designs, practice plac
  assert.ok(centerGuidance({...context,history:practice.history}).every(s=>!s.completed));
  const world=launchWorld(worldFromFlight(null),{parts:preset('rover'),name:'Surface survey',environment:'land'});
  const history=[...world.history,{type:'recover',name:'Surface survey',universalTime:3}],before=structuredClone(history);
- const guide=centerGuidance({...context,history});assert.deepEqual(guide.map(s=>s.completed),[true,false,false]);
+ const guide=centerGuidance({...context,history});assert.deepEqual(guide.map(s=>s.completed),[true,false,false,false,false,false]);
  assert.match(guide[0].text,/Surface survey/);assert.deepEqual(history,before);
  const broken=centerGuidance({...context,history,libraryError:true});assert.equal(broken[0].completed,true);assert.match(broken[0].text,/保存設計を確認できません/);
 });

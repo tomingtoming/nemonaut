@@ -18,9 +18,9 @@ export function surfaceOrigins(partIds,origins){
  return [...events].sort();
 }
 
-export function orbitalOrigins(history){
+export function orbitalOrigins(history,type='orbit'){
  const origins=new Map();
- for(const event of history)if(event.type==='orbit')for(const id of event.partIds??[])if(!origins.has(id))origins.set(id,event.id);
+ for(const event of history)if(event.type===type)for(const id of event.partIds??[])if(!origins.has(id))origins.set(id,event.id);
  return origins;
 }
 export function orbitalReturnSources(partIds,origins){

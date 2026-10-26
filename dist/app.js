@@ -1,5 +1,6 @@
 import {setOrbitUp} from './camera-up.js';
 import {recordOrbitAchievements} from './exploration-history.js';
+import {recordLunarAchievements} from './lunar-achievements.js';
 import {PracticeSession} from './practice-session.js';
 import {departureMode,historyActionLabel,updateDepartureButton} from './departure-mode.js';
 import {updateFlightControls} from './flight-controls.js';
@@ -231,7 +232,7 @@ let explorationError='';
 function updateExploration(){
  if(!flight||!parkedWorld||practiceSession)return;
  try{
-  const before=parkedWorld.history,next=recordOrbitAchievements(before,flight);
+  const before=parkedWorld.history,next=recordLunarAchievements(recordOrbitAchievements(before,flight),flight);
   parkedWorld.history=next;explorationError='';
   for(const event of next.slice(before.length))notify(event.name+' · '+historyActionLabel(event));
  }catch(e){if(explorationError!==e.message){explorationError=e.message;notify('探査記録を保存できません：'+e.message);}}
