@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import * as T from 'three';
+import {mapConic} from '../dist/flight-map.js';import {bodyOrbitState,lunarTrial,MOON} from '../dist/celestial.js';
+test('Map conics retain 3D body-centered geometry and respect surface and sphere of influence',()=>{const trial=lunarTrial(123),o=bodyOrbitState(trial.pos,trial.vel,123),points=mapConic(o,6e7).filter(Boolean);assert.ok(points.length>700);for(const p of points)assert.ok(Math.abs(p.distanceTo(o.center)-(MOON.radius+20000))<1);assert.equal(mapConic({...o,normal:new T.Vector3()},6e7).length,0);assert.ok(mapConic(o,1000).every(p=>p===null));});
