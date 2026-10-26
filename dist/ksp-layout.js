@@ -1,6 +1,7 @@
 import {stageFuelLevels} from './stage-fuel.js';
 import {stagePlan} from './staging.js';
 import {PARTS} from './catalog.js';
+import {chuteNames} from './recovery.js';
 const lastStages=new WeakMap();
 export function renderStageStack(host,parts,{flight,onSelect,onMove}){
  host.replaceChildren();const fuelLevels=stageFuelLevels(parts,flight?.fuel);
@@ -10,7 +11,8 @@ export function renderStageStack(host,parts,{flight,onSelect,onMove}){
   const label=document.createElement('b');label.textContent=String(slot.stage).padStart(2,'0');row.append(label);
   const icons=document.createElement('div');icons.className='stageStackIcons';
   for(const action of slot.actions){const p=parts.find(p=>p.id===action.id),button=document.createElement('button');
-   const name=action.label+' · '+(parts.indexOf(p)+1)+'. '+PARTS[p.type].name;button.title=name;button.setAttribute('aria-label',name);button.disabled=!!flight;
+   const chute=action.kind==='chute'&&flight?flight.chutes.get(p.id)?.status:null;if(chute){button.dataset.chute=chute;row.classList.toggle('chuteActive',row.classList.contains('chuteActive')||['armed','reefed','open'].includes(chute));}
+   const name=(chute?'パラシュート '+chuteNames[chute]:action.label)+' · '+(parts.indexOf(p)+1)+'. '+PARTS[p.type].name;button.title=name;button.setAttribute('aria-label',name);button.disabled=!!flight;
    button.innerHTML={engine:'<svg viewBox="0 0 24 24"><path d="M9 3h6l1 5-2 3 4 8H6l4-8-2-3z"/><path d="M9 21v2m3-2v2m3-2v2"/></svg>',separate:'<svg viewBox="0 0 24 24"><path d="M4 7h16v3H4zm0 7h16v3H4z"/></svg>',chute:'<svg viewBox="0 0 24 24"><path d="M3 10a9 9 0 0 1 18 0zM3 10l9 11 9-11M12 10v11"/></svg>'}[action.kind];button.onclick=()=>onSelect(p.id);icons.append(button);
   }
   if(!slot.actions.length){const empty=document.createElement('span');empty.textContent='—';icons.append(empty);}row.append(icons);
