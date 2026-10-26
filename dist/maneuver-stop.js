@@ -7,14 +7,15 @@ export function remainingBurnSeconds(f){
 }
 
 // Explicit opt-in per plan. Never lights an engine or chooses its throttle.
-export function mountManeuverStop(panel,getFlight,kind){
+export function mountManeuverStop(panel,getFlight,kind=null){
+ const accepts=node=>node&&(kind?node[kind]:!node.capture&&!node.returnPlan&&!node.departure);
  const label=document.createElement('label'),input=document.createElement('input'),estimate=document.createElement('small');
  input.type='checkbox';input.setAttribute('aria-label','目標Δvで噴射停止');
- label.append(input,document.createTextNode('目標Δvで噴射停止（点火・推力調整は手動）'));
+ label.append(input,document.createTextNode(kind?'目標Δvで噴射停止（点火・推力調整は手動）':'目標Δvで噴射停止'));label.title='点火・推力調整は手動';
  panel.append(label,estimate);
- input.onchange=()=>{const f=getFlight();if(f?.maneuver?.[kind]&&!f.maneuver.complete&&canControl(f))f.maneuver.stopAtTarget=input.checked;update();};
+ input.onchange=()=>{const f=getFlight();if(accepts(f?.maneuver)&&!f.maneuver.complete&&canControl(f))f.maneuver.stopAtTarget=input.checked;update();};
  function update(){
-  const f=getFlight(),node=f?.maneuver?.[kind]?f.maneuver:null;
+  const f=getFlight(),node=accepts(f?.maneuver)?f.maneuver:null;
   input.checked=node?.stopAtTarget===true;input.disabled=!node||node.complete||!canControl(f);
   const seconds=node?remainingBurnSeconds(f):null;
   estimate.textContent=!node?'計画固定後に停止支援を選べます。':node.complete?(node.stopAtTarget?'目標到達 · 停止支援を選択済み':'目標到達 · 手動で噴射を停止してください。'):seconds!==null?`現在の推力なら残り約 ${seconds.toFixed(1)} 秒（整列時の目安）。`:'点火・開始時刻・方向を確認してください。停止支援は点火しません。';
