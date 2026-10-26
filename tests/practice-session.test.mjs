@@ -62,3 +62,9 @@ test('rendezvous practice adds a separate target at the home epoch and quicksave
  assert.throws(()=>new PracticeSession(game,{...draft,environment:'moon-orbit',practiceScenario:'rendezvous'}),/母星/);
  assert.throws(()=>new PracticeSession(game,{...draft,practiceScenario:'invalid'}),/不明/);
 });
+
+test('close docking practice places opposed ports 20m apart without changing the home world',async()=>{
+ const {portGuidance}=await import('../dist/port-navigation.js');const {game,draft}=fixture(),before=structuredClone(game),session=new PracticeSession(game,{...draft,parts:preset('orbital-tug'),name:'Training Tug',practiceScenario:'docking'}),f=loadFlight(flightFromWorld(session.initialWorld));
+ try{assert.equal(f.detached.length,1);const target=f.detached[0],g=portGuidance(f,f.dockingPorts.own,target,f.dockingPorts.target);assert.ok(Math.abs(g.axial-20)<1e-6);assert.ok(g.lateral<1e-6);assert.ok(g.angle<1e-6);assert.ok(g.speed<1e-6);assert.equal(target.vesselName,'接続先 · Orbital Tug');assert.equal(target.sasMode,'hold');assert.equal(f.portTranslationEnabled,true);session.saveFlight(saveFlight(f));const replay=loadFlight(session.loadFlight());assert.equal(replay.detached[0].vesselName,target.vesselName);replay.dispose();assert.deepEqual(game,before);}finally{f.dispose();}
+ assert.throws(()=>new PracticeSession(game,{...draft,practiceScenario:'docking'}),/ポート/);
+});
