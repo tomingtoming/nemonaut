@@ -13,9 +13,9 @@ export function surfaceAngularVelocity(body=PRIMARY){
 export function surfaceOrientation(time=0,body=PRIMARY){
  return new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),body.id==='planet'?(time%PRIMARY_ROTATION_PERIOD)*PRIMARY_ROTATION_RATE:0);
 }
-// Ground facilities share a planet-fixed frame. The runway is 2 km north of the pad.
+// Planet-fixed departures: runway 2 km north, sea launch 4 km south of the pad.
 export function launchSiteOrientation(environment){
- return new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),environment==='runway'?-2000/PRIMARY.radius:0);
+ return new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),(environment==='runway'?-2000:environment==='water'?4000:0)/PRIMARY.radius);
 }
 export function fixedToInertial(point,time=0,body=PRIMARY){
  return point.clone().applyQuaternion(surfaceOrientation(time,body)).add(bodyState(body,time).position);
