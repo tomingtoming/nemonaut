@@ -36,6 +36,6 @@ export function retireWorldVessel(value,id,mode){
  const world=validateWorld(value),target=vessel(world,id);
  const result=retireVessel(flightFromWorld(world),target.parts[0].id,mode);
  const next=worldFromFlight(result.record,{universalTime:world.universalTime,history:world.history});
- next.history=appendHistory(next,mode,target);if(world.activeVesselId===null)next.activeVesselId=null;
+ next.history=appendHistory(next,mode,target,{bodyId:result.removed.bodyId});if(world.activeVesselId===null)next.activeVesselId=null;
  return {world:next,removed:{...result.removed,vesselId:id}};
 }

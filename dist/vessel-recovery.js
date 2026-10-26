@@ -15,7 +15,7 @@ export function recoveryStatus(v){
   return Math.abs(bodyAltitude(center,v.universalTime))<=extent+.1;
  });
  const recoverable=!v.crashed&&quiet&&v.time>.5&&(v.landed||afloat);
- return {recoverable,action:recoverable?'回収':'運用終了',reason:v.crashed?'機体損傷':recoverable?(v.environment==='water'?'着水・静止':'着地・静止'):'飛行中または移動中'};
+ return {recoverable,bodyId:motion.body.id,action:recoverable?'回収':'運用終了',reason:v.crashed?'機体損傷':recoverable?(v.environment==='water'?'着水・静止':'着地・静止'):'飛行中または移動中'};
 }
 
 // Work on an independent copy: rejection never mutates the caller's world.
@@ -31,7 +31,7 @@ export function retireVessel(record,partId,mode){
   for(const v of vessels)v.detached=[];
   if(next){next.detached=remaining.filter(v=>v!==next);resolveTargets(next);}
   const result=next?saveFlight(next,{...record.meta,name:next.vesselName||record.meta?.name,pilot:null}):null;
-  return {record:result,removed:{name:target.vesselName||'機体',parts:target.parts.length,action:mode==='recover'?'回収':'運用終了'}};
+  return {record:result,removed:{name:target.vesselName||'機体',parts:target.parts.length,bodyId:status.bodyId,action:mode==='recover'?'回収':'運用終了'}};
  }finally{
   // Dispose each physics world exactly once after detaching the ownership tree.
   if(vessels.length){for(const v of vessels)v.detached=[];for(const v of vessels)v.dispose();}else root.dispose();

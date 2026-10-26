@@ -1,3 +1,4 @@
+import {historyActionLabel} from '../dist/departure-mode.js';
 import {recordOrbitAchievements} from '../dist/exploration-history.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -55,6 +56,8 @@ test('surface-launched A survives B launch, orbit, return, recovery and whole-ga
   const recovered=retireWorldVessel(world,bId,'recover');assert.equal(recovered.world.vessels.length,count-1);assert.equal(recovered.removed.action,'回収');
   const game=validateGame(JSON.parse(JSON.stringify(gameRecord({world:recovered.world,draft}))));
   assert.deepEqual(game.workshop,JSON.parse(JSON.stringify(draft)));assert.equal(game.world.activeVesselId,aId);assert.ok(!game.world.vessels.some(v=>v.vesselId===bId));assert.deepEqual(game.world.history.map(e=>e.type),['launch','orbit','launch','orbit','recover']);assert.equal(game.world.history.at(-1).vesselId,bId);
+  const returnEvent=game.world.history.at(-1),orbitEvent=game.world.history.find(e=>e.type==='orbit'&&e.vesselId===bId);
+  assert.equal(returnEvent.bodyId,'planet');assert.deepEqual(returnEvent.orbitEventIds,[orbitEvent.id]);assert.equal(returnEvent.partIds.length,3);assert.match(historyActionLabel(returnEvent),/軌道から帰還/);
   const aAfter=game.world.vessels.find(v=>v.vesselId===aId);
   for(const key of ['vesselId','pos','vel','fuel','charge','thermal','state','universalTime'])assert.deepEqual(aAfter[key],aBefore[key]);
   f=loadFlight(flightFromWorld(game.world));assert.ok(f.orbit.stable);assert.equal(f.vesselId,aId);

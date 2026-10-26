@@ -44,7 +44,7 @@ test('launch and recovery records survive flight capture and recovery of the las
  assert.deepEqual(world.history,initial);
  const before=structuredClone(world),result=retireWorldVessel(world,id,'recover');world=result.world;
  assert.deepEqual(before.history,initial);assert.equal(world.vessels.length,0);assert.deepEqual(world.history.map(e=>e.type),['launch','recover']);
- assert.equal(world.history[0].universalTime,100);assert.ok(world.history[1].universalTime>101);assert.ok(world.history[1].missionTime>1);assert.equal(world.history[1].vesselId,id);
+ assert.equal(world.history[0].universalTime,100);assert.ok(world.history[1].universalTime>101);assert.ok(world.history[1].missionTime>1);assert.equal(world.history[1].vesselId,id);assert.equal(world.history[1].bodyId,'planet');assert.equal(world.history[1].orbitEventIds,undefined);
  const draft={parts:[],name:'Next',bay:'vab',environment:'land'},game=validateGame(JSON.parse(JSON.stringify(gameRecord({world,draft}))));
  assert.deepEqual(game.world.history,world.history);
  world=launchWorld(game.world,{parts:preset('rocket'),name:'Next',environment:'land'});

@@ -19,7 +19,7 @@ export function recordOrbitAchievements(history,root,{practice=false}={}){
   if(orbit.bodyId!=='planet'||!orbit.stable||!Number.isFinite(orbit.apoapsis)||orbit.apoapsis<orbit.periapsis)continue;
   result=appendHistory({history:result,universalTime:root.universalTime},'orbit',{
    vesselId:vessel.vesselId,vesselName:vessel.vesselName,state:{time:vessel.time},parts:vessel.parts
-  },{bodyId:'planet',periapsis:orbit.periapsis,apoapsis:orbit.apoapsis},sources);
+  },{orbit:{bodyId:'planet',periapsis:orbit.periapsis,apoapsis:orbit.apoapsis},launchEventIds:sources});
   achieved.add(vessel.vesselId);
  }
  return result;
