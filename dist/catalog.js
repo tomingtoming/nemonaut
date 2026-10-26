@@ -1,4 +1,16 @@
 export const PARTS = {
+ tankSmall:{name:'小型タンク',code:'FT-225',cat:'燃料',mass:25,fuel:225,size:[0.625,1,0.625],desc:'直径0.625 m・推進剤225 kg。接続したエンジンへ供給。'},
+ tankLarge:{name:'大型タンク',code:'FT-14400',cat:'燃料',mass:1200,fuel:14400,size:[2.5,4,2.5],desc:'直径2.5 m・推進剤14400 kg。接続したエンジンへ供給。'},
+ adapterSmall:{name:'異径アダプター 0.625–1.25',code:'AD-125',cat:'構造',mass:30,size:[1.25,0.6,1.25],desc:'上面0.625 m／下面1.25 m。燃料は通過。回転して逆向きにも接続可能。'},
+ adapterLarge:{name:'異径アダプター 1.25–2.5',code:'AD-250',cat:'構造',mass:120,size:[2.5,1,2.5],desc:'上面1.25 m／下面2.5 m。燃料は通過。回転して逆向きにも接続可能。'},
+ decouplerSmall:{name:'分離リング 0.625 m',code:'DC-62',cat:'構造',mass:15,size:[0.625,0.16,0.625],decoupler:true,desc:'直径0.625 m。ステージで接続枝を分離。燃料通過なし。'},
+ decouplerLarge:{name:'分離リング 2.5 m',code:'DC-250',cat:'構造',mass:140,size:[2.5,0.32,2.5],decoupler:true,desc:'直径2.5 m。ステージで接続枝を分離。燃料通過なし。'},
+ engineSeaSmall:{name:'小型海面用エンジン',code:'SL-12',cat:'推進',mass:70,thrust:12000,isp:310,ispSeaLevel:285,size:[0.625,0.8,0.625],gimbal:6,gimbalPivot:[0,0.120,0],desc:'直径0.625 m。推力 海面11.0／真空12 kN、比推力 285／310 s。ジンバル6°。'},
+ engineVacSmall:{name:'小型真空用エンジン',code:'VX-6',cat:'推進',mass:35,thrust:6000,isp:350,ispSeaLevel:100,size:[0.625,1,0.625],gimbal:6,gimbalPivot:[0,0.150,0],desc:'直径0.625 m。推力 海面1.7／真空6 kN、比推力 100／350 s。ジンバル6°。'},
+ engineSeaMedium:{name:'中型海面用エンジン',code:'SL-90',cat:'推進',mass:500,thrust:90000,isp:320,ispSeaLevel:290,size:[1.25,1.4,1.25],gimbal:6,gimbalPivot:[0,0.210,0],desc:'直径1.25 m。推力 海面81.6／真空90 kN、比推力 290／320 s。ジンバル6°。'},
+ engineVacMedium:{name:'中型真空用エンジン',code:'VX-60',cat:'推進',mass:280,thrust:60000,isp:360,ispSeaLevel:110,size:[1.25,1.8,1.25],gimbal:6,gimbalPivot:[0,0.270,0],desc:'直径1.25 m。推力 海面18.3／真空60 kN、比推力 110／360 s。ジンバル6°。'},
+ engineSeaLarge:{name:'大型海面用エンジン',code:'SL-650',cat:'推進',mass:2300,thrust:650000,isp:320,ispSeaLevel:285,size:[2.5,2.4,2.5],gimbal:6,gimbalPivot:[0,0.360,0],desc:'直径2.5 m。推力 海面578.9／真空650 kN、比推力 285／320 s。ジンバル6°。'},
+ engineVacLarge:{name:'大型真空用エンジン',code:'VX-250',cat:'推進',mass:1200,thrust:250000,isp:365,ispSeaLevel:120,size:[2.5,3,2.5],gimbal:6,gimbalPivot:[0,0.450,0],desc:'直径2.5 m。推力 海面82.2／真空250 kN、比推力 120／365 s。ジンバル6°。'},
  battery:{name:'バッテリー',code:'BP-1000',cat:'装備',mass:35,size:[.8,.3,.5],battery:1000,desc:'1000 ECの蓄電池。機体全体へ給電し、太陽電池から充電。姿勢制御装置は内蔵しません。'},
  landingLeg:{name:'固定式着陸脚',code:'LL-16',cat:'構造',mass:45,size:[.65,1.6,.65],landingLeg:true,desc:'幅65 cmの接地パッドと支柱。固定式。四脚で推進器を地面から離し、低速で接地してください。'},
  heatShield:{name:'熱シールド',code:'HS-20',cat:'構造',mass:70,size:[2,.28,2],heatShield:true,shieldRadius:1,shieldNormal:[0,-1,0],ablator:40,noseRadius:1,maxTemperature:1800,desc:'直径2 mの曲面耐熱材。茶色の面（ローカル−Y）を進行方向へ。消耗材40 kgで加熱を吸収。'},
@@ -7,7 +19,7 @@ export const PARTS = {
  capsule:{name:'コマンドポッド',code:'CP-1',cat:'指令',mass:620,size:[1.25,1.3,1.25],control:true,reactionTorque:7000,battery:1000,desc:'耐熱外殻と姿勢制御を備える有人カプセル。'},
  probe:{name:'探査コア',code:'OC-4',cat:'指令',mass:90,size:[1.25,.4,1.25],control:true,reactionTorque:1200,battery:200,desc:'小型無人機のための軽量制御ユニット。'},
  cockpit:{name:'コックピット',code:'FC-2',cat:'指令',mass:510,size:[1.25,2,1.25],control:true,battery:500,desc:'航空機・ローバー向けの広視界キャノピー。'},
- tank:{name:'推進剤タンク',code:'FT-200',cat:'燃料',mass:150,fuel:1800,size:[1.25,2,1.25],desc:'同じ燃料系統へ推進剤を供給。分離リングを越えては流れません。'},
+ tank:{name:'中型タンク',code:'FT-200',cat:'燃料',mass:150,fuel:1800,size:[1.25,2,1.25],desc:'直径1.25 m・推進剤1800 kg。同じ燃料系統へ推進剤を供給。分離リングを越えては流れません。'},
  engine:{name:'液体燃料エンジン',code:'RE-45',cat:'推進',mass:270,thrust:45000,isp:300,size:[1.25,1.2,1.25],gimbal:6,gimbalPivot:[0,.16,0],desc:'45 kN・最大6度のジンバル。ノズルを傾けて推力方向を制御。'},
  jet:{name:'ターボジェット',code:'TJ-18',cat:'推進',mass:230,thrust:18000,isp:1800,air:true,size:[1.25,1.2,1.25],desc:'大気中専用。高度とともに推力が低下する。'},
  propeller:{name:'スクリュー',code:'MP-6',cat:'推進',mass:60,thrust:6000,isp:3000,water:true,size:[.8,.5,.8],desc:'水中専用推進器。船・潜水艇の推進に。'},
@@ -32,6 +44,17 @@ export const CATEGORIES=['すべて','指令','燃料','推進','構造','空力
 export function nodes(type){const d=PARTS[type], [x,y,z]=d.size;if(type==='wing'||type==='fin')return [[0,0,0,-1,0,0],[x,0,0,1,0,0]];return [[0,y/2,0,0,1,0],[0,-y/2,0,0,-1,0],[x/2,0,0,1,0,0],[-x/2,0,0,-1,0,0],[0,0,z/2,0,0,1],[0,0,-z/2,0,0,-1]];}
 export function part(type,p=[0,0,0],r=[0,0,0],parent=null,stage=0){return {id:crypto.randomUUID(),type,p,r,parent,stage};}
 export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{const o=part(t,p,r,a[par]?.id??null,stage);a.push(o);return a.length-1;};
+ if(kind==='atlas'){
+  add('probe',[0,0,0]);const upper=add('tank',[0,-1.2,0]);
+  const upper2=add('tank',[0,-3.2,0],[0,0,0],upper);
+  const vacuum=add('engineVacMedium',[0,-5.1,0],[0,0,0],upper2,1);
+  const separator=add('decoupler',[0,-6.11,0],[0,0,0],vacuum,1);
+  const adapter=add('adapterLarge',[0,-6.72,0],[0,0,0],separator);
+  const lower=add('tankLarge',[0,-9.22,0],[0,0,0],adapter);
+  const lower2=add('tankLarge',[0,-13.22,0],[0,0,0],lower);
+  add('engineSeaLarge',[0,-16.42,0],[0,0,0],lower2);
+  for(const x of [-1.6,1.6])add('solar',[x,0,0]);
+ }
  if(kind==='rocket'){add('capsule',[0,3.6,0]);add('tank',[0,1.95,0]);add('engine',[0,.35,0],[0,0,0],1);for(let i=0;i<4;i++){const t=i*Math.PI/2;add('fin',[.625*Math.cos(t),.8,-.625*Math.sin(t)],[0,t,0],1);} }
  if(kind==='launcher'||kind==='returner'){add('capsule',[0,5.6,0]);add('tank',[0,3.95,0]);add('tank',[0,1.95,0],[0,0,0],1);add('engine',[0,.35,0],[0,0,0],2,1);add('decoupler',[0,-.36,0],[0,0,0],3,1);add('tank',[0,-1.47,0],[0,0,0],4);add('tank',[0,-3.47,0],[0,0,0],5);add('tank',[0,-5.47,0],[0,0,0],6);for(const x of [-.7,.7])for(const z of [-.7,.7])add('engine',[x,-7.07,z],[0,0,0],7);for(let i=0;i<4;i++){const t=i*Math.PI/2;add('fin',[.625*Math.cos(t),-5.5,-.625*Math.sin(t)],[0,t,0],7);}}
  if(kind==='returner'){for(let i=1;i<a.length;i++)a[i].p[1]-=.50;const shield=part('heatShield',[0,4.81,0],[0,0,0],a[0].id);const separator=part('decoupler',[0,4.56,0],[0,0,0],shield.id,2);a.push(shield);a[1].parent=separator.id;a.push(separator);a.push(part('parachute',[0,6.45,0],[0,0,0],a[0].id,3));}
