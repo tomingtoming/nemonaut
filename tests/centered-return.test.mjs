@@ -1,0 +1,34 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {Flight} from '../dist/core.js';
+import {preset} from '../dist/catalog.js';
+import {deorbitPlan} from '../dist/deorbit-plan.js';
+import {createManeuverNode} from '../dist/maneuver-node.js';
+import {captureBurnEstimate} from '../dist/lunar-capture.js';
+
+// Compare identical planned impulses and engines, changing only ignition time.
+// This measures the approximation's limit; it is not a universal error bound.
+for(const power of [.1,.01])test(`centering the return burn reduces but does not remove error at ${power*100}%`,t=>{
+ const results=[];
+ for(const centered of [false,true]){
+  const f=new Flight(preset('returner'),'orbit');
+  try{
+   f.stageNext();f.stageNext();
+   const plan=deorbitPlan(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.vel,0,{delay:360});
+   const duration=captureBurnEstimate(f,plan.preview.impulse.length()).duration/power;
+   const start=360-(centered?duration/2:0);
+   assert.ok(start>60,'attitude alignment lead time');
+   f.maneuver=createManeuverNode(plan.preview,0);f.maneuver.stopAtTarget=true;f.maneuver.tolerance=.05;
+   f.sas=true;f.sasMode='maneuver';
+   while(f.universalTime<start)f.step(1/120);
+   const began=f.universalTime;
+   for(let i=0;i<120*800&&!f.maneuver.complete&&!f.crashed;i++){f.throttle=power;f.step(1/120);}
+   assert.equal(f.maneuver.complete,true);assert.equal(f.crashed,false);
+   results.push({centered,start:began,duration:f.universalTime-began,periapsis:f.orbit.periapsis,error:Math.abs(f.orbit.periapsis-25000)});
+  }finally{f.dispose();}
+ }
+ assert.ok(results[1].error<results[0].error*.5,'centering must materially improve this case');
+ assert.ok(Math.abs(results[0].duration-results[1].duration)<.1,'same delivered impulse and fuel mass');
+ if(power===.01)assert.ok(results[1].error>5000,'midpoint timing alone still misses the target by kilometres');
+ t.diagnostic(JSON.stringify(results));
+});
