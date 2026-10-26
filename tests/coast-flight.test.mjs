@@ -105,3 +105,28 @@ test('Stationary atmosphere cooling matches the normal thermal model without fre
  for(let i=0;i<6000;i++)thermalStep(parts,slow,new T.Quaternion(),new T.Vector3(),air,.05);
  for(const [id,s] of fast){assert.ok(s.temperature<500);assert.ok(s.temperature>=air.temperature);assert.ok(Math.abs(s.temperature-slow.get(id).temperature)<.5);}
 });
+
+test('parked rover survives repeated coast, physics and save restoration without vessel switching',()=>{
+ for(const brake of [true,false]){
+  let f=new Flight(preset('rover'),'land',74193.2);
+  try{
+   f.brake=brake;for(let i=0;i<600;i++)f.step(1/120);
+   const position=inertialToFixed(center(f),f.universalTime),fuel=[...f.fuel];
+   for(let cycle=0;cycle<60;cycle++){
+    const result=advanceCoastFleet(f,1000,{maxSteps:200});
+    assert.equal(result.reason,null,`brake=${brake}, cycle=${cycle}`);
+    assert.equal(result.advanced,1000);
+    for(let i=0;i<120;i++)f.step(1/120);
+    const restored=loadFlight(saveFlight(f));f.dispose();f=restored;
+    assert.ok(isParked(f));assert.equal(f.brake,brake);
+    assert.ok(inertialToFixed(center(f),f.universalTime).distanceTo(position)<.1,'surface location stays fixed');
+    assert.deepEqual([...f.fuel],fuel);
+   }
+   // A saved landed flag must not exempt a moving vehicle from surface checks.
+   f.vel.x+=1;
+   const moving=loadFlight(saveFlight(f));f.dispose();f=moving;
+   assert.equal(isParked(f),false);
+   assert.equal(advanceCoastFleet(f,1000).advanced,0);
+  }finally{f.dispose();}
+ }
+});
