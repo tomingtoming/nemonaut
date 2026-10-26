@@ -82,6 +82,7 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
  }
  if(kind==='rover'){add('truss',[0,.9,0]);add('truss',[0,.9,1],[0,0,0]);add('probe',[0,1.6,.5],[0,0,0]);for(const x of [-.7,.7])for(const z of [0,1])add('wheel',[x,.4,z],[0,0,0]);add('solar',[0,2,.3],[-Math.PI/2,0,0],2);}
  if(kind==='boat'||kind==='sub'){const r=[Math.PI/2,0,0];add('cockpit',[0,1,1],r);add('truss',[0,.8,-.5]);if(kind==='boat')for(const x of [-1,1])add('pontoon',[x,.3,0],r,1);add('propeller',[0,-.15,-1.7],r,1);if(kind==='sub'){add('ballast',[-.65,.3,-.3],r,1);add('ballast',[.65,.3,-.3],r,1);}}
+ if(kind==='sub')for(const p of a){if(p.type==='cockpit')p.p=[0,0,.3];if(p.type==='truss')p.p=[0,1.2,0];if(p.type==='propeller')p.p=[0,.1,-2.1];if(p.type==='ballast')p.p=[Math.sign(p.p[0])*1.3,.2,0];}
  if(['plane','boat','sub'].includes(kind)){a[0].r=[Math.PI/2,Math.PI,0];}
  return a;
 }
