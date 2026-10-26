@@ -74,7 +74,12 @@ export class FlightScenery{
   let seed=87231;const random=()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;};
   const positions=[],colors=[];for(let i=0;i<2800;i++){const y=random()*2-1,a=random()*Math.PI*2,r=Math.sqrt(1-y*y),b=.25+random()*.75;positions.push(Math.cos(a)*r*9000000,y*9000000,Math.sin(a)*r*9000000);colors.push(b,b*(.82+random()*.18),b*(.7+random()*.3));}
   const starsGeometry=new T.BufferGeometry();starsGeometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));starsGeometry.setAttribute('color',new T.Float32BufferAttribute(colors,3));
-  this.stars=new T.Points(starsGeometry,new T.PointsMaterial({size:1.5,sizeAttenuation:false,vertexColors:true,transparent:true,depthTest:false,depthWrite:false,toneMapped:false}));this.stars.frustumCulled=false;this.stars.renderOrder=-999;group.add(this.stars);
+  const starsMaterial=new T.PointsMaterial({size:1.5,sizeAttenuation:false,vertexColors:true,transparent:true,depthTest:true,depthWrite:false,toneMapped:false});
+  // Transparent stars render after opaque surfaces. Treat their depth as infinity
+  // so terrain, vessels and even bodies beyond the star sphere occlude them.
+  starsMaterial.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <logdepthbuf_fragment>','#include <logdepthbuf_fragment>\n gl_FragDepth=1.0;');};
+  starsMaterial.customProgramCacheKey=()=> 'stars-infinite-depth-v1';
+  this.stars=new T.Points(starsGeometry,starsMaterial);this.stars.frustumCulled=false;this.stars.renderOrder=-999;group.add(this.stars);
   const shell=new T.ShaderMaterial({side:T.BackSide,transparent:true,depthWrite:false,blending:T.AdditiveBlending,uniforms:{sunDir:uniforms.sunDir},
    vertexShader:`varying vec3 normalWorld;varying vec3 worldPos;
 #include <common>
