@@ -26,6 +26,8 @@ export function mountKspLayout(){
  const speed=document.querySelector('#speed').parentElement;speed.classList.add('navSpeed');nav.prepend(speed);document.querySelector('#navball').width=180;document.querySelector('#navball').height=180;
  nav.append(document.querySelector('.throttle'));const switches=document.createElement('div');switches.className='navSwitches';
  switches.append(document.querySelector('#sas'),document.querySelector('#brake'),document.querySelector('#rcsEnabled').closest('label'));nav.append(switches);
+ const modes=document.createElement('div');modes.id='sasDirections';modes.setAttribute('role','group');modes.setAttribute('aria-label','SAS向け先');const select=document.querySelector('#sasMode');select.closest('label').hidden=true;
+ for(const [mode,label]of [['hold','保持'],['prograde','順行'],['retrograde','逆行'],['radial','天頂'],['antiradial','天底'],['normal','軌道＋'],['antinormal','軌道−'],['maneuver','噴射'],['target','目標'],['relativeRetrograde','相対逆行'],['dock','ポート']]){const b=document.createElement('button');b.dataset.mode=mode;b.textContent=label;b.title=select.querySelector('option[value="'+mode+'"]').textContent;b.setAttribute('aria-label','SAS '+b.title);b.onclick=()=>{select.value=mode;select.dispatchEvent(new Event('change',{bubbles:true}));b.blur();};modes.append(b);}nav.append(modes);
  readings.classList.add('altimeter');document.querySelector('#alt').previousElementSibling.textContent='高度';document.querySelector('#vspeed').previousElementSibling.textContent='昇降率';
  const dock=document.createElement('div');dock.id='stageDock';const stack=document.createElement('div');stack.id='stageStack';dock.append(stack,document.querySelector('#stage'));document.body.append(dock);
  const systems=document.createElement('details');systems.id='flightSystems';const summary=document.createElement('summary');summary.textContent='機器';systems.append(summary,document.querySelector('.flightbottom'));hud.append(systems);
@@ -33,3 +35,5 @@ export function mountKspLayout(){
  const warpLabel=document.querySelector('#warp').closest('label');warpLabel.firstChild.textContent='WARP ';
  const menu=document.createElement('details');menu.id='flightMenu';const menuLabel=document.createElement('summary');menuLabel.textContent='飛行';menu.append(menuLabel,document.querySelector('.hudtop'));hud.append(menu);
 }
+
+export function updateSasDirections(f){for(const b of document.querySelectorAll('#sasDirections button')){const m=b.dataset.mode;b.disabled=m==='maneuver'?!f.maneuver:m==='dock'?!f.dockingPorts:['target','relativeRetrograde'].includes(m)?!f.navigationTarget:false;b.setAttribute('aria-pressed',String(f.sas&&f.sasMode===m));}}
