@@ -48,6 +48,9 @@ export function mountFlightMap(canvas){
  return {update(o,p){if(current?.bodyId!==o.bodyId)extent=null;current=o;preview=p;draw();}};
 }
 export function mountMapPanels(){
+ const edit=document.createElement('button');edit.id='editManeuver';edit.textContent='計画を編集';document.querySelector('#clearManeuver').before(edit);
+ const cancel=document.createElement('button');cancel.id='cancelManeuverEdit';cancel.textContent='編集を取消';cancel.hidden=true;document.querySelector('#fixManeuver').after(cancel);
+
  const existing=document.querySelector('#planDeltaV');existing.closest('label').firstChild.textContent='順行 / 逆行（m/s）';existing.closest('label').title='＋順行、−逆行';
  for(const [id,name,title]of [['planNormal','軌道面 ＋ / −（m/s）','＋は位置×速度の方向、−はその逆'],['planRadial','外向き / 内向き（m/s）','速度に垂直な軌道面内方向。＋外向き、−内向き']]){const label=document.createElement('label');label.textContent=name;label.title=title;const input=document.createElement('input');input.type='number';input.id=id;input.min=-10000;input.max=10000;input.step=1;input.value=0;label.append(input);existing.closest('fieldset').insertBefore(label,document.querySelector('#maneuverResult'));}
 

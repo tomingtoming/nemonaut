@@ -38,3 +38,11 @@ test('Three-axis maneuver vector survives save and guides SAS toward the combine
  for(let i=0;i<120*40;i++)restored.step(1/120);
  const aim=new T.Vector3(0,1,0).applyQuaternion(restored.q);assert.ok(aim.dot(maneuverDirection(restored.maneuver))>.99);f.dispose();restored.dispose();
 });
+
+import {maneuverEditValues} from '../dist/maneuver-node.js';
+test('Editing recovers all three components and leaves the original untouched; spent and special nodes reject editing',()=>{
+ const f=new Flight(preset('rocket'),'orbit'),pos=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),epoch=f.universalTime+100;
+ const p=maneuverPreview(pos,f.vel,{universalTime:epoch},{prograde:-30,normal:40,radial:50},f.universalTime),node=createManeuverNode(p,f.time),before=structuredClone(node),values=maneuverEditValues(node,f.universalTime);
+ for(const [key,n]of Object.entries({prograde:-30,normal:40,radial:50}))assert.ok(Math.abs(values[key]-n)<1e-8);assert.deepEqual(node,before);assert.equal(values.universalTime,epoch);
+ for(const bad of [{...node,complete:true},{...node,departure:{}},{...node,remaining:[0,0,0]}])assert.throws(()=>maneuverEditValues(bad,f.universalTime));assert.throws(()=>maneuverEditValues(node,epoch));f.dispose();
+});
