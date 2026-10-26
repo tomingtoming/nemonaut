@@ -309,3 +309,6 @@ body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
 .stagePerformance{grid-column:1/-1;display:grid;gap:2px;font:10px monospace;color:#d6e5b8}.stagePerformance span{white-space:nowrap}
 
 .stagePreview{align-self:start;padding:0;border:0;background:transparent;font:bold 18px monospace;color:#d2d8d8}.stagePreview[aria-pressed="true"]{color:#c6ef8b;outline:1px solid #9fbb6b;border-radius:2px}
+
+#trackingFocus{position:absolute;top:78px;left:50%;transform:translateX(-50%);width:min(460px,calc(100vw - 32px));display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;padding:7px 10px;border:1px solid #788588;border-radius:4px;background:#202c32e8;pointer-events:auto;color:#e5e8df;font-size:12px}
+#trackingFocus[hidden]{display:none}#trackingName,#trackingControl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#trackingName{align-self:center;color:#c6df9d}#trackingControl{grid-column:1/-1;font-size:11px;color:#c1c9ca}#returnCamera{font-size:11px;padding:4px 8px}
