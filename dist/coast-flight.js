@@ -1,3 +1,4 @@
+import {updateNavigationFrame} from './navigation-frame.js';
 import {observationDemand,advanceObservations} from './observation.js';
 import {frozenSurfaceState,surfaceRelativeVelocity,surfaceAngularVelocity,surfaceOrientation,surfaceVelocity} from './surface-frame.js';
 import {pendingBurns} from './burn-schedule.js';
@@ -120,7 +121,7 @@ export function advanceWorldCoast(vessels,universalTime,activeVesselId,requested
    if(v.crashed){v.q.copy(u.q);v.omega.copy(u.omega);if(v.holdQ)v.holdQ.premultiply(u.turn).normalize();v.orbit=bodyOrbitState(center(v),v.vel,end);continue;}
    v.time+=dt;v.q.copy(u.q);if(u.parked){v.omega.applyQuaternion(u.turn);if(v.holdQ)v.holdQ.premultiply(u.turn);}v.charge=u.charge;v.observations=u.observations;v.thermal=u.thermal;v.orbit=u.orbit;
    v.landed=u.parked;v.landedTime=u.parked?Math.max(.500001,v.landedTime)+dt:0;v.lastThrust=0;v.engineThrust.clear();v.rcsJets=[];
-   v.maxAltitude=Math.max(v.maxAltitude,u.orbit.altitude);
+   v.maxAltitude=Math.max(v.maxAltitude,u.orbit.altitude);updateNavigationFrame(v);
    v.telemetry={power:u.power,force:zero.clone(),torque:zero.clone(),engineForce:zero.clone(),commands:{...commands},stallCount:0,contacts:0,atmosphere:u.air,engine:'Kepler coast'};
   }
   universalTime=end;advanced+=dt;steps++;blocked=worldCoastBlocker(vessels,universalTime,active);reason=blocked?.reason??null;

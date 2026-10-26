@@ -12,7 +12,7 @@ test('Surface and orbital speed and markers share their reference velocity',()=>
 test('Surface SAS follows the same marker; save, legacy load and separation preserve frame policy',()=>{
  const f=new Flight(preset('launcher'),'orbit',1234);let loaded;
  try{
-  f.navigationFrame='surface';f.sasMode='prograde';const com=f.stats.com.clone().applyQuaternion(f.q).add(f.pos);f.vel.copy(surfaceVelocity(com,f.universalTime)).add(new T.Vector3(50,0,0));
+  f.navigationAuto=false;f.navigationFrame='surface';f.sasMode='prograde';const com=f.stats.com.clone().applyQuaternion(f.q).add(f.pos);f.vel.copy(surfaceVelocity(com,f.universalTime)).add(new T.Vector3(50,0,0));
   const expected=navDirections(com,f.vel,f.universalTime,'surface').prograde;f.step(1/120);
   assert.ok(new T.Vector3(0,1,0).applyQuaternion(f.holdQ).angleTo(expected)<.001);
   const saved=saveFlight(f);loaded=loadFlight(saved);assert.equal(loaded.navigationFrame,'surface');loaded.dispose();loaded=null;

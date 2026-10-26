@@ -28,7 +28,7 @@ export function combinedMotion(a,b){const vessels=[a,b],masses=vessels.map(v=>v.
 function rebuilt(source,parts,sources=[source]){
  validateCraft({version:1,parts});const out=new Flight(parts,source.environment),ids=new Set(parts.map(p=>p.id));out.transferGuide=null;
  for(const key of ['vesselName','time','universalTime','stage','started','ballast','trim','brake','reactionEnabled','steeringEnabled','driveEnabled','rcsEnabled','maxAltitude'])out[key]=source[key];
- out.pos.copy(source.pos);out.q.copy(source.q);out.vel.copy(source.vel);out.omega.copy(source.omega);out.holdQ=source.q.clone();out.sas=parts.some(p=>PARTS[p.type].control)&&source.sas;out.sasMode='hold';out.navigationFrame=source.navigationFrame;out.throttle=0;out.maneuver=null;out.targetPartId=source.targetPartId;
+ out.pos.copy(source.pos);out.q.copy(source.q);out.vel.copy(source.vel);out.omega.copy(source.omega);out.holdQ=source.q.clone();out.sas=parts.some(p=>PARTS[p.type].control)&&source.sas;out.sasMode='hold';out.navigationFrame=source.navigationFrame;out.navigationAuto=source.navigationAuto;out.throttle=0;out.maneuver=null;out.targetPartId=source.targetPartId;
  for(const key of ['fuel','charge','thermal','chutes','deflections','gimbals','wheelMotion','observations'])out[key]=new Map(sources.flatMap(v=>[...v[key]]).filter(([id])=>ids.has(id)).map(([id,value])=>[id,value?.isVector3?value.clone():structuredClone(value)]));
  out.active=new Set(sources.flatMap(v=>[...v.active]).filter(id=>ids.has(id)));out.networks=fuelNetworks(out.parts);out.stats=statistics(out.parts,out.fuel,out.ballast,out.thermal);out.buildColliders();return out;
 }
