@@ -1,3 +1,4 @@
+import {selectDockingPorts} from './relative-navigation.js';
 import {chuteNames} from './recovery.js';
 import {mountDesignPartWindows} from './design-part-windows.js';
 import {mountPartWindows} from './part-windows.js';
@@ -244,14 +245,14 @@ function updateDocking(){
  const panel=$('#dockingPanel');panel.hidden=!flight||!canControl(flight);if(panel.hidden){dockingArmed=null;return;}const bonds=$('#dockBonds');bonds.replaceChildren();
  for(const p of flight.parts.filter(p=>p.dockPartner&&p.parent===p.dockPartner)){const button=document.createElement('button');button.textContent='結合ポートを分離';button.onclick=()=>{try{refreshDockedFlight(undockVessel(flight,p.id));notify('再分離しました。相手機体を目標に指定できます。');}catch(e){notify(e.message);}};bonds.append(button);}
  const target=flight.navigationTarget,own=flight.parts.filter(p=>PARTS[p.type].docking&&!p.dockPartner),other=target?.parts.filter(p=>PARTS[p.type].docking&&!p.dockPartner)||[];
- const ownId=portOptions($('#ownPort'),own,flight.dockingPorts?.own),targetId=portOptions($('#targetPort'),other,flight.dockingPorts?.target);flight.dockingPorts=ownId&&targetId?{own:ownId,target:targetId}:null;
+ const ownId=portOptions($('#ownPort'),own,flight.dockingPorts?.own),targetId=portOptions($('#targetPort'),other,flight.dockingPorts?.target);selectDockingPorts(flight,ownId&&targetId?ownId:null,ownId&&targetId?targetId:null);
  const guide=flight.dockingPorts?portGuidance(flight,ownId,target,targetId):null,status=guide?dockingStatus(flight,ownId,target,targetId):null;
  $('#portGuide').hidden=!guide;$('#portFrame').checked=flight.portTranslationEnabled;
  if(guide){$('#portReadings').textContent='軸距離 '+guide.axial.toFixed(2)+' m · 横ずれ '+guide.lateral.toFixed(2)+' m · 接近 '+guide.closing.toFixed(2)+' m/s · 横速度 '+Math.hypot(guide.horizontalSpeed,guide.verticalSpeed).toFixed(2)+' m/s';drawPortScope($('#portCrosshair'),guide);}
  $('#dockStatus').textContent=status?(status.ready?'結合できます':status.reason)+(Number.isFinite(status.distance)?' · 面間 '+status.distance.toFixed(2)+' m · 角度 '+(status.angle*180/Math.PI).toFixed(1)+'° · '+status.speed.toFixed(2)+' m/s':''):target?'双方に空きポートが必要です':'他の機体を目標に指定してください';
  if(dockingArmed&&(dockingArmed.flight!==flight||dockingArmed.own!==ownId||dockingArmed.target!==targetId))dockingArmed=null;const connect=()=>{dockingArmed=null;try{refreshDockedFlight(dockVessels(flight,target,ownId,targetId));notify('ドッキング完了。1機として操縦できます。');}catch(e){notify(e.message);}};$('#dockButton').disabled=!guide;$('#dockButton').textContent=dockingArmed?'結合待機を解除':status?.ready?'目標と結合':'結合待機（接近は手動）';$('#dockButton').onclick=()=>{if(!guide)return;if(dockingArmed){dockingArmed=null;return;}if(status.ready){connect();return;}dockingArmed={flight,own:ownId,target:targetId};notify('結合待機：条件がそろうと結合します。接近と減速は手動です。');};if(dockingArmed&&status?.ready)connect();
 }
-for(const id of ['ownPort','targetPort'])$('#'+id).onchange=()=>{if(flight)flight.dockingPorts={own:$('#ownPort').value,target:$('#targetPort').value};document.activeElement.blur();};
+for(const id of ['ownPort','targetPort'])$('#'+id).onchange=()=>{if(flight){keys.clear();dockingArmed=null;selectDockingPorts(flight,$('#ownPort').value,$('#targetPort').value);}document.activeElement.blur();};
 $('#portFrame').onchange=e=>{if(flight)flight.portTranslationEnabled=e.target.checked&&!!flight.dockingPorts;e.target.blur();};
 $('#alignDock').onclick=()=>{if(!flight?.dockingPorts)return;flight.sasMode='dock';flight.sas=true;flight.holdQ=flight.q.clone();$('#sas').textContent='SAS ON';$('#sas').classList.add('active');document.activeElement.blur();};
 

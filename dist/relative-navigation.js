@@ -13,3 +13,14 @@ export function setTarget(root,v,target){const vessels=fleet(root);if(!vessels.i
 // A part ID survives vessel re-rooting and follows the correct branch on staging.
 export function resolveTargets(root,options={}){return resolveWorldTargets(fleet(root),options);}
 export function resolveWorldTargets(vessels,{strict=false}={}){const owners=new Map(vessels.flatMap(v=>v.parts.map(p=>[p.id,v])));for(const v of vessels){const target=v.targetPartId?owners.get(v.targetPartId):null;if(v.targetPartId&&(!target||target===v)){if(strict)throw Error('保存された目標が存在しないか自機を指しています');v.targetPartId=null;}v.navigationTarget=target&&target!==v?target:null;if(!v.navigationTarget&&TARGET_MODES.includes(v.sasMode)){if(strict)throw Error('目標なしの相対SASは復帰できません');v.sasMode='hold';v.holdQ=v.q.clone();}if(v.dockingPorts){const a=v.parts.find(p=>p.id===v.dockingPorts.own),b=v.navigationTarget?.parts.find(p=>p.id===v.dockingPorts.target);if(!a||!b||!PARTS[a.type].docking||!PARTS[b.type].docking||a.dockPartner||b.dockPartner){if(strict)throw Error('保存されたポート選択が不正です');v.dockingPorts=null;v.portTranslationEnabled=false;}}if(!v.dockingPorts&&(v.sasMode==='dock'||v.portTranslationEnabled)){if(strict)throw Error('ポートなしの誘導は復帰できません');v.sasMode='hold';v.holdQ=v.q.clone();v.portTranslationEnabled=false;}}}
+
+// Both the part windows and the navigation panel use the same pair transition.
+export function selectDockingPorts(v,ownId,targetId){
+ const clear=ownId==null&&targetId==null;
+ const own=v.parts.find(p=>p.id===ownId),target=v.navigationTarget?.parts.find(p=>p.id===targetId);
+ if(!clear&&(!own||!target||!PARTS[own.type].docking||!PARTS[target.type].docking||own.dockPartner||target.dockPartner))return false;
+ const changed=clear?!!v.dockingPorts:v.dockingPorts?.own!==ownId||v.dockingPorts?.target!==targetId;
+ if(changed){v.portTranslationEnabled=false;if(v.sasMode==='dock'){v.sasMode='hold';v.holdQ=v.q.clone();}}
+ v.dockingPorts=clear?null:{own:ownId,target:targetId};if(!clear)v.targetPartId=targetId;
+ return true;
+}

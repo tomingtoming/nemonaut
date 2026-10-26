@@ -1,4 +1,4 @@
-import {setTarget} from './relative-navigation.js';
+import {setTarget,selectDockingPorts} from './relative-navigation.js';
 import {PARTS} from './catalog.js';
 import {fleet,canControl} from './fleet.js';
 import {dockingStatus,dockVessels,undockVessel} from './docking.js';
@@ -20,7 +20,7 @@ export function guideFromPort(f,id,targetId,{align=false}={}){
  const state=portWindowState(f,id,targetId);if(!state?.canGuide)return false;
  const target=state.targets.find(t=>t.id===targetId);
  if(!state.selected){f.portTranslationEnabled=false;if(f.sasMode==='dock'){f.sasMode='hold';f.holdQ=f.q.clone();}}
- setTarget(f,f,target.vessel);f.targetPartId=targetId;f.dockingPorts={own:id,target:targetId};
+ setTarget(f,f,target.vessel);selectDockingPorts(f,id,targetId);
  if(align){f.sas=true;f.sasMode='dock';f.holdQ=f.q.clone();}
  return true;
 }
