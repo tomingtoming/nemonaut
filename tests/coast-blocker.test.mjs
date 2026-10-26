@@ -43,3 +43,17 @@ test('A coast that reaches a future deadline retains the limiting vessel',()=>{
   assert.equal(result.blocker.scheduledTime,160);assert.equal(f.universalTime,145);
  }finally{f.dispose();}
 });
+
+test('Ordinary maneuver coast stops with the same sixty-second alignment margin as physical warp',async()=>{
+ const {physicalWarpStop}=await import('../dist/physics-clock.js');
+ const f=new Flight(preset('orbital-tug'),'orbit',100);
+ try{
+  f.maneuver={universalTime:220,time:120,complete:false};
+  const result=advanceCoastFleet(f,300);
+  assert.equal(result.reason,'予定噴射の直前');assert.equal(f.universalTime,160);
+  assert.equal(f.maneuver.universalTime-f.universalTime,60);
+  assert.equal(physicalWarpStop(f),'予定噴射の直前');
+  assert.equal(result.blocker.scheduledTime,220);assert.equal(result.blocker.overdue,false);
+  assert.equal(f.throttle,0);assert.equal(f.started,false);
+ }finally{f.dispose();}
+});
