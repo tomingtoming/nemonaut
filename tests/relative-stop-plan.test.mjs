@@ -13,3 +13,10 @@ test('Immediate separated craft retain position difference after velocity match'
  const preview=maneuverPreview(p,v,plan.location,plan.components,epoch);assert.ok(preview.afterVel.distanceTo(target.relativeVelocity)<1e-6);assert.deepEqual(preview.burnPos,p);
  assert.throws(()=>relativeStopPlan(own,own),/0.5/);assert.throws(()=>relativeStopPlan(own,{...target,bodyId:'moon'}));
 });
+
+test('Current-position correction does not wait for a future encounter',()=>{
+ const own=bodyOrbitState(p,v,epoch),target=rotated(.6,true),future=relativeStopPlan(own,target),now=relativeStopPlan(own,target,'now');
+ assert.ok(future.time>5);assert.equal(now.time,0);assert.equal(now.location,'now');assert.ok(now.distance>100000);
+ const preview=maneuverPreview(p,v,now.location,now.components,epoch);assert.ok(preview.afterVel.distanceTo(target.relativeVelocity)<1e-6);
+ assert.throws(()=>relativeStopPlan(own,target,'invalid'));assert.throws(()=>relativeStopPlan(own,{...target,universalTime:101},'now'));
+});

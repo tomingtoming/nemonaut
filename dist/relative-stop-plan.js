@@ -2,9 +2,11 @@ import {closestApproach} from './closest-approach.js';
 import {keplerDrift} from './coast-orbit.js';
 
 // A single burn on the current coast trajectory, not a second planned node.
-export function relativeStopPlan(own,target){
- const encounter=closestApproach(own,target,Math.min(21600,own.period));
- const time=encounter.time<5?0:encounter.time;
+export function relativeStopPlan(own,target,when='closest'){
+ if(!['closest','now'].includes(when))throw Error('速度合わせの時点を選んでください');
+ if(!target||own.bodyId!==target.bodyId||Math.abs(own.universalTime-target.universalTime)>1e-4||own.normal.lengthSq()<.5)throw Error('同じ天体・時刻の機体を選んでください');
+ const encounter=when==='closest'?closestApproach(own,target,Math.min(21600,own.period)):null;
+ const time=!encounter||encounter.time<5?0:encounter.time;
  const a=keplerDrift(own.r,own.relativeVelocity,own.body.mu,time);
  const b=keplerDrift(target.r,target.relativeVelocity,target.body.mu,time);
  const impulse=b.velocity.clone().sub(a.velocity),deltaV=impulse.length();
