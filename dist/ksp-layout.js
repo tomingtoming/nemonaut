@@ -4,12 +4,12 @@ import {stagePlan} from './staging.js';
 import {PARTS} from './catalog.js';
 import {chuteNames} from './recovery.js';
 const lastStages=new WeakMap();
-export function renderStageStack(host,parts,{flight,onSelect,onMove}){
+export function renderStageStack(host,parts,{flight,onSelect,onMove,onPreview,previewStage=null}){
  host.replaceChildren();const fuelLevels=stageFuelLevels(parts,flight?.fuel),performance=new Map((flight?[]:stagePerformance(parts)).map(p=>[p.stage,p]));
  for(const slot of stagePlan(parts).reverse()){
   const row=document.createElement('section');row.className='stageStackRow';
   row.classList.toggle('next',!!flight&&slot.stage===flight.stage+1);row.classList.toggle('spent',!!flight&&slot.stage<=flight.stage);
-  const label=document.createElement('b');label.textContent=String(slot.stage).padStart(2,'0');row.append(label);
+  const label=document.createElement(!flight&&onPreview?'button':'b');label.textContent=String(slot.stage).padStart(2,'0');if(!flight&&onPreview){label.className='stagePreview';label.title='段 '+slot.stage+' の分離後機体・重心・推力線を表示／解除';label.setAttribute('aria-label',label.title);label.setAttribute('aria-pressed',String(previewStage===slot.stage));label.onclick=()=>onPreview(slot.stage);}row.append(label);
   const icons=document.createElement('div');icons.className='stageStackIcons';
   for(const action of slot.actions){const p=parts.find(p=>p.id===action.id),button=document.createElement('button');
    const chute=action.kind==='chute'&&flight?flight.chutes.get(p.id)?.status:null;if(chute){button.dataset.chute=chute;row.classList.toggle('chuteActive',row.classList.contains('chuteActive')||['armed','reefed','open'].includes(chute));}

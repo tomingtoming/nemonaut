@@ -29,5 +29,6 @@ export function mountDesignDiagnostics(host,getState,onSelect,onVisual=()=>{},on
   for(const [name,label]of [['controls','制御装置'],['wheels','有効なリアクションホイール'],['rcs','RCS'],['gimbals','ジンバル'],['surfaces','操舵翼'],['solar','ソーラーパネル'],['shields','熱シールド'],['chutes','パラシュート']]){const row=document.createElement('div'),title=document.createElement('p');title.textContent=label+'：'+equipment[name].length+' 個';row.append(title);for(const id of equipment[name])row.append(chooseButton(id,parts));equip.append(row);}
   key=JSON.stringify([parts,reference.value,density.value,stageSelect.value,fuelSelect.value,visual.checked,stageVisual.checked]);
  }
- return {update};
+ function preview(stage){if(getState().flight)return;update();const clear=stageVisual.checked&&visual.checked&&stageSelect.value===String(stage);stageSelect.value=String(stage);fuelSelect.value='full';visual.checked=stageVisual.checked=!clear;key='';update();}
+ return {update,preview,get previewStage(){return stageVisual.checked&&visual.checked?Number(stageSelect.value):null;}};
 }

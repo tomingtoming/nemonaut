@@ -307,3 +307,5 @@ body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
 .stageStackRow.spent.chuteActive{opacity:1}.stageStackIcons button[data-chute="armed"]{border-color:#e3bc65;background:#51482d}.stageStackIcons button[data-chute="reefed"],.stageStackIcons button[data-chute="open"]{border-color:#a9d16b;background:#42572e}.stageStackIcons button[data-chute="cut"] svg{stroke:#e49079}
 
 .stagePerformance{grid-column:1/-1;display:grid;gap:2px;font:10px monospace;color:#d6e5b8}.stagePerformance span{white-space:nowrap}
+
+.stagePreview{align-self:start;padding:0;border:0;background:transparent;font:bold 18px monospace;color:#d2d8d8}.stagePreview[aria-pressed="true"]{color:#c6ef8b;outline:1px solid #9fbb6b;border-radius:2px}

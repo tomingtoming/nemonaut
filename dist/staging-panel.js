@@ -4,8 +4,8 @@ import {stagePlan} from './staging.js';
 import {stagingDiagnostics} from './staging-diagnostics.js';
 const references=new WeakMap();
 
-export function renderStagingPanel(host,parts,{flight=null,onSelect,onMove}){
- const stack=document.querySelector('#stageStack');if(stack)renderStageStack(stack,parts,{flight,onSelect,onMove});
+export function renderStagingPanel(host,parts,{flight=null,onSelect,onMove,onPreview,previewStage=null}){
+ const stack=document.querySelector('#stageStack');if(stack)renderStageStack(stack,parts,{flight,onSelect,onMove,onPreview,previewStage});
  host.replaceChildren();
  const note=document.createElement('p');note.className='muted';
  note.textContent=flight?'現在の機体の作動段。飛行中は編集できません。':'上から順にSpaceで作動。同じ段は同時に作動。段の移動は隣の段と交換します。';host.append(note);
@@ -19,7 +19,7 @@ export function renderStagingPanel(host,parts,{flight=null,onSelect,onMove}){
   for(const p of controlParts){const option=document.createElement('option');option.value=p.id;option.textContent=(parts.indexOf(p)+1)+'. '+PARTS[p.type].name;select.append(option);}
   if(!controlParts.length){const option=document.createElement('option');option.textContent='制御部品なし';select.append(option);select.disabled=true;}
   else select.value=diagnostic.referenceId;
-  select.onchange=()=>{references.set(host,select.value);renderStagingPanel(host,parts,{flight,onSelect,onMove});};label.append(select);host.append(label);
+  select.onchange=()=>{references.set(host,select.value);renderStagingPanel(host,parts,{flight,onSelect,onMove,onPreview,previewStage});};label.append(select);host.append(label);
   const summary=document.createElement('p');summary.className='muted';const different=diagnostic.actions.filter(a=>a.status!=='reference').length;
   summary.textContent=different?'分離後の作動を確認：'+different+' 対象。各段の注記から部品を見直せます。':'作動予定の '+diagnostic.actions.length+' 対象は、予定段まで基準機と一緒に残ります。';host.append(summary);
   const scope=document.createElement('small');scope.className='stageScope';scope.textContent='各制御機で段を順番に進める想定。燃料・電力・損傷や飛行中の再結合は判定しません。';host.append(scope);
