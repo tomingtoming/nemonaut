@@ -1,4 +1,5 @@
 export const PARTS = {
+ battery:{name:'バッテリー',code:'BP-1000',cat:'装備',mass:35,size:[.8,.3,.5],battery:1000,desc:'1000 ECの蓄電池。機体全体へ給電し、太陽電池から充電。姿勢制御装置は内蔵しません。'},
  landingLeg:{name:'固定式着陸脚',code:'LL-16',cat:'構造',mass:45,size:[.65,1.6,.65],landingLeg:true,desc:'幅65 cmの接地パッドと支柱。固定式。四脚で推進器を地面から離し、低速で接地してください。'},
  heatShield:{name:'熱シールド',code:'HS-20',cat:'構造',mass:70,size:[2,.28,2],heatShield:true,shieldRadius:1,shieldNormal:[0,-1,0],ablator:40,noseRadius:1,maxTemperature:1800,desc:'直径2 mの曲面耐熱材。茶色の面（ローカル−Y）を進行方向へ。消耗材40 kgで加熱を吸収。'},
  dockingPort:{name:'ドッキングポート',code:'DP-12',cat:'構造',mass:55,size:[1.25,.242,1.25],docking:true,dockFace:.121,desc:'正面はローカル+Y。ポート面を向き合わせて低速で結合。'},
