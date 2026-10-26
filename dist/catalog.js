@@ -85,6 +85,11 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
   for(const x of [-1.3,1.3])for(const y of [-14.99,-16.99])a.push(part('tank',[x,y,0],[0,0,0],lower.id));
   for(const [x,z]of [[2.5,0],[-2.5,0],[0,2.5],[0,-2.5]])a.push(part('engine',[x,-20.59,z],[0,0,0],lower.id));
   for(let i=0;i<4;i++){const angle=i*Math.PI/2+Math.PI/4;a.push(part('engine',[2.5*Math.cos(angle),-20.59,2.5*Math.sin(angle)],[0,0,0],lower.id));}
+  // Vacuum upper stage: keep the tank socket fixed and extend the lower stack.
+  const upperEngine=a.find(p=>p.type==='engine'&&p.stage===2);
+  upperEngine.type='engineVacMedium';upperEngine.p[1]-=.3;
+  for(const p of a)if(p!==upperEngine&&p.p[1]<-4.35)p.p[1]-=.6;
+  for(const p of a)if(p.type==='landingLeg'||p.type==='truss')p.p[1]-=.6;
  }
  if(kind==='recovery'){add('capsule',[0,0,0]);add('parachute',[0,.85,0]);}
  if(kind==='rcs'){add('probe',[0,0,0]);a[0].reactionEnabled=false;add('truss',[0,-.7,0]);for(const x of [-.74,.74])for(const y of [-1.2,.4])add('rcs',[x,y,0],[0,0,0],1);}
