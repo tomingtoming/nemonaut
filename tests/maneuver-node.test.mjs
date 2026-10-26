@@ -46,3 +46,10 @@ test('Editing recovers all three components and leaves the original untouched; s
  for(const [key,n]of Object.entries({prograde:-30,normal:40,radial:50}))assert.ok(Math.abs(values[key]-n)<1e-8);assert.deepEqual(node,before);assert.equal(values.universalTime,epoch);
  for(const bad of [{...node,complete:true},{...node,departure:{}},{...node,remaining:[0,0,0]}])assert.throws(()=>maneuverEditValues(bad,f.universalTime));assert.throws(()=>maneuverEditValues(node,epoch));f.dispose();
 });
+
+test('Precise tolerance survives partial-burn save below the legacy threshold and rejects invalid values',()=>{
+ const f=new Flight(preset('rocket'),'orbit');try{f.maneuver=plan(f,30);f.maneuver.tolerance=.05;f.maneuver.remaining=[.1,0,0];
+ const restored=loadFlight(saveFlight(f));try{assert.equal(restored.maneuver.tolerance,.05);advanceManeuver(restored.maneuver,new T.Vector3(.02,0,0));assert.equal(restored.maneuver.complete,false);advanceManeuver(restored.maneuver,new T.Vector3(.04,0,0));assert.equal(restored.maneuver.complete,true);}finally{restored.dispose();}
+ const bad=saveFlight(f);bad.maneuver.tolerance=0;assert.throws(()=>loadFlight(bad));
+ }finally{f.dispose();}
+});
