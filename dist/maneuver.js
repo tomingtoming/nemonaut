@@ -3,7 +3,8 @@ import {bodyOrbitState,bodyState} from './celestial.js';
 import {apsisPlan} from './orbit-plan.js';
 // A preview is pure: both inputs and the live vehicle remain untouched.
 export function maneuverPreview(pos,vel,location,deltaV,universalTime=0){
- if(!Number.isFinite(deltaV)||Math.abs(deltaV)>10000)throw new Error('Δvは−10000〜10000 m/sで入力してください');
+ const components=typeof deltaV==='number'?{prograde:deltaV,normal:0,radial:0}:deltaV;
+ if(!components||!['prograde','normal','radial'].every(k=>Number.isFinite(components[k]))||Math.hypot(components.prograde,components.normal,components.radial)>10000)throw new Error('合計Δvは10000 m/s以内で入力してください');
  const custom=location&&typeof location==='object';
  if(!custom&&!['now','apoapsis','periapsis'].includes(location))throw new Error('噴射地点を選んでください');
  const original=bodyOrbitState(pos,vel,universalTime),body=original.body,plan=apsisPlan(original);let burnPos=pos.clone(),burnVel=vel.clone(),time=0;
@@ -22,7 +23,11 @@ export function maneuverPreview(pos,vel,location,deltaV,universalTime=0){
   burnVel=original.normal.clone().cross(direction).multiplyScalar(Math.sqrt(Math.max(0,2*(original.energy+body.mu/radius))));burnVel.add(future.velocity);time=point.time;
  }
  const relativeVelocity=burnVel.clone().sub(bodyState(body,universalTime+time).velocity);if(relativeVelocity.length()<.5)throw new Error('速度が小さすぎるため順行方向を決められません');
- const impulse=relativeVelocity.normalize().multiplyScalar(deltaV),afterVel=burnVel.clone().add(impulse);
+ const prograde=relativeVelocity.normalize(),radius=burnPos.clone().sub(bodyState(body,universalTime+time).position),normal=radius.clone().cross(prograde);
+ if((components.normal||components.radial)&&normal.lengthSq()<1e-8)throw Error('半径方向の飛行では軌道面方向を決められません');
+ normal.normalize();const radial=prograde.clone().cross(normal).normalize();
+ const impulse=prograde.multiplyScalar(components.prograde).addScaledVector(normal,components.normal).addScaledVector(radial,components.radial),afterVel=burnVel.clone().add(impulse);
+ deltaV=typeof deltaV==='number'?deltaV:impulse.length();
  return {original,orbit:bodyOrbitState(burnPos,afterVel,universalTime+time,body),universalTime:universalTime+time,burnPos,burnVel,afterVel,impulse,time,deltaV};
 }
 

@@ -16,3 +16,12 @@ test('Clicked conic points reproduce their next passage and immutable burn epoch
   assert.throws(()=>maneuverPreview(state.pos,state.vel,{universalTime:epoch-1},100,epoch));
  }
 });
+
+test('Three-axis impulses change inclination and radial motion with the correct magnitude',()=>{
+ const {pos,vel}=initial(),o=bodyOrbitState(pos,vel),before=pos.clone();
+ const n=maneuverPreview(pos,vel,'now',{prograde:0,normal:100,radial:0});assert.ok(n.impulse.clone().normalize().dot(o.normal)>.999999);assert.ok(Math.abs(n.orbit.normal.angleTo(o.normal)-Math.atan2(100,vel.length()))<1e-10);
+ const r=maneuverPreview(pos,vel,'now',{prograde:0,normal:0,radial:80});assert.ok(Math.abs(r.orbit.vertical-80)<1e-8);
+ const mixed=maneuverPreview(pos,vel,'now',{prograde:-30,normal:40,radial:50});assert.ok(Math.abs(mixed.deltaV-Math.sqrt(5000))<1e-9);assert.deepEqual(pos,before);
+ for(const c of [{prograde:10000,normal:1,radial:0},{prograde:0,normal:NaN,radial:0},{prograde:0}])assert.throws(()=>maneuverPreview(pos,vel,'now',c));
+ assert.throws(()=>maneuverPreview(pos,new T.Vector3(0,100,0),'now',{prograde:0,normal:1,radial:0}));
+});

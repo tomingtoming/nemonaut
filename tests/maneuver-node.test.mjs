@@ -30,3 +30,11 @@ test('Saved node resumes burn accounting and rejects corrupt state; older saves 
 test('Asymmetric tank depletion updates each collider and COM from its own remaining fuel',async()=>{const {statistics}=await import('../dist/core.js'),{PARTS}=await import('../dist/catalog.js');const f=new Flight(preset('launcher'),'orbit'),tanks=f.parts.filter(p=>PARTS[p.type].fuel);f.fuel.set(tanks[0].id,0);f.fuel.set(tanks[1].id,100);const expected=statistics(f.parts,f.fuel);f.step(1/120);assert.ok(f.stats.com.distanceTo(expected.com)<1e-9);assert.ok(Math.abs(f.colliders.get(tanks[0].id).mass()-PARTS[tanks[0].type].mass)<.001);assert.ok(Math.abs(f.colliders.get(tanks[1].id).mass()-PARTS[tanks[1].type].mass-100)<.001);f.dispose();});
 
 test('Crossing the target at a large step is detected and continued thrust remains visible as overshoot',()=>{const f=new Flight(preset('rocket'),'orbit'),n=plan(f,30),direction=maneuverDirection(n);advanceManeuver(n,direction.clone().multiplyScalar(31));assert.equal(n.complete,true);assert.ok(Math.abs(new T.Vector3(...n.remaining).length()-1)<1e-8);advanceManeuver(n,direction.clone().multiplyScalar(2));assert.ok(Math.abs(new T.Vector3(...n.remaining).length()-3)<1e-8);assert.ok(maneuverDirection(n).dot(direction)>.999);f.dispose();});
+
+test('Three-axis maneuver vector survives save and guides SAS toward the combined impulse',()=>{
+ const f=new Flight(preset('rocket'),'orbit'),pos=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+ f.maneuver=createManeuverNode(maneuverPreview(pos,f.vel,'now',{prograde:30,normal:40,radial:50},f.universalTime),f.time);f.sasMode='maneuver';
+ const restored=loadFlight(saveFlight(f));assert.deepEqual(restored.maneuver.impulse,f.maneuver.impulse);
+ for(let i=0;i<120*40;i++)restored.step(1/120);
+ const aim=new T.Vector3(0,1,0).applyQuaternion(restored.q);assert.ok(aim.dot(maneuverDirection(restored.maneuver))>.99);f.dispose();restored.dispose();
+});
