@@ -146,3 +146,37 @@ header>#craftName{min-width:80px;max-width:240px;width:22vw;padding:7px 10px;fon
 #worldHistory{margin-top:16px;font-size:12px;line-height:1.6}#worldHistory summary{cursor:pointer}#worldHistoryRows{padding-left:18px}#worldHistoryRows li{margin:8px 0}#worldHistoryRows p{color:#a9b8bf}
 
 .centerGuide li.completed:before{content:"✓";color:#b5cc88}
+
+/* The world fills the window. Tools are independent overlays. */
+body,body.flying{overflow:hidden}
+body>main,body.flying>main{position:fixed;inset:0;display:block;height:100dvh}
+#viewport{position:absolute;inset:0}
+body>header{position:fixed;inset:10px 12px auto;z-index:8;height:40px;border:0;background:transparent;padding:0;pointer-events:none}
+body>header>*{pointer-events:auto}
+#library,#inspector,body.flying #inspector{position:absolute;z-index:6;top:104px;bottom:96px;width:244px;border:1px solid #62707866;border-radius:8px;background:#20292deb;box-shadow:0 6px 24px #0004;overflow-y:auto}
+#library{left:12px}#inspector,body.flying #inspector{right:12px;padding:0 14px}
+body.library-closed #library,body.inspector-closed #inspector{display:none}
+#panelDock{position:fixed;top:60px;left:12px;right:12px;display:flex;justify-content:space-between;pointer-events:none;z-index:8}
+#panelDock button{pointer-events:auto;background:#20292deb;min-width:70px}
+#panelDock button[aria-expanded=true]{border-color:#b7d783;color:#b7d783}
+.at-center #panelDock,.flying #panelDock button:first-child{visibility:hidden}
+.viewtop{top:60px;left:100px;right:100px}.viewbottom{display:none}
+#toolbar{bottom:16px}#placement{top:108px}
+.flying .hudtop{top:58px;right:100px;background:transparent;padding:0}
+.flying .hudreadings{top:145px}.flying .universalClock{top:220px}
+.flying .navpanel,.flying .flightbottom{bottom:16px}
+#spaceCenter{display:block}
+.centerView{position:absolute;inset:0}
+.centerSidebar{position:absolute;z-index:2;left:18px;top:18px;bottom:24px;width:260px;padding:16px;background:#17262bdf;border:1px solid #82939b55;border-radius:10px;box-shadow:0 6px 24px #0003}
+.centerSidebar h1{font-size:22px;margin:0 0 16px}.centerFacilities{margin:0 0 14px;gap:8px}.centerFacilities button{padding:10px 14px}.centerFacilities strong{font-size:15px;margin:4px 0}
+.centerFacilityCard{left:auto;right:20px;top:20px;max-width:270px}.centerViewLabel{display:none}
+@media(max-width:760px){
+ #library,#inspector,body.flying #inspector{width:210px;top:100px;bottom:100px}
+ .viewtop{left:90px;right:90px}.viewactions{display:flex;flex-wrap:wrap}
+ .centerSidebar{left:10px;top:10px;bottom:auto;max-height:55dvh;width:210px;padding:12px}
+ .centerFacilities{grid-template-columns:1fr}.centerFacilityCard{top:auto;bottom:16px;right:12px;left:auto;max-width:230px}
+ .flying .hudtop{right:85px}.flying .hudreadings{top:165px}.flying .universalClock{top:245px}
+}
+.centerSidebar{bottom:auto;max-height:calc(100dvh - 42px)}
+#centerRecords>summary{cursor:pointer;padding:10px 0;color:#c0d0d3}
+#library #parts{grid-template-columns:repeat(2,minmax(0,1fr));overflow-x:hidden}.partcard{min-width:0}.partcard strong{white-space:normal}
