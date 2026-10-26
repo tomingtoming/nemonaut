@@ -13,17 +13,40 @@ float terrain(vec3 p){return .55*noise(p)+.27*noise(p*2.03)+.12*noise(p*4.07)+.0
 // oceans in land mode, or visual mountains that falsely promise collisions.
 export function surfaceMaterial(water=false){
  const material=new T.MeshStandardMaterial({color:0xffffff,roughness:water?.38:1,metalness:water?.12:0,envMapIntensity:.15});
- const rotation={value:new T.Matrix3()};material.userData.rotation=rotation;
+ const rotation={value:new T.Matrix3()},time={value:0};material.userData.rotation=rotation;material.userData.time=time;
  material.onBeforeCompile=shader=>{
-  shader.uniforms.surfaceRotation=rotation;
+  shader.uniforms.surfaceRotation=rotation;shader.uniforms.surfaceTime=time;
   shader.vertexShader='varying vec3 terrainWorld;\n'+shader.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\nterrainWorld=(modelMatrix*vec4(transformed,1.)).xyz;');
-  shader.fragmentShader='varying vec3 terrainWorld; uniform mat3 surfaceRotation;\n'+noise+shader.fragmentShader;
+  shader.fragmentShader='varying vec3 terrainWorld; uniform mat3 surfaceRotation; uniform float surfaceTime;\n'+noise+shader.fragmentShader;
   const colors=water?'vec3 base=mix(vec3(.014,.07,.12),vec3(.035,.20,.26),n);':'vec3 base=mix(vec3(.095,.145,.07),vec3(.38,.32,.18),smoothstep(.35,.72,n));base=mix(base,vec3(.63,.67,.63),smoothstep(.83,.97,abs(p.x)));';
   shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
    vec3 p=normalize(surfaceRotation*(terrainWorld-vec3(0.,-${PLANET.radius.toFixed(1)},0.)));
    float n=terrain(p*32.);${colors}
    float detail=terrain(p*1800.);diffuseColor.rgb*=base*(.78+.44*detail);`);
- };material.customProgramCacheKey=()=>water?'water-surface-v1':'land-surface-v1';return material;
+  if(water){
+   shader.vertexShader='varying vec2 waterCoord; uniform mat3 surfaceRotation;\n'+shader.vertexShader.replace('terrainWorld=(modelMatrix*vec4(transformed,1.)).xyz;','terrainWorld=(modelMatrix*vec4(transformed,1.)).xyz;waterCoord=(surfaceRotation*(terrainWorld-vec3(0.,-600000.,0.))).zx;');
+   shader.fragmentShader='varying vec2 waterCoord;\n'+shader.fragmentShader;
+   // Metre-scale shading gives motion cues without moving the physical sea level.
+   shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_begin>',`#include <normal_fragment_begin>
+    vec2 waterUV=waterCoord;
+    float nearWater=1.-smoothstep(300.,1800.,length(vViewPosition));
+    float wave=.075*sin(dot(waterUV,vec2(.8,.35))-surfaceTime*1.3)
+              +.04*sin(dot(waterUV,vec2(-1.2,.9))+surfaceTime*1.7)
+              +.018*sin(dot(waterUV,vec2(2.6,1.7))-surfaceTime*2.1);
+    vec3 dx=dFdx(-vViewPosition),dy=dFdy(-vViewPosition);
+    vec3 rx=cross(dy,normal),ry=cross(normal,dx);float det=dot(dx,rx);
+    normal=normalize(abs(det)*normal-sign(det)*(dFdx(wave)*rx+dFdy(wave)*ry)*nearWater);
+   `);
+   shader.fragmentShader=shader.fragmentShader.replace('#include <roughnessmap_fragment>',`#include <roughnessmap_fragment>
+    roughnessFactor=.35;
+   `);
+   shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+    float ripple=sin(dot(waterCoord,vec2(.8,.35))-surfaceTime*1.3)*sin(dot(waterCoord,vec2(-1.2,.9))+surfaceTime*1.7);
+    float closeWater=1.-smoothstep(300.,1800.,length(vViewPosition));
+    diffuseColor.rgb*=1.+.45*ripple*closeWater;
+   `);
+  }
+ };material.customProgramCacheKey=()=>water?'water-surface-v2':'land-surface-v1';return material;
 }
 
 export class FlightScenery{
@@ -73,6 +96,6 @@ export class FlightScenery{
   this.sky.position.copy(camera.position);this.stars.position.copy(camera.position);this.stars.material.opacity=1-air*day;
   light.intensity=inEclipse(camera.position,time)?0:2.4;ambient.intensity=.12+.55*air*day;
   const inverse=new T.Matrix3().setFromMatrix4(new T.Matrix4().makeRotationFromQuaternion(surfaceOrientation(time).invert()));
-  for(const m of materials)m?.userData.rotation?.value.copy(inverse);
+  for(const m of materials){m?.userData.rotation?.value.copy(inverse);if(m?.userData.time)m.userData.time.value=time%(Math.PI*20);}
  }
 }
