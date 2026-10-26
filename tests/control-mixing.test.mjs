@@ -1,0 +1,14 @@
+import test from 'node:test';import assert from 'node:assert/strict';import * as T from 'three';
+import {preset,PARTS} from '../dist/catalog.js';import {Flight,statistics,validateCraft} from '../dist/core.js';
+import {controlAxes,controlDeflection,surfaceForce,partRotation,aeroPoint} from '../dist/aero.js';
+import {setPartAction,setPartControlLimit,partActions} from '../dist/part-actions.js';import {saveFlight,loadFlight} from '../dist/flight-save.js';
+const run=(f,input)=>{for(let i=0;i<60;i++)f.step(1/120,input);};
+test('Aileron pair can mix pitch and roll with physical moments and bounded travel',()=>{
+ const ps=preset('plane'),com=statistics(ps).com,ailerons=ps.filter(p=>p.type==='aileron');for(const p of ailerons){assert.deepEqual(controlAxes(p),{pitch:false,yaw:false,roll:true});p.controlPitch=true;p.controlLimit=.5;}
+ const verticalForces=command=>ailerons.map(p=>surfaceForce(p,partRotation(p),new T.Vector3(0,0,80),1.225,controlDeflection(p,com,command)).force.y);const pitch=verticalForces({pitch:1}),roll=verticalForces({roll:1});assert.ok(pitch[0]*pitch[1]>0);assert.ok(roll[0]*roll[1]<0);
+ for(const [command,axis]of [[{pitch:1},'x'],[{roll:1},'z']]){let moment=0;for(const p of ailerons){const angle=controlDeflection(p,com,command),force=surfaceForce(p,partRotation(p),new T.Vector3(0,0,80),1.225,angle).force;moment+=aeroPoint(p).sub(com).cross(force)[axis];}assert.ok(moment>1);}
+ for(const p of ailerons){assert.ok(Math.abs(controlDeflection(p,com,{pitch:1,roll:1}))<=PARTS[p.type].maxDeflection*.5*Math.PI/180+1e-12);p.controlPitch=false;p.controlRoll=false;assert.equal(controlDeflection(p,com,{pitch:1,yaw:1,roll:1}),0);p.controlYaw=true;assert.equal(controlDeflection(p,com,{yaw:1}),0,'horizontal surface has no yaw moment; ignore floating-point rotation noise');}
+});
+test('Flight actuators obey 5-degree limit, axis disable, and saved per-part settings',()=>{
+ const f=new Flight(preset('plane'),'orbit');try{f.sas=false;const p=f.parts.find(p=>p.type==='elevator');assert.ok(setPartControlLimit(f,p.id,5/PARTS[p.type].maxDeflection));run(f,{pitch:1});assert.ok(Math.abs(Math.abs(f.deflections.get(p.id))-5*Math.PI/180)<1e-10);assert.ok(setPartAction(f,p.id,'controlPitch',false));run(f,{pitch:1});assert.equal(f.deflections.get(p.id),0);const g=loadFlight(saveFlight(f)),q=g.parts.find(q=>q.id===p.id);assert.equal(controlAxes(q).pitch,false);assert.equal(q.controlLimit,p.controlLimit);g.dispose();assert.equal(partActions(f,p.id).find(a=>a.key==='controlYaw').on,false);for(const bad of [-1,1.1,NaN,'0.5'])assert.equal(setPartControlLimit(f,p.id,bad),false);assert.equal(setPartControlLimit(f,f.parts.find(q=>q.type==='wing').id,.5),false);const malformed=structuredClone(f.parts);malformed[0].controlPitch=1;assert.throws(()=>validateCraft({version:1,parts:malformed}));}finally{f.dispose();}
+});

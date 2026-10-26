@@ -17,4 +17,14 @@ export function surfaceForce(p,orientation,velocity,density,deflection=0){
  const q=.5*density*speed*speed*d.wing;
  return {force:lift.multiplyScalar(q*cl).addScaledVector(direction,-q*cd),alpha,cl,stalled:a>stall};
 }
-export function controlDeflection(p,com,commands){const d=PARTS[p.type];if(!d.controlAxis||p.controlEnabled===false)return 0;const n=new T.Vector3(0,0,1).applyQuaternion(partRotation(p)),r=aeroPoint(p).sub(com),moment=r.cross(n);if(d.controlAxis==='auto'){const intent=new T.Vector3(commands.pitch||0,commands.yaw||0,commands.roll||0);return T.MathUtils.clamp(moment.normalize().dot(intent),-1,1)*(d.maxDeflection||18)*Math.PI/180;}const axis={pitch:'x',yaw:'y',roll:'z'}[d.controlAxis];const sign=Math.sign(moment[axis]);return sign*(commands[d.controlAxis]||0)*(d.maxDeflection||25)*Math.PI/180;}
+export function controlAxes(p){const axis=PARTS[p.type].controlAxis;return Object.fromEntries(['pitch','yaw','roll'].map(name=>[name,p['control'+name[0].toUpperCase()+name.slice(1)]??(axis==='auto'||axis===name)]));}
+export function controlDeflection(p,com,commands){
+ const d=PARTS[p.type];if(!d.controlAxis||p.controlEnabled===false)return 0;
+ const n=new T.Vector3(0,0,1).applyQuaternion(partRotation(p)),moment=aeroPoint(p).sub(com).cross(n),axes=controlAxes(p);
+ // Normalize only the enabled moment components. Single-axis defaults retain
+ // their original full travel; mixed axes share the same bounded travel.
+ const leverage=moment.length();moment.set(axes.pitch?moment.x:0,axes.yaw?moment.y:0,axes.roll?moment.z:0);
+ if(moment.length()<Math.max(1e-9,leverage*1e-8))return 0;moment.normalize();
+ const intent=new T.Vector3(commands.pitch||0,commands.yaw||0,commands.roll||0);
+ return T.MathUtils.clamp(moment.dot(intent),-1,1)*(d.maxDeflection||(d.controlAxis==='auto'?18:25))*(p.controlLimit??1)*Math.PI/180;
+}
