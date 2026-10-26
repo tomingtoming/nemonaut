@@ -1,3 +1,4 @@
+import {createBodyAerodynamics,bodyDrag} from './body-drag.js';
 import {separationName} from './separation-name.js';
 import {displacedVolume} from './buoyancy.js';
 import {engineMedium} from './engine-medium.js';
@@ -41,7 +42,7 @@ export class Flight {
  }
  get fuelRatio(){const capacity=this.parts.reduce((s,p)=>s+(PARTS[p.type].fuel||0),0);return capacity?this.parts.reduce((s,p)=>s+(PARTS[p.type].fuel?this.fuel.get(p.id)||0:0),0)/capacity:1;}
  set fuelRatio(value){for(const p of this.parts)if(PARTS[p.type].fuel)this.fuel.set(p.id,PARTS[p.type].fuel*Math.max(0,Math.min(1,value)));}
- buildColliders(){for(const c of this.colliders.values())this.world.removeCollider(c,true);this.colliders.clear();for(const p of this.parts){const d=PARTS[p.type],center=partCenter(p),rot=partRotation(p);const shape=d.wheel?RAPIER.ColliderDesc.ball(.35):RAPIER.ColliderDesc.cuboid(...d.size.map(n=>Math.max(.02,n/2)));shape.setTranslation(...center.toArray()).setRotation(rot).setMass(partMass(p,this.fuel,this.ballast,this.thermal)).setFriction(d.wheel?.015:.35).setRestitution(0);this.colliders.set(p.id,this.world.createCollider(shape,this.body));}this.body.recomputeMassPropertiesFromColliders();}
+ buildColliders(){this.bodyAerodynamics=createBodyAerodynamics(this.parts);for(const c of this.colliders.values())this.world.removeCollider(c,true);this.colliders.clear();for(const p of this.parts){const d=PARTS[p.type],center=partCenter(p),rot=partRotation(p);const shape=d.wheel?RAPIER.ColliderDesc.ball(.35):RAPIER.ColliderDesc.cuboid(...d.size.map(n=>Math.max(.02,n/2)));shape.setTranslation(...center.toArray()).setRotation(rot).setMass(partMass(p,this.fuel,this.ballast,this.thermal)).setFriction(d.wheel?.015:.35).setRestitution(0);this.colliders.set(p.id,this.world.createCollider(shape,this.body));}this.body.recomputeMassPropertiesFromColliders();}
  transferFuel(from,to,amount){
  const before=statistics(this.parts,this.fuel,this.ballast,this.thermal);
  for(const p of this.parts)this.colliders.get(p.id).setMass(partMass(p,this.fuel,this.ballast,this.thermal));this.body.recomputeMassPropertiesFromColliders();
@@ -104,7 +105,7 @@ export class Flight {
  const levels=mixRCS(thrusters,st.com,rotation,translation);this.rcsJets=burnRCS(thrusters,levels,this.fuel,dt);
  for(const jet of this.rcsJets)apply(jet.force.clone().applyQuaternion(this.q),jet.position.clone().applyQuaternion(this.q).add(this.pos));
  // Body drag at COM; wing drag and lift above act at individual aerodynamic centers.
- apply(relativeVelocity.clone().multiplyScalar(-.5*density*.4*Math.max(1,this.parts.length*.12)*relativeVelocity.length()),com);
+ const bodyAero=bodyDrag(this.bodyAerodynamics,this.q,relativeVelocity,density);apply(bodyAero.force,com);
  const reaction=this.parts.reduce((s,p)=>s+(p.reactionEnabled===false?0:(PARTS[p.type].reactionTorque||0)),0);
  const power=powerStep(this.parts,this.charge,com,this.q,commands,this.reactionEnabled,dt,startTime);
  if(this.reactionEnabled&&reaction)this.body.addTorque(new T.Vector3(commands.pitch,commands.yaw,commands.roll).multiplyScalar(reaction*power.ratio).applyQuaternion(this.q),true);

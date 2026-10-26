@@ -28,7 +28,7 @@ test('Surface expedition lands on the moon, ascends and returns its capsule in o
   while(f.universalTime<p.startTime-60){const result=advanceCoastFleet(f,p.startTime-60-f.universalTime,{maxSteps:10000});if(result.remaining<.01)break;for(let i=0;i<1200&&f.universalTime<p.startTime-60;i++)f.step(1/120);}
   assert.throws(()=>lunarDepartureNode(p,f),/再計算/);assert.ok(Math.abs(f.universalTime-(p.startTime-60))<.1);
   while(f.universalTime<p.startTime)f.step(Math.min(1/120,p.startTime-f.universalTime));
-  for(let i=0;i<14400&&!f.maneuver.complete;i++){const left=new T.Vector3(...f.maneuver.remaining).length();f.throttle=left<2?.01:left<10?.1:1;f.step(1/120);}f.throttle=0;
+  for(let i=0;i<Math.ceil((p.burn.duration+60)*120)&&!f.maneuver.complete;i++){const left=new T.Vector3(...f.maneuver.remaining).length();f.throttle=left<2?.01:left<10?.1:1;f.step(1/120);}f.throttle=0;
   assert.ok(f.maneuver.complete);assert.equal(advanceCoastFleet(f,50000,{maxSteps:10000}).reason,'月重力圏の境界');
   for(let i=0;i<120&&f.orbit.bodyId!=='moon';i++)f.step(1);
   assert.equal(f.orbit.bodyId,'moon');assert.ok(Math.abs(f.orbit.periapsis-p.finite.closest.altitude)<1000);assert.equal(f.crashed,false);

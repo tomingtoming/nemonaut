@@ -1,3 +1,4 @@
+import {bodyDrag} from '../dist/body-drag.js';
 import * as T from 'three';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
@@ -21,7 +22,7 @@ for(const dt of [1/120,1/240])for(const scenario of ['observed-steep','entry-pre
   const com=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),v=surfaceRelativeVelocity(com,f.vel,f.universalTime),h=f.orbit.altitude,speed=v.length();peakSpeed=Math.max(peakSpeed,speed);
   if(gates.length&&h<gates[0]){
    const gate=gates.shift(),axis=new T.Vector3(0,1,0).applyQuaternion(f.q),error=axis.angleTo(v.clone().negate())*180/Math.PI,density=atmosphere(h).density;
-   rows.push({time:+t.toFixed(2),gate,altitude:Math.round(h),speed:Math.round(speed),attitudeErrorDeg:+error.toFixed(2),density:+density.toFixed(4),dragN:Math.round(.5*density*.4*Math.max(1,f.parts.length*.12)*speed*speed),mass:Math.round(f.stats.mass),chute:[...f.chutes.values()][0].status});
+   rows.push({time:+t.toFixed(2),gate,altitude:Math.round(h),speed:Math.round(speed),attitudeErrorDeg:+error.toFixed(2),density:+density.toFixed(4),cdArea:+bodyDrag(f.bodyAerodynamics,f.q,v,density).cdArea.toFixed(3),dragN:Math.round(bodyDrag(f.bodyAerodynamics,f.q,v,density).force.length()),mass:Math.round(f.stats.mass),chute:[...f.chutes.values()][0].status});
   }
  }
  profiles.push({scenario,dt,initialStateIsApproximate:scenario==='observed-steep',duration:+t.toFixed(1),peakSpeed:Math.round(peakSpeed),landed:f.landed,crashed:f.crashed,rows});f.dispose();
