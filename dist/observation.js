@@ -21,3 +21,16 @@ export function advanceObservations(v,states,power,dt){
   const key=power.eclipse?'night':'day';s[key]=Math.min(1e12,s[key]+dt*power.ratio);
  }
 }
+
+export function observationStatus(v,id,{paused=false}={}){
+ const state=v.state??v,thermal=new Map(v.thermal),observation=new Map(v.observations??[]).get(id);
+ if(state.crashed||thermal.get(id)?.failed)return '機体損傷';
+ if(!observation)return '観測装置なし';
+ if(!observation.enabled)return '停止中';
+ if(paused)return '観測ON · 時間停止中';
+ const reason=observationReason(v,id);if(reason)return reason;
+ const power=v.telemetry.power;if(!power)return '給電確認中';
+ if(power.ratio<=0)return '電力不足 · 観測停止';
+ const period=power.eclipse?'夜間':'日照';
+ return power.ratio<.999?'電力不足 · '+period+' '+Math.round(power.ratio*100)+'%で観測':period+'を観測中';
+}

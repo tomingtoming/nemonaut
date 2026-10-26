@@ -8,7 +8,7 @@ import {deliverySitePosition,DELIVERY_SITE} from '../dist/delivery-sites.js';
 import {PRIMARY} from '../dist/celestial.js';
 import {surfaceOrientation,surfaceVelocity,surfaceAngularVelocity,PRIMARY_ROTATION_PERIOD} from '../dist/surface-frame.js';
 import {powerTotals} from '../dist/power.js';
-import {observationReason} from '../dist/observation.js';
+import {observationReason,observationStatus} from '../dist/observation.js';
 import {setPartAction} from '../dist/part-actions.js';
 import {advanceCoastFleet,isParked} from '../dist/coast-flight.js';
 import {dockVessels,undockVessel} from '../dist/docking.js';
@@ -49,4 +49,17 @@ test('Legacy saves start disabled with no invented data; malformed observation s
 });
 test('Sunlit observations are separate from night data and can be supplied by solar generation',()=>{
  const f=station(0);try{const id=f.parts[0].id;setPartAction(f,id,'observation',true);f.charge.set(id,0);const r=advanceCoastFleet(f,30);assert.equal(r.reason,null);assert.ok(Math.abs(f.observations.get(id).day-30)<1e-8);assert.equal(f.observations.get(id).night,0);assert.ok(f.charge.get(id)>0);}finally{f.dispose();}
+});
+
+test('Observation status distinguishes paused saves, real partial supply, depletion and invalid placement',()=>{
+ const f=station();try{
+  const id=f.parts[0].id;assert.equal(observationStatus(f,id),'停止中');
+  setPartAction(f,id,'observation',true);
+  assert.equal(observationStatus(saveFlight(f),id,{paused:true}),'観測ON · 時間停止中');
+  advanceCoastFleet(f,5);assert.equal(observationStatus(f,id),'夜間を観測中');
+  f.charge.set(id,.05);advanceCoastFleet(f,5);assert.equal(observationStatus(f,id),'電力不足 · 夜間 10%で観測');
+  advanceCoastFleet(f,5);assert.equal(observationStatus(f,id),'電力不足 · 観測停止');
+  f.pos.x+=100;assert.equal(observationStatus(f,id),'北観測点の範囲外');
+  f.crashed=true;assert.equal(observationStatus(f,id),'機体損傷');
+ }finally{f.dispose();}
 });

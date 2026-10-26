@@ -19,3 +19,10 @@ test('Moved, airborne, unpowered and damaged stations report current state indep
  const v=vessel();v.pos.x+=100;v.landed=false;v.charge.set('probe-1',0);v.thermal.set('probe-1',{failed:true});
  const result=deliveryStation(history,[v]);assert.ok(result.distance>90);assert.equal(result.landed,false);assert.equal(result.charge,0);assert.equal(result.damaged,true);assert.equal(result.record,history[0]);
 });
+
+test('Station power includes attached storage in live and saved vessels',()=>{
+ const v=vessel();v.parts.push({id:'battery',type:'battery',p:[0,.35,0]});v.charge.set('battery',900);
+ const live=deliveryStation(history,[v]);assert.deepEqual(live.power,{stored:912,capacity:1200});
+ const saved={...v,pos:v.pos.toArray(),q:v.q.toArray(),charge:[...v.charge],thermal:[]};
+ assert.deepEqual(deliveryStation(history,[saved]).power,live.power);assert.equal(live.charge,12);
+});
