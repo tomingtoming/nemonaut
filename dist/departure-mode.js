@@ -21,6 +21,7 @@ export function historyActionLabel(event){
 }
 export function updateDepartureButton(root,environment){
  const {mode,label}=departureMode(environment),button=root.querySelector('#launch');
+ root.querySelector('#targetPracticeControl')?.toggleAttribute('hidden',environment!=='orbit');
  button.textContent=mode==='practice'?'練習配置へ ↗':'出発 ↗';
  button.title=label+(mode==='practice'?'から独立した練習を開始します':'から現在の世界に機体を追加します');
  root.querySelector('#departureNotice').textContent=mode==='practice'

@@ -49,3 +49,16 @@ test('a new practice session has no inherited quicksave and failed saves leave n
  assert.throws(()=>new PracticeSession(game,draft).loadFlight(),/まだありません/);
  assert.deepEqual(readStoredGame(s).game,JSON.parse(JSON.stringify(game)));
 });
+
+test('rendezvous practice adds a separate target at the home epoch and quicksave retains both',()=>{
+ const {game,draft}=fixture(),before=structuredClone(game);
+ const session=new PracticeSession(game,{...draft,parts:preset('orbital-tug'),practiceScenario:'rendezvous'});
+ const world=session.initialWorld;assert.equal(world.vessels.length,2);assert.equal(world.universalTime,5000);
+ const f=loadFlight(flightFromWorld(world));
+ try{assert.equal(f.navigationTarget,f.detached[0]);assert.equal(f.detached[0].universalTime,5000);assert.equal(f.detached[0].vesselName,'移送先 · Orbital Tug');
+ session.saveFlight(saveFlight(f));const restored=loadFlight(session.loadFlight());try{assert.equal(restored.navigationTarget,restored.detached[0]);assert.equal(restored.parts.length,10);}finally{restored.dispose();}
+ }finally{f.dispose();}
+ assert.deepEqual(session.home,before);assert.deepEqual(game,before);
+ assert.throws(()=>new PracticeSession(game,{...draft,environment:'moon-orbit',practiceScenario:'rendezvous'}),/母星/);
+ assert.throws(()=>new PracticeSession(game,{...draft,practiceScenario:'invalid'}),/不明/);
+});
