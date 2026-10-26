@@ -1,4 +1,4 @@
-import {PARTS} from './catalog.js';
+import {validPartSetting} from './part-settings.js';
 import * as T from 'three';
 
 export function validateSymmetry(parts){
@@ -37,9 +37,8 @@ export function transformSymmetryFrames(parts,delta){for(const p of parts)if(p.s
 export function editSymmetrySetting(parts,id,key,value,linked=true){
  validateSymmetry(parts);
  const copy=structuredClone(parts),targets=symmetryTargets(copy,id,linked);
- const allowed={reactionEnabled:d=>!!d.reactionTorque,steeringEnabled:d=>!!d.steer,driveEnabled:(_,p)=>p.type==='wheel'};
  if(key==='stage'){if(!Number.isInteger(value)||value<0||value>9)throw Error('作動段が不正です');}
- else if(!allowed[key]||typeof value!=='boolean'||targets.some(p=>!allowed[key](PARTS[p.type],p)))throw Error('この部品では変更できない作動設定です');
+ else if(targets.some(p=>!validPartSetting(p,key,value)))throw Error('この部品では変更できない作動設定です');
  for(const p of targets)p[key]=value;
  return copy;
 }
