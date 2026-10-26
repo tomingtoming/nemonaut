@@ -55,10 +55,11 @@ function blocker(reason,v,code=null,other=null){
  const scheduled=pendingBurns(v)[0]?.time??null;
  return {reason,code,vesselId:anchor(v),vesselName:v.vesselName||'名称未設定の機体',otherVesselId:other?anchor(other):null,otherVesselName:other?.vesselName||null,overdue:code==='maneuver'&&scheduled!==null&&scheduled<v.universalTime,scheduledTime:code==='maneuver'?scheduled:null};
 }
-export function coastBlocker(root,{input=false}={}){
- if(input)return blocker('操作中',root,'input');
- for(const v of fleet(root)){
-  if(v.universalTime!==root.universalTime)return blocker('機体の共通時刻が不一致',v,'clock');
+export function coastBlocker(root,options={}){return worldCoastBlocker(fleet(root),root.universalTime,root,options);}
+function worldCoastBlocker(vessels,universalTime,active,{input=false}={}){
+ if(input)return blocker('操作中',active,'input');
+ for(const v of vessels){
+  if(v.universalTime!==universalTime)return blocker('機体の共通時刻が不一致',v,'clock');
   if(v.crashed)continue;
   if(v.throttle!==0)return blocker('推力設定のある機体',v,'thrust');
   if([...v.thermal.values()].some(s=>s.failed||!Number.isFinite(s.temperature)||s.temperature<3))return blocker('熱状態を確認してください',v,'thermal');
@@ -75,10 +76,13 @@ export function coastEligibility(root,options){return coastBlocker(root,options)
 // this coast mode. Attitude is frozen; stored angular velocity is retained for
 // resuming normal physics. UI must explicitly describe this on-rails contract.
 // Max 5 seconds per resource sample bounds eclipse/solar sampling error.
-export function advanceCoastFleet(root,requested,{input=false,maxSteps=64}={}){
+export function advanceCoastFleet(root,requested,options={}){return advanceWorldCoast(fleet(root),root.universalTime,root.vesselId,requested,options);}
+export function advanceWorldCoast(vessels,universalTime,activeVesselId,requested,{input=false,maxSteps=64}={}){
+ const active=vessels.find(v=>v.vesselId===activeVesselId);
+ if(!active||new Set(vessels.map(v=>v.vesselId)).size!==vessels.length||!Number.isFinite(universalTime))throw Error('高速航行の世界が不正です');
  if(!Number.isFinite(requested)||requested<=0||!Number.isInteger(maxSteps)||maxSteps<1||maxSteps>10000)throw Error('時間加速の要求が不正です');
- let advanced=0,steps=0,blocked=coastBlocker(root,{input}),reason=blocked?.reason??null;
- const vessels=fleet(root);
+ let advanced=0,steps=0,blocked=worldCoastBlocker(vessels,universalTime,active,{input}),reason=blocked?.reason??null;
+
  while(!reason&&advanced<requested&&steps<maxSteps){
   let dt=Math.min(5,requested-advanced),limiting=null,limitingVessel=null,nearby=null;
   for(const v of vessels){if(v.crashed||isParked(v))continue;const limit=coastStepLimit(center(v),v.vel,v.universalTime,{requested:dt,deadline:deadline(v),surfaceMargin:coastSurfaceMargin(v)});if(limit.dt<dt){dt=limit.dt;limiting=limit.reason;limitingVessel=v;nearby=null;}}
@@ -89,9 +93,9 @@ export function advanceCoastFleet(root,requested,{input=false,maxSteps=64}={}){
    const safe=Math.max(0,clearance)/(a.vel.clone().sub(b.vel).length()+100)*.5;
    if(safe<dt){dt=safe;limiting='proximity';limitingVessel=a;nearby=b;}
   }
-  if(dt<.05&&dt<requested-advanced){reason={surface:'大気・地表への接近',soi:'月重力圏の境界',maneuver:'予定噴射の直前',proximity:'他機体への接近'}[limiting]||'通常物理が必要';blocked=blocker(reason,limitingVessel||root,limiting,nearby);break;}
-  const time=root.universalTime,end=time+dt;
-  if(end===time){reason='時刻の計算精度の上限';blocked=blocker(reason,root,'precision');break;}
+  if(dt<.05&&dt<requested-advanced){reason={surface:'大気・地表への接近',soi:'月重力圏の境界',maneuver:'予定噴射の直前',proximity:'他機体への接近'}[limiting]||'通常物理が必要';blocked=blocker(reason,limitingVessel||active,limiting,nearby);break;}
+  const time=universalTime,end=time+dt;
+  if(end===time){reason='時刻の計算精度の上限';blocked=blocker(reason,active,'precision');break;}
   // Compute on copies first: a failed propagation cannot split fleet clocks.
   const updates=vessels.map(v=>{
    if(v.crashed)return {v,...frozenSurfaceState(v,time,dt)};
@@ -111,7 +115,7 @@ export function advanceCoastFleet(root,requested,{input=false,maxSteps=64}={}){
    v.maxAltitude=Math.max(v.maxAltitude,u.orbit.altitude);
    v.telemetry={power:u.power,force:zero.clone(),torque:zero.clone(),engineForce:zero.clone(),commands:{...commands},stallCount:0,contacts:0,atmosphere:u.air,engine:'Kepler coast'};
   }
-  advanced+=dt;steps++;blocked=coastBlocker(root);reason=blocked?.reason??null;
+  universalTime=end;advanced+=dt;steps++;blocked=worldCoastBlocker(vessels,universalTime,active);reason=blocked?.reason??null;
  }
- return {advanced,steps,reason,blocker:blocked,remaining:Math.max(0,requested-advanced)};
+ return {universalTime,advanced,steps,reason,blocker:blocked,remaining:Math.max(0,requested-advanced)};
 }
