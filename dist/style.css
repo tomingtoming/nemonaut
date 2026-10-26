@@ -274,3 +274,5 @@ body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
 .floatingContent .partThrustLimit{display:grid;grid-template-columns:1fr auto;gap:3px}.partThrustLimit input{grid-column:1/-1;width:100%;margin:0;accent-color:#b4c584}.partThrustLimit span:last-of-type{font-variant-numeric:tabular-nums}
 
 .floatingContent label[hidden]{display:none}.floatingContent label small:empty{display:none}
+
+.fuelTransfer{border-top:1px solid #4e555d;margin-top:8px}.fuelTransfer select{max-width:145px}.fuelTransfer input{width:80px}.fuelTransfer>div{display:flex;gap:6px;margin:6px 0}.fuelTransfer button{flex:1;padding:5px}
