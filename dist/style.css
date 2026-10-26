@@ -301,3 +301,4 @@ body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
 }
 
 .buoyancyPanel{padding:10px}.buoyancyPanel[hidden]{display:none}.buoyancyPanel label{display:block;margin-top:8px}.buoyancyPanel output{float:right;display:inline;border:0;padding:0;line-height:inherit}.buoyancyPanel input{width:100%;margin:7px 0}.buoyancyPanel dl{display:grid;grid-template-columns:1fr auto;gap:6px;margin:8px 0 0}.buoyancyPanel dd{margin:0;text-align:right;font-family:monospace}.buoyancyLegend{display:flex;justify-content:space-between;margin-top:8px}.buoyancyLegend span:first-child{color:#e7cf4c}.buoyancyLegend span:last-child{color:#bf8dff}
+.exampleGroups{display:flex;gap:5px;flex-wrap:wrap;margin:12px 0 18px}.exampleGroups button{flex:1;white-space:nowrap;padding:8px}.exampleGroups button[aria-pressed=true]{background:#667c39;color:#f3ffd6;border-color:#b2ca83}
