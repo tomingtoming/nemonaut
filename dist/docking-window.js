@@ -1,3 +1,4 @@
+import {DOCK_LIMITS} from './docking.js';
 import {floatingWindow} from './floating-window.js';
 
 // Move the live controls, preserving selection, handlers and the docking latch.
@@ -12,8 +13,12 @@ export function mountDockingWindow(getFlight){
  panel.append(help);
  const axes=document.createElement('table');axes.className='portAxes';axes.setAttribute('aria-label','目標ポート基準の横ずれと速度');axes.innerHTML='<thead><tr><th></th><th>ずれ m</th><th>速度 m/s</th></tr></thead><tbody><tr><th>右＋</th><td></td><td></td></tr><tr><th>上＋</th><td></td><td></td></tr></tbody>';
  document.querySelector('#portReadings').after(axes);const cells=axes.querySelectorAll('td');
+ const conditions=document.createElement('table');conditions.className='dockConditions';conditions.setAttribute('aria-label','結合条件');
+ const criteria=[['distance','面間','m',1,2],['angle','面角度','°',180/Math.PI,1],['speed','相対速度','m/s',1,2],['angularSpeed','相対回転','°/s',180/Math.PI,1]];
+ const readings=criteria.map(([key,label,unit,factor,digits])=>{const row=document.createElement('tr'),name=document.createElement('th'),value=document.createElement('td');name.textContent=label;row.append(name,value);conditions.append(row);return {key,unit,factor,digits,row,value};});
+ axes.after(conditions);
  view.element.addEventListener('click',e=>e.target.closest('button,input[type=checkbox]')?.blur());
- function update(){const active=!!getFlight();if(!active)open=false;button.disabled=!active;button.setAttribute('aria-expanded',String(open));const mapOpen=!document.querySelector('#orbitOverlay').hidden;button.hidden=mapOpen;view.element.hidden=!active||!open||mapOpen;}
+ function update(){const active=!!getFlight();if(!active)open=false;button.disabled=!active;button.setAttribute('aria-expanded',String(open));const mapOpen=!document.querySelector('#orbitOverlay').hidden;button.hidden=mapOpen;view.element.hidden=!active||!open||mapOpen;if(active&&open&&!mapOpen)view.clamp();}
  button.onclick=()=>{open=!open;button.blur();update();if(open){view.front();view.clamp();}};
- return {update,close,readings(guide){axes.hidden=!guide;if(!guide)return;[guide.horizontal,guide.horizontalSpeed,guide.vertical,guide.verticalSpeed].forEach((v,i)=>{cells[i].textContent=(v>=0?'+':'')+v.toFixed(3);});}};
+ return {update,close,readings(guide,status){conditions.hidden=!Number.isFinite(status?.distance);if(!conditions.hidden)for(const r of readings){const pass=status[r.key]<=DOCK_LIMITS[r.key];r.value.textContent=(pass?'✓ ':'')+(status[r.key]*r.factor).toFixed(r.digits)+' / '+(DOCK_LIMITS[r.key]*r.factor).toFixed(r.digits)+' '+r.unit;r.row.classList.toggle('satisfied',pass);}axes.hidden=!guide;if(!guide)return;[guide.horizontal,guide.horizontalSpeed,guide.vertical,guide.verticalSpeed].forEach((v,i)=>{cells[i].textContent=(v>=0?'+':'')+v.toFixed(3);});}};
 }
