@@ -257,3 +257,7 @@ body:not(.flying) #toolbar{left:246px;transform:none;bottom:12px;border-radius:2
 .mapTargets{position:absolute;z-index:2;left:12px;top:94px;display:flex;flex-direction:column;gap:5px;max-width:230px;background:#202c35df;padding:7px;border:1px solid #536574;border-radius:4px}.mapTargets select{max-width:215px;font-size:11px}.mapTargets small{color:#ee95e8}.mapTargets button{font-size:11px;padding:4px}@media(max-width:650px){.mapTargets{top:auto;bottom:125px;max-width:180px}.mapTargets select{max-width:160px}}
 
 .mapTransfer select,.mapTransfer button,.mapTransfer small{display:block;width:100%;margin-top:5px}.mapTransfer summary{cursor:pointer}
+
+/* Flight actions must remain clickable above the inspector. */
+#flightMenu[open],#flightSystems[open]{z-index:9}
+body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
