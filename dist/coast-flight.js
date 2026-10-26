@@ -111,7 +111,7 @@ export function advanceWorldCoast(vessels,universalTime,activeVesselId,requested
    const next=drift(dt),mid=drift(dt/2),turn=parked?surfaceOrientation(dt,body):new T.Quaternion(),q=v.q.clone().premultiply(turn),midQ=parked?v.q.clone().premultiply(surfaceOrientation(dt/2,body)):q,air=parked&&body.id==='planet'?atmosphere(c.distanceTo(start.position)-body.radius):{density:0,pressure:0,temperature:3};
    const charge=new Map(v.charge),thermal=new Map([...v.thermal].map(([id,s])=>[id,{...s}]));
    const power=powerStep(v.parts,charge,mid.position,midQ,commands,false,dt,time+dt/2,observationDemand(v));
-   const observations=new Map([...v.observations].map(([id,s])=>[id,{...s}]));advanceObservations({...v,landed:parked,pos:mid.position.clone().sub(v.stats.com.clone().applyQuaternion(midQ)),q:midQ,vel:mid.velocity,universalTime:time+dt/2},observations,power,dt);
+   const observations=new Map([...v.observations].map(([id,s])=>[id,structuredClone(s)]));advanceObservations({...v,landed:parked,pos:mid.position.clone().sub(v.stats.com.clone().applyQuaternion(midQ)),q:midQ,vel:mid.velocity,universalTime:time+dt/2},observations,power,dt);
    coolStationary(v.parts,thermal,dt,air);
    return {v,parked,air,turn,pos:next.position.clone().sub(v.stats.com.clone().applyQuaternion(q)),vel:next.velocity,q,charge,thermal,power,observations,orbit:bodyOrbitState(next.position,next.velocity,end)};
   });

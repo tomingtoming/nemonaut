@@ -1,3 +1,4 @@
+import {deliverySite} from './delivery-sites.js';
 const environments={
  land:['surface','発射台 / 地上'],runway:['surface','滑走路'],water:['surface','海面'],
  drop:['practice','高度1 km降下'],entry:['practice','高度45 km再突入'],
@@ -9,8 +10,8 @@ export function departureMode(environment){
  const [mode,label]=environments[environment];return {mode,label};
 }
 export function historyActionLabel(event){
- if(event.type==='survey')return '北観測点の昼夜観測を完了';
- if(event.type==='delivery')return '北観測点に観測機を設置';
+ if(event.type==='survey')return (deliverySite(event.siteId)?.name??'観測点')+'の昼夜観測を完了';
+ if(event.type==='delivery')return (deliverySite(event.siteId)?.name??'観測点')+'に観測機を設置';
  if(event.type==='recover'&&event.moonEventIds?.length)return '月探査から母星へ帰還・回収';
  if(event.type==='moon-arrival')return '月の重力圏に到達';
  if(event.type==='moon-landing')return '月面に着陸';

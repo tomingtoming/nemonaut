@@ -7,7 +7,7 @@ import {worldFromFlight,flightFromWorld,validateWorld} from '../dist/world-save.
 import {launchWorld,retireWorldVessel} from '../dist/world-operations.js';
 import {surfaceOrientation,surfaceVelocity,surfaceAngularVelocity,PRIMARY_ROTATION_PERIOD} from '../dist/surface-frame.js';
 import {PRIMARY} from '../dist/celestial.js';
-import {DELIVERY_SITE,deliverySitePosition} from '../dist/delivery-sites.js';
+import {DELIVERY_SITE,DELIVERY_SITES,deliverySitePosition} from '../dist/delivery-sites.js';
 import {recordDeliveryAchievements} from '../dist/surface-delivery.js';
 import {recordSurveyAchievement,surveyProgress} from '../dist/surface-survey.js';
 import {advanceCoastFleet,isParked} from '../dist/coast-flight.js';
@@ -44,5 +44,16 @@ test('Practice, unrelated probes and missing installation cannot earn the survey
   const noDelivery=history.slice(0,1);assert.equal(recordSurveyAchievement(noDelivery,f),noDelivery);
   f.observations.set(id,{enabled:false,day:9000,night:0});f.observations.set('another',{enabled:false,day:0,night:9000});assert.equal(recordSurveyAchievement(history,f),history);
   f.observations.delete('another');f.observations.get(id).night=9000;f.crashed=true;assert.equal(recordSurveyAchievement(history,f),history);
+ }finally{f.dispose();}
+});
+
+test('Northern data never completes an eastern survey, and per-site saved counters are strict',()=>{
+ const {f,history,id}=station();try{
+  const east=DELIVERY_SITES.find(s=>s.id==='east-station'),records=structuredClone(history);records.at(-1).siteId=east.id;
+  f.observations.set(id,{enabled:true,day:9000,night:9000});
+  assert.equal(recordSurveyAchievement(records,f),records);assert.equal(surveyProgress(records,[f],east).day,0);
+  f.observations.get(id).sites={[east.id]:{day:123,night:456}};
+  const saved=saveFlight(f),loaded=loadFlight(saved);try{assert.deepEqual(loaded.observations.get(id).sites,{[east.id]:{day:123,night:456}});loaded.observations.get(id).sites[east.id].day=1;assert.equal(f.observations.get(id).sites[east.id].day,123);}finally{loaded.dispose();}
+  for(const sites of [[],{'north-station':{day:1,night:2}},{unknown:{day:1,night:2}},{'east-station':{day:-1,night:2}},{'east-station':{day:1,night:NaN}}]){const bad=structuredClone(saved);bad.observations[0][1].sites=sites;assert.throws(()=>loadFlight(bad));}
  }finally{f.dispose();}
 });

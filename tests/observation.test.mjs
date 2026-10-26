@@ -4,7 +4,7 @@ import * as T from 'three';
 import {Flight} from '../dist/core.js';
 import {part,preset} from '../dist/catalog.js';
 import {saveFlight,loadFlight} from '../dist/flight-save.js';
-import {deliverySitePosition,DELIVERY_SITE} from '../dist/delivery-sites.js';
+import {deliverySitePosition,DELIVERY_SITE,DELIVERY_SITES} from '../dist/delivery-sites.js';
 import {PRIMARY} from '../dist/celestial.js';
 import {surfaceOrientation,surfaceVelocity,surfaceAngularVelocity,PRIMARY_ROTATION_PERIOD} from '../dist/surface-frame.js';
 import {powerTotals} from '../dist/power.js';
@@ -12,11 +12,11 @@ import {observationReason,observationStatus} from '../dist/observation.js';
 import {setPartAction} from '../dist/part-actions.js';
 import {advanceCoastFleet,isParked} from '../dist/coast-flight.js';
 import {dockVessels,undockVessel} from '../dist/docking.js';
-function station(time=PRIMARY_ROTATION_PERIOD/2){
+function station(time=PRIMARY_ROTATION_PERIOD/2,site=DELIVERY_SITE){
  const probe=part('probe'),solar=part('solar',[0,.3,0],[-Math.PI/2,0,0],probe.id);
  const f=new Flight([probe,solar],'land',time);f.sas=false;f.reactionEnabled=false;
- f.q.copy(surfaceOrientation(time)).multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),-DELIVERY_SITE.north/PRIMARY.radius));
- f.pos.copy(deliverySitePosition(time)).add(new T.Vector3(0,.205,0).applyQuaternion(f.q));f.vel.copy(surfaceVelocity(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),time));f.omega.copy(surfaceAngularVelocity());
+ f.q.copy(surfaceOrientation(time)).multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),-site.north/PRIMARY.radius)).multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),(site.east??0)/PRIMARY.radius));
+ f.pos.copy(deliverySitePosition(time,site)).add(new T.Vector3(0,.205,0).applyQuaternion(f.q));f.vel.copy(surfaceVelocity(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),time));f.omega.copy(surfaceAngularVelocity());
  for(let i=0;i<240;i++)f.step(1/120);return f;
 }
 test('Observation is opt-in, consumes real energy, and gives matching normal/coast progress at night',()=>{
@@ -32,7 +32,7 @@ test('Depletion limits data to supplied energy; invalid location/flight never ea
  const f=station();try{const id=f.parts[0].id;setPartAction(f,id,'observation',true);f.charge.set(id,.05);
   const r=advanceCoastFleet(f,5);assert.equal(r.reason,null);assert.ok(Math.abs(f.observations.get(id).night-.5)<1e-8);assert.equal(powerTotals(f.parts,f.charge).stored,0);
   advanceCoastFleet(f,5);assert.ok(Math.abs(f.observations.get(id).night-.5)<1e-8);
-  f.pos.x+=100;assert.equal(observationReason(f,id),'北観測点の範囲外');const before=f.observations.get(id).night;f.charge.set(id,20);advanceCoastFleet(f,5);assert.equal(f.observations.get(id).night,before);f.pos.x-=100;f.landed=false;assert.equal(observationReason(f,id),'接地・静止待ち');
+  f.pos.x+=100;assert.equal(observationReason(f,id),'観測点の範囲外');const before=f.observations.get(id).night;f.charge.set(id,20);advanceCoastFleet(f,5);assert.equal(f.observations.get(id).night,before);f.pos.x-=100;f.landed=false;assert.equal(observationReason(f,id),'接地・静止待ち');
  }finally{f.dispose();}
 });
 test('Observation data follows parts through separation, save/restore and docking without aliasing',()=>{
@@ -59,7 +59,16 @@ test('Observation status distinguishes paused saves, real partial supply, deplet
   advanceCoastFleet(f,5);assert.equal(observationStatus(f,id),'夜間を観測中');
   f.charge.set(id,.05);advanceCoastFleet(f,5);assert.equal(observationStatus(f,id),'電力不足 · 夜間 10%で観測');
   advanceCoastFleet(f,5);assert.equal(observationStatus(f,id),'電力不足 · 観測停止');
-  f.pos.x+=100;assert.equal(observationStatus(f,id),'北観測点の範囲外');
+  f.pos.x+=100;assert.equal(observationStatus(f,id),'観測点の範囲外');
   f.crashed=true;assert.equal(observationStatus(f,id),'機体損傷');
+ }finally{f.dispose();}
+});
+
+test('Coast advances nested site observations on independent copies',()=>{
+ const site=DELIVERY_SITES[1],f=station(0,site);try{for(let i=0;i<1200;i++)f.step(1/120);assert.ok(isParked(f));
+  const id=f.parts[0].id;setPartAction(f,id,'observation',true);f.observations.get(id).sites={[site.id]:{day:10,night:20}};
+  const previous=f.observations,before=structuredClone([...previous]);
+  assert.equal(advanceCoastFleet(f,5).reason,null);
+  assert.deepEqual([...previous],before);assert.ok(f.observations.get(id).sites[site.id].day>10);
  }finally{f.dispose();}
 });

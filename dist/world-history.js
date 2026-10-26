@@ -1,4 +1,4 @@
-import {DELIVERY_SITE,SURVEY_TARGET_SECONDS} from './delivery-sites.js';
+import {deliverySite,SURVEY_TARGET_SECONDS} from './delivery-sites.js';
 import {departureMode} from './departure-mode.js';
 import {PLANET} from './planet.js';
 import {surfaceOrigins,orbitalOrigins,orbitalReturnSources} from './launch-provenance.js';
@@ -27,7 +27,7 @@ export function validateHistory(value=[],time){
   }
   if(event.type==='delivery'){
    const sources=event.partIds&&surfaceOrigins(event.partIds,origins);
-   if(event.siteId!==DELIVERY_SITE.id||deliveries.has(event.siteId)||!sources||!Array.isArray(event.launchEventIds)||JSON.stringify([...event.launchEventIds].sort())!==JSON.stringify(sources)||!event.partIds.includes(event.probePartId)||!Number.isFinite(event.distance)||event.distance<0||event.distance>DELIVERY_SITE.radius||!Number.isFinite(event.speed)||event.speed<0||event.speed>=.5)throw Error('観測点設置の出発履歴・距離・速度・重複が不正です');
+   if(!deliverySite(event.siteId)||deliveries.has(event.siteId)||!sources||!Array.isArray(event.launchEventIds)||JSON.stringify([...event.launchEventIds].sort())!==JSON.stringify(sources)||!event.partIds.includes(event.probePartId)||!Number.isFinite(event.distance)||event.distance<0||event.distance>deliverySite(event.siteId).radius||!Number.isFinite(event.speed)||event.speed<0||event.speed>=.5)throw Error('観測点設置の出発履歴・距離・速度・重複が不正です');
    deliveries.add(event.siteId);deliveryEvents.set(event.id,event);
   }else if(event.type==='survey'){
    const source=deliveryEvents.get(event.deliveryEventId);
