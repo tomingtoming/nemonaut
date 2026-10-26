@@ -1,3 +1,6 @@
+import * as T from 'three';
+import {MOON,bodyState,bodyOrbitState} from '../dist/celestial.js';
+import {descentTelemetry} from '../dist/descent.js';
 import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
 const surfaceSpeed=f=>surfaceRelativeVelocity(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.vel,f.universalTime).length();
 import test from 'node:test';
@@ -76,4 +79,42 @@ test('Accelerated parachute descent reaches exactly the same touchdown and fleet
   }finally{f.dispose();}
  };
  const normal=run(1);assert.deepEqual(run(2),normal);assert.deepEqual(run(4),normal);
+});
+
+
+test('Four-times lunar freefall yields before braking altitude, leaving time for manual ignition',()=>{
+ const f=new Flight(preset('lander'),'moon-orbit',40000),clock=new PhysicsClock();
+ try{
+  const moon=bodyState(MOON,f.universalTime);
+  f.q.identity();f.pos.copy(moon.position).add(new T.Vector3(0,MOON.radius+15000,0));f.vel.copy(moon.velocity);
+  f.sasMode='radial';f.stageNext();f.throttle=0;
+  let reason='';
+  for(let frame=0;frame<10000&&!reason;frame++)clock.advance(1/60,4,dt=>{f.step(dt);reason=physicalWarpStop(f);return !reason;});
+  assert.equal(reason,'月面降下の減速準備');
+  const d=descentTelemetry(f);
+  assert.ok(d.clearance>4000&&d.clearance<15000);
+  assert.ok(d.clearance>d.brakingDistance+10*Math.abs(d.vertical));
+  assert.equal(f.throttle,0,'guard must not ignite the engine');
+  for(let i=0;i<1200;i++)f.step(1/120);
+  f.throttle=1;
+  for(let i=0;i<12000&&f.orbit.vertical<0&&!f.crashed;i++)f.step(1/120);
+  assert.equal(f.crashed,false);assert.ok(descentTelemetry(f).clearance>1000);
+ }finally{f.dispose();}
+});
+
+test('Lunar warp guard preserves orbit and ascent while protecting unpowered and sideways descents',()=>{
+ const f=new Flight(preset('lander'),'moon-orbit',40000);
+ try{
+  const moon=bodyState(MOON,f.universalTime);
+  const state=(height,vertical,horizontal)=>{
+   f.q.identity();f.pos.copy(moon.position).add(new T.Vector3(0,MOON.radius+height,0));
+   f.vel.copy(moon.velocity).add(new T.Vector3(0,vertical,horizontal));
+   f.orbit=bodyOrbitState(f.pos.clone().add(f.stats.com),f.vel,f.universalTime);
+  };
+  assert.equal(physicalWarpStop(f),'');
+  state(5000,30,0);assert.equal(physicalWarpStop(f),'');
+  state(3000,-200,0);assert.equal(physicalWarpStop(f),'月面降下の減速準備','unlit engine cannot be treated as usable braking thrust');
+  f.stageNext();state(7000,-30,500);assert.equal(physicalWarpStop(f),'月面降下の減速準備','horizontal speed also needs braking');
+  state(30000,-30,500);assert.equal(physicalWarpStop(f),'');
+ }finally{f.dispose();}
 });

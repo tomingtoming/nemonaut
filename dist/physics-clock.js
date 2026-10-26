@@ -1,9 +1,15 @@
+import {coastSurfaceMargin} from './coast-flight.js';
+
 // Frame scheduling only: simulated time advances exclusively through step().
 // Overload discards wall-clock demand, never integrates a larger physics step.
 export function physicalWarpStop(flight,input=false){
  if(input)return '操縦入力';
  if(flight.crashed)return '機体損傷';
  if(flight.landed)return '着地';
+ const orbit=flight.orbit;
+ // Physical warp still integrates collisions, but must return control before
+ // a lunar landing needs braking. Use the same speed/thrust margin as coast.
+ if(orbit?.bodyId==='moon'&&orbit.periapsis<1000&&orbit.vertical< -5&&orbit.altitude<=coastSurfaceMargin(flight))return '月面降下の減速準備';
  const node=flight.maneuver;
  if(node&&!node.complete&&node.universalTime-flight.universalTime<=60)return '予定噴射の直前';
  const transfer=flight.transferGuide;
