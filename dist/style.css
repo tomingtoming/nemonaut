@@ -320,3 +320,9 @@ body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
 #deliverySiteMarker{position:absolute;transform:translate(-50%,-100%);padding:3px 6px;background:#182b28b8;color:#e5f6ad;border:1px solid #b8d285;border-radius:3px;font-size:11px;pointer-events:auto;text-shadow:0 1px 2px #000}#deliverySiteMarker[hidden]{display:none}
 
 .surveyQuality table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}.surveyQuality th,.surveyQuality td{padding:5px 2px;border-bottom:1px solid #4e555d;text-align:right;white-space:nowrap}.surveyQuality th:first-child{text-align:left}.surveyQuality p{font-size:11px;color:#bdc8ce}
+
+.dockingWindow{position:fixed;width:280px}.dockingWindow[hidden]{display:none}.dockingWindow #dockingPanel{margin:0;padding:0;border:0}.dockingWindow #dockingPanel>summary{display:none}.dockingWindow #portCrosshair{display:block;width:100%;height:140px;object-fit:contain}.dockingWindow select{max-width:180px;min-width:0}.dockingWindow #alignDock,.dockingWindow #dockButton{width:100%;margin:4px 0}.dockingWindow small{display:block;line-height:1.5;margin:5px 0}.portAxes{width:100%;font-variant-numeric:tabular-nums;border-collapse:collapse;margin:5px 0}.portAxes th,.portAxes td{padding:3px;text-align:right}.portAxes th:first-child{text-align:left}.portAxes thead{color:#a9bdc5;font-size:10px}.portAxes tbody{border-top:1px solid #57636b}.portAxes[hidden]{display:none}
+
+#openDocking{display:none}.flying #openDocking{display:block;position:fixed;right:12px;top:145px;width:70px;padding:9px 3px;z-index:20;font-size:10px}body.at-center #openDocking{display:none}
+
+#openDocking[hidden]{display:none}
