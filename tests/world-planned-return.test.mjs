@@ -1,3 +1,4 @@
+import {finiteReturnPlan} from '../dist/finite-return-plan.js';
 import {WorldRuntime} from '../dist/world-runtime.js';
 import {centerGuidance} from '../dist/center-facilities.js';
 import {historyActionLabel} from '../dist/departure-mode.js';
@@ -17,7 +18,7 @@ import {gameRecord,validateGame} from '../dist/game-save.js';
 
 // Both vehicles actually depart from the rotating surface. Demonstration pilots
 // use the same staging/throttle/SAS actuators; no positions or velocities are set.
-test('surface-launched A survives B planned finite-burn return, recovery and reload',t=>{
+for(const finite of [false,true])test(`surface-launched A survives B ${finite?'corrected':'instantaneous'} planned return, recovery and reload`,t=>{
  let world=launchWorld(worldFromFlight(null),{parts:preset('launcher'),name:'Satellite A',environment:'land'});
  const aId=world.activeVesselId;
  let runtime;let f=loadFlight(flightFromWorld(world));runtime=new WorldRuntime(f);
@@ -46,7 +47,8 @@ test('surface-launched A survives B planned finite-burn return, recovery and rel
   world=validateGame(JSON.parse(JSON.stringify(gameRecord({world,draft})))).world;
   assert.equal(world.activeVesselId,aId);
   world=selectWorldVessel(world,bId).world;f=loadFlight(flightFromWorld(world));runtime=new WorldRuntime(f);
-  const plan=deorbitPlan(centerOfVessel(f),f.vel,f.universalTime);
+  const plan=finite?finiteReturnPlan(f,{throttle:.1}):deorbitPlan(centerOfVessel(f),f.vel,f.universalTime);
+  const expectedPeriapsis=finite?plan.prediction.orbit.periapsis:plan.preview.orbit.periapsis;
   f.maneuver=createManeuverNode(plan.preview,f.time);f.maneuver.stopAtTarget=true;f.maneuver.tolerance=.05;f.sas=true;f.sasMode='maneuver';
   // Save/reload the scheduled node before executing it, as during a real session.
   world=worldFromFlight(saveFlight(f),{history:world.history});f.dispose();f=loadFlight(flightFromWorld(world));runtime=new WorldRuntime(f);
@@ -55,8 +57,8 @@ test('surface-launched A survives B planned finite-burn return, recovery and rel
   for(let i=0;i<120*180&&!f.maneuver.complete&&!f.crashed;i++){f.throttle=.1;runtime.step(1/120);}
   assert.equal(f.maneuver.complete,true);assert.equal(f.throttle,0);assert.equal(f.crashed,false);
   const actualPeriapsis=f.orbit.periapsis;
-  assert.ok(Math.abs(actualPeriapsis-plan.preview.orbit.periapsis)<100,`actual periapsis ${actualPeriapsis}`);
-  t.diagnostic(JSON.stringify({plannedDeltaV:plan.preview.impulse.length(),burnDuration:f.universalTime-burnStart,plannedPeriapsis:plan.preview.orbit.periapsis,actualPeriapsis}));
+  assert.ok(Math.abs(actualPeriapsis-expectedPeriapsis)<100,`actual periapsis ${actualPeriapsis}`);
+  t.diagnostic(JSON.stringify({plannedDeltaV:plan.preview.impulse.length(),burnDuration:f.universalTime-burnStart,plannedPeriapsis:expectedPeriapsis,actualPeriapsis}));
   f.stageNext();f.armParachutes();let opened=false;
   for(let i=0;i<3000*60&&!f.landed&&!f.crashed;i++){
    f.sasMode=f.vel.length()>300?'retrograde':'radial';runtime.replace(f);runtime.step(1/60);opened||=[...f.chutes.values()].some(c=>c.status==='open');
