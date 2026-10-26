@@ -1,5 +1,5 @@
 """Orbital Foundry campus. Blender Z-up; GLB Y-up. Facility roots carry IDs."""
-import bpy, math, os
+import bpy, math, os, random
 from mathutils import Vector
 root=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
@@ -23,8 +23,13 @@ def facility(identifier):
  global parent
  parent=bpy.data.objects.new(identifier,None);parent['facility']=identifier;bpy.context.collection.objects.link(parent)
 box('Ocean',(1600,1600,1),(0,0,-2),water)
-box('Coastal plateau',(500,420,3),(-75,0,-.6),sand,5)
-box('Campus grass',(480,410,2),(-80,0,-.03),grass,4)
+# A continuous mainland with a curved coast, rather than a square island.
+def coastal_surface(name,edge,z,material):
+ v=[(-1100,-1100,z)]+[(x,y,z) for x,y in edge]+[(-1100,1100,z)]
+ m=bpy.data.meshes.new(name);m.from_pydata(v,[],[tuple(range(len(v)))]);m.update();o=bpy.data.objects.new(name,m);bpy.context.collection.objects.link(o);attach(o,name,material)
+shore=[(250,-1100),(265,-500),(255,-300),(245,-210),(230,-120),(220,-10),(230,100),(265,230),(300,420),(360,1100)]
+coastal_surface('Sandy coastal shelf',[(x+18,y) for x,y in shore],-.8,sand)
+coastal_surface('Mainland grass',shore,.95,grass)
 box('Main service avenue',(320,12,.15),(-60,-53,1),road)
 box('Vertical service road',(10,170,.15),(25,10,1),road)
 for i in range(22):box('Road center dash',(5,.25,.02),(-210+i*14,-53,1.09),paint)
@@ -81,15 +86,26 @@ for x,y in [(-151,20),(-122,28),(-160,47)]:
  for p in m.polygons:p.use_smooth=True
  cyl('Receiver mast',.2,7,(x,y,14),steel);cyl('Receiver',.65,1,(x,y,17.5),orange)
 facility('pad')
-cyl('Launch pad concrete',25,1,(107,66,1.5),concrete)
-box('Flame trench',(8,38,1),(107,66,2.1),steel)
-box('Launch table',(16,13,3),(107,66,4),white,.4)
-for x in [93,97]:
- for y in [69,73]:box('Service tower leg',(1,1,43),(x,y,23),steel)
-for z in range(5,46,5):box('Service gantry platform',(8,8,.6),(95,71,z),concrete)
-box('Umbilical bridge',(18,3,1.5),(103,69,36),orange)
+# Reuse the actual launch complex, including its editable Blender geometry.
+with bpy.data.libraries.load(os.path.join(root,'assets-source','launchpad.blend'),link=False) as (src,dst):
+ dst.objects=[n for n in src.objects if n.startswith('Pad01 ')]
+for o in dst.objects:
+ if o and o.type=='MESH':bpy.context.collection.objects.link(o);o.parent=parent;o.location+=Vector((107,66,1.05))
 parent=None
-box('Pad access road',(82,10,.15),(66,51,1.1),road)
+box('Pad access road',(82,10,.15),(66,10,1.1),road)
+# Dense architectural detail and supporting campus infrastructure.
+exec(compile(open(os.path.join(root,'assets-source','space_center_details.py'),encoding='utf-8').read(),'space_center_details.py','exec'))
+# Batch per material AND facility: draw calls stay low without losing picking IDs.
+for group in [None]+[o for o in bpy.data.objects if o.get('facility')]:
+ for material in list(bpy.data.materials):
+  objects=[o for o in bpy.context.scene.objects if o.type=='MESH' and o.parent==group and len(o.data.materials)==1 and o.data.materials[0]==material]
+  if not objects:continue
+  for o in objects:
+   bpy.context.view_layer.objects.active=o
+   for mod in list(o.modifiers):bpy.ops.object.modifier_apply(modifier=mod.name)
+  bpy.ops.object.select_all(action='DESELECT')
+  for o in objects:o.select_set(True)
+  bpy.context.view_layer.objects.active=objects[0];bpy.ops.object.join();objects[0].name=(group.name if group else 'Campus')+' '+material.name
 os.makedirs(os.path.join(root,'dist/assets/scenery'),exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(root,'assets-source','space-center.blend'))
 bpy.ops.export_scene.gltf(filepath=os.path.join(root,'dist/assets/scenery','space-center.glb'),export_format='GLB',export_yup=True,export_extras=True)
