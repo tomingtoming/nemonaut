@@ -12,8 +12,10 @@ export function maneuverBurnAvailable(flight,kind){
  });
 }
 
-export function recoveryGuidance(flight){
+export function recoveryGuidance(flight,{practice=false}={}){
  if(flight.crashed)return '機体が損傷しています。帰還装備と再突入姿勢を見直してください';
+ if(flight.landed&&practice)return '練習の着地を確認しました。「練習終了」または宇宙センターで通常世界へ戻れます。練習は回収・実績の対象外です';
+ if(flight.landed&&flight.orbit?.bodyId==='moon')return '月面に着地しました。母星へ帰還後、追跡施設から回収できます';
  if(flight.landed)return '着地しました。宇宙センターの追跡施設から回収できます';
  const shield=flight.parts.some(p=>PARTS[p.type].heatShield),chutes=[...flight.chutes.values()];
  if(!shield)return '熱シールドがありません。この機体の安全な再突入は未確認です';

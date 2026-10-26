@@ -354,7 +354,7 @@ const ascentPanel=mountAscentPanel(document.querySelector('#descentPanel'),()=>f
 const departurePanel=mountDeparturePanel(document.querySelector('#ascentPanel'),()=>flight,message=>{syncFlightControls();if(message)notify(message);});
 const stageVisibility=mountStageVisibility(()=>objects);
 const designDiagnostics=mountDesignDiagnostics($('#checks'),()=>({parts,flight}),id=>{cancelPlacement();select(id);$('#selection').scrollIntoView({block:'nearest'});},balance=>thrustOverlay.update(balance),ids=>stageVisibility.update(ids));
-const returnPanel=mountReturnPanel(document.querySelector('#ascentPanel'),()=>flight,message=>{syncFlightControls();if(message)notify(message);});
+const returnPanel=mountReturnPanel(document.querySelector('#ascentPanel'),()=>flight,message=>{syncFlightControls();if(message)notify(message);},{isPractice:()=>!!practiceSession});
 const trajectoryPanel=mountTrajectoryPanel(document.querySelector('.mapContent'),()=>{
  if(!flight)return null;let burn=null,note='';const time=flight.universalTime;
  if(document.querySelector('#planEnabled').checked){const preview=maneuverPreview(flightCenter(),flight.vel,document.querySelector('#planLocation').value,Number(document.querySelector('#planDeltaV').value),time);burn={time:preview.universalTime,deltaV:preview.impulse.toArray()};}

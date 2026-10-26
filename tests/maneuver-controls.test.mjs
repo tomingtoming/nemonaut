@@ -28,7 +28,10 @@ test('Recovery guidance follows separation, arming, deployment and damage across
   const chute=[...f.chutes.values()][0];chute.status='reefed';assert.match(recoveryGuidance(f),/縮帆/);
   chute.status='open';chute.fraction=1;assert.match(recoveryGuidance(f),/全開/);
   const restored=loadFlight(saveFlight(f));try{assert.equal(recoveryGuidance(restored),recoveryGuidance(f));}finally{restored.dispose();}
-  f.landed=true;assert.match(recoveryGuidance(f),/回収/);
+  f.step(1/120);f.landed=true;assert.match(recoveryGuidance(f),/母星へ帰還後/);
+  assert.match(recoveryGuidance(f,{practice:true}),/練習は回収・実績の対象外/);
+  f.orbit.bodyId='planet';assert.match(recoveryGuidance(f),/追跡施設から回収できます/);
+  assert.match(recoveryGuidance(f,{practice:true}),/通常世界へ戻れます/);
   f.crashed=true;assert.match(recoveryGuidance(f),/損傷/);
  }finally{f.dispose();}
  const bare=new Flight(preset('recovery'),'drop');try{assert.match(recoveryGuidance(bare),/熱シールドがありません/);}finally{bare.dispose();}
