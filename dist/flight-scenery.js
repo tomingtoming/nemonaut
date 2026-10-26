@@ -12,7 +12,7 @@ float terrain(vec3 p){return .55*noise(p)+.27*noise(p*2.03)+.12*noise(p*4.07)+.0
 // Surface colour only: physics remains the existing smooth sphere. No painted
 // oceans in land mode, or visual mountains that falsely promise collisions.
 export function surfaceMaterial(water=false){
- const material=new T.MeshStandardMaterial({color:0xffffff,roughness:water?.38:1,metalness:water?.12:0,envMapIntensity:.15});
+ const material=new T.MeshStandardMaterial({color:0xffffff,roughness:water?.38:1,metalness:water?.12:0,envMapIntensity:.15,side:water?T.DoubleSide:T.FrontSide});
  const rotation={value:new T.Matrix3()},time={value:0};material.userData.rotation=rotation;material.userData.time=time;
  material.onBeforeCompile=shader=>{
   shader.uniforms.surfaceRotation=rotation;shader.uniforms.surfaceTime=time;
@@ -53,17 +53,19 @@ export class FlightScenery{
  constructor(group){
   const planetarySun=new T.DirectionalLight(0xfff0d8,2.4);planetarySun.layers.set(1);planetarySun.position.copy(center).addScaledVector(SUN_DIRECTION,1000000);planetarySun.target.position.copy(center);group.add(planetarySun,planetarySun.target);
   const starlight=new T.AmbientLight(0x8ca5cc,.08);starlight.layers.set(1);group.add(starlight);
-  const uniforms={sunDir:{value:SUN_DIRECTION.clone()},up:{value:new T.Vector3(0,1,0)},air:{value:1},day:{value:1}};
+  this.waterFog=new T.FogExp2('#073a49',.035);
+  const uniforms={waterDepth:{value:0},sunDir:{value:SUN_DIRECTION.clone()},up:{value:new T.Vector3(0,1,0)},air:{value:1},day:{value:1}};
   this.uniforms=uniforms;
   const material=new T.ShaderMaterial({side:T.BackSide,depthTest:false,depthWrite:false,uniforms,
    vertexShader:'varying vec3 direction;void main(){direction=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-   fragmentShader:`varying vec3 direction;uniform vec3 sunDir,up;uniform float air,day;
+   fragmentShader:`varying vec3 direction;uniform vec3 sunDir,up;uniform float air,day,waterDepth;
     void main(){vec3 d=normalize(direction);float h=max(0.,dot(d,up));float s=max(0.,dot(d,sunDir));
     vec3 sky=mix(vec3(.36,.57,.75),vec3(.035,.18,.44),pow(h,.35));
     sky*=mix(.018,1.,day);sky+=vec3(.65,.22,.055)*pow(1.-h,5.)*(1.-abs(day*2.-1.))*.6;
     vec3 color=mix(vec3(.0006,.001,.003),sky,air);
     float disk=smoothstep(.99994,.99997,s);float halo=pow(s,350.)*.15+pow(s,35.)*.025;
     color+=vec3(1.,.88,.64)*(disk*5.+halo)*(1.-air*.25);
+    if(waterDepth>0.)color=vec3(.027,.14,.18)*mix(.35,1.,day)*exp(-waterDepth/120.);
     gl_FragColor=vec4(color,1.);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -89,13 +91,16 @@ export class FlightScenery{
   shell.vertexShader=shell.vertexShader.replace(';#include',';\n#include');
   this.shell=new T.Mesh(new T.SphereGeometry(PLANET.radius+12000,128,64),shell);this.shell.position.copy(center);group.add(this.shell);
  }
- update(camera,time,light,ambient,materials){
+ update(camera,time,light,ambient,materials,water=false){
   const radial=camera.position.clone().sub(center),alt=radial.length()-PLANET.radius,up=radial.normalize();
+  const depth=water?Math.max(0,-alt):0;this.uniforms.waterDepth.value=depth;this.shell.visible=depth===0;
   const day=T.MathUtils.smoothstep(up.dot(SUN_DIRECTION),-.16,.18),air=Math.exp(-Math.max(0,alt)/16000);
   this.uniforms.up.value.copy(up);this.uniforms.air.value=air;this.uniforms.day.value=day;
-  this.sky.position.copy(camera.position);this.stars.position.copy(camera.position);this.stars.material.opacity=1-air*day;
-  light.intensity=inEclipse(camera.position,time)?0:2.4;ambient.intensity=.12+.55*air*day;
+  this.sky.position.copy(camera.position);this.stars.position.copy(camera.position);this.stars.material.opacity=depth>0?0:1-air*day;
+  const attenuation=Math.exp(-depth/40);light.intensity=inEclipse(camera.position,time)?0:2.4*attenuation;ambient.intensity=(.12+.55*air*day)*Math.max(.08,attenuation);
+  this.waterFog.color.setRGB(.027,.14,.18).multiplyScalar((.35+.65*day)*Math.exp(-depth/120));
   const inverse=new T.Matrix3().setFromMatrix4(new T.Matrix4().makeRotationFromQuaternion(surfaceOrientation(time).invert()));
   for(const m of materials){m?.userData.rotation?.value.copy(inverse);if(m?.userData.time)m.userData.time.value=time%(Math.PI*20);}
+  return depth>0?this.waterFog:null;
  }
 }
