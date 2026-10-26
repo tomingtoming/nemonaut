@@ -70,6 +70,14 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
  if(kind==='twin'){add('probe',[0,2.5,0]);add('tank',[0,1.3,0]);add('engine',[0,-.3,0],[0,0,0],1,0);add('decoupler',[0,-1.01,0],[0,0,0],2,1);add('probe',[0,-1.35,0],[0,0,0],3);add('tank',[0,-2.55,0],[0,0,0],4);add('engine',[0,-4.15,0],[0,0,0],5,2);add('solar',[1.6,2.5,0]);add('solar',[-1.6,2.5,0]);add('solar',[1.6,-1.35,0],[0,0,0],4);add('solar',[-1.6,-1.35,0],[0,0,0],4);}
  if(kind==='rendezvous'){a=preset('twin');for(const core of a.filter(p=>p.type==='probe')){core.reactionEnabled=false;for(const x of [-.9,.9])for(const y of [-1.2,1.2])a.push(part('rcs',[x,core.p[1]-1.3+y,0],[0,0,0],core.id));}}
  if(kind==='orbital-tug'){a=preset('orbiter');add('dockingPort',[0,2.821,0]);for(const z of [-.9,.9])for(const y of [.2,2.4])add('rcs',[0,y,z],[0,0,0],1);}
+ if(kind==='tug-launcher'){
+  a=preset('orbital-tug');const engine=a.find(p=>p.type==='engine');engine.stage=1;
+  const upper=add('tank',[0,-.7,0],[0,0,0],1);engine.parent=a[upper].id;engine.p[1]-=2;
+  const separator=add('decoupler',[0,-3.01,0],[0,0,0],a.indexOf(engine),1);let tank=separator;
+  for(let i=0;i<3;i++)tank=add('tank',[0,-4.12-i*2,0],[0,0,0],tank);
+  for(const x of [-.7,.7])for(const z of [-.7,.7])add('engine',[x,-9.72,z],[0,0,0],tank);
+  for(let i=0;i<4;i++){const angle=i*Math.PI/2;add('fin',[.625*Math.cos(angle),-8.15,-.625*Math.sin(angle)],[0,angle,0],tank);}
+ }
  if(kind==='docking'){add('probe',[0,-1.4,0]);add('truss',[0,-.7,0]);add('dockingPort',[0,-.079,0],[0,0,0],1);add('dockingPort',[0,.163,0],[Math.PI,0,0],2);add('truss',[0,.784,0],[Math.PI,0,0],3);add('probe',[0,1.484,0],[Math.PI,0,0],4);a[2].dockPartner=a[3].id;a[3].dockPartner=a[2].id;for(const [core,ys]of [[0,[-1.2,-.2]],[5,[.284,1.284]]])for(const x of [-.74,.74])for(const y of ys)add('rcs',[x,y,0],[0,0,0],core);}
  if(kind==='plane'){
  const r=[Math.PI/2,0,0],left=[Math.PI/2,Math.PI,0],vertical=[Math.PI/2,Math.PI/2,0];
