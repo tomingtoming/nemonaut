@@ -1,4 +1,5 @@
 import {updateNavigationFrame} from './navigation-frame.js';
+import {sasTrim} from './sas-trim.js';
 import {createObservations,observationDemand,advanceObservations} from './observation.js';
 import {createBodyAerodynamics,bodyDrag} from './body-drag.js';
 import {separationName} from './separation-name.js';
@@ -89,7 +90,11 @@ export class Flight {
  const apply=(f,point)=>{force.add(f);torque.add(point.clone().sub(com).cross(f));this.body.addForceAtPoint(f,point.clone().sub(origin),true);};
  const commands={pitch:input.pitch||0,yaw:(this.rocketAxes?input.roll:input.yaw)||0,roll:(this.rocketAxes?input.yaw:input.roll)||0};const steering=new T.Vector3(commands.pitch,commands.yaw,commands.roll);
  if(steering.lengthSq()>.0001)this.sasMode='hold';if(!this.holdQ||steering.lengthSq()>.0001||!this.sas)this.holdQ=this.q.clone();if(this.sas&&this.sasMode!=='hold'){const guide=this.dockingPorts?portGuidance(this,this.dockingPorts.own,navigationTarget,this.dockingPorts.target):null;const target=this.sasMode==='dock'?guide?.desiredNormal:this.sasMode==='target'?relativeState(this,navigationTarget)?.direction:this.sasMode==='relativeRetrograde'?relativeState(this,navigationTarget)?.braking:this.sasMode==='maneuver'?maneuverDirection(this.maneuver):navDirections(com,this.vel,startTime,this.navigationFrame)[this.sasMode],forward=this.sasMode==='dock'&&guide?new T.Vector3(0,1,0).applyQuaternion(partRotation(guide.own.part)):new T.Vector3(0,this.rocketAxes?1:0,this.rocketAxes?0:1);if(target)this.holdQ=attitudeTarget(this.q,forward,target);}
- if(this.sas){const error=this.holdQ.clone().multiply(this.q.clone().invert());if(error.w<0){error.x*=-1;error.y*=-1;error.z*=-1;}const correction=new T.Vector3(error.x,error.y,error.z).multiplyScalar(4).addScaledVector(freeFlight?this.omega:relativeOmega,-1.5).applyQuaternion(this.q.clone().invert());for(const [name,axis]of [['pitch','x'],['yaw','y'],['roll','z']])commands[name]=T.MathUtils.clamp(commands[name]+correction[axis],-1,1);}
+ if(this.sas){const error=this.holdQ.clone().multiply(this.q.clone().invert());if(error.w<0){error.x*=-1;error.y*=-1;error.z*=-1;}const inverse=this.q.clone().invert(),localError=new T.Vector3(error.x,error.y,error.z).applyQuaternion(inverse),correction=new T.Vector3(error.x,error.y,error.z).multiplyScalar(4).addScaledVector(freeFlight?this.omega:relativeOmega,-1.5).applyQuaternion(inverse);
+ const axes={};for(const [name,axis]of [['pitch','x'],['yaw','y'],['roll','z']])axes[axis]=!this.rocketAxes&&this.parts.some(p=>PARTS[p.type].controlAxis&&Math.abs(controlDeflection(p,st.com,{[name]:1}))>1e-6);
+ const bias=sasTrim(this,localError,correction.clone().add(new T.Vector3(this.trim,0,0)),axes,dt,!this.rocketAxes&&steering.lengthSq()<.0001&&!this.telemetry.groundContact&&density*relativeVelocity.lengthSq()/2>50);
+ correction.add(bias);for(const [name,axis]of [['pitch','x'],['yaw','y'],['roll','z']])commands[name]=T.MathUtils.clamp(commands[name]+correction[axis],-1,1);
+ }else sasTrim(this,null,null,null,dt,false);
  commands.pitch=T.MathUtils.clamp(commands.pitch+this.trim,-1,1);
  this.engineThrust=engineBurn(this.networks,this.fuel,this.started?this.active:new Set(),this.throttle,density,dt,air.pressure);let stallCount=0,contacts=0;this.lastThrust=0;const wheelCount=this.parts.filter(p=>PARTS[p.type].wheel).length;
  for(const p of this.parts){const d=PARTS[p.type],orientation=this.q.clone().multiply(partRotation(p)),wp=partCenter(p).applyQuaternion(this.q).add(this.pos),r=wp.clone().sub(com),pv=relativeVelocity.clone().add(relativeOmega.clone().cross(r));
