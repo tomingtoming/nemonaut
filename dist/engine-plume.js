@@ -8,5 +8,13 @@ export function createEnginePlume(definition,gimballed=false){
  geometry.setAttribute('color',new T.Float32BufferAttribute(colors,3));
  const mesh=new T.Mesh(geometry,new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:.9,depthWrite:false,toneMapped:false}));
  mesh.position.y=-definition.size[1]/2-(gimballed?definition.gimbalPivot[1]:0);
+ mesh.userData.nominalThrust=definition.thrust;
  mesh.renderOrder=5;mesh.visible=false;return mesh;
+}
+
+// Use delivered thrust, including fuel starvation, atmospheric loss and thrust limits.
+export function updateEnginePlume(mesh,thrust,crashed,now){
+ const ratio=Math.min(1,Math.max(0,thrust/(mesh.userData.nominalThrust||1)));
+ mesh.visible=thrust>1&&!crashed;
+ mesh.scale.y=.5+ratio*(1+Math.sin(now*.09)*.08);
 }
