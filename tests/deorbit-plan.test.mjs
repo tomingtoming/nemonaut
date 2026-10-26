@@ -25,3 +25,14 @@ test('planned return burns finite thrust, separates and lands with parachute int
   assert.ok(opened);assert.equal(f.crashed,false);assert.equal(f.landed,true);assert.equal(f.parts.length,3);assert.ok(surfaceRelativeVelocity(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.vel,f.universalTime).length()<.8);
  }finally{f.dispose();}
 });
+
+import {captureBurnEstimate} from '../dist/lunar-capture.js';
+test('long low-power burn duration is estimable but instantaneous orbit is not its endpoint',t=>{
+ const f=new Flight(preset('returner'),'orbit');try{
+  f.stageNext();f.stageNext();const plan=deorbitPlan(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.vel,0),before=[...f.fuel],estimate=captureBurnEstimate(f,plan.preview.impulse.length());assert.deepEqual([...f.fuel],before);
+  f.maneuver=createManeuverNode(plan.preview,0);f.maneuver.stopAtTarget=true;f.maneuver.tolerance=.05;f.sas=true;f.sasMode='maneuver';while(f.universalTime<60)f.step(1/120);const start=f.universalTime;
+  for(let i=0;i<120*800&&!f.maneuver.complete&&!f.crashed;i++){f.throttle=.01;f.step(1/120);}
+  assert.equal(f.maneuver.complete,true);assert.equal(f.crashed,false);assert.ok(Math.abs(f.universalTime-start-estimate.duration/.01)<1);assert.ok(f.orbit.periapsis-25000>10000);assert.ok(estimate.duration/.01>plan.preview.original.period*.05);
+  t.diagnostic(JSON.stringify({estimatedSeconds:estimate.duration/.01,actualSeconds:f.universalTime-start,actualPeriapsis:f.orbit.periapsis}));
+ }finally{f.dispose();}
+});
