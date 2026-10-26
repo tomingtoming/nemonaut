@@ -273,6 +273,7 @@ function updateDocking(){
  $('#dockStatus').textContent=status?(status.ready?'結合できます':status.reason):target?'双方に空きポートが必要です':'他の機体を目標に指定してください';
  if(dockingArmed&&(dockingArmed.flight!==flight||dockingArmed.own!==ownId||dockingArmed.target!==targetId))dockingArmed=null;const connect=()=>{dockingArmed=null;try{refreshDockedFlight(dockVessels(flight,target,ownId,targetId));gameAudio.play('dock');notify('ドッキング完了。1機として操縦できます。');}catch(e){notify(e.message);}};$('#dockButton').disabled=!guide;$('#dockButton').textContent=dockingArmed?'結合待機を解除':status?.ready?'目標と結合':'結合待機（接近は手動）';$('#dockButton').onclick=()=>{if(!guide)return;if(dockingArmed){dockingArmed=null;return;}if(status.ready){connect();return;}dockingArmed={flight,own:ownId,target:targetId};notify('結合待機：条件がそろうと結合します。接近と減速は手動です。');};if(dockingArmed&&status?.ready)connect();
 }
+$('#portPower').onchange=e=>{keys.clear();e.target.blur();};
 for(const id of ['ownPort','targetPort'])$('#'+id).onchange=()=>{if(flight){keys.clear();dockingArmed=null;selectDockingPorts(flight,$('#ownPort').value,$('#targetPort').value);}document.activeElement.blur();};
 $('#portFrame').onchange=e=>{if(flight)flight.portTranslationEnabled=e.target.checked&&!!flight.dockingPorts;e.target.blur();};
 $('#alignDock').onclick=()=>{if(!flight?.dockingPorts)return;flight.sasMode='dock';flight.sas=true;flight.holdQ=flight.q.clone();$('#sas').textContent='SAS ON';$('#sas').classList.add('active');document.activeElement.blur();};
