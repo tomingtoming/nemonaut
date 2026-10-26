@@ -23,6 +23,7 @@ export function advanceObservations(v,states,power,dt){
   const site=observationSite(v,id);if(!site)continue;
   const data=site.id===DELIVERY_SITE.id?s:((s.sites??={})[site.id]??={day:0,night:0});
   const key=power.eclipse?'night':'day';data[key]=Math.min(1e12,data[key]+dt*power.ratio);
+  const quality=data.quality??={day:{received:0,missed:0},night:{received:0,missed:0}};quality[key].received=Math.min(1e12,quality[key].received+dt*power.ratio);quality[key].missed=Math.min(1e12,quality[key].missed+dt*(1-power.ratio));
  }
 }
 

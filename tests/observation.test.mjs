@@ -72,3 +72,14 @@ test('Coast advances nested site observations on independent copies',()=>{
   assert.deepEqual([...previous],before);assert.ok(f.observations.get(id).sites[site.id].day>10);
  }finally{f.dispose();}
 });
+
+test('Quality records partial supply as received and missing time, excluding OFF and invalid placement',()=>{
+ const f=station();try{
+  const id=f.parts[0].id;f.observations.get(id).night=100;setPartAction(f,id,'observation',true);f.charge.set(id,.05);
+  advanceCoastFleet(f,5);const data=f.observations.get(id);assert.ok(Math.abs(data.quality.night.received-.5)<1e-8);assert.ok(Math.abs(data.quality.night.missed-4.5)<1e-8);assert.equal(data.night,100.5);
+  const saved=saveFlight(f),loaded=loadFlight(saved);try{assert.deepEqual(loaded.observations.get(id),data);}finally{loaded.dispose();}
+  setPartAction(f,id,'observation',false);advanceCoastFleet(f,5);assert.deepEqual(f.observations.get(id).quality,data.quality);
+  setPartAction(f,id,'observation',true);f.pos.x+=100;advanceCoastFleet(f,5);assert.deepEqual(f.observations.get(id).quality,data.quality);
+  for(const quality of [[],{}, {day:{received:0,missed:0},night:{received:101,missed:0}}, {day:{received:0,missed:-1},night:{received:0,missed:0}}]){const bad=structuredClone(saved);bad.observations[0][1].quality=quality;assert.throws(()=>loadFlight(bad));}
+ }finally{f.dispose();}
+});

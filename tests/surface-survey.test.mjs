@@ -23,10 +23,10 @@ test('A powered battery station records day/night observation through a real rot
  const {f,history,id}=station();try{
   f.observations.get(id).enabled=true;let remaining=PRIMARY_ROTATION_PERIOD,minimum=1200;
   while(remaining>1e-6){const r=advanceCoastFleet(f,Math.min(300,remaining));assert.equal(r.reason,null);assert.ok(r.advanced>0);remaining-=r.advanced;minimum=Math.min(minimum,powerTotals(f.parts,f.charge).stored);}
-  const data=f.observations.get(id);assert.ok(data.day>=9000&&data.night>=9000,JSON.stringify(data));assert.ok(minimum>0);assert.ok(Math.abs(data.day+data.night-PRIMARY_ROTATION_PERIOD)<.01);
+  const data=f.observations.get(id);assert.ok(data.day>=9000&&data.night>=9000,JSON.stringify(data));assert.ok(minimum>0);assert.equal(data.quality.day.missed,0);assert.equal(data.quality.night.missed,0);assert.ok(Math.abs(data.day+data.night-PRIMARY_ROTATION_PERIOD)<.01);
   const completed=recordSurveyAchievement(history,f);assert.equal(completed.at(-1).type,'survey');assert.equal(recordSurveyAchievement(completed,f),completed);
   const saved=worldFromFlight(saveFlight(f),{history:completed}),restored=validateWorld(JSON.parse(JSON.stringify(saved)));assert.equal(surveyProgress(restored.history,restored.vessels).completed.type,'survey');
-  const recovered=retireWorldVessel(restored,restored.activeVesselId,'recover').world;assert.equal(recovered.vessels.length,0);assert.equal(surveyProgress(recovered.history,[]).completed.type,'survey');
+  const recovered=retireWorldVessel(restored,restored.activeVesselId,'recover').world;assert.equal(recovered.vessels.length,0);assert.equal(surveyProgress(recovered.history,[]).completed.type,'survey');assert.deepEqual(surveyProgress(recovered.history,[]).quality,data.quality);const corrupt=structuredClone(saved);corrupt.history.at(-1).quality.night.missed=-1;assert.throws(()=>validateWorld(corrupt));
   for(const mutate of [e=>e.day=8999,e=>e.night=NaN,e=>e.deliveryEventId='missing',e=>e.probePartId='wrong',e=>e.siteId='wrong']){const bad=structuredClone(saved);mutate(bad.history.at(-1));assert.throws(()=>validateWorld(bad));}
   const duplicate=structuredClone(saved);duplicate.history.push({...duplicate.history.at(-1),id:'duplicate'});assert.throws(()=>validateWorld(duplicate));
  }finally{f.dispose();}
@@ -35,7 +35,7 @@ test('Insufficient storage cannot earn full night coverage in one day',()=>{
  const {f,history,id}=station(false);try{
   f.observations.get(id).enabled=true;let remaining=PRIMARY_ROTATION_PERIOD;
   while(remaining>1e-6){const r=advanceCoastFleet(f,Math.min(300,remaining));assert.equal(r.reason,null);remaining-=r.advanced;}
-  assert.ok(f.observations.get(id).night<9000);assert.equal(recordSurveyAchievement(history,f),history);
+  assert.ok(f.observations.get(id).night<9000);assert.ok(f.observations.get(id).quality.night.missed>8000);assert.equal(recordSurveyAchievement(history,f),history);
  }finally{f.dispose();}
 });
 test('Practice, unrelated probes and missing installation cannot earn the survey; data is never summed across probes',()=>{

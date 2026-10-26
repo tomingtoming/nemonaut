@@ -1,3 +1,4 @@
+import {copyObservationQuality} from './observation-quality.js';
 import {deliverySite,SURVEY_TARGET_SECONDS} from './delivery-sites.js';
 import {departureMode} from './departure-mode.js';
 import {PLANET} from './planet.js';
@@ -32,9 +33,9 @@ export function validateHistory(value=[],time){
   }else if(event.type==='survey'){
    const source=deliveryEvents.get(event.deliveryEventId);
    if(!source||event.siteId!==source.siteId||event.probePartId!==source.probePartId||!event.partIds?.includes(event.probePartId)||surveys.has(event.siteId)||!['day','night'].every(k=>Number.isFinite(event[k])&&event[k]>=SURVEY_TARGET_SECONDS&&event[k]<=1e12)||event.distance!==undefined||event.speed!==undefined)throw Error('観測記録の設置元・測定時間・重複が不正です');
-   surveys.add(event.siteId);
+   copyObservationQuality(event.quality,event);surveys.add(event.siteId);
   }else if(['siteId','probePartId','distance','speed'].some(k=>event[k]!==undefined))throw Error('設置の証拠は設置記録にのみ保存できます');
-  if(event.type!=='survey'&&['deliveryEventId','day','night'].some(k=>event[k]!==undefined))throw Error('測定時間は観測記録にのみ保存できます');
+  if(event.type!=='survey'&&['deliveryEventId','day','night','quality'].some(k=>event[k]!==undefined))throw Error('測定時間は観測記録にのみ保存できます');
   if(event.type==='orbit'){
    const o=event.orbit;
    let sourceProven=surfaceLaunches.has(event.vesselId);
