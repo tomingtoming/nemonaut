@@ -312,3 +312,6 @@ body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
 
 #trackingFocus{position:absolute;top:78px;left:50%;transform:translateX(-50%);width:min(460px,calc(100vw - 32px));display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;padding:7px 10px;border:1px solid #788588;border-radius:4px;background:#202c32e8;pointer-events:auto;color:#e5e8df;font-size:12px}
 #trackingFocus[hidden]{display:none}#trackingName,#trackingControl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#trackingName{align-self:center;color:#c6df9d}#trackingControl{grid-column:1/-1;font-size:11px;color:#c1c9ca}#returnCamera{font-size:11px;padding:4px 8px}
+
+#deliveryGuide{display:block;position:static;width:100%;margin-top:5px;padding:5px 7px;background:#253630e8;border:1px solid #9ba96b;color:#eef4d1;font-size:12px;text-align:left;pointer-events:auto}
+#deliveryGuide[hidden]{display:none}.deliveryWindow{width:300px}.deliveryWindow h3{margin:0 0 8px}.deliveryWindow p{line-height:1.5}.deliveryWindow details{margin-top:12px}.deliveryResult{color:#d6ed9b}.at-center #deliveryGuide{display:none}
