@@ -57,3 +57,24 @@ test('Ordinary maneuver coast stops with the same sixty-second alignment margin 
   assert.equal(f.throttle,0);assert.equal(f.started,false);
  }finally{f.dispose();}
 });
+
+test('spent uncontrolled stage coasts without clearing its throttle or weakening surface guards',()=>{
+ const root=new Flight(preset('launcher'),'orbit',100);
+ root.throttle=1;root.stageNext();root.stageNext();
+ const stage=root.detached[0];assert.ok(stage,'actual staging creates the booster');
+ stage.vesselName='Spent booster';root.throttle=0;
+ stage.pos.z+=1000;
+ try{
+  assert.equal(coastBlocker(root)?.code,'thrust','a fueled discarded engine still blocks');
+  for(const id of stage.fuel.keys())stage.fuel.set(id,0);
+  const fuel=[...stage.fuel],before=stage.throttle;
+  assert.equal(coastBlocker(root),null);
+  assert.equal(advanceCoastFleet(root,10).advanced,10);
+  assert.deepEqual([...stage.fuel],fuel);assert.equal(stage.throttle,before);
+  // The former throttle blocker must not mask the required atmospheric stop.
+  const ground=new Flight(preset('rocket'),'land',root.universalTime);
+  stage.pos.copy(ground.pos);stage.vel.copy(ground.vel);ground.dispose();
+  assert.equal(coastBlocker(root)?.code,'surface');
+  root.throttle=1;assert.equal(coastBlocker(root)?.code,'thrust','active pilot still must cut throttle');
+ }finally{root.dispose();}
+});

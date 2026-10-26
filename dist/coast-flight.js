@@ -59,12 +59,21 @@ function blocker(reason,v,code=null,other=null){
  return {reason,code,vesselId:anchor(v),vesselName:v.vesselName||'名称未設定の機体',otherVesselId:other?anchor(other):null,otherVesselName:other?.vesselName||null,overdue:code==='maneuver'&&scheduled!==null&&scheduled<v.universalTime,scheduledTime:code==='maneuver'?scheduled:null};
 }
 export function coastBlocker(root,options={}){return worldCoastBlocker(fleet(root),root.universalTime,root,options);}
+function throttleBlocksCoast(v,active){
+ if(v.throttle===0)return false;
+ // Keep the pilot's cutoff requirement. Only inert, uncontrolled debris may
+ // retain an inherited throttle setting; wheels and marine drives need physics.
+ if(v===active||v.parts.some(p=>PARTS[p.type].control||p.type==='wheel'||PARTS[p.type].water))return true;
+ // Sample on a copy, with sea-level air as a conservative jet bound. A jet
+ // currently in vacuum must not become powered unnoticed on atmospheric entry.
+ return [...engineBurn(v.networks,new Map(v.fuel),v.started?v.active:new Set(),v.throttle,1.225,1/120).values()].some(force=>force>0);
+}
 function worldCoastBlocker(vessels,universalTime,active,{input=false}={}){
  if(input)return blocker('操作中',active,'input');
  for(const v of vessels){
   if(v.universalTime!==universalTime)return blocker('機体の共通時刻が不一致',v,'clock');
   if(v.crashed)continue;
-  if(v.throttle!==0)return blocker('推力設定のある機体',v,'thrust');
+  if(throttleBlocksCoast(v,active))return blocker('推力設定のある機体',v,'thrust');
   if([...v.thermal.values()].some(s=>s.failed||!Number.isFinite(s.temperature)||s.temperature<3))return blocker('熱状態を確認してください',v,'thermal');
   if(isParked(v))continue;
   const limit=coastStepLimit(center(v),v.vel,v.universalTime,{deadline:deadline(v),surfaceMargin:coastSurfaceMargin(v)});
