@@ -36,6 +36,8 @@ function craft(){const core=part('probe');return [core,part('dockingPort',[0,.32
 test('docking cannot transfer surface provenance to practice parts; undocking restores per-part attribution',()=>{
  for(const secondEnvironment of ['land','orbit']){
   let world=launchWorld(worldFromFlight(null),{parts:craft(),name:'A',environment:'land'});
+  // The provenance fixture clears A from the departure envelope before adding B.
+  world.vessels[0].pos[0]+=100;
   world=launchWorld(world,{parts:craft(),name:'B',environment:secondEnvironment});
   const origins=launchOrigins(world.history);let f=loadFlight(flightFromWorld(world));
   try{
@@ -59,7 +61,9 @@ test('docking cannot transfer surface provenance to practice parts; undocking re
 
 test('history rejects duplicate births and inconsistent part evidence; legacy records remain readable',()=>{
  let world=launchWorld(worldFromFlight(null),{parts:craft(),name:'A',environment:'land'});
- world=launchWorld(world,{parts:craft(),name:'B',environment:'land'});
+ // The provenance fixture clears A from the departure envelope before adding B.
+  world.vessels[0].pos[0]+=100;
+  world=launchWorld(world,{parts:craft(),name:'B',environment:'land'});
  const duplicate=structuredClone(world);duplicate.history[1].partIds[0]=duplicate.history[0].partIds[0];assert.throws(()=>validateWorld(duplicate),/重複/);
  for(const partIds of [[],['x','x'],[null,'y']]){const bad=structuredClone(world);bad.history[0].partIds=partIds;assert.throws(()=>validateWorld(bad));}
  const legacy=structuredClone(world);for(const e of legacy.history)delete e.partIds;

@@ -365,6 +365,7 @@ function launchAdditional(design){
   if(next&&next!==flight)next.dispose();
   parts=draft.parts;$('#craftName').value=draft.name;$('#environment').value=draft.environment;bayMode=draft.bay;
   $('#centerNotice').textContent=e.message;notify(e.message);
+  if(e.code==='launch_site_occupied'){showModal('<h2>出発地点を使用中</h2><div id="launchBlockers"></div>');for(const item of e.blockers){const row=document.createElement('article'),name=document.createElement('strong'),button=document.createElement('button');row.className='facilityRow';name.textContent=item.name;button.textContent='追跡施設で確認';button.onclick=()=>{showCenter();openTracking(item.id);};row.append(name,button);$('#launchBlockers').append(row);}return;}
   if($('#modal').open){const message=document.createElement('p');message.textContent=e.message;$('#modalBody').append(message);}
  }
 }

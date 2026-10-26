@@ -47,6 +47,8 @@ test('lunar provenance follows real docking and undocking; new parts cannot borr
  const craft=()=>{const core=part('probe');return [core,part('dockingPort',[0,.321,0],[0,0,0],core.id)];};
  for(const environment of ['land','orbit']){
   let world=launchWorld(worldFromFlight(null),{parts:craft(),name:'A',environment:'land'});
+  // The provenance fixture clears A from the departure envelope before adding B.
+  world.vessels[0].pos[0]+=100;
   world=launchWorld(world,{parts:craft(),name:'B',environment});
   let f=loadFlight(flightFromWorld(world));
   try{

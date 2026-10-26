@@ -1,3 +1,4 @@
+import {assertLaunchClear} from './launch-clearance.js';
 import {validUniversalTime,setUniversalTime} from './universal-time.js';
 import {normalizeSymmetry} from './symmetry.js';
 import {Flight,validateCraft} from './core.js';import {PARTS} from './catalog.js';import {loadFlight} from './flight-save.js';import {fleet} from './fleet.js';
@@ -13,6 +14,7 @@ export function launchIntoFleet(record,{parts,environment,name,universalTime}){
  let previous=null,launched=null;try{
   previous=record?loadFlight(record):null;const others=previous?fleet(previous):[],used=new Set(others.flatMap(v=>v.parts.map(p=>p.id)));if(used.size+checked.length>400)throw Error('飛行中の合計部品数が400を超えます。既存の飛行は保持されています。');
   const time=validUniversalTime(universalTime??previous?.universalTime??0);if(previous&&time!==previous.universalTime)throw Error('出発時の共通時刻が保存と一致しません');const fresh=freshLaunchParts(checked,used);launched=new Flight(fresh,environment,time);const base=name.trim().slice(0,70)||'新しい機体',names=new Set(others.map(v=>v.vesselName));let candidate=base,index=2;while(names.has(candidate))candidate=base+' / '+index++;launched.vesselName=candidate;
+  assertLaunchClear(launched,others);
   // Flatten older launch groups: the depth limit must not become a launch limit.
   for(const v of others)v.detached=[];launched.detached=others;setUniversalTime(launched,time);return launched;
  }catch(e){if(launched)launched.dispose();if(previous)previous.dispose();throw e;}
