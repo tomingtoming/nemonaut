@@ -7,10 +7,14 @@ import {worldFromFlight,flightFromWorld,validateWorld} from '../dist/world-save.
 import {loadFlight,saveFlight} from '../dist/flight-save.js';
 import {deliverySitePosition,deliveryDistance} from '../dist/delivery-sites.js';
 import {deliveryTelemetry,recordDeliveryAchievements} from '../dist/surface-delivery.js';
+import {advanceCoastFleet} from '../dist/coast-flight.js';
+import {PRIMARY_ROTATION_PERIOD} from '../dist/surface-frame.js';
+import {powerTotals} from '../dist/power.js';
+import {recordSurveyAchievement} from '../dist/surface-survey.js';
 import {fleet} from '../dist/fleet.js';
 test('Courier physically drives from the pad, separates a station and preserves delivery and both vessels',()=>{
 const world=launchWorld(worldFromFlight(null),{parts:preset('courier'),name:'Courier',environment:'land'}),f=loadFlight(flightFromWorld(world));
-try{f.sas=false;f.stageNext();f.throttle=.5;
+try{f.sas=false;f.stageNext();assert.equal(f.brake,false);f.throttle=.5;
 let stopped=false;
 for(let i=0;i<120*300&&!f.crashed;i++){
  const target=deliverySitePosition(f.universalTime).sub(f.pos).applyQuaternion(f.q.clone().invert()),angle=Math.atan2(target.x,target.z),distance=deliveryDistance(f.pos,f.universalTime);
@@ -21,11 +25,14 @@ for(let i=0;i<120*300&&!f.crashed;i++){
 }
 f.throttle=0;f.brake=true;
 for(let i=0;i<600;i++)f.step(1/120);
-assert.ok(stopped);assert.equal(f.crashed,false);assert.equal(deliveryTelemetry(f,world.history).reason,'運搬機から分離');assert.equal(recordDeliveryAchievements(world.history,f),world.history);f.stageNext();
+assert.ok(stopped);assert.equal(f.crashed,false);assert.equal(deliveryTelemetry(f,world.history).reason,'運搬機から分離');assert.equal(recordDeliveryAchievements(world.history,f),world.history);f.stageNext();assert.ok(fleet(f).every(v=>v.brake));
 for(let i=0;i<1200;i++)f.step(1/120);
-assert.equal(f.crashed,false);assert.ok(f.landed);assert.ok(deliveryTelemetry(f,world.history).ready);assert.equal(f.parts.length,2);assert.equal(f.detached.length,1);
+assert.equal(f.crashed,false);assert.ok(f.landed);assert.ok(deliveryTelemetry(f,world.history).ready);assert.equal(f.parts.length,3);assert.equal(powerTotals(f.parts,f.charge).capacity,1200);assert.equal(powerTotals(f.detached[0].parts,f.detached[0].charge).capacity,200);assert.equal(f.detached.length,1);
 const history=recordDeliveryAchievements(world.history,f);assert.equal(history.at(-1).type,'delivery');
-const saved=validateWorld(JSON.parse(JSON.stringify(worldFromFlight(saveFlight(f),{history}))));assert.equal(saved.vessels.length,2);assert.deepEqual(saved.history,history);
+f.observations.get(f.parts.find(p=>p.type==='probe').id).enabled=true;
+let remaining=PRIMARY_ROTATION_PERIOD;while(remaining>1e-6){const result=advanceCoastFleet(f,Math.min(300,remaining));assert.equal(result.reason,null,JSON.stringify({result,vessels:fleet(f).map(v=>({parts:v.parts.length,brake:v.brake,landed:v.landed,landedTime:v.landedTime,vel:v.vel.toArray(),omega:v.omega.toArray(),pos:v.pos.toArray(),com:v.stats.com.toArray()}))}));assert.ok(result.advanced>0);remaining-=result.advanced;}
+const completed=recordSurveyAchievement(history,f);assert.equal(completed.at(-1).type,'survey');assert.ok(powerTotals(f.parts,f.charge).stored>0);
+const saved=validateWorld(JSON.parse(JSON.stringify(worldFromFlight(saveFlight(f),{history:completed}))));assert.equal(saved.vessels.length,2);assert.deepEqual(saved.history,completed);
 const restored=loadFlight(flightFromWorld(saved));try{assert.equal(recordDeliveryAchievements(saved.history,restored),saved.history);}finally{restored.dispose();}
 }finally{f.dispose();}
 });

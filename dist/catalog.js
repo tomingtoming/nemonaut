@@ -86,7 +86,8 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
   const sep=add('decoupler',[0,1.6,-.61],[Math.PI/2,0,0],0,1);
   const chassis=add('truss',[0,.9,0],[0,0,0],sep);add('truss',[0,.9,1],[0,0,0],chassis);
   add('probe',[0,1.6,.5],[0,0,0],chassis);
-  for(const x of [-.9,.9])for(const z of [-.6,1.6]){const i=add('wheel',[x,.4,z],[0,0,0],chassis);if(z<0)a[i].steeringEnabled=false;}
+  for(const x of [-1.2,1.2])for(const z of [-.6,1.6]){const i=add('wheel',[x,.4,z],[0,0,0],chassis);if(z<0)a[i].steeringEnabled=false;}
+  add('battery',[0,1.25,-1.345],[0,0,0],0);
   for(const p of a)if(p.type==='probe')p.reactionEnabled=false;
  }
  if(kind==='rover'){add('truss',[0,.9,0]);add('truss',[0,.9,1],[0,0,0]);add('probe',[0,1.6,.5],[0,0,0]);for(const x of [-.7,.7])for(const z of [0,1])add('wheel',[x,.4,z],[0,0,0]);add('solar',[0,2,.3],[-Math.PI/2,0,0],2);}
