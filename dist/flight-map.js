@@ -1,3 +1,4 @@
+import {MapBodies} from './map-bodies.js';
 import {mapVessels} from './map-vessels.js';
 import {timedRendezvousTransfer,timedRelativeStopPlan} from './timed-rendezvous.js';
 import {rendezvousTransfer} from './rendezvous-transfer.js';
@@ -16,7 +17,7 @@ export function mapConic(o,limit){
  for(let i=0;i<=720;i++){const a=i*Math.PI/360,den=1+o.eccentricity*Math.cos(a),r=o.p/den;points.push(den>0&&r>=o.body.radius&&r<=Math.min(limit,o.body.sphereOfInfluence??Infinity)?x.clone().multiplyScalar(r*Math.cos(a)).addScaledVector(y,r*Math.sin(a)).add(o.center):null);}return points;
 }
 export function mountFlightMap(canvas,onTarget=()=>{},getFlight=()=>null){
- const ctx=canvas.getContext('2d');let current=null,preview=null,yaw=1.15,pitch=.4,extent=null,focus='body',drag=null,markers=[],focusHits=[],orbitHits=[],handles=[],vessels=[],encounter=null,encounterTarget=null,plannedEncounter=null;
+ const ctx=canvas.getContext('2d');let bodyRenderer;try{bodyRenderer=new MapBodies();}catch(error){console.warn('Map surface renderer unavailable',error);}let current=null,preview=null,yaw=1.15,pitch=.4,extent=null,focus='body',drag=null,markers=[],focusHits=[],orbitHits=[],handles=[],vessels=[],encounter=null,encounterTarget=null,plannedEncounter=null;
  const overlay=document.querySelector('#orbitOverlay'),header=overlay.querySelector('.mapHeader');
  const toolbar=document.createElement('div');toolbar.className='mapToolbar';
  for(const [key,name]of [['body','現在の天体'],['craft','機体'],['target','目標'],['planet','母星'],['moon','月'],['system','全体']]){const b=document.createElement('button');b.textContent=name;b.dataset.focus=key;b.onclick=()=>{focus=key;extent=null;draw();};toolbar.append(b);}header.append(toolbar);
@@ -49,7 +50,7 @@ export function mountFlightMap(canvas,onTarget=()=>{},getFlight=()=>null){
   focusHits=[];const moonOrbit=[];for(let i=0;i<=180;i++){const a=i*Math.PI/90;moonOrbit.push(center.clone().add(new T.Vector3(0,MOON.orbitRadius*Math.cos(a),MOON.orbitRadius*Math.sin(a))));}
   for(const [b,pos]of [[PRIMARY,center],[MOON,moon]].sort((a,b)=>project(a[1])[2]-project(b[1])[2])){
    const [x,y]=project(pos),r=b.radius*scale;focusHits.push({x,y,radius:Math.max(12,r),focus:b.id==='moon'?'moon':'planet'});if(x+r<0||y+r<0||x-r>w||y-r>h)continue;
-   const g=ctx.createRadialGradient(x-r*.4,y-r*.4,0,x,y,Math.max(1,r));g.addColorStop(0,b.id==='moon'?'#c2c1b8':'#628c83');g.addColorStop(.65,b.id==='moon'?'#656971':'#274c63');g.addColorStop(1,'#0a1726');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,Math.max(2,r),0,Math.PI*2);ctx.fill();
+   if(bodyRenderer&&r>=3){ctx.drawImage(bodyRenderer.image(b,yaw,pitch,time,getFlight()?.environment==='water'),x-r,y-r,r*2,r*2);}else{const g=ctx.createRadialGradient(x-r*.4,y-r*.4,0,x,y,Math.max(1,r));g.addColorStop(0,b.id==='moon'?'#c2c1b8':'#628c83');g.addColorStop(.65,b.id==='moon'?'#656971':'#274c63');g.addColorStop(1,'#0a1726');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,Math.max(2,r),0,Math.PI*2);ctx.fill();}
    if(b.atmosphereTop){ctx.strokeStyle='#5ea9d855';ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,r*(1+b.atmosphereTop/b.radius),0,Math.PI*2);ctx.stroke();}
    ctx.fillStyle='#bdc8d5';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText(b.name,x,y+Math.max(2,r)+18);
   }
