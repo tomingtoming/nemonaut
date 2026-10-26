@@ -70,5 +70,6 @@ test('legacy worlds have no invented history; invalid history cannot silently en
   const bad=structuredClone(world);mutate(bad);assert.throws(()=>validateWorld(bad));
  }
  const full=structuredClone(world);full.history=Array.from({length:10000},(_,i)=>({...world.history[0],id:'event-'+i}));
+ for(const event of full.history)delete event.partIds;
  const before=structuredClone(full);assert.throws(()=>launchWorld(full,{parts:preset('rocket'),name:'B',environment:'land'}),/件数/);assert.deepEqual(full,before);
 });

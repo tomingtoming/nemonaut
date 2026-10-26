@@ -25,7 +25,7 @@ test('practice placement, legacy craft and stale display orbits cannot earn surf
 test('saved orbit evidence requires a surface departure, valid apsides and no duplicate achievement',()=>{
  const world=launchWorld(worldFromFlight(null),{parts:preset('rocket'),name:'Test',environment:'land'});
  world.universalTime=10;for(const v of world.vessels)v.universalTime=10;
- const event={...world.history[0],id:crypto.randomUUID(),type:'orbit',missionTime:10,universalTime:10,orbit:{bodyId:'planet',periapsis:80000,apoapsis:100000}};delete event.environment;
+ const event={...world.history[0],id:crypto.randomUUID(),type:'orbit',missionTime:10,universalTime:10,orbit:{bodyId:'planet',periapsis:80000,apoapsis:100000}};delete event.environment;event.launchEventIds=[world.history[0].id];
  world.history.push(event);assert.deepEqual(validateWorld(world).history,world.history);
  for(const mutate of [
   w=>w.history[0].environment='orbit',w=>delete w.history[0].environment,
