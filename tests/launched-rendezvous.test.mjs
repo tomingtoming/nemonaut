@@ -1,14 +1,15 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {preset} from '../dist/catalog.js';import {LaunchPilot} from '../dist/launch-pilot.js';
-import {WorldRuntime} from '../dist/world-runtime.js';import {launchWorld} from '../dist/world-operations.js';
+import {WorldRuntime} from '../dist/world-runtime.js';import {launchWorld,selectWorldVessel} from '../dist/world-operations.js';
 import {worldFromFlight,flightFromWorld} from '../dist/world-save.js';import {saveFlight,loadFlight} from '../dist/flight-save.js';
 import {relativeState,centerOfVessel,setTarget,selectDockingPorts} from '../dist/relative-navigation.js';import {bodyOrbitState} from '../dist/celestial.js';
 import {timedRendezvousTransfer,timedRelativeStopPlan,transferThrottle} from '../dist/timed-rendezvous.js';import {rendezvousTransfer} from '../dist/rendezvous-transfer.js';
 import {maneuverPreview} from '../dist/maneuver.js';import {keplerDrift} from '../dist/coast-orbit.js';
 import {createManeuverNode} from '../dist/maneuver-node.js';
-import {portGuidance} from '../dist/port-navigation.js';import {dockingStatus,dockVessels} from '../dist/docking.js';
+import {portGuidance} from '../dist/port-navigation.js';import {dockingStatus,dockVessels,undockVessel} from '../dist/docking.js';
+import {setPartAction} from '../dist/part-actions.js';
 
-test('two surface launches, transfer burns and bounded RCS inputs reach a saved docking',()=>{
+test('two surface launches rendezvous, dock, refuel, separate and resume independently',()=>{
  let world=worldFromFlight(null),firstId,firstFuel,firstTime;
  for(let n=0;n<2;n++){
   world=launchWorld(world,{parts:preset('tug-launcher'),environment:'land',name:'Tug '+(n+1)});
@@ -70,6 +71,24 @@ test('two surface launches, transfer burns and bounded RCS inputs reach a saved 
     const docked=loadFlight(flightFromWorld(worldFromFlight(saveFlight(f),{history:world.history})));
     try{assert.equal(docked.parts.length,22);assert.equal(docked.parts.find(p=>p.id===ownPort).dockPartner,targetPort);assert.equal(docked.parts.find(p=>p.id===targetPort).dockPartner,ownPort);assert.deepEqual([...docked.fuel],[...f.fuel]);}
     finally{docked.dispose();}
+    const stores=type=>f.parts.filter(p=>p.type===type).sort((a,b)=>f.fuel.get(b.id)-f.fuel.get(a.id));
+    const tanks=stores('tank'),rcs=stores('rcs'),source=tanks[0].id,destinationTank=tanks.at(-1).id;
+    const sourceBefore=f.fuel.get(source),destinationTankBefore=f.fuel.get(destinationTank);
+    assert.ok(setPartAction(f,ownPort,'fuelCrossfeed',false));assert.equal(f.transferFuel(source,destinationTank,400),0);
+    assert.ok(setPartAction(f,ownPort,'fuelCrossfeed',true));assert.equal(f.transferFuel(source,destinationTank,400),400);
+    assert.equal(f.transferFuel(rcs[0].id,rcs.at(-1).id,2),2);
+    assert.equal(f.fuel.get(source),sourceBefore-400);assert.equal(f.fuel.get(destinationTank),destinationTankBefore+400);
+    const movedFuel=new Map(f.fuel);f=undockVessel(f,ownPort);
+    assert.equal(f.parts.length,11);assert.equal(f.transferFuel(source,destinationTank,1),0);
+    const separatedWorld=worldFromFlight(saveFlight(f),{history:world.history});
+    const incoming=separatedWorld.vessels.find(v=>v.parts.some(p=>p.id===targetPort));
+    for(const v of separatedWorld.vessels)for(const p of v.parts)if(movedFuel.has(p.id))assert.equal(new Map(v.fuel).get(p.id),movedFuel.get(p.id));
+    const selected=selectWorldVessel(separatedWorld,incoming.vesselId);f.dispose();f=loadFlight(flightFromWorld(selected.world));
+    const resumed=new WorldRuntime(f),others=[...resumed.vessels.values()].filter(v=>v!==f),mainFuel=v=>v.parts.filter(p=>p.type==='tank').map(p=>[p.id,v.fuel.get(p.id)]),otherFuel=others.map(mainFuel);
+    const initialFuel=mainFuel(f).reduce((a,b)=>a+b[1],0);f.throttle=.1;
+    for(let i=0;i<240;i++)resumed.step(1/120);f.throttle=0;
+    assert.ok(mainFuel(f).reduce((a,b)=>a+b[1],0)<initialFuel);assert.equal(f.crashed,false);
+    others.forEach((v,i)=>{assert.deepEqual(mainFuel(v),otherFuel[i]);assert.equal(v.universalTime,f.universalTime);});
    }
    world=worldFromFlight(saveFlight(f),{history:world.history});
   }finally{f.dispose();}
