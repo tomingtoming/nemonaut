@@ -23,6 +23,20 @@ export function surfaceMaterial(water=false){
    vec3 p=normalize(surfaceRotation*(terrainWorld-vec3(0.,-${PLANET.radius.toFixed(1)},0.)));
    float n=terrain(p*32.);${colors}
    float detail=terrain(p*1800.);diffuseColor.rgb*=base*(.78+.44*detail);`);
+  if(!water){
+   // Body-fixed metre coordinates: detail stays on the terrain as the camera
+   // moves and the planet rotates. Fade subpixel grains to avoid distant shimmer.
+   shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+    vec3 groundCoord=surfaceRotation*(terrainWorld-vec3(0.,-${PLANET.radius.toFixed(1)},0.));
+    float footprint=max(length(dFdx(groundCoord)),length(dFdy(groundCoord)));
+    float patchFade=1.-smoothstep(3.,14.,footprint);
+    float grainFade=1.-smoothstep(.12,.7,footprint);
+    float patches=noise(groundCoord*.11);
+    float grains=noise(groundCoord*1.7);
+    float mottling=mix(.72,1.22,smoothstep(.23,.77,patches));
+    diffuseColor.rgb*=mix(1.,mottling,patchFade)*mix(1.,.82+.36*grains,grainFade);
+   `);
+  }
   if(water){
    shader.vertexShader='varying vec2 waterCoord; uniform mat3 surfaceRotation;\n'+shader.vertexShader.replace('terrainWorld=(modelMatrix*vec4(transformed,1.)).xyz;','terrainWorld=(modelMatrix*vec4(transformed,1.)).xyz;waterCoord=(surfaceRotation*(terrainWorld-vec3(0.,-600000.,0.))).zx;');
    shader.fragmentShader='varying vec2 waterCoord;\n'+shader.fragmentShader;
