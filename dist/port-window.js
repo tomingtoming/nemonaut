@@ -24,3 +24,9 @@ export function guideFromPort(f,id,targetId,{align=false}={}){
  if(align){f.sas=true;f.sasMode='dock';f.holdQ=f.q.clone();}
  return true;
 }
+
+export function setPortTranslation(f,id,targetId,on){
+ const state=portWindowState(f,id,targetId);
+ if(typeof on!=='boolean'||!state?.canGuide||!state.selected)return false;
+ f.portTranslationEnabled=on;return true;
+}
