@@ -3,6 +3,8 @@ import {PARTS} from './catalog.js';
 import {bodyOrbitState,MOON} from './celestial.js';
 import {partCenter,partRotation} from './aero.js';
 import {engineBurn} from './resources.js';
+import {atmosphere} from './planet.js';
+import {surfaceRelativeVelocity} from './surface-frame.js';
 
 // Geometry is evaluated at the lowest part, not the vehicle origin or COM.
 // Braking figures assume thrust aligned against motion and constant gravity;
@@ -14,16 +16,26 @@ export function descentTelemetry(v){
   const rotation=v.q.clone().multiply(partRotation(p)),c=partCenter(p).applyQuaternion(v.q).add(v.pos),[x,y,z]=PARTS[p.type].size;
   for(const a of [-1,1])for(const b of [-1,1])for(const d of [-1,1]){const corner=new T.Vector3(a*x/2,b*y/2,d*z/2).applyQuaternion(rotation).add(c);clearance=Math.min(clearance,corner.distanceTo(o.center)-o.body.radius);}
  }
- const burns=engineBurn(v.networks,new Map(v.fuel),v.started?v.active:new Set(),1,0,.001),force=new T.Vector3();
+ const air=o.bodyId==='planet'?atmosphere(o.altitude):{density:0,pressure:0};
+ const burns=engineBurn(v.networks,new Map(v.fuel),v.started?v.active:new Set(),1,air.density,.001,air.pressure),force=new T.Vector3();
  for(const p of v.parts){const thrust=burns.get(p.id)||0;if(thrust)force.addScaledVector(new T.Vector3(0,1,0).applyQuaternion(partRotation(p)),thrust);}
- const thrust=force.length(),acceleration=thrust/v.stats.mass,netAcceleration=acceleration-o.gravity,vertical=o.vertical,horizontal=Math.sqrt(Math.max(0,o.speed**2-vertical**2)),fall=Math.max(0,-vertical);
- const brakingDistance=netAcceleration>0?o.speed**2/(2*netAcceleration):Infinity,verticalBrakingDistance=netAcceleration>0?fall*fall/(2*netAcceleration):Infinity;
+ const velocity=surfaceRelativeVelocity(com,v.vel,v.universalTime,o.body),speed=velocity.length();
+ const thrust=force.length(),acceleration=thrust/v.stats.mass,netAcceleration=acceleration-o.gravity,vertical=velocity.dot(up),horizontal=Math.sqrt(Math.max(0,speed**2-vertical**2)),fall=Math.max(0,-vertical);
+ const brakingDistance=netAcceleration>0?speed**2/(2*netAcceleration):Infinity,verticalBrakingDistance=netAcceleration>0?fall*fall/(2*netAcceleration):Infinity;
  const tilt=force.lengthSq()?force.normalize().applyQuaternion(v.q).angleTo(up)*180/Math.PI:null;
- return {body:o.bodyId,energy:o.energy,periapsis:o.periapsis,apoapsis:o.apoapsis,clearance,vertical,horizontal,speed:o.speed,gravity:o.gravity,thrust,acceleration,netAcceleration,hoverThrottle:acceleration>0?o.gravity/acceleration:Infinity,brakingDistance,verticalBrakingDistance,tilt,landed:v.landed&&!v.crashed,crashed:v.crashed,legs:v.parts.filter(p=>PARTS[p.type].landingLeg).length};
+ return {body:o.bodyId,energy:o.energy,periapsis:o.periapsis,apoapsis:o.apoapsis,clearance,vertical,horizontal,speed,gravity:o.gravity,thrust,acceleration,netAcceleration,hoverThrottle:acceleration>0?o.gravity/acceleration:Infinity,brakingDistance,verticalBrakingDistance,tilt,landed:v.landed&&!v.crashed,crashed:v.crashed,legs:v.parts.filter(p=>PARTS[p.type].landingLeg).length};
 }
 
 export function descentGuidance(d,throttle=0){
  if(d.crashed)return '機体損傷';
+ if(d.body==='planet'){
+  if(d.landed)return throttle>0?'接地・静止：噴射を停止してください':'接地・静止';
+  if(!d.thrust)return '点火段・推進剤を確認してください';
+  if(d.netAcceleration<=0)return '推力不足：降下速度を止められません';
+  if(d.vertical>1)return '上昇中';
+  if(d.clearance<d.verticalBrakingDistance)return '降下の減速距離が対地距離を超えています';
+  return d.horizontal>5?'横移動を減速してください':'接地前に鉛直速度を1 m/s未満へ';
+ }
  if(d.landed)return throttle>0?'月面で静止：噴射を停止してください':'月面着陸完了：噴射停止・静止を確認';
  // Braking distance alone says nothing about whether a surface intercept exists.
  // Do not tell an escaping or safely orbiting craft to cancel its velocity.
