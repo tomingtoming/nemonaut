@@ -10,3 +10,8 @@ export function setPartAction(f,id,key,on){
  if(key==='engine'){if(on){f.active.add(id);f.started=true;}else f.active.delete(id);}else p[key]=on;
  return true;
 }
+
+export function setPartThrustLimit(f,id,value){
+ const p=f?.parts.find(p=>p.id===id);if(!p||!canControl(f)||!PARTS[p.type].thrust||!Number.isFinite(value)||value<0||value>1)return false;
+ p.thrustLimit=value;return true;
+}
