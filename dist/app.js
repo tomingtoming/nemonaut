@@ -1,3 +1,4 @@
+import {recordSurveyAchievement} from './surface-survey.js';
 import {mountDeliveryPanel} from './delivery-panel.js';
 import {recordDeliveryAchievements} from './surface-delivery.js';
 import {createEnginePlume,updateEnginePlume} from './engine-plume.js';
@@ -278,7 +279,7 @@ let explorationError='';
 function updateExploration(){
  if(!flight||!parkedWorld||practiceSession)return;
  try{
-  const before=parkedWorld.history,next=recordDeliveryAchievements(recordLunarAchievements(recordOrbitAchievements(before,flight),flight),flight);
+  const before=parkedWorld.history,next=recordSurveyAchievement(recordDeliveryAchievements(recordLunarAchievements(recordOrbitAchievements(before,flight),flight),flight),flight);
   parkedWorld.history=next;explorationError='';
   for(const event of next.slice(before.length))notify(event.name+' · '+historyActionLabel(event));
  }catch(e){if(explorationError!==e.message){explorationError=e.message;notify('探査記録を保存できません：'+e.message);}}

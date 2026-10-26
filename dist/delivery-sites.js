@@ -1,3 +1,4 @@
+export const SURVEY_TARGET_SECONDS=9000;
 import * as T from 'three';
 import {PRIMARY} from './celestial.js';
 import {fixedToInertial,inertialToFixed} from './surface-frame.js';
