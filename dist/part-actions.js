@@ -10,7 +10,7 @@ export function setPartAction(f,id,key,on){
  if(!f||!canControl(f)||typeof on!=='boolean'||!partActions(f,id).some(a=>a.key===key))return false;
  const p=f.parts.find(p=>p.id===id);
  if(key==='engine'){if(on){f.active.add(id);f.started=true;}else f.active.delete(id);}else p[key]=on;
- if(key==='fuelCrossfeed')f.networks=fuelNetworks(f.parts);
+ if(key==='fuelCrossfeed'||key==='fuelEnabled')f.networks=fuelNetworks(f.parts);
  return true;
 }
 

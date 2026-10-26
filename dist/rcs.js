@@ -20,7 +20,7 @@ export function mixRCS(thrusters,com,rotation,translation){
  return levels;
 }
 
-export function rcsThrusters(parts,definitions){return parts.flatMap(p=>{const d=definitions[p.type];if(!d.rcsThrust)return [];const q=new T.Quaternion().setFromEuler(new T.Euler(...p.r));return RCS_NOZZLES.map((n,index)=>({id:p.id,index,position:new T.Vector3(...n.position).applyQuaternion(q).add(new T.Vector3(...p.p)),direction:new T.Vector3(...n.direction).applyQuaternion(q),thrust:d.rcsThrust,isp:d.rcsIsp}));});}
+export function rcsThrusters(parts,definitions){return parts.flatMap(p=>{const d=definitions[p.type];if(!d.rcsThrust||p.fuelEnabled===false)return [];const q=new T.Quaternion().setFromEuler(new T.Euler(...p.r));return RCS_NOZZLES.map((n,index)=>({id:p.id,index,position:new T.Vector3(...n.position).applyQuaternion(q).add(new T.Vector3(...p.p)),direction:new T.Vector3(...n.direction).applyQuaternion(q),thrust:d.rcsThrust,isp:d.rcsIsp}));});}
 
 // Internal monopropellant reservoirs supply only their own block. No main-fuel
 // crossfeed, and no resource transfer across separated craft.
