@@ -10,6 +10,9 @@ export function departureMode(environment){
  const [mode,label]=environments[environment];return {mode,label};
 }
 export function historyActionLabel(event){
+ if(event.type==='flight-ascent')return '着陸課題 · 対地100 mを通過';
+ if(event.type==='flight-touchdown')return '着陸課題 · 接地点を記録';
+ if(event.type==='precision-landing')return (deliverySite(event.siteId)?.name??'観測点')+'に精密着陸';
  if(event.type==='survey')return (deliverySite(event.siteId)?.name??'観測点')+'の昼夜観測を完了';
  if(event.type==='delivery')return (deliverySite(event.siteId)?.name??'観測点')+'に観測機を設置';
  if(event.type==='recover'&&event.moonEventIds?.length)return '月探査から母星へ帰還・回収';
