@@ -47,7 +47,8 @@ export function coastSurfaceMargin(v){
  const thrust=[...engineBurn(v.networks,new Map(v.fuel),v.started?v.active:new Set(),1,0,.001).values()].reduce((a,b)=>a+b,0),net=thrust/v.stats.mass-o.gravity;
  // Leave braking distance plus ten seconds for attitude/input, even though
  // actual steering and manual throttle can need more. Never promise a landing.
- return net>0?1000+fall*10+1.5*fall*fall/(2*net):1000+fall*20;
+ const brakingSpeed=o.periapsis<1000?o.speed:fall;
+ return net>0?1000+brakingSpeed*10+1.5*brakingSpeed*brakingSpeed/(2*net):1000+brakingSpeed*20;
 }
 
 function blocker(reason,v,code=null,other=null){

@@ -39,6 +39,17 @@ test('Lunar descent warp stops with braking and attitude margin before the fixed
  }finally{f.dispose();}
 });
 
+test('Lunar landing coast reserves braking distance for horizontal speed as well as descent',()=>{
+ const f=new Flight(preset('lander'),'moon-orbit',40000);try{
+  const moon=bodyState(MOON,f.universalTime);
+  f.pos.copy(moon.position).add(new T.Vector3(0,MOON.radius+12000,0));
+  f.vel.copy(moon.velocity).add(new T.Vector3(0,-30,500));f.stageNext();
+  const d=descentTelemetry(f);
+  assert.ok(d.horizontal>490);assert.ok(d.vertical<0);
+  assert.ok(coastSurfaceMargin(f)>d.brakingDistance,'low periapsis needs room to brake total surface-relative velocity');
+ }finally{f.dispose();}
+});
+
 test('Real lander can brake from lunar circular orbit and descend to a stationary touchdown',()=>{
  const f=new Flight(preset('lander'),'moon-orbit',40000);try{
   f.sasMode='retrograde';for(let i=0;i<120*30;i++)f.step(1/120);f.stageNext();f.throttle=1;

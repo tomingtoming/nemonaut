@@ -46,6 +46,22 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
   for(let i=0;i<6;i++){const angle=i*Math.PI/3;add('engine',[1.25*Math.cos(angle),-20.59,1.25*Math.sin(angle)],[0,0,0],tank);}
   for(let i=0;i<4;i++){const angle=i*Math.PI/2;add('fin',[.625*Math.cos(angle),-18.99,-.625*Math.sin(angle)],[0,angle,0],tank);}
  }
+ if(kind==='lunar-surface-expedition'){
+  a=preset('lunar-expedition');
+  const tank=a.find(p=>p.type==='tank');
+  for(const x of [-1.3,1.3])a.push(part('tank',[x,-2.15,0],[0,0,0],tank.id));
+  for(const [x,z]of [[1,0],[-1,0],[0,1],[0,-1]]){
+   const frame=part('truss',[x*1.8,-3.2,z*1.8],[0,0,0],tank.id);
+   a.push(frame,part('landingLeg',[x*1.8,-4.25,z*1.8],[0,0,0],frame.id));
+  }
+  for(const p of a.filter(p=>p.type==='solar'))p.p[0]*=1.8;
+  const middle=a.find(p=>p.type==='tank'&&p.p[1]===-5.57),lower=a.find(p=>p.type==='tank'&&p.p[1]<-18);
+  for(const x of [-1.3,1.3])a.push(part('tank',[x,-5.57,0],[0,0,0],middle.id));
+  for(const z of [-1.4,1.4])a.push(part('engine',[0,-9.17,z],[0,0,0],middle.id,1));
+  for(const x of [-1.3,1.3])for(const y of [-14.99,-16.99])a.push(part('tank',[x,y,0],[0,0,0],lower.id));
+  for(const [x,z]of [[2.5,0],[-2.5,0],[0,2.5],[0,-2.5]])a.push(part('engine',[x,-20.59,z],[0,0,0],lower.id));
+  for(let i=0;i<4;i++){const angle=i*Math.PI/2+Math.PI/4;a.push(part('engine',[2.5*Math.cos(angle),-20.59,2.5*Math.sin(angle)],[0,0,0],lower.id));}
+ }
  if(kind==='recovery'){add('capsule',[0,0,0]);add('parachute',[0,.85,0]);}
  if(kind==='rcs'){add('probe',[0,0,0]);a[0].reactionEnabled=false;add('truss',[0,-.7,0]);for(const x of [-.74,.74])for(const y of [-1.2,.4])add('rcs',[x,y,0],[0,0,0],1);}
  if(kind==='orbiter'||kind==='transfer'){add('probe',[0,2.5,0]);add('tank',[0,1.3,0]);add('engine',[0,-.3,0],[0,0,0],1);add('solar',[1.6,2.5,0],[0,0,0]);add('solar',[-1.6,2.5,0],[0,0,0]);}

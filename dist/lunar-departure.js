@@ -8,7 +8,7 @@ import {engineBurn} from './resources.js';
 
 // Search departure time on the actual parking conic. No seed position, clock,
 // circularisation or propellant reset is applied to the vessel.
-export function searchLunarDeparture(position,velocity,time,{preparation=120,phases=48,periods=2,flybys=[400000,800000,1200000]}={}){
+export function searchLunarDeparture(position,velocity,time,{preparation=120,phases=48,periods=2,flybys=[400000,800000,1200000],accept=null}={}){
  const orbit=orbitState(position,velocity);
  if(!orbit.stable||orbit.apoapsis+PLANET.radius>=MOON.orbitRadius-MOON.sphereOfInfluence)throw Error('母星の安全な待機軌道から計画してください');
  if(!Number.isFinite(time)||time<0||!Number.isFinite(preparation)||preparation<60||!Number.isInteger(phases)||phases<8||phases>96||!Number.isInteger(periods)||periods<1||periods>8||!Array.isArray(flybys)||flybys.length>8||!flybys.length||flybys.some(x=>!Number.isFinite(x)||Math.abs(x)>2000000))throw Error('月遷移探索の条件が不正です');
@@ -24,17 +24,27 @@ export function searchLunarDeparture(position,velocity,time,{preparation=120,pha
   }
  }
  candidates.sort((a,b)=>a.deltaV-b.deltaV);
+ let firstSafe=null;
  for(const candidate of candidates.slice(0,32)){
   const prediction=predictTrajectory(candidate.position,candidate.afterVelocity,candidate.time,{duration:Math.min(604800,candidate.duration*1.6),samples:160});
-  if(prediction.events.some(e=>e.type==='enter-moon')&&prediction.closest.altitude>10000&&prediction.closest.altitude<1000000&&!prediction.closest.atBoundary&&prediction.reason==='duration')return {...candidate,prediction};
+  if(prediction.events.some(e=>e.type==='enter-moon')&&prediction.closest.altitude>10000&&prediction.closest.altitude<1000000&&!prediction.closest.atBoundary&&prediction.reason==='duration'){
+   const plan={...candidate,prediction};firstSafe??=plan;
+   if(!accept||accept(plan))return plan;
+  }
  }
+ if(firstSafe)return firstSafe;
  throw Error('探索範囲内に安全な月接近案が見つかりません');
 }
 
 export function lunarDeparturePlan(vessel){
  if(vessel.throttle!==0)throw Error('噴射を停止してから月遷移を計画してください');
  captureBurnEstimate(vessel,1);
- const plan=searchLunarDeparture(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime);
+ return searchLunarDeparture(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,{accept:plan=>evaluateFiniteDeparture(vessel,plan).ready});
+}
+
+// The cheapest instantaneous burn may collide once its real duration is used.
+// Test other candidates before reporting that the vessel has no usable plan.
+function evaluateFiniteDeparture(vessel,plan){
  plan.burn=captureBurnEstimate(vessel,plan.deltaV);plan.startTime=plan.time-plan.burn.duration/2;plan.warnings=[];
  if(!plan.burn.enough)plan.warnings.push('現在の点火段では推進剤が不足しています');
  if(plan.startTime-vessel.universalTime<60)plan.warnings.push('姿勢調整の60秒を確保できません');
