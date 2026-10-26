@@ -400,7 +400,13 @@ mountFlightLayout();
 const ascentPanel=mountAscentPanel(document.querySelector('#descentPanel'),()=>flight,()=>syncFlightControls());
 const departurePanel=mountDeparturePanel(document.querySelector('#ascentPanel'),()=>flight,message=>{syncFlightControls();if(message)notify(message);});
 const stageVisibility=mountStageVisibility(()=>objects);
-const deliveryPanel=mountDeliveryPanel(document,()=>({flight,history:parkedWorld?.history??[],practice:!!practiceSession,atCenter}),notify);
+const deliveryPanel=mountDeliveryPanel(document,()=>({flight,world:parkedWorld,history:parkedWorld?.history??[],practice:!!practiceSession,atCenter}),notify,probeId=>{
+ try{
+  if(practiceSession)return;
+  if(!flight){const target=parkedWorld?.vessels.find(v=>v.parts.some(p=>p.id===probeId));if(!target)throw Error('観測機が見つかりません');resumeFromCenter(selectWorldVessel(parkedWorld,target.vesselId,{observe:!canControl({parts:target.parts,crashed:target.state.crashed})}));}
+  else{const target=fleet(flight).find(v=>v.parts.some(p=>p.id===probeId));if(!target)throw Error('観測機が見つかりません');if(canControl(target)){switchVessel(target);}else{trackedDebris=target;const focus=vesselCenter(target);controls.target.copy(focus);camera.position.copy(focus).add(new T.Vector3(14,10,18));flightFocus.copy(focus);updateDebrisList();}}
+ }catch(error){notify(error.message);}
+});
 const buoyancyPanel=mountBuoyancyPanel(document,scene,()=>({parts,flight,atCenter}),comMarker);
 const designDiagnostics=mountDesignDiagnostics($('#checks'),()=>({parts,flight}),id=>{cancelPlacement();select(id);$('#selection').scrollIntoView({block:'nearest'});},balance=>thrustOverlay.update(balance),ids=>stageVisibility.update(ids));
 const returnPanel=mountReturnPanel(document.querySelector('#ascentPanel'),()=>flight,message=>{syncFlightControls();if(message)notify(message);},{isPractice:()=>!!practiceSession});
