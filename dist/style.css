@@ -344,3 +344,7 @@ body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
 .finiteBurnControls{display:grid;grid-template-columns:1fr 1fr;gap:4px}.finiteBurnControls select{min-width:0;width:100%}.finiteBurnControls button,.finiteBurnControls p{grid-column:1/-1}#orbitOverlay .finiteBurnControls p{color:#9be888;white-space:pre-line;margin:3px 0;font-size:11px}
 
 #mapThrottle button[data-planned=true]{border-color:#9be888;box-shadow:inset 0 0 0 1px #9be888}
+
+.descentWindow{width:300px}.descentWindow #descentPanel{margin:0;padding:0;border:0;background:transparent}.descentWindow #descentPanel>strong{display:none}.descentWindow .floatingContent{padding:10px}.descentWindow #descentPanel>div{display:flex;flex-wrap:wrap;gap:4px}.descentWindow #descentPanel button{margin:0;font-size:11px}.descentWindow header{position:sticky;top:0;z-index:1}
+
+#flightQuickNav>#openDescent{grid-column:auto}#flightQuickNav>#deliveryGuide{grid-column:1/-1;width:100%}

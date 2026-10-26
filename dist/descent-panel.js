@@ -1,4 +1,5 @@
 import {PARTS} from './catalog.js';
+import {floatingWindow} from './floating-window.js';
 import {descentTelemetry,descentGuidance} from './descent.js';
 
 export function mountDescentPanel(host,getFlight,changed){
@@ -11,8 +12,16 @@ export function mountDescentPanel(host,getFlight,changed){
  host.after(panel);
  for(const [name,mode]of [['Retro','retrograde'],['Up','radial']])panel.querySelector('.descent'+name).onclick=()=>{const f=getFlight();if(f&&!f.crashed){f.sas=true;f.sasMode=mode;changed();}};
  for(const name of ['Full','Hover','Less','More','Stop'])panel.querySelector('.descent'+name).onclick=()=>{const f=getFlight();if(!f||f.crashed)return;const d=descentTelemetry(f);f.throttle=name==='Stop'?0:name==='Full'?1:name==='Hover'?Math.min(1,d.hoverThrottle):Math.max(0,Math.min(1,f.throttle+(name==='More'?.005:-.005)));changed();};
+ let window=null,button=null,anchor=null;
+ function closeWindow(){if(!window)return;anchor.after(panel);window.remove();window=null;button.setAttribute('aria-pressed','false');}
+ function mountWindow(){
+  anchor=document.createComment('descent instruments');panel.before(anchor);
+  button=document.createElement('button');button.id='openDescent';button.textContent='降下計器';button.hidden=true;button.setAttribute('aria-pressed','false');
+  document.querySelector('#flightQuickNav').append(button);
+  button.onclick=()=>{if(window){closeWindow();return;}window=floatingWindow(document.body,{title:'降下・接地計器',x:innerWidth-330,y:155,onClose:closeWindow});window.element.classList.add('descentWindow');window.content.append(panel);button.setAttribute('aria-pressed','true');window.clamp();};
+ }
  function update(){
-  const f=getFlight(),ground=f?.orbit?.bodyId==='planet'&&f.environment!=='water'&&f.rocketAxes&&f.parts.some(p=>PARTS[p.type].landingLeg)&&f.orbit.altitude<10000;panel.hidden=!f||(!ground&&(f.orbit?.bodyId!=='moon'||(f.orbit.energy>=0&&f.orbit.altitude>30000)));if(panel.hidden)return;
+  const f=getFlight(),ground=f?.orbit?.bodyId==='planet'&&f.environment!=='water'&&f.rocketAxes&&f.parts.some(p=>PARTS[p.type].landingLeg)&&f.orbit.altitude<10000;panel.hidden=!f||(!ground&&(f.orbit?.bodyId!=='moon'||(f.orbit.energy>=0&&f.orbit.altitude>30000)));if(button)button.hidden=panel.hidden;if(panel.hidden){closeWindow();return;}
   panel.querySelector('strong').textContent=ground?'降下・接地計器':'月面降下・接地計器';expeditionHelp.hidden=ground;(basicHelp.closest('details')||basicHelp).hidden=ground;
   const d=descentTelemetry(f);for(const button of panel.querySelectorAll('button'))button.disabled=f.crashed;
   panel.querySelector('.descentHover').disabled=f.crashed||!Number.isFinite(d.hoverThrottle)||d.hoverThrottle>1;
@@ -20,5 +29,5 @@ export function mountDescentPanel(host,getFlight,changed){
   const distance=n=>Number.isFinite(n)?n.toFixed(0)+' m':'算出不可';
   panel.querySelector('.descentNumbers').textContent=`最低部の対地距離 ${distance(d.clearance)} · 水平 ${d.horizontal.toFixed(1)} m/s · 鉛直 ${d.vertical.toFixed(1)} m/s。減速距離 ${distance(d.brakingDistance)}（鉛直のみ ${distance(d.verticalBrakingDistance)}）。天頂静止推力 ${Number.isFinite(d.hoverThrottle)?(100*d.hoverThrottle).toFixed(1)+'%':'—'} · 現在 ${(100*f.throttle).toFixed(1)}% · 推力軸の傾き ${d.tilt===null?'—':d.tilt.toFixed(1)+'°'} · 着陸脚 ${d.legs}本。`;
  }
- return {update};
+ return {update,mountWindow};
 }

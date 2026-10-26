@@ -42,6 +42,14 @@ const qualityPanel=window.content.querySelector('.surveyQuality');qualityPanel.h
 for(const selector of ['.deliveryResult','.deliveryStation','.deliveryVisit','.surveyProgress','.surveyQuality','.deliveryConditions','.deliveryInstructions']){const e=window.content.querySelector(selector);if(precise)e.hidden=true;}window.content.querySelector('.precisionChallenge').hidden=!precise;window.content.querySelector('.deliveryResult').hidden=precise;window.content.querySelector('.deliveryConditions').hidden=precise;
 if(station)text.textContent=station.vessel?(station.vessel.vesselName||'観測機')+' · '+(station.damaged?'損傷':station.landed?'接地':'飛行中')+' · 観測点から '+Math.round(station.distance)+' m · '+station.power.stored.toFixed(0)+' / '+station.power.capacity+' EC':'観測機は現在の世界にありません';}
  }
- function updateMarker(camera,width,height){const site=selectedDeliverySite();marker.textContent='◇ '+site.name;marker.setAttribute('aria-label',site.name+'の位置');const {flight,atCenter}=getState();const visible=followed&&flight&&!atCenter&&root.querySelector('#orbitOverlay').hidden;const p=visible?projectDeliverySite(camera,flight.universalTime,width,height,site):null;marker.hidden=!p;if(p){marker.style.left=p.x+'px';marker.style.top=p.y+'px';}}
+ function updateMarker(camera,width,height){const site=selectedDeliverySite();marker.textContent='◇ '+site.name;marker.setAttribute('aria-label',site.name+'の位置');const {flight,atCenter}=getState();const visible=followed&&flight&&!atCenter&&root.querySelector('#orbitOverlay').hidden;const p=visible?projectDeliverySite(camera,flight.universalTime,width,height,site):null;marker.hidden=!p;if(p){marker.style.left=p.x+'px';marker.style.top=p.y+'px';
+  // Keep the world anchor truthful; the guide still supplies distance/bearing
+  // when another instrument occupies its projected screen position.
+  const m=marker.getBoundingClientRect();
+  marker.hidden=[...root.querySelectorAll('#flightQuickNav,.navpanel,.hudreadings,#inspector,#flightMenu,#flightSystems,#stageDock,.floatingWindow,#panelDock')].some(el=>{
+   if(getComputedStyle(el).visibility==='hidden')return false;
+   const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&m.left<r.right+4&&m.right>r.left-4&&m.top<r.bottom+4&&m.bottom>r.top-4;
+  });
+ }}
  return {update,close,updateMarker};
 }

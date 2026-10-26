@@ -421,6 +421,7 @@ function updateWorkshop(){if(flight)return;const bounds=new T.Box3().setFromObje
 const capturePanel=mountCapturePanel(document.querySelector('#transferPanel'),()=>flight,message=>{syncFlightControls();notify(message);});
 const descentPanel=mountDescentPanel(document.querySelector('#capturePanel'),()=>flight,()=>syncFlightControls());
 mountFlightLayout();
+descentPanel.mountWindow();
 const flightPause=mountFlightPause(document,{keys,clock:physicsClock,onChange:()=>{if(flight)updateFlightControls(document,flight);}});
 const dockingWindow=mountDockingWindow(()=>flight);
 const ascentPanel=mountAscentPanel(document.querySelector('#descentPanel'),()=>flight,()=>syncFlightControls());
