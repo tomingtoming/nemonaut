@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import * as T from 'three';
 import {mixRCS,rcsThrusters,burnRCS} from '../dist/rcs.js';
 import {Flight,statistics} from '../dist/core.js';
-import {preset,part} from '../dist/catalog.js';
+import {preset,part,PARTS} from '../dist/catalog.js';
 import {saveFlight,loadFlight} from '../dist/flight-save.js';
 import {selectVessel} from '../dist/fleet.js';
 const definitions={rcs:{rcsThrust:120,rcsIsp:65}},zero=()=>new T.Vector3();
@@ -20,4 +20,18 @@ test('RCS consumption changes total mass and center without burning main fuel',(
 });
 test('Separated RCS reservoirs and ON/OFF persist across control switch and restore',()=>{
  const a=preset('twin'),cores=a.filter(p=>p.type==='probe');for(const core of cores)a.push(part('rcs',[core.p[0]+1,core.p[1],0],[0,0,0],core.id));const f=new Flight(a,'orbit');f.rcsEnabled=true;const blocks=f.parts.filter(p=>p.type==='rcs');f.fuel.set(blocks[0].id,3);f.fuel.set(blocks[1].id,7);f.stageNext();f.stageNext();const child=f.detached[0];assert.equal(child.fuel.get(blocks[1].id),7);assert.equal(f.fuel.has(blocks[1].id),false);const active=selectVessel(f,child),saved=saveFlight(active),g=loadFlight(saved);assert.equal(g.rcsEnabled,true);assert.equal(g.fuel.get(blocks[1].id),7);assert.equal(g.detached[0].fuel.get(blocks[0].id),3);saved.fuel.find(([id])=>id===blocks[1].id)[1]=13;assert.throws(()=>loadFlight(saved));const old=saveFlight(active);delete old.rcsEnabled;const migrated=loadFlight(old);assert.equal(migrated.rcsEnabled,false);active.dispose();g.dispose();migrated.dispose();
+});
+
+
+test('Tug RCS removes cancelling nozzles without losing axial thrust or torque balance',()=>{
+ const craft=preset('tug-launcher').slice(0,11),ts=rcsThrusters(craft,PARTS),com=statistics(craft).com;
+ for(const translation of [new T.Vector3(1,0,0),new T.Vector3(0,1,0),new T.Vector3(0,0,1),new T.Vector3(.3,-.2,.5)]){
+  const levels=mixRCS(ts,com,new T.Vector3(),translation);
+  for(let i=0;i<ts.length;i++)for(let j=i+1;j<ts.length;j++)if(ts[i].id===ts[j].id&&ts[i].direction.dot(ts[j].direction)<-.999)assert.ok(Math.min(levels[i],levels[j])<1e-12);
+  const force=new T.Vector3(),torque=new T.Vector3();let spent=0;
+  ts.forEach((t,i)=>{const f=t.direction.clone().multiplyScalar(t.thrust*levels[i]);force.add(f);torque.add(t.position.clone().sub(com).cross(f));spent+=f.length();});
+  if(translation.y===1){assert.ok(Math.abs(force.y-480)<1e-6);assert.ok(torque.length()<1e-6);assert.ok(Math.abs(spent-480)<1e-6);}
+  // This off-center command is constrained: preserve its pre-cleanup wrench.
+  if(translation.z===1){assert.ok(Math.abs(force.z-463.83289807191943)<1e-6);assert.ok(Math.abs(torque.x-30.289461935971275)<1e-6);}
+ }
 });

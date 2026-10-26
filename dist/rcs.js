@@ -17,6 +17,13 @@ export function mixRCS(thrusters,com,rotation,translation){
   const next=T.MathUtils.clamp(levels[j]+col.reduce((s,v,i)=>s+v*residual[i],0)/norm,0,1),delta=next-levels[j];
   levels[j]=next;col.forEach((v,i)=>residual[i]-=v*delta);
  }
+ // Opposed nozzles can retain a cancelling component in a least-squares
+ // solution. Remove only exactly opposite force/torque columns: this keeps
+ // the commanded wrench unchanged while avoiding propellant spent on itself.
+ for(let i=0;i<columns.length;i++)for(let j=i+1;j<columns.length;j++){
+  if(!columns[i].every((v,k)=>Math.abs(v+columns[j][k])<1e-9))continue;
+  const cancelled=Math.min(levels[i],levels[j]);levels[i]-=cancelled;levels[j]-=cancelled;
+ }
  return levels;
 }
 
