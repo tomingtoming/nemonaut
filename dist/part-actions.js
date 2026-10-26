@@ -23,3 +23,16 @@ export function setPartControlLimit(f,id,value){
  const p=f?.parts.find(p=>p.id===id);if(!p||!canControl(f)||!PARTS[p.type].controlAxis||!Number.isFinite(value)||value<0||value>1)return false;
  p.controlLimit=value;return true;
 }
+
+export function parachuteActions(f,id){
+ const p=f?.parts.find(p=>p.id===id),s=f?.chutes.get(id);
+ if(!p||!PARTS[p.type].parachute||!s)return [];
+ return [{key:'arm',label:'開傘待機',enabled:s.status==='stowed'},
+ {key:'disarm',label:'待機解除',enabled:s.status==='armed'},
+ {key:'cut',label:'パラシュートを切離す',enabled:['reefed','open'].includes(s.status)}]
+ .map(a=>({...a,enabled:a.enabled&&canControl(f)&&!f.thermal.get(id)?.failed}));
+}
+export function setParachuteAction(f,id,key){
+ if(!parachuteActions(f,id).some(a=>a.key===key&&a.enabled))return false;
+ const s=f.chutes.get(id);s.status={arm:'armed',disarm:'stowed',cut:'cut'}[key];s.fraction=0;return true;
+}
