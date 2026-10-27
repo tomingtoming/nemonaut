@@ -1,3 +1,4 @@
+import {cargoShellBoxes} from './cargo-geometry.js';
 import * as T from 'three';
 import {PARTS} from './catalog.js';
 import {partRotation} from './aero.js';
@@ -12,7 +13,7 @@ function hitBox(point,direction,box){
  return far>=Math.max(near,0)?Math.max(near,0):null;
 }
 export function createBodyAerodynamics(parts){
- const boxes=parts.filter(p=>!PARTS[p.type].wing).map(p=>{const d=PARTS[p.type],rotation=partRotation(p);return {id:p.id,type:p.type,center:new T.Vector3(...p.p),half:new T.Vector3(...d.size).multiplyScalar(.5),rotation,inverse:rotation.clone().invert(),axes:[new T.Vector3(1,0,0),new T.Vector3(0,1,0),new T.Vector3(0,0,1)].map(a=>a.applyQuaternion(rotation))};});
+ const boxes=parts.filter(p=>!PARTS[p.type].wing).flatMap(p=>{const d=PARTS[p.type],rotation=partRotation(p),pieces=d.cargoBay?cargoShellBoxes(d,p.cargoOpen):[{center:[0,0,0],size:d.size}];return pieces.map(piece=>{const q=rotation.clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(...(piece.rotation||[0,0,0]))));return {id:p.id,type:p.type,center:new T.Vector3(...piece.center).applyQuaternion(rotation).add(new T.Vector3(...p.p)),half:new T.Vector3(...piece.size).multiplyScalar(.5),rotation:q,inverse:q.clone().invert(),axes:[new T.Vector3(1,0,0),new T.Vector3(0,1,0),new T.Vector3(0,0,1)].map(a=>a.applyQuaternion(q))};});});
  let lastDirection=null,lastArea=0;
  return {dragArea(direction){
   if(direction.lengthSq()<1e-12)return 0;const wind=direction.clone().normalize();

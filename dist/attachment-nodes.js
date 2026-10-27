@@ -14,7 +14,7 @@ export function validateAttachments(parts){
   if(!a||!['node','surface','free'].includes(a.mode))throw Error('取付方法が不正です');
   if(a.mode==='node'){
    const parent=byId.get(p.parent);
-   if(!Number.isInteger(a.ownNode)||!nodes(p.type)[a.ownNode]||!Number.isInteger(a.parentNode)||a.parentNode<0||a.parentNode>5||(parent&&!nodes(parent.type)[a.parentNode]))throw Error('接続点の番号が不正です');
+   if(!Number.isInteger(a.ownNode)||!nodes(p.type)[a.ownNode]||!Number.isInteger(a.parentNode)||a.parentNode<0||(parent&&!nodes(parent.type)[a.parentNode]))throw Error('接続点の番号が不正です');
   }
  }
 }

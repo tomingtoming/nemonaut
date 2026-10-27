@@ -1,4 +1,15 @@
 import * as T from 'three';
+import {PARTS} from './catalog.js';
+import {cargoShellBoxes} from './cargo-geometry.js';
+
+export function partInterferenceBounds(p,bounds){
+ const d=PARTS[p.type];if(!d?.cargoBay)return [orientedBounds(p,bounds.get(p.type))];
+ const q=new T.Quaternion().setFromEuler(new T.Euler(...p.r));
+ return cargoShellBoxes(d,p.cargoOpen).map(b=>{
+  const center=new T.Vector3(...b.center).applyQuaternion(q).add(new T.Vector3(...p.p)),rotation=new T.Euler().setFromQuaternion(q.clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(...(b.rotation||[0,0,0]))))),half=new T.Vector3(...b.size).multiplyScalar(.5);
+  return orientedBounds({...p,p:center.toArray(),r:[rotation.x,rotation.y,rotation.z]},new T.Box3(half.clone().negate(),half));
+ });
+}
 
 // Local bounds come from the loaded Blender asset, before any animation or mounts.
 export function orientedBounds(part,bounds){
@@ -19,10 +30,10 @@ export function overlapDepth(a,b,tolerance=.002){
  return depth;
 }
 export function assemblyInterferences(parts,bounds,{tolerance=.002,limit=60}={}){
- const boxes=parts.map(p=>({id:p.id,box:orientedBounds(p,bounds.get(p.type))})).sort((a,b)=>a.box.aabb.min.x-b.box.aabb.min.x),pairs=[];let total=0;
+ const boxes=parts.map(p=>{const shapes=partInterferenceBounds(p,bounds),aabb=new T.Box3();for(const s of shapes)aabb.union(s.aabb);return {id:p.id,shapes,aabb};}).sort((a,b)=>a.aabb.min.x-b.aabb.min.x),pairs=[];let total=0;
  for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){
-  const a=boxes[i],b=boxes[j];if(b.box.aabb.min.x>=a.box.aabb.max.x-tolerance)break;
-  const depth=overlapDepth(a.box,b.box,tolerance);if(!depth)continue;total++;if(pairs.length<limit)pairs.push({a:a.id,b:b.id,depth});
+  const a=boxes[i],b=boxes[j];if(b.aabb.min.x>=a.aabb.max.x-tolerance)break;
+  let depth=0;for(const x of a.shapes)for(const y of b.shapes)depth=Math.max(depth,overlapDepth(x,y,tolerance));if(!depth)continue;total++;if(pairs.length<limit)pairs.push({a:a.id,b:b.id,depth});
  }
  return {total,pairs};
 }

@@ -1,3 +1,4 @@
+import {angularMomentum,angularVelocity} from './angular-momentum.js';
 import {engineMedium} from './engine-medium.js';
 import {fuelNetworks} from './resources.js';
 import {partSettings} from './part-settings.js';
@@ -10,8 +11,10 @@ export function partActions(f,id){
 export function setPartAction(f,id,key,on){
  if(!f||!canControl(f)||typeof on!=='boolean'||!partActions(f,id).some(a=>a.key===key))return false;
  const p=f.parts.find(p=>p.id===id);
+ const momentum=key==='cargoOpen'?angularMomentum(f.body,f.q,f.omega):null;
  if(key==='observation'){if(on&&f.thermal.get(id)?.failed)return false;f.observations.get(id).enabled=on;return true;}
  if(key==='engine'){if(on&&f.thermal.get(id)?.failed)return false;if(on){f.active.add(id);f.started=true;}else f.active.delete(id);}else p[key]=on;
+ if(key==='cargoOpen'){f.buildColliders();f.omega.copy(angularVelocity(f.body,f.q,momentum));}
  if(key==='fuelCrossfeed'||key==='fuelEnabled')f.networks=fuelNetworks(f.parts);
  return true;
 }

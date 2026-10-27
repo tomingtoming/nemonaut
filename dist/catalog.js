@@ -1,3 +1,4 @@
+import {installCargoParts} from './cargo-parts.js';
 import {installLargeParts} from './large-parts.js';
 export const PARTS = {
  tankSmall:{name:'小型タンク',code:'FT-225',cat:'燃料',mass:25,fuel:225,size:[0.625,1,0.625],desc:'直径0.625 m・推進剤225 kg。接続したエンジンへ供給。'},
@@ -42,8 +43,9 @@ export const PARTS = {
  ballast:{name:'バラストタンク',code:'BT-1',cat:'船舶',mass:110,size:[1.25,1,1.25],volume:1.05,ballast:1050,desc:'注排水で質量を変え、浮上・潜航を調整する。'}
 };
 installLargeParts(PARTS);
+installCargoParts(PARTS);
 export const CATEGORIES=['すべて','指令','燃料','推進','構造','空力','走行','装備','船舶'];
-export function nodes(type){const d=PARTS[type], [x,y,z]=d.size;if(d.rootWing)return [[0,0,0,-1,0,0],[x,0,0,1,0,0]];return [[0,y/2,0,0,1,0],[0,-y/2,0,0,-1,0],[x/2,0,0,1,0,0],[-x/2,0,0,-1,0,0],[0,0,z/2,0,0,1],[0,0,-z/2,0,0,-1]];}
+export function nodes(type){const d=PARTS[type], [x,y,z]=d.size;if(d.attachmentNodes)return d.attachmentNodes.map(n=>[...n]);if(d.rootWing)return [[0,0,0,-1,0,0],[x,0,0,1,0,0]];return [[0,y/2,0,0,1,0],[0,-y/2,0,0,-1,0],[x/2,0,0,1,0,0],[-x/2,0,0,-1,0,0],[0,0,z/2,0,0,1],[0,0,-z/2,0,0,-1]];}
 export function part(type,p=[0,0,0],r=[0,0,0],parent=null,stage=0){return {id:crypto.randomUUID(),type,p,r,parent,stage};}
 export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{const o=part(t,p,r,a[par]?.id??null,stage);a.push(o);return a.length-1;};
  if(kind==='atlas'){
@@ -161,6 +163,15 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
    const engine=a.find(p=>p.type==='jetLarge');engine.p=[3,2.7,-1.2];
    a.push(part('jetLarge',[-3,2.7,-1.2],[...engine.r],engine.parent,engine.stage));
   }
+ }
+ if(kind==='cargo-lab'){
+  const bay=add('cargoBay',[0,0,0]);
+  add('probe',[0,5,0],[0,0,0],bay);
+  const ring=add('decoupler',[0,0,-2.19],[Math.PI/2,0,0],bay,1);
+  a[ring].attachment={mode:'node',parentNode:6,ownNode:1};
+  const payload=add('probe',[0,0,-1.88],[Math.PI/2,0,0],ring);
+  add('battery',[0,0,-1.53],[Math.PI/2,0,0],payload);
+  for(const x of [-.85,.85])add('solar',[x,0,-1.88],[0,0,0],payload);
  }
  return a;
 }
