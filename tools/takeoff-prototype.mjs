@@ -12,7 +12,7 @@ export class TakeoffPrototype{
  update(f,dt){
   if(f.vesselId!==this.owner||f.crashed||!Number.isFinite(dt)||dt<0){this.phase='stopped';return {};}
   if(dt===0||this.phase==='stopped')return {};
-  if(this.cruise){if(['ramp','servo','seed'].includes(this.handoffMode))this.cruise.target.speed+=clamp(this.target.speed-this.cruise.target.speed,-.5*dt,.5*dt);this.cruise.update(f,dt);return this.handoffMode==='servo'?this.pitchServo(f,this.cruise.telemetry.pitch,dt):{};}
+  if(this.cruise){if(['ramp','servo','seed','attitude'].includes(this.handoffMode))this.cruise.target.speed+=clamp(this.target.speed-this.cruise.target.speed,-.5*dt,.5*dt);this.cruise.update(f,dt);return this.cruiseCommands(f,dt);}
   // Fast attitude feedback must observe each physics step; holding saturated
   // control for 100 ms caused a limit cycle on the light aircraft.
   const center=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),up=bodyUp(center,f.universalTime),v=surfaceRelativeVelocity(center,f.vel,f.universalTime);
@@ -29,11 +29,11 @@ export class TakeoffPrototype{
    targetPitch=clamp(lift+(clamp((this.target.altitude-height)*.05,-3,5)-vertical)*.4,-5,12);
    if(height>300&&Math.abs(vertical)<5&&Math.abs(pitch)<15&&!cruiseReadiness(f)&&!cruiseTargetReadiness(f,this.target)){
     const beforeThrottle=f.throttle;
-    this.cruise=new CruisePilot(f,{...this.target,speed:['ramp','servo','seed'].includes(this.handoffMode)?speed:this.target.speed});
+    this.cruise=new CruisePilot(f,{...this.target,speed:['ramp','servo','seed','attitude'].includes(this.handoffMode)?speed:this.target.speed});
     if(this.handoffMode!=='direct')this.cruise.powerBias=clamp(beforeThrottle-(this.cruise.target.speed-speed)*.025,0,1);
     this.phase='cruise';this.cruise.update(f,dt);
     if(this.handoffMode==='seed')seedSasTrim(f,f.telemetry.commands);
-    this.telemetry={height,speed,vertical,pitch,targetPitch,minimum,beforeThrottle,afterThrottle:f.throttle,handoffMode:this.handoffMode};return this.handoffMode==='servo'?this.pitchServo(f,this.cruise.telemetry.pitch,dt):{};
+    this.telemetry={height,speed,vertical,pitch,targetPitch,minimum,beforeThrottle,afterThrottle:f.throttle,handoffMode:this.handoffMode};return this.cruiseCommands(f,dt);
    }
   }
   f.sas=false;f.trim=0;f.brake=false;f.throttle=this.phase==='capture'?clamp(.5+(this.target.speed-speed)*.03,.1,1):1;
@@ -41,6 +41,27 @@ export class TakeoffPrototype{
   if(this.integral&&(Math.abs(raw)<1||error*raw<0))this.pitchBias=clamp(this.pitchBias+error*.08*dt,-.6,.6);
   this.commands={pitch:clamp(error*.2+pitchRate*.12+this.pitchBias,-1,1)};
   this.telemetry={height,speed,vertical,pitch,pitchRate,alpha:pitch-Math.asin(clamp(vertical/Math.max(speed,.001),-1,1))/rad,targetPitch,minimum,pitchCommand:this.commands.pitch,contacts:f.telemetry.contacts};return this.commands;
+ }
+ cruiseCommands(f,dt){
+  if(this.cruise.running===false){this.phase='stopped';return {};}
+  if(!['servo','attitude'].includes(this.handoffMode))return {};
+  // Flight refreshes holdQ while SAS is off. Retain the guidance target across
+  // the faster inner-loop steps rather than accidentally chasing current pose.
+  if(this.guidanceSample!==this.cruise.telemetry){this.guidanceSample=this.cruise.telemetry;this.attitudeTarget=f.holdQ.clone();}
+  const commands=this.pitchServo(f,this.cruise.telemetry.pitch,dt);
+  if(this.handoffMode==='attitude'){
+   const error=this.attitudeTarget.clone().multiply(f.q.clone().invert());
+   if(error.w<0){error.x*=-1;error.y*=-1;error.z*=-1;}
+   const inverse=f.q.clone().invert(),local=new T.Vector3(error.x,error.y,error.z).applyQuaternion(inverse);
+   const rate=f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(inverse);
+   this.lateralBias??=new T.Vector3();
+   for(const [name,axis]of [['yaw','y'],['roll','z']]){
+    const base=local[axis]*4-rate[axis]*1.5,raw=base+this.lateralBias[axis];
+    if(Math.abs(raw)<1||Math.sign(local[axis])!==Math.sign(raw))this.lateralBias[axis]=clamp(this.lateralBias[axis]+local[axis]*.8*dt,-.8,.8);
+    commands[name]=clamp(base+this.lateralBias[axis],-1,1);
+   }
+  }
+  return commands;
  }
  // Diagnostic straight-flight comparison only: retain the takeoff elevator
  // controller while consuming the cruise guidance. No heading/bank control.
