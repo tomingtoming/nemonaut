@@ -524,7 +524,10 @@ function landingTrim(f, { speed, density: density2 = 1.225, gravity = 9.81, slop
 var rad3 = Math.PI / 180;
 var clamp2 = T5.MathUtils.clamp;
 var LandingPrototype = class {
-  constructor(f, { rolloutControl = true, rollIntegral = false, lateralMode = "acceleration", lateralTime = 8, rollGain = 12, speedFloor = 90, approachAlpha = 8, useTrimPlan = true, preparedPlan, preparedContext } = {}) {
+  constructor(f, { end = "09", rolloutControl = true, rollIntegral = false, lateralMode = "acceleration", lateralTime = 8, rollGain = 12, speedFloor = 90, approachAlpha = 8, useTrimPlan = true, preparedPlan, preparedContext } = {}) {
+    if (!["09", "27"].includes(end)) throw Error("Unknown runway end");
+    this.end = end;
+    this.heading = end === "27" ? 270 : 90;
     this.approachAlpha = approachAlpha;
     this.speedFloor = speedFloor;
     this.rollGain = rollGain;
@@ -560,8 +563,8 @@ var LandingPrototype = class {
     if (dt === 0 || ["stopped", "failed"].includes(this.phase)) return {};
     const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)), up = bodyUp2(center, f.universalTime);
     const h = bodyAltitude4(center, f.universalTime), v = surfaceRelativeVelocity3(center, f.vel, f.universalTime), speed = v.length(), vs = v.dot(up);
-    const r = runwayApproach4(center, f.universalTime, "09", f.vel), heading = compassHeading3(new T5.Vector3(0, 0, 1).applyQuaternion(f.q), center, f.universalTime);
-    const headingError = (90 - heading + 540) % 360 - 180;
+    const r = runwayApproach4(center, f.universalTime, this.end, f.vel), heading = compassHeading3(new T5.Vector3(0, 0, 1).applyQuaternion(f.q), center, f.universalTime);
+    const headingError = (this.heading - heading + 540) % 360 - 180;
     const groundHeight = Math.max(...f.parts.filter((p) => PARTS2[p.type].wheel).map((p) => PARTS2[p.type].size[1] / 2 - partCenter2(p).y + f.stats.com.y)) + 0.12;
     const agl = h - groundHeight;
     const wheelHalfSpan = Math.max(...f.parts.filter((p) => PARTS2[p.type].wheel).map((p) => Math.abs(partCenter2(p).x - f.stats.com.x) + PARTS2[p.type].size[0] / 2));
@@ -617,10 +620,10 @@ var LandingPrototype = class {
       this.verticalBias = clamp2(this.verticalBias + error * 0.04 * elapsed, -6, 6);
       const lift = f.stats.mass * g / (0.5 * density2 * speed * speed * area * 4.5);
       const pitch = clamp2(lift / rad3 + Math.asin(clamp2(targetVs / Math.max(speed, 1), -0.5, 0.5)) / rad3 + this.verticalBias + error * 0.4, -8, 15);
-      const targetHeading = 90 - clamp2(Math.atan2(r.crossTrack + (r.track?.x ?? 0) * 8, Math.max(500, speed * 8)) / rad3, -30, 30);
+      const targetHeading = this.heading - clamp2(Math.atan2(r.crossTrack + (r.track?.x ?? 0) * 8, Math.max(500, speed * 8)) / rad3, -30, 30);
       const turn = (targetHeading - heading + 540) % 360 - 180;
       const crossRate = r.track?.x ?? 0, alongRate = -(r.track?.y ?? -speed);
-      const course = 90 + Math.atan2(crossRate, Math.max(alongRate, 1)) / rad3;
+      const course = this.heading + Math.atan2(crossRate, Math.max(alongRate, 1)) / rad3;
       const acceleration = -r.crossTrack / (this.lateralTime * this.lateralTime) - 2 * crossRate / this.lateralTime;
       const bank = this.lateralMode === "acceleration" ? clamp2(Math.atan2(acceleration, g), -20 * rad3, 20 * rad3) : clamp2(turn * 0.7, -20, 20) * rad3;
       const yawError = this.lateralMode === "acceleration" ? (course - heading + 540) % 360 - 180 : turn;
@@ -643,15 +646,16 @@ var LandingPrototype = class {
 };
 
 // tools/landing-session.mjs
-function landingReadiness(f) {
+function landingReadiness(f, end = "09") {
+  if (!["09", "27"].includes(end)) return "\u7740\u9678\u65B9\u5411\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044";
   const problem = cruiseAuthority2(f) || cruisePropulsion2(f);
   if (problem) return problem;
   if (!f.parts.some((p) => PARTS3[p.type].wheel)) return "\u7740\u9678\u7528\u306E\u8ECA\u8F2A\u304C\u5FC5\u8981";
   const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
-  if (referenceBody(center, f.universalTime).id !== "planet" || f.telemetry.contacts) return "\u6BCD\u661F\u306E\u6ED1\u8D70\u8DEF09\u3078\u98DB\u884C\u4E2D\u306B\u6E96\u5099\u3057\u3066\u304F\u3060\u3055\u3044";
+  if (referenceBody(center, f.universalTime).id !== "planet" || f.telemetry.contacts) return `\u6BCD\u661F\u306E\u6ED1\u8D70\u8DEF${end}\u3078\u98DB\u884C\u4E2D\u306B\u6E96\u5099\u3057\u3066\u304F\u3060\u3055\u3044`;
   const h = bodyAltitude5(center, f.universalTime), up = bodyUp3(center, f.universalTime), v = surfaceRelativeVelocity4(center, f.vel, f.universalTime);
-  const r = runwayApproach5(center, f.universalTime, "09", f.vel), heading = compassHeading4(new T6.Vector3(0, 0, 1).applyQuaternion(f.q), center, f.universalTime);
-  if (!r || ![h, heading, r.remaining, r.crossTrack, v.length(), v.dot(up)].every(Number.isFinite) || h < 300 || h > 400 || r.remaining < 5e3 || r.remaining > 1e4 || Math.abs(r.crossTrack) > 250 || Math.abs((heading - 90 + 540) % 360 - 180) > 15) return "09\u7AEF\u306E\u624B\u524D5\u301C10 km\u30FB\u9AD8\u5EA6300\u301C400 m\u3067\u9032\u5165\u65B9\u5411\u3078\u6574\u5217\u3057\u3066\u304F\u3060\u3055\u3044";
+  const r = runwayApproach5(center, f.universalTime, end, f.vel), heading = compassHeading4(new T6.Vector3(0, 0, 1).applyQuaternion(f.q), center, f.universalTime);
+  if (!r || ![h, heading, r.remaining, r.crossTrack, v.length(), v.dot(up)].every(Number.isFinite) || h < 300 || h > 400 || r.remaining < 5e3 || r.remaining > 1e4 || Math.abs(r.crossTrack) > 250 || Math.abs((heading - (end === "27" ? 270 : 90) + 540) % 360 - 180) > 15) return `${end}\u7AEF\u306E\u624B\u524D5\u301C10 km\u30FB\u9AD8\u5EA6300\u301C400 m\u3067\u9032\u5165\u65B9\u5411\u3078\u6574\u5217\u3057\u3066\u304F\u3060\u3055\u3044`;
   if (v.length() < 40 || v.length() > 170 || Math.abs(v.dot(up)) > 6 || new T6.Vector3(0, 1, 0).applyQuaternion(f.q).dot(up) < 0.94) return "\u901F\u5EA6\u30FB\u59FF\u52E2\u30FB\u6607\u964D\u7387\u3092\u5B89\u5B9A\u3055\u305B\u3066\u304F\u3060\u3055\u3044";
   return null;
 }
@@ -670,10 +674,10 @@ var LandingSession = class {
     this.prepared = null;
     if (!this.pilot) this.state = "idle";
   }
-  async prepare(f) {
+  async prepare(f, { end = "09" } = {}) {
     if (this.pilot) throw Error("\u7740\u9678\u5236\u5FA1\u3092\u505C\u6B62\u3057\u3066\u304B\u3089\u518D\u6E96\u5099\u3057\u3066\u304F\u3060\u3055\u3044");
     this.cancel();
-    const generation = this.generation, problem = landingReadiness(f);
+    const generation = this.generation, problem = landingReadiness(f, end);
     if (problem) throw Error(problem);
     this.state = "planning";
     try {
@@ -683,11 +687,11 @@ var LandingSession = class {
         this.state = result.status === "unavailable" ? "rejected" : "idle";
         return result;
       }
-      if (!result.context || !landingPlanMatches(result.plan, result.context) || !landingPlanCurrent(f, result.context) || landingReadiness(f)) {
+      if (!result.context || !landingPlanMatches(result.plan, result.context) || !landingPlanCurrent(f, result.context) || landingReadiness(f, end)) {
         this.state = "idle";
         return { status: "stale" };
       }
-      this.prepared = { f, ...result };
+      this.prepared = { f, ...result, end };
       this.state = "ready";
       return result;
     } catch (error) {
@@ -698,14 +702,14 @@ var LandingSession = class {
   }
   readyFor(f) {
     if (this.state !== "ready" || !this.prepared) return false;
-    const p = this.prepared, valid = p.f === f && landingPlanCurrent(f, p.context) && !landingReadiness(f);
+    const p = this.prepared, valid = p.f === f && landingPlanCurrent(f, p.context) && !landingReadiness(f, p.end);
     if (!valid) this.cancel();
     return valid;
   }
   start(f) {
     if (!this.readyFor(f)) throw Error("\u9032\u5165\u72B6\u614B\u304C\u5909\u308F\u308A\u307E\u3057\u305F\u3002\u7740\u9678\u3092\u518D\u6E96\u5099\u3057\u3066\u304F\u3060\u3055\u3044");
     const p = this.prepared;
-    const pilot = new LandingPrototype(f, { preparedPlan: p.plan, preparedContext: p.context });
+    const pilot = new LandingPrototype(f, { end: p.end, preparedPlan: p.plan, preparedContext: p.context });
     this.previous = { sas: f.sas, sasMode: f.sasMode, trim: f.trim };
     this.owner = f;
     this.pilot = pilot;
@@ -795,7 +799,7 @@ import * as T7 from "three";
 import { PRIMARY, bodyAltitude as bodyAltitude6 } from "./celestial.js";
 import { fixedToInertial, inertialToFixed as inertialToFixed2, launchSiteOrientation, surfaceRelativeVelocity as surfaceRelativeVelocity5, surfaceOrientation as surfaceOrientation2 } from "./surface-frame.js";
 import { compassHeading as compassHeading5 } from "./navigation.js";
-import { runwayApproach as runwayApproach6 } from "./runway-navigation.js";
+import { runwayApproach as runwayApproach6, RUNWAY as RUNWAY4 } from "./runway-navigation.js";
 import { CruisePilot as CruisePilot3, cruiseReadiness as cruiseReadiness3, cruiseTargetReadiness as cruiseTargetReadiness4 } from "./cruise-pilot.js";
 
 // tools/return-route.mjs
@@ -858,17 +862,20 @@ function planReturnRoute(start, goal, { radius, minLength = 0 } = {}) {
 }
 
 // tools/return-pilot.mjs
-function returnReadiness(f, speed = 90) {
+function returnReadiness(f, speed = 90, end = "09") {
+  if (!["09", "27"].includes(end)) return "\u7740\u9678\u65B9\u5411\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044";
   const problem = cruiseReadiness3(f);
   if (problem) return problem;
   const h = bodyAltitude6(f.pos, f.universalTime), r = runwayApproach6(f.pos, f.universalTime);
   if (h > 1500 || !r || r.distance > 4e4) return "\u9AD8\u5EA6300\u301C1500 m\u30FB\u6ED1\u8D70\u8DEF\u304B\u308940 km\u4EE5\u5185\u3067\u5E30\u6295\u3057\u3066\u304F\u3060\u3055\u3044";
-  return cruiseTargetReadiness4(f, { speed, altitude: 350, heading: 90, mode: "altitude" });
+  return cruiseTargetReadiness4(f, { speed, altitude: 350, heading: end === "27" ? 270 : 90, mode: "altitude" });
 }
 var ReturnPilot = class {
-  constructor(f, { speed = 90 } = {}) {
-    const problem = returnReadiness(f, speed);
+  constructor(f, { speed = 90, end = "09" } = {}) {
+    const problem = returnReadiness(f, speed, end);
     if (problem) throw Error(problem);
+    this.end = end;
+    this.heading = end === "27" ? 270 : 90;
     this.owner = f;
     this.previous = { sas: f.sas, sasMode: f.sasMode, trim: f.trim };
     this.phase = "return";
@@ -880,7 +887,7 @@ var ReturnPilot = class {
     const v = surfaceRelativeVelocity5(center, f.vel, f.universalTime).applyQuaternion(surfaceOrientation2(f.universalTime).invert()).applyQuaternion(this.inverse);
     const radius = Math.max(2500, Math.max(speed, v.length()) ** 2 / (9.81 * Math.tan(15 * Math.PI / 180)));
     const minLength = Math.max(18e3, (Math.max(0, bodyAltitude6(center, f.universalTime) - 350) / 5 + 30) * speed);
-    this.route = planReturnRoute({ x: local.x, y: local.z, heading: Math.atan2(v.z, v.x) }, { x: 0, y: -9e3, heading: Math.PI / 2 }, { radius, minLength });
+    this.route = planReturnRoute({ x: local.x, y: local.z, heading: Math.atan2(v.z, v.x) }, { x: 0, y: RUNWAY4.center + (end === "27" ? 1 : -1) * (RUNWAY4.length / 2 + 8850), heading: end === "27" ? -Math.PI / 2 : Math.PI / 2 }, { radius, minLength });
     this.progress = 0;
     this.maxRouteError = 0;
     this.elapsed = 0;
@@ -936,7 +943,7 @@ var ReturnPilot = class {
     }
     this.elapsed += dt;
     const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
-    const local = inertialToFixed2(center, f.universalTime).applyQuaternion(this.inverse), r = runwayApproach6(center, f.universalTime, "09", f.vel);
+    const local = inertialToFixed2(center, f.universalTime).applyQuaternion(this.inverse), r = runwayApproach6(center, f.universalTime, this.end, f.vel);
     let nearest = this.progress, error = Infinity;
     for (let d = Math.max(0, this.progress - 100); d <= Math.min(this.route.length, this.progress + 1e3); d += 25) {
       const p = routePoint(this.route, d), e = Math.hypot(p.x - local.x, p.y - local.z);
@@ -955,8 +962,8 @@ var ReturnPilot = class {
     }
     const aim = routePoint(this.route, Math.min(this.route.length, this.progress + 800));
     const target = fixedToInertial(new T7.Vector3(aim.x, PRIMARY.radius, aim.y).normalize().multiplyScalar(PRIMARY.radius + 350).applyQuaternion(this.orientation), f.universalTime);
-    this.driver.cruise.target.heading = nearEnd ? 90 - Math.atan2(r.crossTrack, 1500) * 180 / Math.PI : compassHeading5(target.sub(center), center, f.universalTime);
-    this.phase = nearEnd && !landingReadiness(f) ? "capture" : "return";
+    this.driver.cruise.target.heading = nearEnd ? this.heading - Math.atan2(r.crossTrack, 1500) * 180 / Math.PI : compassHeading5(target.sub(center), center, f.universalTime);
+    this.phase = nearEnd && !landingReadiness(f, this.end) ? "capture" : "return";
     if (nearEnd && r.remaining < 5e3) {
       this.recover("\u7740\u9678\u6E96\u5099\u306E\u7BC4\u56F2\u3092\u901A\u904E\u3057\u307E\u3057\u305F");
       return this.drive(f, dt);
@@ -1007,7 +1014,7 @@ var ReturnSession = class {
   prepare(f) {
     const generation = this.generation;
     this.state = "planning";
-    this.pending = this.landing.prepare(f).then((result) => {
+    this.pending = this.landing.prepare(f, { end: this.pilot.end }).then((result) => {
       if (generation !== this.generation || f !== this.owner) return;
       this.pending = null;
       if (result.status !== "ready") this.recover("\u7740\u9678\u8A08\u753B\u304C\u6210\u7ACB\u3057\u307E\u305B\u3093\u3067\u3057\u305F \xB7 \u9AD8\u5EA6600 m\u3078");
