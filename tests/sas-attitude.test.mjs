@@ -42,3 +42,28 @@ test('a short left or right bank retains aircraft pitch support after runway tak
   }finally{f.dispose();}
  }
 });
+
+// A bank pulse is not a complete turn: holding a tilted attitude for a long
+// interval eventually saturates yaw authority. Exercise the rollout as well.
+test('Swift recovers attitude and climb after a bank and opposite rollout',()=>{
+ for(const roll of [-1,1]){
+  const f=new Flight(preset('plane'),'runway',159701);
+  try{
+   f.throttle=1;f.stageNext();let maxSettledError=0,minClimb=Infinity;
+   for(let i=0;i<100*120;i++){
+    const t=i/120;
+    f.step(1/120,{pitch:t>=10&&t<26?-1:0,
+     roll:t>=51&&t<51.5?roll:t>=57&&t<57.5?-roll:0});
+    if(t>=80){
+     maxSettledError=Math.max(maxSettledError,f.q.angleTo(f.holdQ));
+     minClimb=Math.min(minClimb,f.orbit.vertical);
+     assert.equal(f.telemetry.stallCount,0);
+     assert.ok(Math.abs(f.telemetry.commands.yaw)<.9,'rudder regains control margin');
+    }
+   }
+   assert.equal(f.crashed,false);
+   assert.ok(maxSettledError<3*Math.PI/180,`settled error ${maxSettledError*180/Math.PI}`);
+   assert.ok(minClimb>10,`climb ${minClimb}`);
+  }finally{f.dispose();}
+ }
+});
