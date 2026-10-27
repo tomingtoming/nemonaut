@@ -468,13 +468,13 @@ function trimForces(f, { speed, alpha, pitchCommand, density: density2 = 1.225, 
   return { speed, alpha, pitchCommand, throttle, stalled, liftError: force.dot(up) - f.stats.mass * gravity, pitchTorque: torque.x };
 }
 function pitchTrim(f, options) {
-  let lo = -0.8, hi = 0.8, left = trimForces(f, { ...options, pitchCommand: lo }), right = trimForces(f, { ...options, pitchCommand: hi });
-  if (!Number.isFinite(left.pitchTorque) || left.pitchTorque * right.pitchTorque > 0) return null;
+  let lo = -0.8, hi = 0.8, left2 = trimForces(f, { ...options, pitchCommand: lo }), right = trimForces(f, { ...options, pitchCommand: hi });
+  if (!Number.isFinite(left2.pitchTorque) || left2.pitchTorque * right.pitchTorque > 0) return null;
   for (let i = 0; i < 25; i++) {
     const mid = (lo + hi) / 2, value = trimForces(f, { ...options, pitchCommand: mid });
-    if (value.pitchTorque * left.pitchTorque > 0) {
+    if (value.pitchTorque * left2.pitchTorque > 0) {
       lo = mid;
-      left = value;
+      left2 = value;
     } else hi = mid;
   }
   return trimForces(f, { ...options, pitchCommand: (lo + hi) / 2 });
@@ -764,11 +764,296 @@ var LandingSession = class {
     return commands;
   }
 };
+
+// tools/return-pilot.mjs
+import * as T7 from "three";
+import { PRIMARY, bodyAltitude as bodyAltitude6 } from "./celestial.js";
+import { fixedToInertial, inertialToFixed as inertialToFixed2, launchSiteOrientation, surfaceRelativeVelocity as surfaceRelativeVelocity5, surfaceOrientation as surfaceOrientation2 } from "./surface-frame.js";
+import { compassHeading as compassHeading5 } from "./navigation.js";
+import { runwayApproach as runwayApproach6 } from "./runway-navigation.js";
+import { CruisePilot as CruisePilot3, cruiseReadiness as cruiseReadiness3, cruiseTargetReadiness as cruiseTargetReadiness4 } from "./cruise-pilot.js";
+
+// tools/return-route.mjs
+var TAU = 2 * Math.PI;
+var mod = (a) => (a % TAU + TAU) % TAU;
+var left = (v) => ({ x: -v.y, y: v.x });
+var add = (a, b, k = 1) => ({ x: a.x + k * b.x, y: a.y + k * b.y });
+var dot = (a, b) => a.x * b.x + a.y * b.y;
+var unit = (a) => ({ x: Math.cos(a), y: Math.sin(a) });
+function circle(p, sign, radius) {
+  return add(p, left(unit(p.heading)), sign * radius);
+}
+function arc(center, start, end, sign, radius, loops = 0) {
+  const angle = Math.atan2(start.y - center.y, start.x - center.x);
+  const sweep = mod(sign * (Math.atan2(end.y - center.y, end.x - center.x) - angle)) + loops * TAU;
+  return { type: "arc", center, angle, sign, radius, sweep, length: sweep * radius };
+}
+function routePoint(route, distance) {
+  if (!Number.isFinite(distance)) throw new RangeError("Non-finite route distance");
+  let d = Math.max(0, Math.min(route.length, distance));
+  for (let i = 0; i < route.segments.length; i++) {
+    const s = route.segments[i];
+    if (d > s.length && i < route.segments.length - 1) {
+      d -= s.length;
+      continue;
+    }
+    if (s.type === "line") return { ...add(s.start, unit(s.heading), d), heading: s.heading, curvature: 0 };
+    const angle = s.angle + s.sign * d / s.radius;
+    return { ...add(s.center, unit(angle), s.radius), heading: angle + s.sign * Math.PI / 2, curvature: s.sign / s.radius };
+  }
+  throw new Error("Empty route");
+}
+function planReturnRoute(start, goal, { radius, minLength = 0 } = {}) {
+  if (![start?.x, start?.y, start?.heading, goal?.x, goal?.y, goal?.heading, radius, minLength].every(Number.isFinite) || radius <= 0 || minLength < 0)
+    throw new RangeError("Finite poses, positive radius and nonnegative minimum length required");
+  const candidates = [];
+  for (const first of [-1, 1]) for (const last of [-1, 1]) {
+    const c1 = circle(start, first, radius), c2 = circle(goal, last, radius), delta = add(c2, c1, -1);
+    const distance = Math.hypot(delta.x, delta.y), k = first === last ? 1 : -1;
+    if (distance < 1e-8) continue;
+    const projection = radius * (1 - k) / distance;
+    if (projection > 1) continue;
+    const along = { x: delta.x / distance, y: delta.y / distance }, normal = left(along);
+    for (const side of [-1, 1]) {
+      const n = add({ x: projection * along.x, y: projection * along.y }, normal, side * Math.sqrt(Math.max(0, 1 - projection ** 2)));
+      const tangent = left(n), direction = { x: first * tangent.x, y: first * tangent.y };
+      const p1 = add(c1, n, radius), p2 = add(c2, n, k * radius), line = add(p2, p1, -1);
+      if (dot(line, direction) < -1e-7) continue;
+      const segments = [arc(c1, start, p1, first, radius), { type: "line", start: p1, heading: Math.atan2(direction.y, direction.x), length: Math.hypot(line.x, line.y) }, arc(c2, p2, goal, last, radius)];
+      let length = segments.reduce((sum, s) => sum + s.length, 0);
+      const loops = Math.max(0, Math.ceil((minLength - length) / (TAU * radius)));
+      segments[0].sweep += loops * TAU;
+      segments[0].length += loops * TAU * radius;
+      length += loops * TAU * radius;
+      candidates.push({ segments, length, radius, loops, family: `${first > 0 ? "L" : "R"}S${last > 0 ? "L" : "R"}` });
+    }
+  }
+  if (!candidates.length) throw new RangeError("Degenerate circle geometry");
+  return candidates.sort((a, b) => a.length - b.length)[0];
+}
+
+// tools/return-pilot.mjs
+function returnReadiness(f, speed = 90) {
+  const problem = cruiseReadiness3(f);
+  if (problem) return problem;
+  const h = bodyAltitude6(f.pos, f.universalTime), r = runwayApproach6(f.pos, f.universalTime);
+  if (h > 1500 || !r || r.distance > 4e4) return "\u9AD8\u5EA6300\u301C1500 m\u30FB\u6ED1\u8D70\u8DEF\u304B\u308940 km\u4EE5\u5185\u3067\u5E30\u6295\u3057\u3066\u304F\u3060\u3055\u3044";
+  return cruiseTargetReadiness4(f, { speed, altitude: 350, heading: 90, mode: "altitude" });
+}
+var ReturnPilot = class {
+  constructor(f, { speed = 90 } = {}) {
+    const problem = returnReadiness(f, speed);
+    if (problem) throw Error(problem);
+    this.owner = f;
+    this.previous = { sas: f.sas, sasMode: f.sasMode, trim: f.trim };
+    this.phase = "return";
+    this.running = true;
+    this.orientation = launchSiteOrientation("runway");
+    this.inverse = this.orientation.clone().invert();
+    const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+    const local = inertialToFixed2(center, f.universalTime).applyQuaternion(this.inverse);
+    const v = surfaceRelativeVelocity5(center, f.vel, f.universalTime).applyQuaternion(surfaceOrientation2(f.universalTime).invert()).applyQuaternion(this.inverse);
+    const radius = Math.max(2500, Math.max(speed, v.length()) ** 2 / (9.81 * Math.tan(15 * Math.PI / 180)));
+    const minLength = Math.max(18e3, (Math.max(0, bodyAltitude6(center, f.universalTime) - 350) / 5 + 30) * speed);
+    this.route = planReturnRoute({ x: local.x, y: local.z, heading: Math.atan2(v.z, v.x) }, { x: 0, y: -9e3, heading: Math.PI / 2 }, { radius, minLength });
+    this.progress = 0;
+    this.maxRouteError = 0;
+    this.elapsed = 0;
+    this.driver = new TakeoffPrototype(f, { speed, altitude: 350, rotation: 12, integral: true, handoff: "attitude" });
+    this.driver.cruise = new CruisePilot3(f, { speed, altitude: 350, heading: compassHeading5(new T7.Vector3(0, 0, 1).applyQuaternion(f.q), center, f.universalTime) });
+  }
+  stop(reason = "manual") {
+    if (!this.running) return;
+    this.running = false;
+    this.reason = reason;
+    this.phase = reason === "fault" ? "failed" : "stopped";
+    Object.assign(this.owner, this.previous);
+    this.owner.holdQ = this.owner.q.clone();
+    if (reason === "fault") this.owner.throttle = 0;
+  }
+  recover(reason = "\u7740\u9678\u6E96\u5099\u3092\u4E2D\u6B62\u3057\u307E\u3057\u305F") {
+    if (!this.running) return;
+    const f = this.owner, center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+    this.phase = "recovery";
+    this.recoveryReason = reason;
+    this.driver.cruise.target.altitude = 600;
+    this.driver.cruise.target.heading = compassHeading5(new T7.Vector3(0, 0, 1).applyQuaternion(f.q), center, f.universalTime);
+  }
+  drive(f, dt) {
+    const commands = this.driver.update(f, dt);
+    if (!this.driver.cruise.running) {
+      this.faultMessage = this.driver.cruise.faultMessage;
+      this.stop("fault");
+      return {};
+    }
+    if (this.driver.attitudeTarget) {
+      this.driver.lateralBias.z = 0;
+      commands.roll = rollServo(f, this.driver.attitudeTarget, 12);
+    }
+    return commands;
+  }
+  update(f, dt, { manual = false } = {}) {
+    if (!this.running) return {};
+    if (f !== this.owner || manual) {
+      this.stop(manual ? "manual" : "vessel changed");
+      return {};
+    }
+    if (f.crashed || !Number.isFinite(dt) || dt < 0) {
+      this.stop("fault");
+      return {};
+    }
+    if (dt === 0) return {};
+    if (this.phase === "recovery" || this.phase === "recovery-hold") {
+      const commands2 = this.drive(f, dt);
+      this.telemetry = this.driver.cruise.telemetry;
+      if (this.running) this.phase = this.driver.cruise.status === "\u4FDD\u6301" ? "recovery-hold" : "recovery";
+      return commands2;
+    }
+    this.elapsed += dt;
+    const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+    const local = inertialToFixed2(center, f.universalTime).applyQuaternion(this.inverse), r = runwayApproach6(center, f.universalTime, "09", f.vel);
+    let nearest = this.progress, error = Infinity;
+    for (let d = Math.max(0, this.progress - 100); d <= Math.min(this.route.length, this.progress + 1e3); d += 25) {
+      const p = routePoint(this.route, d), e = Math.hypot(p.x - local.x, p.y - local.z);
+      if (e < error) {
+        error = e;
+        nearest = d;
+      }
+    }
+    this.progress = Math.max(this.progress, nearest);
+    this.maxRouteError = Math.max(this.maxRouteError, error);
+    const nearEnd = this.progress > this.route.length - 1200;
+    if (!r || !Number.isFinite(error) || (nearEnd ? Math.abs(r.crossTrack) > 2e3 : error > 2e3) || this.elapsed > 1200 || f.telemetry.contacts) {
+      this.faultMessage = "\u5E30\u6295\u7D4C\u8DEF\u3092\u7DAD\u6301\u3067\u304D\u307E\u305B\u3093";
+      this.stop("fault");
+      return {};
+    }
+    const aim = routePoint(this.route, Math.min(this.route.length, this.progress + 800));
+    const target = fixedToInertial(new T7.Vector3(aim.x, PRIMARY.radius, aim.y).normalize().multiplyScalar(PRIMARY.radius + 350).applyQuaternion(this.orientation), f.universalTime);
+    this.driver.cruise.target.heading = nearEnd ? 90 - Math.atan2(r.crossTrack, 1500) * 180 / Math.PI : compassHeading5(target.sub(center), center, f.universalTime);
+    this.phase = nearEnd && !landingReadiness(f) ? "capture" : "return";
+    if (nearEnd && r.remaining < 5e3) {
+      this.recover("\u7740\u9678\u6E96\u5099\u306E\u7BC4\u56F2\u3092\u901A\u904E\u3057\u307E\u3057\u305F");
+      return this.drive(f, dt);
+    }
+    const commands = this.drive(f, dt);
+    this.telemetry = { ...this.driver.cruise.telemetry, remaining: r.remaining, cross: r.crossTrack, progress: this.progress, length: this.route.length, error };
+    return commands;
+  }
+};
+
+// tools/return-session.mjs
+var ReturnSession = class {
+  constructor(client) {
+    this.landing = new LandingSession(client);
+    this.generation = 0;
+    this.state = "idle";
+    this.owner = null;
+    this.pilot = null;
+    this.pending = null;
+  }
+  start(f, settings) {
+    if (this.owner) throw Error("\u73FE\u5728\u306E\u81EA\u52D5\u64CD\u7E26\u3092\u505C\u6B62\u3057\u3066\u304F\u3060\u3055\u3044");
+    const pilot = new ReturnPilot(f, settings);
+    this.generation++;
+    this.owner = f;
+    this.pilot = pilot;
+    this.state = "return";
+    this.message = null;
+    return pilot;
+  }
+  stop(reason = "manual") {
+    this.generation++;
+    this.landing.stop(reason);
+    this.pilot?.stop(reason);
+    this.pilot = null;
+    this.owner = null;
+    this.pending = null;
+    this.state = reason === "fault" ? "failed" : "idle";
+  }
+  recover(message) {
+    this.generation++;
+    this.landing.cancel();
+    this.pending = null;
+    this.message = message;
+    this.pilot?.recover(message);
+    this.state = "recovery";
+  }
+  prepare(f) {
+    const generation = this.generation;
+    this.state = "planning";
+    this.pending = this.landing.prepare(f).then((result) => {
+      if (generation !== this.generation || f !== this.owner) return;
+      this.pending = null;
+      if (result.status !== "ready") this.recover("\u7740\u9678\u8A08\u753B\u304C\u6210\u7ACB\u3057\u307E\u305B\u3093\u3067\u3057\u305F \xB7 \u9AD8\u5EA6600 m\u3078");
+    }).catch((error) => {
+      if (generation !== this.generation || f !== this.owner) return;
+      this.recover(error.message + " \xB7 \u9AD8\u5EA6600 m\u3078");
+    });
+  }
+  step(f, dt, { manual = false } = {}) {
+    if (!this.owner) return {};
+    if (f !== this.owner || manual) {
+      this.stop(manual ? "manual" : "vessel changed");
+      return {};
+    }
+    if (!Number.isFinite(dt) || dt < 0 || f.crashed) {
+      this.stop("fault");
+      return {};
+    }
+    if (dt === 0) return {};
+    if (this.landing.pilot) {
+      const commands2 = this.landing.step(f, dt);
+      this.telemetry = this.landing.telemetry;
+      this.state = this.landing.pilot?.phase ?? this.landing.state;
+      if (!this.landing.pilot) {
+        this.owner = null;
+        this.pilot = null;
+        this.generation++;
+      }
+      return commands2;
+    }
+    const pilot = this.pilot;
+    if (this.landing.state === "ready") {
+      if (!this.landing.readyFor(f)) {
+        this.recover("\u7740\u9678\u8A08\u753B\u304C\u5931\u52B9\u3057\u307E\u3057\u305F \xB7 \u9AD8\u5EA6600 m\u3078");
+      } else {
+        pilot.stop("handoff");
+        try {
+          this.landing.start(f);
+          this.state = "approach";
+          return this.landing.step(f, dt);
+        } catch (error) {
+          this.message = error.message;
+          this.stop("fault");
+          return {};
+        }
+      }
+    }
+    const commands = pilot.update(f, dt);
+    this.telemetry = pilot.telemetry;
+    if (!pilot.running) {
+      this.message = pilot.faultMessage;
+      this.stop("fault");
+      return {};
+    }
+    if (pilot.phase.startsWith("recovery")) {
+      if (this.pending || this.landing.state !== "idle") this.recover(pilot.recoveryReason);
+      this.state = pilot.phase;
+      return commands;
+    }
+    if (pilot.phase === "capture" && !this.pending && this.landing.state === "idle") this.prepare(f);
+    else if (!this.pending) this.state = pilot.phase;
+    return commands;
+  }
+};
 export {
   LandingPlanClient,
   LandingSession,
+  ReturnSession,
   TakeoffPreviewClient,
   TakeoffSession,
   departureReadiness,
-  landingReadiness
+  landingReadiness,
+  returnReadiness
 };

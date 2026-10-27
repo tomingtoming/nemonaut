@@ -1,6 +1,6 @@
 import {floatingWindow} from './floating-window.js';
 import {CruisePilot,cruiseReadiness,cruiseSettings,cruiseTargetReadiness,cruiseAuthority,cruisePropulsion} from './cruise-pilot.js';
-import {TakeoffSession,TakeoffPreviewClient,departureReadiness,LandingSession,LandingPlanClient,landingReadiness} from './takeoff-controller.js';
+import {TakeoffSession,TakeoffPreviewClient,departureReadiness,LandingSession,LandingPlanClient,landingReadiness,ReturnSession,returnReadiness} from './takeoff-controller.js';
 import {compassHeading} from './navigation.js';
 import {bodyAltitude} from './celestial.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
@@ -13,11 +13,14 @@ export function mountCruisePanel(root,getState,{claim,sync}){
  let takeoff=null,takeoffPrevious=null,landingNotice=null;
  const departure=new TakeoffSession(new TakeoffPreviewClient(()=>new Worker(new URL('./takeoff-forecast-worker.js',import.meta.url),{type:'module'})));
  const landing=new LandingSession(new LandingPlanClient(()=>new Worker(new URL('./landing-plan-worker.js',import.meta.url),{type:'module'})));
+ const returning=new ReturnSession(new LandingPlanClient(()=>new Worker(new URL('./landing-plan-worker.js',import.meta.url),{type:'module'})));
+ const returnStatus=()=>returning.owner?({return:'帰投',capture:'進入へ整列',planning:'着陸計算中',approach:'進入',rollout:'着陸滑走','go-around':'復行',recovery:'高度600 mへ回復','recovery-hold':'回復後の保持'}[returning.state]||returning.state):null;
+ const activeLanding=()=>returning.landing.pilot?returning.landing:landing;
  const landingStatus=()=>({approach:'進入',rollout:'着陸滑走','go-around':'復行',recovery:'復行後の高度捕捉','recovery-hold':'復行後の保持'}[landing.pilot?.phase]);
  const takeoffStatus=()=>takeoff?.cruise&&Math.abs(takeoff.cruise.target.speed-takeoff.target.speed)>1?'捕捉中':takeoff?.cruise?.status??({roll:'滑走',rotate:'機首上げ',climb:'上昇',capture:'巡航へ移行',abort:'離陸中止',stopped:'停止'}[takeoff?.phase]??'待機');
  const button=root.createElement('button');button.id='openCruise';button.textContent='自動操縦';root.querySelector('#flightSystems').append(button);
  const close=()=>{panel?.remove();panel=null;shown=null;};
- const stop=(reason='手動操縦')=>{landingNotice=null;const pending=departure.state!=='idle'||landing.state!=='idle',wasLanding=!!landing.pilot;departure.cancel();landing.stop(reason==='異常停止'?'fault':'manual');if(wasLanding)sync();if(takeoff){Object.assign(owner,takeoffPrevious);owner.holdQ=owner.q.clone();if(reason==='異常停止')owner.throttle=0;takeoff=null;message=reason;sync();}if(pilot){pilot.stop(owner,reason==='異常停止'?'fault':'manual');pilot=null;message=reason;sync();}else if(pending)message=reason;};
+ const stop=(reason='手動操縦')=>{landingNotice=null;const pending=departure.state!=='idle'||landing.state!=='idle'||!!returning.owner,wasLanding=!!landing.pilot||!!returning.owner;returning.stop(reason==='異常停止'?'fault':'manual');departure.cancel();landing.stop(reason==='異常停止'?'fault':'manual');if(wasLanding)sync();if(takeoff){Object.assign(owner,takeoffPrevious);owner.holdQ=owner.q.clone();if(reason==='異常停止')owner.throttle=0;takeoff=null;message=reason;sync();}if(pilot){pilot.stop(owner,reason==='異常停止'?'fault':'manual');pilot=null;message=reason;sync();}else if(pending)message=reason;};
  function defaults(f){
   const heading=compassHeading(new T.Vector3(0,0,1).applyQuaternion(f.q),f.pos,f.universalTime)??90;
   if(f.cruiseSettings)return f.cruiseSettings;
@@ -32,7 +35,7 @@ export function mountCruisePanel(root,getState,{claim,sync}){
   }
   const mode=root.createElement('select');mode.setAttribute('aria-label','垂直制御');for(const [value,label]of [['altitude','高度保持'],['vertical','昇降率保持']]){const o=root.createElement('option');o.value=value;o.textContent=label;mode.append(o);}mode.value=settings.mode;
   const settingsNow=()=>cruiseSettings({...Object.fromEntries(Object.entries(inputs).map(([k,v])=>[k,Number(v.value)])),mode:mode.value});
-  const apply=()=>{departure.cancel();if(takeoff||landing.pilot)stop();try{const next=settingsNow();const problem=cruiseTargetReadiness(f,next);if(problem)throw Error(problem);inputError=null;f.cruiseSettings=next;if(pilot&&owner===f){pilot.target={...next};pilot.duration=0;pilot.settled=0;}message='待機';}catch(error){inputError=error.message;}update();};
+  const apply=()=>{departure.cancel();if(takeoff||landing.pilot||returning.owner)stop();try{const next=settingsNow();const problem=cruiseTargetReadiness(f,next);if(problem)throw Error(problem);inputError=null;f.cruiseSettings=next;if(pilot&&owner===f){pilot.target={...next};pilot.duration=0;pilot.settled=0;}message='待機';}catch(error){inputError=error.message;}update();};
   for(const input of Object.values(inputs)){input.oninput=apply;input.onchange=apply;}mode.onchange=apply;
   const start=root.createElement('button');start.id='cruiseStart';start.textContent='開始';start.onclick=()=>{try{const next=cruiseSettings({...Object.fromEntries(Object.entries(inputs).map(([k,v])=>[k,Number(v.value)])),mode:mode.value});inputError=null;const reason=cruiseReadiness(f)||cruiseTargetReadiness(f,next);if(reason){message=reason;update();return;}claim();stop();owner=f;f.cruiseSettings=next;pilot=new CruisePilot(f,next);message='捕捉中';sync();}catch(error){inputError=error.message;}update();};
   const halt=root.createElement('button');halt.textContent='停止';halt.onclick=()=>{stop();update();};
@@ -44,22 +47,26 @@ export function mountCruisePanel(root,getState,{claim,sync}){
   prepareLanding.onclick=async()=>{owner=f;inputError=null;message='着陸計算中';landingNotice=null;try{const pending=landing.prepare(f);update();const result=await pending;if(getState().flight!==f||result.status==='cancelled')return;landingNotice=result.status==='ready'?'着陸準備完了 · 09':result.status==='stale'?'進入状態が変わりました · 再準備':'着陸速度を算出できません';}catch(error){inputError=error.message;}update();};
   const land=root.createElement('button');land.id='landingStart';land.textContent='着陸開始';
   land.onclick=()=>{try{inputError=null;if(!landing.readyFor(f))throw Error('進入状態が変わりました。着陸を再準備してください');claim();departure.cancel();if(pilot){pilot.stop(owner);pilot=null;}if(takeoff){Object.assign(owner,takeoffPrevious);owner.holdQ=owner.q.clone();takeoff=null;}owner=f;landing.start(f);landingNotice=null;message='進入';sync();}catch(error){inputError=error.message;}update();};
-  const goAround=root.createElement('button');goAround.id='landingGoAround';goAround.textContent='復行';goAround.onclick=()=>{landing.goAround(f);update();};
-  const out=root.createElement('output');out.id='cruiseStatus';out.style.cssText='display:block;margin-top:8px';panel.content.append(mode,start,predict,depart,prepareLanding,land,goAround,halt,out);shown=f;
+  const returnButton=root.createElement('button');returnButton.id='aircraftReturn';returnButton.textContent='帰投・着陸';
+ returnButton.onclick=()=>{try{inputError=null;const next=settingsNow(),reason=returnReadiness(f,next.speed);if(reason)throw Error(reason);claim();stop();owner=f;returning.start(f,{speed:next.speed});message='帰投';sync();}catch(error){inputError=error.message;}update();};
+ const goAround=root.createElement('button');goAround.id='landingGoAround';goAround.textContent='復行';goAround.onclick=()=>{activeLanding().goAround(f);update();};
+  const out=root.createElement('output');out.id='cruiseStatus';out.style.cssText='display:block;margin-top:8px';panel.content.append(mode,start,predict,depart,returnButton,prepareLanding,land,goAround,halt,out);shown=f;
  }
- function update(){const {flight:f,atCenter}=getState();if((pilot||takeoff||departure.state!=='idle'||landing.state!=='idle')&&(owner!==f||atCenter))stop('機体切替 · 待機');button.hidden=!f||atCenter||f.rocketAxes;if(button.hidden){close();return;}const status=landingStatus()||(takeoff?takeoffStatus():pilot?.status);button.textContent=status?'自動操縦 · '+status:'自動操縦';if(!panel)return;if(shown!==f)render(f);const ground=f.environment==='runway'&&bodyAltitude(f.pos,f.universalTime)<30;
+ function update(){const {flight:f,atCenter}=getState();if((pilot||takeoff||returning.owner||departure.state!=='idle'||landing.state!=='idle')&&(owner!==f||atCenter))stop('機体切替 · 待機');button.hidden=!f||atCenter||f.rocketAxes;if(button.hidden){close();return;}const status=returnStatus()||landingStatus()||(takeoff?takeoffStatus():pilot?.status);button.textContent=status?'自動操縦 · '+status:'自動操縦';if(!panel)return;if(shown!==f)render(f);const ground=f.environment==='runway'&&bodyAltitude(f.pos,f.universalTime)<30;
   if(departure.state==='ready'&&!departure.readyFor(f,defaults(f)))message='状態が変わりました · 再予測';
   if(landing.state==='ready'&&!landing.readyFor(f))landingNotice='進入状態が変わりました · 再準備';
   const preparing=landing.state==='planning'?'着陸計算中':landing.state==='ready'?'着陸準備完了 · 09':null;
-  const out=panel.content.querySelector('output');out.textContent=inputError||preparing||landingNotice||status||(message==='待機'?((ground?departureReadiness(f,defaults(f)):cruiseReadiness(f))||message):message);
-  panel.content.querySelector('#cruiseStart').disabled=!!pilot||!!takeoff||!!landing.pilot||landing.state==='planning'||departure.state==='predicting';
-  panel.content.querySelector('#takeoffForecast').hidden=!ground;panel.content.querySelector('#takeoffForecast').disabled=!!pilot||!!takeoff||!!landing.pilot||landing.state==='planning'||departure.state==='predicting';
-  panel.content.querySelector('#landingPrepare').hidden=ground;panel.content.querySelector('#landingPrepare').disabled=!!landing.pilot||landing.state==='planning';panel.content.querySelector('#landingPrepare').title=landingReadiness(f)||'';
-  panel.content.querySelector('#landingGoAround').hidden=!landing.pilot;panel.content.querySelector('#landingGoAround').disabled=landing.pilot?.phase!=='approach';
-  panel.content.querySelector('#landingStart').hidden=ground;panel.content.querySelector('#landingStart').disabled=landing.state!=='ready';
-  panel.content.querySelector('#takeoffStart').hidden=!ground;panel.content.querySelector('#takeoffStart').disabled=departure.state!=='ready'||!!pilot||!!takeoff;
+  const out=panel.content.querySelector('output');out.textContent=inputError||(returning.owner&&returning.message)||preparing||landingNotice||status||(message==='待機'?((ground?departureReadiness(f,defaults(f)):cruiseReadiness(f))||message):message);
+  panel.content.querySelector('#cruiseStart').disabled=!!pilot||!!takeoff||!!landing.pilot||!!returning.owner||landing.state==='planning'||departure.state==='predicting';
+  panel.content.querySelector('#takeoffForecast').hidden=!ground;panel.content.querySelector('#takeoffForecast').disabled=!!pilot||!!takeoff||!!landing.pilot||!!returning.owner||landing.state==='planning'||departure.state==='predicting';
+  panel.content.querySelector('#landingPrepare').hidden=ground;panel.content.querySelector('#landingPrepare').disabled=!!landing.pilot||!!returning.owner||landing.state==='planning';panel.content.querySelector('#landingPrepare').title=landingReadiness(f)||'';
+  panel.content.querySelector('#landingGoAround').hidden=!activeLanding().pilot;panel.content.querySelector('#landingGoAround').disabled=activeLanding().pilot?.phase!=='approach';
+  panel.content.querySelector('#landingStart').hidden=ground;panel.content.querySelector('#landingStart').disabled=landing.state!=='ready'||!!returning.owner;
+  panel.content.querySelector('#takeoffStart').hidden=!ground;panel.content.querySelector('#takeoffStart').disabled=departure.state!=='ready'||!!pilot||!!takeoff||!!returning.owner;
+  panel.content.querySelector('#aircraftReturn').hidden=ground;panel.content.querySelector('#aircraftReturn').disabled=!!returning.owner||!!landing.pilot||landing.state==='planning'||departure.state==='predicting';panel.content.querySelector('#aircraftReturn').title=returnReadiness(f,defaults(f).speed)||'';
  }
  function step(f,dt){
+  if(returning.owner){const wasSas=f.sas,wasMode=f.sasMode,commands=returning.step(f,dt);if(!returning.owner){message=returning.state==='landed'?'着陸完了':returning.state==='failed'?'異常停止 · '+(returning.message||'制御不能'):'待機';sync();}else if(wasSas!==f.sas||wasMode!==f.sasMode)sync();return commands;}
   if(landing.pilot){const wasSas=f.sas,wasMode=f.sasMode,commands=landing.step(f,dt);if(!landing.pilot){message=landing.state==='landed'?'着陸完了':landing.state==='failed'?'異常停止 · '+(landing.faultMessage||'制御不能'):'待機';sync();}else if(wasSas!==f.sas||wasMode!==f.sasMode)sync();return commands;}
   if(takeoff){if(f!==owner){stop('機体切替 · 待機');return {};}const fault=cruiseAuthority(f)||cruisePropulsion(f);if(fault){stop('異常停止');message=fault;return {};}const wasSas=f.sas,wasMode=f.sasMode;const commands=takeoff.update(f,dt);if(takeoff.phase==='stopped')stop('異常停止');else if(wasSas!==f.sas||wasMode!==f.sasMode)sync();return commands;}
   if(!pilot)return;if(f!==owner){stop('機体切替 · 待機');return;}
@@ -70,11 +77,11 @@ export function mountCruisePanel(root,getState,{claim,sync}){
  const direct='#throttle,#trim,#sas,#sasDirections,#stage,#autoLaunch,#autoReturn,#navigationFrame,#navigationAuto,#brake';
  for(const type of ['input','click'])root.addEventListener(type,e=>{if(e.target.closest?.(direct)){stop();update();}},true);
  window.addEventListener('keydown',e=>{if(!acceptsFlightKey(e.target,e.code))return;if(/^(Key[WASDQEZXTB]|Space|ShiftLeft|ShiftRight|ControlLeft|ControlRight)$/.test(e.code)){
-  const controlled=pilot||takeoff||landing.pilot?owner:null;stop();
+  const controlled=pilot||takeoff||landing.pilot||returning.owner?owner:null;stop();
   // Floating windows stop bubbling keyboard events. Preserve the throttle
   // command that releases cruise even when a window button owns focus.
   if(controlled&&['KeyX','KeyZ'].includes(e.code)&&!e.ctrlKey&&!e.metaKey&&!e.altKey){controlled.throttle=e.code==='KeyX'?0:1;sync();}
   update();
  }},true);
- return {update,step,stop,close,get active(){return !!pilot||!!takeoff||!!landing.pilot;}};
+ return {update,step,stop,close,get active(){return !!pilot||!!takeoff||!!landing.pilot||!!returning.owner;}};
 }
