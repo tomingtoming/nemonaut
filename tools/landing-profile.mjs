@@ -33,7 +33,7 @@ try{
 }finally{f.dispose();}
 
 }
-if(process.argv[1]?.endsWith('landing-profile.mjs')){
+if(typeof process!=='undefined'&&process.argv[1]?.endsWith('landing-profile.mjs')){
  const legacy=process.argv.includes('--legacy');
  console.log(JSON.stringify(runLandingProfile({kind:process.argv[2]??'plane-large',offset:Number(process.argv[3]??200),headingOffset:Number(process.argv[4]??0),rollIntegral:process.argv.includes('--roll-integral'),useTrimPlan:!legacy,lateralMode:legacy?'heading':'acceleration',rollGain:legacy?4:12,log:r=>console.log(JSON.stringify(r))})));
 }
