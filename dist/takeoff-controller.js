@@ -305,7 +305,7 @@ var TakeoffPreviewClient = class {
 
 // tools/landing-session.mjs
 import * as T6 from "three";
-import { cruiseAuthority as cruiseAuthority2, cruisePropulsion as cruisePropulsion2 } from "./cruise-pilot.js";
+import { CruisePilot as CruisePilot2, cruiseReadiness as cruiseReadiness2, cruiseTargetReadiness as cruiseTargetReadiness3, cruiseAuthority as cruiseAuthority2, cruisePropulsion as cruisePropulsion2 } from "./cruise-pilot.js";
 import { bodyAltitude as bodyAltitude5, bodyUp as bodyUp3, referenceBody } from "./celestial.js";
 import { surfaceRelativeVelocity as surfaceRelativeVelocity4 } from "./surface-frame.js";
 import { compassHeading as compassHeading4 } from "./navigation.js";
@@ -684,6 +684,7 @@ var LandingSession = class {
     this.previous = { sas: f.sas, sasMode: f.sasMode, trim: f.trim };
     this.owner = f;
     this.pilot = pilot;
+    this.recovery = null;
     this.prepared = null;
     this.state = "running";
     this.reason = null;
@@ -700,9 +701,16 @@ var LandingSession = class {
       if (reason === "landed") f.brake = true;
     }
     this.pilot = null;
+    this.recovery = null;
     this.owner = null;
     this.state = reason === "fault" ? "failed" : reason === "landed" ? "landed" : "idle";
     this.reason = reason;
+  }
+  goAround(f) {
+    if (f !== this.owner || !this.pilot || this.pilot.phase !== "approach") return false;
+    this.pilot.phase = "go-around";
+    this.pilot.reason = "requested";
+    return true;
   }
   step(f, dt, { manual = false } = {}) {
     if (!this.pilot) return {};
@@ -719,6 +727,27 @@ var LandingSession = class {
     if (problem) {
       this.stop("fault");
       this.faultMessage = problem;
+      return {};
+    }
+    if (this.pilot.phase === "go-around" && !this.recovery) {
+      const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+      if (bodyAltitude5(center, f.universalTime) >= 450 && !cruiseReadiness2(f)) {
+        const target = { speed: Math.max(90, this.pilot.trimPlan?.speed ?? 90), altitude: 600, heading: compassHeading4(new T6.Vector3(0, 0, 1).applyQuaternion(f.q), center, f.universalTime), mode: "altitude", vertical: 0 };
+        if (!cruiseTargetReadiness3(f, target)) {
+          this.recovery = new CruisePilot2(f, target);
+          this.pilot.phase = "recovery";
+        }
+      }
+    }
+    if (this.recovery) {
+      this.recovery.update(f, dt);
+      this.telemetry = this.recovery.telemetry;
+      if (!this.recovery.running) {
+        this.faultMessage = this.recovery.faultMessage;
+        this.stop("fault");
+        return {};
+      }
+      this.pilot.phase = this.recovery.status === "\u4FDD\u6301" ? "recovery-hold" : "recovery";
       return {};
     }
     const commands = this.pilot.update(f, dt);

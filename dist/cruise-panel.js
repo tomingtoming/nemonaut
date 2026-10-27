@@ -13,7 +13,7 @@ export function mountCruisePanel(root,getState,{claim,sync}){
  let takeoff=null,takeoffPrevious=null,landingNotice=null;
  const departure=new TakeoffSession(new TakeoffPreviewClient(()=>new Worker(new URL('./takeoff-forecast-worker.js',import.meta.url),{type:'module'})));
  const landing=new LandingSession(new LandingPlanClient(()=>new Worker(new URL('./landing-plan-worker.js',import.meta.url),{type:'module'})));
- const landingStatus=()=>({approach:'進入',rollout:'着陸滑走','go-around':'復行 · 手動解除可'}[landing.pilot?.phase]);
+ const landingStatus=()=>({approach:'進入',rollout:'着陸滑走','go-around':'復行',recovery:'復行後の高度捕捉','recovery-hold':'復行後の保持'}[landing.pilot?.phase]);
  const takeoffStatus=()=>takeoff?.cruise&&Math.abs(takeoff.cruise.target.speed-takeoff.target.speed)>1?'捕捉中':takeoff?.cruise?.status??({roll:'滑走',rotate:'機首上げ',climb:'上昇',capture:'巡航へ移行',abort:'離陸中止',stopped:'停止'}[takeoff?.phase]??'待機');
  const button=root.createElement('button');button.id='openCruise';button.textContent='自動操縦';root.querySelector('#flightSystems').append(button);
  const close=()=>{panel?.remove();panel=null;shown=null;};
@@ -44,7 +44,8 @@ export function mountCruisePanel(root,getState,{claim,sync}){
   prepareLanding.onclick=async()=>{owner=f;inputError=null;message='着陸計算中';landingNotice=null;try{const pending=landing.prepare(f);update();const result=await pending;if(getState().flight!==f||result.status==='cancelled')return;landingNotice=result.status==='ready'?'着陸準備完了 · 09':result.status==='stale'?'進入状態が変わりました · 再準備':'着陸速度を算出できません';}catch(error){inputError=error.message;}update();};
   const land=root.createElement('button');land.id='landingStart';land.textContent='着陸開始';
   land.onclick=()=>{try{inputError=null;if(!landing.readyFor(f))throw Error('進入状態が変わりました。着陸を再準備してください');claim();departure.cancel();if(pilot){pilot.stop(owner);pilot=null;}if(takeoff){Object.assign(owner,takeoffPrevious);owner.holdQ=owner.q.clone();takeoff=null;}owner=f;landing.start(f);landingNotice=null;message='進入';sync();}catch(error){inputError=error.message;}update();};
-  const out=root.createElement('output');out.id='cruiseStatus';out.style.cssText='display:block;margin-top:8px';panel.content.append(mode,start,predict,depart,prepareLanding,land,halt,out);shown=f;
+  const goAround=root.createElement('button');goAround.id='landingGoAround';goAround.textContent='復行';goAround.onclick=()=>{landing.goAround(f);update();};
+  const out=root.createElement('output');out.id='cruiseStatus';out.style.cssText='display:block;margin-top:8px';panel.content.append(mode,start,predict,depart,prepareLanding,land,goAround,halt,out);shown=f;
  }
  function update(){const {flight:f,atCenter}=getState();if((pilot||takeoff||departure.state!=='idle'||landing.state!=='idle')&&(owner!==f||atCenter))stop('機体切替 · 待機');button.hidden=!f||atCenter||f.rocketAxes;if(button.hidden){close();return;}const status=landingStatus()||(takeoff?takeoffStatus():pilot?.status);button.textContent=status?'自動操縦 · '+status:'自動操縦';if(!panel)return;if(shown!==f)render(f);const ground=f.environment==='runway'&&bodyAltitude(f.pos,f.universalTime)<30;
   if(departure.state==='ready'&&!departure.readyFor(f,defaults(f)))message='状態が変わりました · 再予測';
@@ -54,6 +55,7 @@ export function mountCruisePanel(root,getState,{claim,sync}){
   panel.content.querySelector('#cruiseStart').disabled=!!pilot||!!takeoff||!!landing.pilot||landing.state==='planning'||departure.state==='predicting';
   panel.content.querySelector('#takeoffForecast').hidden=!ground;panel.content.querySelector('#takeoffForecast').disabled=!!pilot||!!takeoff||!!landing.pilot||landing.state==='planning'||departure.state==='predicting';
   panel.content.querySelector('#landingPrepare').hidden=ground;panel.content.querySelector('#landingPrepare').disabled=!!landing.pilot||landing.state==='planning';panel.content.querySelector('#landingPrepare').title=landingReadiness(f)||'';
+  panel.content.querySelector('#landingGoAround').hidden=!landing.pilot;panel.content.querySelector('#landingGoAround').disabled=landing.pilot?.phase!=='approach';
   panel.content.querySelector('#landingStart').hidden=ground;panel.content.querySelector('#landingStart').disabled=landing.state!=='ready';
   panel.content.querySelector('#takeoffStart').hidden=!ground;panel.content.querySelector('#takeoffStart').disabled=departure.state!=='ready'||!!pilot||!!takeoff;
  }
