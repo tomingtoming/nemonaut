@@ -21,7 +21,7 @@ export class ReturnSession{
  prepare(f){
   const generation=this.generation;
   this.state='planning';
-  this.pending=this.landing.prepare(f).then(result=>{
+  this.pending=this.landing.prepare(f,{end:this.pilot.end}).then(result=>{
    if(generation!==this.generation||f!==this.owner)return;
    this.pending=null;
    if(result.status!=='ready')this.recover('着陸計画が成立しませんでした · 高度600 mへ');

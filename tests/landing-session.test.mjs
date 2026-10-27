@@ -12,6 +12,8 @@ test('capture envelope rejects ground, wrong heading and off-axis approaches',()
  const f=landingFixture();
  try{
   assert.equal(landingReadiness(f),null);
+  assert.match(landingReadiness(f,'27'),/27端/);
+  assert.match(landingReadiness(f,'bad'),/着陸方向/);
   f.telemetry.contacts=1;assert.match(landingReadiness(f),/飛行中/);f.telemetry.contacts=0;
   f.q.multiply(f.q.clone().setFromAxisAngle({x:0,y:1,z:0},Math.PI));assert.match(landingReadiness(f),/整列/);
  }finally{f.dispose();}
@@ -26,6 +28,16 @@ test('preparation is read-only, late failures cannot erase newer ready plans',as
   requests[0].reject(Error('late failure'));assert.equal((await old).status,'cancelled');assert.equal(s.state,'ready');
   assert.deepEqual({throttle:f.throttle,sas:f.sas,trim:f.trim,q:f.q,pos:f.pos,vel:f.vel},before);
   s.cancel();assert.equal(s.readyFor(f),false);assert.throws(()=>s.start(f),/再準備/);
+ }finally{s.stop();f.dispose();}
+});
+
+test('repreparing for the opposite runway end invalidates the previous ready plan',async()=>{
+ const f=landingFixture(),s=new LandingSession(immediate());
+ try{
+  await s.prepare(f,{end:'09'});assert.equal(s.readyFor(f),true);
+  await assert.rejects(s.prepare(f,{end:'27'}),/27端/);
+  assert.equal(s.readyFor(f),false);assert.equal(s.state,'idle');
+  assert.throws(()=>s.start(f),/再準備/);
  }finally{s.stop();f.dispose();}
 });
 test('start revalidates geometry and vessel identity, pause and manual stop release control',async()=>{

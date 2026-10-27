@@ -1,4 +1,4 @@
-// Experimental guidance. Commands actuators only; not connected to product UI.
+// Landing guidance commands actuators only; runway end is fixed per attempt.
 import * as T from 'three';
 import {bodyUp,bodyAltitude,bodyGravity} from '../dist/celestial.js';
 import {surfaceRelativeVelocity,surfaceAngularVelocity} from '../dist/surface-frame.js';
@@ -15,7 +15,7 @@ import {planLandingTrim} from './landing-trim.mjs';
 import {landingPlanMatches,landingPlanCurrent} from './landing-plan-client.mjs';
 const rad=Math.PI/180,clamp=T.MathUtils.clamp;
 export class LandingPrototype{
- constructor(f,{rolloutControl=true,rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12,speedFloor=90,approachAlpha=8,useTrimPlan=true,preparedPlan,preparedContext}={}){this.approachAlpha=approachAlpha;this.speedFloor=speedFloor;this.rollGain=rollGain;this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
+ constructor(f,{end='09',rolloutControl=true,rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12,speedFloor=90,approachAlpha=8,useTrimPlan=true,preparedPlan,preparedContext}={}){if(!['09','27'].includes(end))throw Error('Unknown runway end');this.end=end;this.heading=end==='27'?270:90;this.approachAlpha=approachAlpha;this.speedFloor=speedFloor;this.rollGain=rollGain;this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
   this.rolloutControl=rolloutControl?new RolloutControl():null;
   this.inner=new TakeoffPrototype(f,{speed:90,integral:true,handoff:'attitude'});this.inner.cruise={running:true,telemetry:{pitch:0}};
   if(useTrimPlan){
@@ -33,8 +33,8 @@ export class LandingPrototype{
   if(dt===0||['stopped','failed'].includes(this.phase))return {};
   const center=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),up=bodyUp(center,f.universalTime);
   const h=bodyAltitude(center,f.universalTime),v=surfaceRelativeVelocity(center,f.vel,f.universalTime),speed=v.length(),vs=v.dot(up);
-  const r=runwayApproach(center,f.universalTime,'09',f.vel),heading=compassHeading(new T.Vector3(0,0,1).applyQuaternion(f.q),center,f.universalTime);
-  const headingError=((90-heading+540)%360)-180;
+  const r=runwayApproach(center,f.universalTime,this.end,f.vel),heading=compassHeading(new T.Vector3(0,0,1).applyQuaternion(f.q),center,f.universalTime);
+  const headingError=((this.heading-heading+540)%360)-180;
   const groundHeight=Math.max(...f.parts.filter(p=>PARTS[p.type].wheel).map(p=>PARTS[p.type].size[1]/2-partCenter(p).y+f.stats.com.y))+.12;
   const agl=h-groundHeight;
   const wheelHalfSpan=Math.max(...f.parts.filter(p=>PARTS[p.type].wheel).map(p=>Math.abs(partCenter(p).x-f.stats.com.x)+PARTS[p.type].size[0]/2));
@@ -84,10 +84,10 @@ export class LandingPrototype{
    this.verticalBias=clamp(this.verticalBias+error*.04*elapsed,-6,6);
    const lift=f.stats.mass*g/(.5*density*speed*speed*area*4.5);
    const pitch=clamp(lift/rad+Math.asin(clamp(targetVs/Math.max(speed,1),-.5,.5))/rad+this.verticalBias+error*.4,-8,15);
-   const targetHeading=90-clamp(Math.atan2(r.crossTrack+(r.track?.x??0)*8,Math.max(500,speed*8))/rad,-30,30);
+   const targetHeading=this.heading-clamp(Math.atan2(r.crossTrack+(r.track?.x??0)*8,Math.max(500,speed*8))/rad,-30,30);
    const turn=((targetHeading-heading+540)%360)-180;
    const crossRate=r.track?.x??0,alongRate=-(r.track?.y??-speed);
-   const course=90+Math.atan2(crossRate,Math.max(alongRate,1))/rad;
+   const course=this.heading+Math.atan2(crossRate,Math.max(alongRate,1))/rad;
    // Experimental damped cross-track acceleration; yaw follows velocity to
    // avoid demanding a skid while the bank supplies the lateral acceleration.
    const acceleration=-r.crossTrack/(this.lateralTime*this.lateralTime)-2*crossRate/this.lateralTime;
