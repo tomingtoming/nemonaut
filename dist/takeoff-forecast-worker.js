@@ -2209,6 +2209,7 @@ function handleTakeoffRequest({ id, vesselId, epoch, payload }) {
   }
 }
 globalThis.onmessage = ({ data }) => globalThis.postMessage(handleTakeoffRequest(data));
+if (typeof globalThis.postMessage === "function") globalThis.postMessage({ type: "ready" });
 export {
   handleTakeoffRequest
 };

@@ -1,5 +1,6 @@
 node_modules/
 .sites-runtime/
 artifacts/
+dist/_diagnostics/
 *.blend1
 assets-source/*.log

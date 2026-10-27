@@ -6,3 +6,6 @@ export function handleTakeoffRequest({id,vesselId,epoch,payload}){
  }catch(error){return {id,vesselId,epoch,error:error.message};}
 }
 globalThis.onmessage=({data})=>globalThis.postMessage(handleTakeoffRequest(data));
+// Imports include asynchronous Rapier initialization. Do not accept a request
+// until that initialization and the message handler installation have completed.
+if(typeof globalThis.postMessage==='function')globalThis.postMessage({type:'ready'});

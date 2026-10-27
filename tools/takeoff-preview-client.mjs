@@ -13,6 +13,9 @@ export class TakeoffPreviewClient{
    const finish=(error,result)=>{if(this.pending!==pending)return;this.pending=null;clearTimeout(pending.timer);worker.terminate();error?reject(error):resolve(result);};
    pending.timer=setTimeout(()=>finish(Error('Takeoff forecast timed out')),this.timeoutMs);
    worker.onmessage=({data})=>{
+    if(this.pending!==pending)return;
+    if(data.type==='ready'&&!pending.sent){pending.sent=true;try{worker.postMessage({id,vesselId,epoch,payload});}catch(error){finish(error);}return;}
+    if(!pending.sent)return;
     if(this.pending!==pending||data.id!==id||data.vesselId!==vesselId||data.epoch!==epoch)return;
     if(f.vesselId!==vesselId||f.universalTime<epoch||f.universalTime-epoch>this.maxAge){finish(null,{status:'stale'});return;}
     if(data.error){finish(Error(data.error));return;}
@@ -21,7 +24,6 @@ export class TakeoffPreviewClient{
     finish(null,{...r,vesselId,epoch});
    };
    worker.onerror=()=>finish(Error('Takeoff forecast worker failed'));
-   try{worker.postMessage({id,vesselId,epoch,payload});}catch(error){finish(error);}
   });
  }
 }

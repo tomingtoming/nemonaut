@@ -11,11 +11,12 @@ test('superseded, cancelled and stale replies cannot become a current forecast',
  const {f,p}=setup(),workers=[];
  const c=new TakeoffPreviewClient(()=>{const w={postMessage(v){this.sent=v;},terminate(){this.closed=true;}};workers.push(w);return w;});
  try{
-  const first=c.request(f,p),second=c.request(f,p);assert.equal((await first).status,'cancelled');assert.ok(workers[0].closed);
+  const first=c.request(f,p);assert.equal(workers[0].sent,undefined);workers[0].onmessage({data:{type:'ready'}});
+  const second=c.request(f,p);workers[1].onmessage({data:{type:'ready'}});assert.equal((await first).status,'cancelled');assert.ok(workers[0].closed);
   workers[0].onmessage({data:{...workers[0].sent,result:good}});assert.equal(c.pending.worker,workers[1]);
   workers[1].onmessage({data:{...workers[1].sent,id:999,result:good}});assert.ok(c.pending);
   workers[1].onmessage({data:{...workers[1].sent,result:good}});assert.equal((await second).status,'airborne');
-  const stale=c.request(f,p);f.universalTime+=6;workers[2].onmessage({data:{...workers[2].sent,result:good}});assert.equal((await stale).status,'stale');
+  const stale=c.request(f,p);workers[2].onmessage({data:{type:'ready'}});f.universalTime+=6;workers[2].onmessage({data:{...workers[2].sent,result:good}});assert.equal((await stale).status,'stale');
   const cancelled=c.request(f,p);c.cancel();assert.equal((await cancelled).status,'cancelled');
  }finally{c.cancel();f.dispose();}
 });

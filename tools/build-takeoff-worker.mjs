@@ -7,4 +7,4 @@ const result=await build({write:!check,entryPoints:['tools/takeoff-preview-worke
   build.onResolve({filter:/vendor\/rapier\/rapier\.mjs$/},()=>({path:'./vendor/rapier/rapier.mjs',external:true}));
  }
 }]});
-if(check&&(await readFile('dist/takeoff-forecast-worker.js','utf8'))!==result.outputFiles[0].text)throw Error('Rebuild the takeoff worker before publishing');
+if(check&&(await readFile('dist/takeoff-forecast-worker.js','utf8')).replace(/\r\n/g,'\n')!==result.outputFiles[0].text.replace(/\r\n/g,'\n'))throw Error('Rebuild the takeoff worker before publishing');
