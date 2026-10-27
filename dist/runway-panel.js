@@ -8,7 +8,7 @@ export function mountRunwayPanel(root,getState){
  root.querySelector('#flightSystems').append(button);
  const close=()=>{window?.remove();window=null;};
  function update(){
-  const {flight,atCenter}=getState(),end=runwaySelection.end;button.hidden=!flight||atCenter;
+  const {flight,atCenter}=getState();runwaySelection.bind(flight);const end=runwaySelection.end;button.hidden=!flight||atCenter;
   if(button.hidden){close();return;}if(!window)return;window.content.querySelector('select').value=end;
   const point=flight.stats.com.clone().applyQuaternion(flight.q).add(flight.pos);
   const v=runwayApproach(point,flight.universalTime,end,flight.vel),out=window.content.querySelector('output');

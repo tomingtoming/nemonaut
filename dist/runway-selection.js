@@ -1,9 +1,16 @@
 // Both navigation and autopilot read the same selected arrival direction.
+export function runwayEnd(value='09'){
+ if(!['09','27'].includes(value))throw Error('Unknown runway end');
+ return value;
+}
 export function createRunwaySelection(){
- let end='09';const listeners=new Set();
- return {get end(){return end;},set(value){
-  if(!['09','27'].includes(value))throw Error('Unknown runway end');
-  if(value===end)return;end=value;for(const listener of listeners)listener(end);
+ let end='09',flight=null;const listeners=new Set();
+ const publish=value=>{if(value===end)return;end=value;for(const listener of listeners)listener(end);};
+ return {get end(){return end;},bind(next){
+  if(next===flight)return;
+  const value=runwayEnd(next?.runwayEnd);flight=next;publish(value);
+ },set(value){
+  value=runwayEnd(value);if(flight)flight.runwayEnd=value;publish(value);
  },subscribe(listener){listeners.add(listener);return ()=>listeners.delete(listener);}};
 }
 export const runwaySelection=createRunwaySelection();
