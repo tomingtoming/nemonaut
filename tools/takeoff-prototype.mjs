@@ -5,13 +5,14 @@ import {surfaceRelativeVelocity,surfaceAngularVelocity} from '../dist/surface-fr
 import {atmosphere} from '../dist/planet.js';
 import {compassHeading} from '../dist/navigation.js';
 import {CruisePilot,cruiseReadiness,cruiseTargetReadiness} from '../dist/cruise-pilot.js';
+import {seedSasTrim} from '../dist/sas-trim.js';
 const rad=Math.PI/180,clamp=T.MathUtils.clamp;
 export class TakeoffPrototype{
  constructor(f,{speed,altitude=600,rotation=8,integral=false,handoff='direct'}){this.handoffMode=handoff;this.integral=integral;this.pitchBias=0;this.rotation=rotation;this.owner=f.vesselId;this.target={speed,altitude,heading:compassHeading(new T.Vector3(0,0,1).applyQuaternion(f.q),f.pos,f.universalTime)};this.phase='roll';this.elapsed=0;this.commands={};this.cruise=null;}
  update(f,dt){
   if(f.vesselId!==this.owner||f.crashed||!Number.isFinite(dt)||dt<0){this.phase='stopped';return {};}
   if(dt===0||this.phase==='stopped')return {};
-  if(this.cruise){if(['ramp','servo'].includes(this.handoffMode))this.cruise.target.speed+=clamp(this.target.speed-this.cruise.target.speed,-.5*dt,.5*dt);this.cruise.update(f,dt);return this.handoffMode==='servo'?this.pitchServo(f,this.cruise.telemetry.pitch,dt):{};}
+  if(this.cruise){if(['ramp','servo','seed'].includes(this.handoffMode))this.cruise.target.speed+=clamp(this.target.speed-this.cruise.target.speed,-.5*dt,.5*dt);this.cruise.update(f,dt);return this.handoffMode==='servo'?this.pitchServo(f,this.cruise.telemetry.pitch,dt):{};}
   // Fast attitude feedback must observe each physics step; holding saturated
   // control for 100 ms caused a limit cycle on the light aircraft.
   const center=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),up=bodyUp(center,f.universalTime),v=surfaceRelativeVelocity(center,f.vel,f.universalTime);
@@ -28,9 +29,10 @@ export class TakeoffPrototype{
    targetPitch=clamp(lift+(clamp((this.target.altitude-height)*.05,-3,5)-vertical)*.4,-5,12);
    if(height>300&&Math.abs(vertical)<5&&Math.abs(pitch)<15&&!cruiseReadiness(f)&&!cruiseTargetReadiness(f,this.target)){
     const beforeThrottle=f.throttle;
-    this.cruise=new CruisePilot(f,{...this.target,speed:['ramp','servo'].includes(this.handoffMode)?speed:this.target.speed});
+    this.cruise=new CruisePilot(f,{...this.target,speed:['ramp','servo','seed'].includes(this.handoffMode)?speed:this.target.speed});
     if(this.handoffMode!=='direct')this.cruise.powerBias=clamp(beforeThrottle-(this.cruise.target.speed-speed)*.025,0,1);
     this.phase='cruise';this.cruise.update(f,dt);
+    if(this.handoffMode==='seed')seedSasTrim(f,f.telemetry.commands);
     this.telemetry={height,speed,vertical,pitch,targetPitch,minimum,beforeThrottle,afterThrottle:f.throttle,handoffMode:this.handoffMode};return this.handoffMode==='servo'?this.pitchServo(f,this.cruise.telemetry.pitch,dt):{};
    }
   }
