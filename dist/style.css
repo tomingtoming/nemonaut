@@ -348,3 +348,5 @@ body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
 .descentWindow{width:300px}.descentWindow #descentPanel{margin:0;padding:0;border:0;background:transparent}.descentWindow #descentPanel>strong{display:none}.descentWindow .floatingContent{padding:10px}.descentWindow #descentPanel>div{display:flex;flex-wrap:wrap;gap:4px}.descentWindow #descentPanel button{margin:0;font-size:11px}.descentWindow header{position:sticky;top:0;z-index:1}
 
 #flightQuickNav>#openDescent{grid-column:auto}#flightQuickNav>#deliveryGuide{grid-column:1/-1;width:100%}
+
+.runwayWindow{width:280px}.runwayWindow output{display:block;white-space:pre-line;line-height:1.8;font-variant-numeric:tabular-nums}.runwayWindow select{width:100%}
