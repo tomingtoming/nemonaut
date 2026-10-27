@@ -6,6 +6,8 @@ test('experimental guidance commands actuators without changing physical state; 
  const f=new Flight(preset('plane'),'runway');
  try{
   f.sas=false;f.trim=.12;f.sasMode='prograde';f.throttle=.5;
+  // Controlled moving state: this guidance is not a takeoff controller.
+  f.vel.z+=120;
   const p=new AircraftHoldPrototype(f),pos=f.pos.clone(),vel=f.vel.clone(),q=f.q.clone(),omega=f.omega.clone();
   p.update(f,0);assert.equal(f.sas,false);assert.equal(f.trim,.12);assert.equal(f.throttle,.5);
   p.update(f,1/120);assert.equal(f.sas,true);assert.equal(f.sasMode,'hold');
@@ -14,6 +16,12 @@ test('experimental guidance commands actuators without changing physical state; 
   assert.equal(f.throttle,.23);assert.equal(f.sas,false);assert.equal(f.trim,.12);assert.equal(f.sasMode,'prograde');
   assert.ok(f.holdQ.angleTo(q)<1e-7);
   p.update(f,1);assert.equal(f.throttle,.23);
+ }finally{f.dispose();}
+});
+test('guidance rejects zero aerodynamic authority without injecting motion',()=>{
+ const f=new Flight(preset('plane'),'runway');
+ try{f.stats.aero.weight=0;const pos=f.pos.clone(),q=f.q.clone(),p=new AircraftHoldPrototype(f);p.update(f,1/120);
+  assert.equal(p.running,false);assert.equal(f.throttle,0);assert.deepEqual(f.pos,pos);assert.deepEqual(f.q,q);
  }finally{f.dispose();}
 });
 test('experimental owner does not write to another vessel and rejects nonfinite guidance',()=>{
