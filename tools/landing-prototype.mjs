@@ -11,13 +11,17 @@ import {TakeoffPrototype} from './takeoff-prototype.mjs';
 import {extendWheelTrack} from '../dist/runway-wheel-track.js';
 import {rollServo} from './roll-servo.mjs';
 import {planLandingTrim} from './landing-trim.mjs';
+import {landingPlanMatches,landingPlanCurrent} from './landing-plan-client.mjs';
 const rad=Math.PI/180,clamp=T.MathUtils.clamp;
 export class LandingPrototype{
- constructor(f,{rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12,speedFloor=90,approachAlpha=8,useTrimPlan=true}={}){this.approachAlpha=approachAlpha;this.speedFloor=speedFloor;this.rollGain=rollGain;this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
+ constructor(f,{rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12,speedFloor=90,approachAlpha=8,useTrimPlan=true,preparedPlan,preparedContext}={}){this.approachAlpha=approachAlpha;this.speedFloor=speedFloor;this.rollGain=rollGain;this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
   this.inner=new TakeoffPrototype(f,{speed:90,integral:true,handoff:'attitude'});this.inner.cruise={running:true,telemetry:{pitch:0}};
   if(useTrimPlan){
    const center=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
-   this.trimPlan=planLandingTrim(f,{density:atmosphere(bodyAltitude(center,f.universalTime)).density,gravity:bodyGravity(center,f.universalTime).length()});
+   if(preparedPlan!==undefined){
+    if(!preparedContext||!landingPlanMatches(preparedPlan,preparedContext)||!landingPlanCurrent(f,preparedContext))throw Error('Landing plan no longer applies');
+    this.trimPlan=structuredClone(preparedPlan);
+   }else this.trimPlan=planLandingTrim(f,{density:atmosphere(bodyAltitude(center,f.universalTime)).density,gravity:bodyGravity(center,f.universalTime).length()});
    this.commandedSpeed=surfaceRelativeVelocity(center,f.vel,f.universalTime).length();
    if(!this.trimPlan){this.phase='failed';this.reason='no longitudinal trim in search range';}
   }
