@@ -67,3 +67,36 @@ test('Swift recovers attitude and climb after a bank and opposite rollout',()=>{
   }finally{f.dispose();}
  }
 });
+
+test('large aircraft can hold a banked turn and recover without fighting its original heading',()=>{
+ for(const sign of [-1,1]){
+  const f=new Flight(preset('plane-large'),'runway',160658.7);f.stageNext();f.throttle=1;
+  try{
+   for(let i=0;i<150*120;i++){
+    const t=i/120;
+    const pitch=t>=33.6&&t<41.6?-1:t>=41.6&&t<43.6?1:t>=43.6&&t<44.3?-1:t>=67.8&&t<68.15?-1:t>=84&&t<84.3?-1:0;
+    const roll=sign*(t>=44.3&&t<45.5?1:t>=65.5&&t<66.2?-1:t>=67.45&&t<67.8?-1:t>=83.8&&t<84?-1:0);
+    f.step(1/120,{pitch,roll});
+    if(t>110){
+     assert.ok(f.orbit.vertical>10,`climb ${f.orbit.vertical}`);
+     assert.ok(f.q.angleTo(f.holdQ)<2*Math.PI/180);
+     assert.ok(Math.abs(f.telemetry.commands.yaw)<.2);
+     assert.equal(f.telemetry.stallCount,0);
+    }
+   }
+   assert.equal(f.crashed,false);assert.ok(f.orbit.altitude>1000);
+  }finally{f.dispose();}
+ }
+});
+
+test('bank heading transport preserves target pitch and roll relative to local vertical',async()=>{
+ const {followBankHeading}=await import('../dist/sas-attitude.js');
+ for(const up of [new T.Vector3(0,1,0),new T.Vector3(1,2,-3).normalize()]){
+  const local=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),up);
+  const target=local.clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(-.2,0,.4)));
+  const current=new T.Quaternion().setFromAxisAngle(up,.8).multiply(target);
+  const result=followBankHeading(current,target,up);
+  assert.ok(result.angleTo(current)<1e-7);
+  for(const axis of [new T.Vector3(1,0,0),new T.Vector3(0,0,1)])assert.ok(Math.abs(axis.clone().applyQuaternion(result).dot(up)-axis.clone().applyQuaternion(target).dot(up))<1e-9);
+ }
+});
