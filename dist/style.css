@@ -284,8 +284,8 @@ body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
 .flying .navpanel .navSpeed{grid-column:1;grid-row:1;margin:0;width:100%;padding:2px;box-sizing:border-box}
 .flying .navpanel .navSpeed strong{font-size:20px}
 .flying #navPitch{grid-column:2;grid-row:3;margin:0;font-size:9px}
-.flying .navpanel .navSwitches{position:static;grid-column:1;grid-row:2;display:grid;width:100%;gap:5px}
-.flying .navpanel .navSwitches button,.flying .navpanel .navSwitches label{font-size:11px;padding:7px 6px;justify-content:center;text-align:center}
+.flying .navpanel .navSwitches{position:static;grid-column:1;grid-row:2;display:grid;width:100%;height:100%;grid-template-rows:repeat(4,minmax(0,1fr));gap:3px}
+.flying .navpanel .navSwitches button,.flying .navpanel .navSwitches label{font-size:11px;padding:4px 6px;margin:0;min-height:0;box-sizing:border-box;justify-content:center;text-align:center}
 .flying .navpanel .throttle{position:static;grid-column:1;grid-row:3;display:flex;align-items:center;gap:4px;width:100%;height:20px;padding:0;border:0;background:none}
 .flying .navpanel .throttle label{width:30px;flex-shrink:0;margin:0}
 .flying .navpanel .throttle input{writing-mode:horizontal-tb;direction:ltr;width:100%;min-width:0;height:16px;margin:0}

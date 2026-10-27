@@ -1,3 +1,4 @@
+import {attitudeCommands} from './flight-input.js';
 import {updateNavigationFrame} from './navigation-frame.js';
 import {sasTrim} from './sas-trim.js';
 import {followBankHeading,manualAttitudeTarget} from './sas-attitude.js';
@@ -89,7 +90,7 @@ export class Flight {
  const st=statistics(this.parts,this.fuel,this.ballast,this.thermal);this.stats=st;const mass=st.mass,com=st.com.clone().applyQuaternion(this.q).add(this.pos),air=reference.id==='planet'?atmosphere(height):{density:0,pressure:0,temperature:3},density=air.density;
  this.body.resetForces(true);this.body.resetTorques(true);const force=new T.Vector3(),torque=new T.Vector3(),engineForce=new T.Vector3();
  const apply=(f,point)=>{force.add(f);torque.add(point.clone().sub(com).cross(f));this.body.addForceAtPoint(f,point.clone().sub(origin),true);};
- const commands={pitch:input.pitch||0,yaw:(this.rocketAxes?input.roll:input.yaw)||0,roll:(this.rocketAxes?input.yaw:input.roll)||0};const steering=new T.Vector3(commands.pitch,commands.yaw,commands.roll);
+ const commands=attitudeCommands(input,this.rocketAxes);const steering=new T.Vector3(commands.pitch,commands.yaw,commands.roll);
  const manual=steering.lengthSq()>.0001;if(!this.holdQ||!this.sas||(manual&&(this.rocketAxes||this.sasMode!=='hold')))this.holdQ=this.q.clone();else if(manual)this.holdQ=manualAttitudeTarget(this.q,this.holdQ,steering);if(manual)this.sasMode='hold';if(this.sas&&this.sasMode!=='hold'){const guide=this.dockingPorts?portGuidance(this,this.dockingPorts.own,navigationTarget,this.dockingPorts.target):null;const target=this.sasMode==='dock'?guide?.desiredNormal:this.sasMode==='target'?relativeState(this,navigationTarget)?.direction:this.sasMode==='relativeRetrograde'?relativeState(this,navigationTarget)?.braking:this.sasMode==='maneuver'?maneuverDirection(this.maneuver):navDirections(com,this.vel,startTime,this.navigationFrame)[this.sasMode],forward=this.sasMode==='dock'&&guide?new T.Vector3(0,1,0).applyQuaternion(partRotation(guide.own.part)):new T.Vector3(0,this.rocketAxes?1:0,this.rocketAxes?0:1);if(target)this.holdQ=attitudeTarget(this.q,forward,target);}
  const banking=this.sas&&this.sasMode==='hold'&&!this.rocketAxes&&st.aero.area>0&&!this.telemetry.groundContact&&density*relativeVelocity.lengthSq()/2>50&&Math.abs(new T.Vector3(1,0,0).applyQuaternion(this.q).dot(normal))>Math.sin(5*Math.PI/180);
  if(banking)this.holdQ=followBankHeading(this.q,this.holdQ,normal);
