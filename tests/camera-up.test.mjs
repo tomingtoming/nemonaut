@@ -53,3 +53,16 @@ test('surface constraint keeps camera outside mother planet and moving moon with
   assert.deepEqual(camera.position,before);
  }
 });
+
+test('marine framing follows shallow dives while land framing retains the overhead view',async()=>{
+ const {flightFrameOffset}=await import('../dist/camera-up.js');
+ const center=new Vector3(0,-600000,0),radius=600000;
+ for(const up of [new Vector3(0,1,0),new Vector3(0,-1,0),new Vector3(1,2,3).normalize()])for(const distance of [20,60,100]){
+  const sea=flightFrameOffset(distance,up,true),land=flightFrameOffset(distance,up,false);
+  assert.ok(Math.abs(sea.length()-distance)<1e-8);
+  assert.ok(sea.dot(up)>0&&sea.dot(up)<4);
+  const focus=center.clone().addScaledVector(up,radius-8.9);
+  assert.ok(focus.clone().add(sea).distanceTo(center)<radius-5,'camera enters water with the shallow-diving vessel');
+  assert.ok(land.dot(up)>distance*.3,'ordinary flight retains its overhead view');
+ }
+});

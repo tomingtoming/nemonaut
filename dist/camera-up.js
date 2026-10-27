@@ -1,6 +1,13 @@
 import {Vector3,Quaternion} from 'three';
 const worldUp=new Vector3(0,1,0);
 
+// A low marine view follows shallow dives below the opaque sea surface.
+// This only chooses the initial/F-key offset; orbit input remains unrestricted.
+export function flightFrameOffset(distance,up,water=false){
+ return new Vector3(1,water?.06:.65,1.3).normalize().multiplyScalar(distance)
+  .applyQuaternion(new Quaternion().setFromUnitVectors(worldUp,up));
+}
+
 // Three r180 caches this frame at construction. Keep it synchronized with the
 // local vertical so orbit/pan input and camera.lookAt use the same up direction.
 export function setOrbitUp(controls,up){

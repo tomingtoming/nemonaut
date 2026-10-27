@@ -67,7 +67,7 @@ export class FlightScenery{
  constructor(group){
   const planetarySun=new T.DirectionalLight(0xfff0d8,2.4);planetarySun.layers.set(1);planetarySun.position.copy(center).addScaledVector(SUN_DIRECTION,1000000);planetarySun.target.position.copy(center);group.add(planetarySun,planetarySun.target);
   const starlight=new T.AmbientLight(0x8ca5cc,.08);starlight.layers.set(1);group.add(starlight);
-  this.waterFog=new T.FogExp2('#073a49',.035);
+  this.waterFog=new T.FogExp2('#073a49',.012);
   const uniforms={waterDepth:{value:0},sunDir:{value:SUN_DIRECTION.clone()},up:{value:new T.Vector3(0,1,0)},air:{value:1},day:{value:1}};
   this.uniforms=uniforms;
   const material=new T.ShaderMaterial({side:T.BackSide,depthTest:false,depthWrite:false,uniforms,
