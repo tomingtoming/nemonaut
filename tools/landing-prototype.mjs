@@ -9,9 +9,10 @@ import {PARTS} from '../dist/catalog.js';
 import {partCenter} from '../dist/aero.js';
 import {TakeoffPrototype} from './takeoff-prototype.mjs';
 import {extendWheelTrack} from '../dist/runway-wheel-track.js';
+import {rollServo} from './roll-servo.mjs';
 const rad=Math.PI/180,clamp=T.MathUtils.clamp;
 export class LandingPrototype{
- constructor(f,{rollIntegral=false,lateralMode='heading',lateralTime=8}={}){this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
+ constructor(f,{rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12}={}){this.rollGain=rollGain;this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
   this.inner=new TakeoffPrototype(f,{speed:90,integral:true,handoff:'attitude'});this.inner.cruise={running:true,telemetry:{pitch:0}};
  }
  update(f,dt){
@@ -79,6 +80,8 @@ export class LandingPrototype{
   // Retained roll trim caused overshoot during reversing final-approach demands.
   // Keep the comparison available; pitch/yaw trim and the product servo are unchanged.
   if(!this.rollIntegral&&this.inner.lateralBias)this.inner.lateralBias.z=0;
-  return this.inner.cruiseCommands(f,dt);
+  const commands=this.inner.cruiseCommands(f,dt);
+  if(this.rollGain!==4)commands.roll=rollServo(f,this.inner.attitudeTarget,this.rollGain);
+  return commands;
  }
 }
