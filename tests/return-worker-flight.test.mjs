@@ -9,9 +9,10 @@ import {ReturnSession} from '../tools/return-session.mjs';
 import {LandingPlanClient} from '../tools/landing-plan-client.mjs';
 import {extendWheelTrack} from '../dist/runway-wheel-track.js';
 import {RUNWAY} from '../dist/runway-navigation.js';
-for(const kind of ['plane','plane-large','transport-cargo'])test(`${kind} normal departure returns through real planning worker and lands`,async(t)=>{
- const parts=preset(kind);for(const p of parts)if(PARTS[p.type].fuel)p.fuelLoad=.5;
- const f=new Flight(parts,'runway',161700),id=f.vesselId,partCount=f.parts.length;
+const conditions=[...['plane','plane-large','transport-cargo'].map(kind=>({kind,fuelLoad:.5})),...['plane','plane-large'].map(kind=>({kind,fuelLoad:1})),{kind:'plane-large',fuelLoad:1,epoch:0}];
+for(const {kind,fuelLoad,epoch=161700} of conditions)test(`${kind} UT${epoch} ${fuelLoad===1?'full':'half'} fuel normal departure returns through real planning worker and lands`,async(t)=>{
+ const parts=preset(kind);for(const p of parts)if(PARTS[p.type].fuel)p.fuelLoad=fuelLoad;
+ const f=new Flight(parts,'runway',epoch),id=f.vesselId,partCount=f.parts.length;
  const client=new LandingPlanClient(()=>{
   const w=new Worker(new URL('./fixtures/landing-worker.mjs',import.meta.url));
   const adapter={postMessage:data=>w.postMessage(data),terminate:()=>w.terminate()};
@@ -41,7 +42,7 @@ for(const kind of ['plane','plane-large','transport-cargo'])test(`${kind} normal
    assert.ok(!['recovery','recovery-hold'].includes(session.state),session.message);
   }
   assert.equal(session.state,'landed',session.message);assert.ok(planningSteps>2);assert.ok(approached);
-  t.diagnostic(JSON.stringify({kind,planningSteps,touchdown,worstWheel,track}));
+  t.diagnostic(JSON.stringify({kind,fuelLoad,epoch,planningSteps,touchdown,worstWheel,track}));
   assert.ok(touchdown&&touchdown.impact>-3,JSON.stringify(touchdown));
   assert.ok(worstWheel&&worstWheel.impact>-3,JSON.stringify(worstWheel));
   assert.equal(f.crashed,false);assert.equal(f.landed,true);assert.equal(f.vesselId,id);assert.equal(f.parts.length,partCount);
