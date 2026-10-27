@@ -164,6 +164,19 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
    a.push(part('jetLarge',[-3,2.7,-1.2],[...engine.r],engine.parent,engine.stage));
   }
  }
+ if(kind==='transport-cargo'){
+  a=preset('transport');
+  const bay=a.find(p=>p.type==='transportFuselage'&&p.p[2]===0);
+  bay.type='cargoBay';bay.r=[Math.PI/2,0,0];
+  // Belly doors clear the high wing; the payload hangs from the internal mount.
+  const lab=preset('cargo-lab'),source=lab[0];
+  const payload=lab.filter(p=>p.id!==source.id&&(p.parent!==source.id||p.type==='decoupler'));
+  for(const p of payload){
+   const [x,y,z]=p.p;p.p=[x,5-z,y];p.r=[p.r[0]+Math.PI/2,p.r[1],p.r[2]];
+   if(p.parent===source.id)p.parent=bay.id;
+  }
+  a.push(...payload);
+ }
  if(kind==='cargo-lab'){
   const bay=add('cargoBay',[0,0,0]);
   add('probe',[0,5,0],[0,0,0],bay);
