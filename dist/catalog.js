@@ -24,7 +24,7 @@ export const PARTS = {
  engine:{name:'液体燃料エンジン',code:'RE-45',cat:'推進',mass:270,thrust:45000,isp:300,size:[1.25,1.2,1.25],gimbal:6,gimbalPivot:[0,.16,0],desc:'45 kN・最大6度のジンバル。ノズルを傾けて推力方向を制御。'},
  jet:{name:'ターボジェット',code:'TJ-18',cat:'推進',mass:230,thrust:18000,isp:1800,air:true,size:[1.25,1.2,1.25],desc:'大気中専用。高度とともに推力が低下する。'},
  propeller:{name:'スクリュー',code:'MP-6',cat:'推進',mass:60,thrust:6000,isp:3000,water:true,size:[.8,.5,.8],desc:'水中専用推進器。船・潜水艇の推進に。'},
- nose:{name:'ノーズコーン',code:'NC-1',cat:'構造',mass:65,size:[1.25,1,1.25],desc:'機首を覆う軽量の整流コーン。'},
+ nose:{streamlinedNose:true,name:'ノーズコーン',code:'NC-1',cat:'構造',mass:65,size:[1.25,1,1.25],desc:'機首を覆う軽量の整流コーン。'},
  decoupler:{name:'分離リング',code:'DC-12',cat:'構造',mass:40,size:[1.25,.22,1.25],decoupler:true,desc:'ステージ実行時、この部品から先の接続枝を分離。'},
  truss:{name:'構造フレーム',code:'TR-1',cat:'構造',mass:65,size:[1,1,1],desc:'ローバーや宇宙機の骨組み。6方向に接続可能。'},
  wing:{rootWing:true,name:'主翼・固定翼',code:'SW-2',cat:'空力',mass:55,size:[2,1.6,.12],wing:2.1,ac:[.80,.13,0],massCenter:[.8,-.20,0],chord:1.1,desc:'空気速度と迎角から揚力が発生。基部はローカルX=0。'},

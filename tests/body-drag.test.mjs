@@ -21,3 +21,10 @@ test('Shield orientation and rigid transforms change drag consistently',()=>{
  near(a.force.length(),b.force.length());assert.ok(b.force.dot(v.clone().applyQuaternion(q))<0);
  near(bodyDrag(model,q,v,0).force.length(),0);near(bodyDrag(model,q,new T.Vector3(),1).force.length(),0);
 });
+
+test('scaled nose geometry inherits front drag treatment without streamlining its blunt back',()=>{
+ const base=createBodyAerodynamics([part('nose')]),large=createBodyAerodynamics([part('transportTail')]);
+ const forward=new T.Vector3(0,1,0),backward=new T.Vector3(0,-1,0),side=new T.Vector3(1,0,0);
+ for(const direction of [forward,backward,side])near(large.dragArea(direction),base.dragArea(direction)*4.8**2);
+ assert.ok(large.dragArea(forward)<large.dragArea(backward));
+});

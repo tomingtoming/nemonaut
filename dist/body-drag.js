@@ -30,7 +30,7 @@ export function createBodyAerodynamics(parts){
     }
     // Shield disc uses its circular face area. Other dimensions are box bounds.
     const round=box.type==='heatShield'&&axis===1?Math.PI/4:1;
-    const cd=box.type==='heatShield'&&axis===1?1.1:box.type==='nose'&&axis===1&&sign>0?.15:.4;
+    const cd=box.type==='heatShield'&&axis===1?1.1:PARTS[box.type].streamlinedNose&&axis===1&&sign>0?.15:.4;
     cdArea+=4*box.half[u]*box.half[v]*cos*exposed/16*round*cd;
    }
   }

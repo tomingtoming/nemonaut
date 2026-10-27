@@ -7,12 +7,16 @@ import {bodyUp} from '../dist/celestial.js';
 // Design experiment, not a playable shuttle or orbital-flight acceptance.
 // Common large airframe with rocket engines. Reduced propellant cases are
 // explicit initial-condition fixtures; no state or forces change during flight.
-const wingShift=Number(process.argv[2]??0),glideMode=process.argv[3]??'none',glideControl=['control','alpha','flare'].includes(glideMode),closedClimb=process.argv[4]==='closed-climb';
-if(!Number.isFinite(wingShift)||Math.abs(wingShift)>5||!['none','control','alpha','flare'].includes(glideMode))throw Error('Usage: node tools/rocket-airframe-profile.mjs [wing shift metres -5..5] [control|alpha|flare] [closed-climb] [trace]');
+const wingShift=Number(process.argv[2]??0),glideMode=process.argv[3]??'none',glideControl=['control','alpha','flare','speed'].includes(glideMode),closedClimb=process.argv[4]==='closed-climb',tail=process.argv[6]??'standard';
+if(!Number.isFinite(wingShift)||Math.abs(wingShift)>5||!['none','control','alpha','flare','speed'].includes(glideMode)||!['standard','transport'].includes(tail))throw Error('Usage: node tools/rocket-airframe-profile.mjs [wing shift metres -5..5] [control|alpha|flare|speed] [closed-climb] [trace] [standard|transport]');
 export function rocketAirframe(){
  const parts=preset('plane-large');
  for(const p of parts)if(p.type==='jetLarge'){p.type='engineSeaMedium';p.p[2]=-4.5;}
  for(const p of parts)if(['wingLarge','aileronLarge'].includes(p.type))p.p[2]+=wingShift;
+ if(tail==='transport')for(const p of parts){
+  if(p.type==='stabilizerLarge'&&Math.abs(p.p[0])>1){p.type='transportStabilizer';p.p[0]=Math.sign(p.p[0])*4.5;}
+  if(p.type==='elevatorLarge'){p.type='transportElevator';p.p[0]=Math.sign(p.p[0])*4.5;p.p[2]=-7.425;}
+ }
  return validateCraft({version:1,parts});
 }
 for(const fuel of [1,.5,.1])for(const gimbal of [true,false]){
@@ -29,7 +33,8 @@ for(const fuel of [1,.5,.1])for(const gimbal of [true,false]){
    const rate=-f.omega.clone().applyQuaternion(f.q.clone().invert()).x*180/Math.PI;
    const velocity=surfaceRelativeVelocity(f.pos,f.vel,f.universalTime),path=Math.asin(T.MathUtils.clamp(velocity.clone().normalize().dot(bodyUp(f.pos,f.universalTime)),-1,1))*180/Math.PI;
    const flareHeight=glideMode==='flare'?Math.max(20,-f.orbit.vertical*5):20;
-   const target=t<40?10:['alpha','flare'].includes(glideMode)&&f.orbit.altitude>flareHeight?path+6:6;
+   let target=t<40?10:['alpha','flare','speed'].includes(glideMode)&&f.orbit.altitude>flareHeight?path+6:6;
+   if(t>=40&&glideMode==='speed'){const desiredSpeed=110*Math.sqrt(f.stats.mass/26416);target=f.orbit.altitude>Math.max(30,-f.orbit.vertical*3)?T.MathUtils.clamp((velocity.length()-desiredSpeed)*.5,-20,10):12;}
    pitch=T.MathUtils.clamp((attitude-target)*.08+rate*.1,-1,1);
    if(t>=40&&f.telemetry.contacts>0)f.brake=true;
   }
@@ -40,10 +45,11 @@ for(const fuel of [1,.5,.1])for(const gimbal of [true,false]){
   const wing=f.parts.find(p=>p.type==='wingLarge'),point=aeroPoint(wing).applyQuaternion(f.q).add(f.pos),pv=velocity.clone().add(localOmega.cross(point.clone().sub(com)));
   const alpha=surfaceForce(wing,f.q.clone().multiply(partRotation(wing)),pv,1,0).alpha*180/Math.PI;
   if(t>=40){maxAlpha=Math.max(maxAlpha,Math.abs(alpha));if(Math.abs(alpha)>15)stalledSeconds+=1/120;if(Math.abs(f.telemetry.commands.pitch)>.99)saturatedSeconds+=1/120;}
-  const elevators=f.parts.filter(p=>p.type==='elevatorLarge').map(p=>(f.deflections.get(p.id)||0)*180/Math.PI);
-  final={t,alpha,elevators,command:f.telemetry.commands.pitch,stallCount:f.telemetry.stallCount,alt:f.orbit.altitude,vs:f.orbit.vertical,speed:surfaceRelativeVelocity(f.pos,f.vel,f.universalTime).length(),pitch:Math.asin(new T.Vector3(0,0,1).applyQuaternion(f.q).dot(bodyUp(f.pos,f.universalTime)))*180/Math.PI,margin:f.stats.aero.staticMargin};
+  const elevators=f.parts.filter(p=>PARTS[p.type].controlAxis==='pitch').map(p=>(f.deflections.get(p.id)||0)*180/Math.PI);
+  const direction=velocity.clone().normalize(),lift=f.telemetry.force.clone().addScaledVector(direction,-f.telemetry.force.dot(direction)).length(),drag=-f.telemetry.force.dot(direction);
+  final={t,alpha,elevators,lift,drag,liftWeight:lift/(f.stats.mass*9.81),command:f.telemetry.commands.pitch,stallCount:f.telemetry.stallCount,alt:f.orbit.altitude,vs:f.orbit.vertical,speed:surfaceRelativeVelocity(f.pos,f.vel,f.universalTime).length(),pitch:Math.asin(new T.Vector3(0,0,1).applyQuaternion(f.q).dot(bodyUp(f.pos,f.universalTime)))*180/Math.PI,margin:f.stats.aero.staticMargin};
   if(process.argv[5]==='trace'&&i%600===0)console.log(JSON.stringify({sample:true,fuel,gimbal,...final}));
  }
- console.log(JSON.stringify({wingShift,glideMode,glideControl,closedClimb,maxPitch,maxAlpha,stalledSeconds,saturatedSeconds,fuel,gimbal,initial,cut,peak,touch,final,landed:f.landed,crashed:f.crashed,remaining:f.fuelRatio,parts:f.parts.length}));
+ console.log(JSON.stringify({tail,wingShift,glideMode,glideControl,closedClimb,maxPitch,maxAlpha,stalledSeconds,saturatedSeconds,fuel,gimbal,initial,cut,peak,touch,final,landed:f.landed,crashed:f.crashed,remaining:f.fuelRatio,parts:f.parts.length}));
  }finally{f.dispose();}
 }
