@@ -29,3 +29,20 @@ for(const kind of ['plane','plane-large','transport-cargo'])test(`${kind} runway
  assert.ok(r.worst.impact>-3,JSON.stringify(r.worst));
  assert.ok(r.track.minAlong>=0&&r.track.maxAlong<RUNWAY.length&&r.track.maxCross<RUNWAY.width/2);
 });
+
+for(const kind of ['plane','plane-large','transport-cargo'])test(`${kind} late rollout guard avoids overrun caused by unconditional delay`,()=>{
+ const baseline=rolloutImpact({kind,touchdownAlong:1200});
+ const delayed=rolloutImpact({kind,mode:'both',touchdownAlong:1200});
+ const guarded=rolloutImpact({kind,mode:'guarded',touchdownAlong:1200});
+ assert.deepEqual(guarded.fixture,baseline.fixture);
+ assert.deepEqual(delayed.fixture,baseline.fixture);
+ assert.ok(Math.abs(guarded.fixture.along-1200)<.01);
+ assert.equal(delayed.result,'failed');assert.ok(delayed.track.maxAlong>RUNWAY.length);
+ assert.equal(baseline.result,'stopped');assert.equal(guarded.result,'stopped');
+ assert.equal(guarded.touchdown.brake,true);assert.equal(delayed.touchdown.brake,false);
+ assert.equal(guarded.crashed,false);assert.equal(guarded.initialParts,guarded.remainingParts);
+ assert.ok(guarded.track.maxAlong<baseline.track.maxAlong);
+ assert.ok(guarded.track.maxAlong<RUNWAY.length&&guarded.track.minAlong>1190&&guarded.track.maxCross<RUNWAY.width/2);
+ // Immediate braking prioritizes stopping distance; do not claim all impacts > -3.
+ assert.ok(guarded.worst.impact>baseline.worst.impact);
+});
