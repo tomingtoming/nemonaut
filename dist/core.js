@@ -1,3 +1,4 @@
+import {createPartColliders} from './part-colliders.js';
 import {attitudeCommands} from './flight-input.js';
 import {updateNavigationFrame} from './navigation-frame.js';
 import {sasTrim} from './sas-trim.js';
@@ -48,15 +49,23 @@ export class Flight {
  }
  get fuelRatio(){const capacity=this.parts.reduce((s,p)=>s+(PARTS[p.type].fuel||0),0);return capacity?this.parts.reduce((s,p)=>s+(PARTS[p.type].fuel?this.fuel.get(p.id)||0:0),0)/capacity:1;}
  set fuelRatio(value){for(const p of this.parts)if(PARTS[p.type].fuel)this.fuel.set(p.id,PARTS[p.type].fuel*Math.max(0,Math.min(1,value)));}
- buildColliders(){this.bodyAerodynamics=createBodyAerodynamics(this.parts);for(const c of this.colliders.values())this.world.removeCollider(c,true);this.colliders.clear();for(const p of this.parts){const d=PARTS[p.type],center=partCenter(p),rot=partRotation(p);const shape=d.wheel?RAPIER.ColliderDesc.ball(d.size[1]/2):RAPIER.ColliderDesc.cuboid(...d.size.map(n=>Math.max(.02,n/2)));shape.setTranslation(...center.toArray()).setRotation(rot).setMass(partMass(p,this.fuel,this.ballast,this.thermal)).setFriction(d.wheel?.015:.35).setRestitution(0);this.colliders.set(p.id,this.world.createCollider(shape,this.body));}this.body.recomputeMassPropertiesFromColliders();}
+ buildColliders(){
+ this.bodyAerodynamics=createBodyAerodynamics(this.parts);
+ for(const group of this.colliderGroups?.values()||[])for(const {collider}of group)this.world.removeCollider(collider,true);
+ this.colliders.clear();this.colliderGroups=new Map();
+ for(const p of this.parts){const group=createPartColliders(this.world,this.body,p,partMass(p,this.fuel,this.ballast,this.thermal));this.colliderGroups.set(p.id,group);this.colliders.set(p.id,group[0].collider);}
+ this.body.recomputeMassPropertiesFromColliders();
+ }
+ updateColliderMasses(){for(const p of this.parts){const mass=partMass(p,this.fuel,this.ballast,this.thermal);for(const {collider,weight}of this.colliderGroups.get(p.id))collider.setMass(mass*weight);}this.body.recomputeMassPropertiesFromColliders();}
+
  transferFuel(from,to,amount){
  const before=statistics(this.parts,this.fuel,this.ballast,this.thermal);
- for(const p of this.parts)this.colliders.get(p.id).setMass(partMass(p,this.fuel,this.ballast,this.thermal));this.body.recomputeMassPropertiesFromColliders();
+ this.updateColliderMasses();
  const momentum=angularMomentum(this.body,this.q,this.omega),moved=transferFuel(this,from,to,amount);if(!moved)return 0;
  this.stats=statistics(this.parts,this.fuel,this.ballast,this.thermal);
  // In free flight internal redistribution must not teleport the world-space COM.
  if(!this.landed)this.pos.add(before.com.clone().sub(this.stats.com).applyQuaternion(this.q));
- for(const p of this.parts)this.colliders.get(p.id).setMass(partMass(p,this.fuel,this.ballast,this.thermal));this.body.recomputeMassPropertiesFromColliders();
+ this.updateColliderMasses();
  if(!this.landed)this.omega.copy(angularVelocity(this.body,this.q,momentum));
  this.orbit=bodyOrbitState(this.pos.clone().add(this.stats.com.clone().applyQuaternion(this.q)),this.vel,this.universalTime);return moved;
  }
@@ -86,7 +95,7 @@ export class Flight {
  this.world.gravity=freeFlight?{x:0,y:0,z:0}:gravity(startCOM).add(rotatingFrameCorrection(startCOM,relativeVelocity,startTime,reference));
  if(this.ground){this.ground.setEnabled(!freeFlight);this.ground.setTranslation(this.pos.clone().sub(origin).addScaledVector(normal,-height-1));this.ground.setRotation(new T.Quaternion().setFromUnitVectors(up,normal));}
  this.body.setTranslation(this.pos.clone().sub(origin),true);this.body.setRotation(this.q,true);this.body.setLinvel(freeFlight?{x:0,y:0,z:0}:relativeVelocity,true);this.body.setAngvel(freeFlight?this.omega:relativeOmega,true);
- for(const p of this.parts)this.colliders.get(p.id).setMass(partMass(p,this.fuel,this.ballast,this.thermal));this.body.recomputeMassPropertiesFromColliders();
+ this.updateColliderMasses();
  const st=statistics(this.parts,this.fuel,this.ballast,this.thermal);this.stats=st;const mass=st.mass,com=st.com.clone().applyQuaternion(this.q).add(this.pos),air=reference.id==='planet'?atmosphere(height):{density:0,pressure:0,temperature:3},density=air.density;
  this.body.resetForces(true);this.body.resetTorques(true);const force=new T.Vector3(),torque=new T.Vector3(),engineForce=new T.Vector3();
  const apply=(f,point)=>{force.add(f);torque.add(point.clone().sub(com).cross(f));this.body.addForceAtPoint(f,point.clone().sub(origin),true);};
@@ -136,7 +145,7 @@ export class Flight {
  // Suspension may absorb a hard touchdown over several solver steps.
  // Measure incoming contact-point speed before spring/solver impulses too.
  if(!water&&!freeFlight&&(wheelImpactSpeed<-9||(impactSpeed<-9&&endRelativeVelocity.dot(normal)>impactSpeed*.4)))this.crashed=true;
- const touching=!freeFlight&&this.parts.some(p=>{const point=partCenter(p).applyQuaternion(this.q).add(this.pos),axes=new T.Matrix4().makeRotationFromQuaternion(this.q.clone().multiply(partRotation(p))).elements,d=PARTS[p.type],extent=(Math.abs(normal.x*axes[0]+normal.y*axes[1]+normal.z*axes[2])*d.size[0]+Math.abs(normal.x*axes[4]+normal.y*axes[5]+normal.z*axes[6])*d.size[1]+Math.abs(normal.x*axes[8]+normal.y*axes[9]+normal.z*axes[10])*d.size[2])/2;return bodyAltitude(point,this.universalTime,reference)-extent<.1;});const supported=!freeFlight&&this.ground&&[...this.colliders.values()].some(c=>{let contact=false;this.world.contactPair(c,this.ground,m=>{for(let i=0;i<m.numContacts();i++)if(m.contactImpulse(i)>0)contact=true;});return contact;});this.telemetry.groundContact=touching||supported||contacts>0;this.landedTime=(touching||supported||contacts>0)&&endRelativeVelocity.length()<.8&&this.lastThrust===0?this.landedTime+dt:0;this.landed=this.landedTime>.5;
+ const touching=!freeFlight&&this.parts.some(p=>{const point=partCenter(p).applyQuaternion(this.q).add(this.pos),axes=new T.Matrix4().makeRotationFromQuaternion(this.q.clone().multiply(partRotation(p))).elements,d=PARTS[p.type],extent=(Math.abs(normal.x*axes[0]+normal.y*axes[1]+normal.z*axes[2])*d.size[0]+Math.abs(normal.x*axes[4]+normal.y*axes[5]+normal.z*axes[6])*d.size[1]+Math.abs(normal.x*axes[8]+normal.y*axes[9]+normal.z*axes[10])*d.size[2])/2;return bodyAltitude(point,this.universalTime,reference)-extent<.1;});const supported=!freeFlight&&this.ground&&[...this.colliderGroups.values()].flat().some(({collider:c})=>{let contact=false;this.world.contactPair(c,this.ground,m=>{for(let i=0;i<m.numContacts();i++)if(m.contactImpulse(i)>0)contact=true;});return contact;});this.telemetry.groundContact=touching||supported||contacts>0;this.landedTime=(touching||supported||contacts>0)&&endRelativeVelocity.length()<.8&&this.lastThrust===0?this.landedTime+dt:0;this.landed=this.landedTime>.5;
  if(thermal.failed.length){this.crashed=true;this.throttle=0;}
  this.maxAltitude=Math.max(this.maxAltitude,bodyAltitude(this.pos,this.universalTime)-this.floor);
  }
