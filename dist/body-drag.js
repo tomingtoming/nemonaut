@@ -6,6 +6,7 @@ import {partRotation} from './aero.js';
 // projected area; this is a game model, not measured Cd or compressible CFD.
 // Wings already have their own lift/drag and are excluded here.
 const axes=['x','y','z'];
+export const MIN_BODY_DRAG_FORCE=1e-4; // Newtons; upper bound, not a speed cutoff.
 function hitBox(point,direction,box){
  const x=point.x-box.center.x,y=point.y-box.center.y,z=point.z-box.center.z;
  let near=-Infinity,far=Infinity;
@@ -15,7 +16,8 @@ function hitBox(point,direction,box){
 export function createBodyAerodynamics(parts){
  const boxes=parts.filter(p=>!PARTS[p.type].wing).flatMap(p=>{const d=PARTS[p.type],rotation=partRotation(p),pieces=d.cargoBay?cargoShellBoxes(d,p.cargoOpen):[{center:[0,0,0],size:d.size}];return pieces.map(piece=>{const q=rotation.clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(...(piece.rotation||[0,0,0]))));return {id:p.id,type:p.type,center:new T.Vector3(...piece.center).applyQuaternion(rotation).add(new T.Vector3(...p.p)),half:new T.Vector3(...piece.size).multiplyScalar(.5),rotation:q,inverse:q.clone().invert(),axes:[new T.Vector3(1,0,0),new T.Vector3(0,1,0),new T.Vector3(0,0,1)].map(a=>a.applyQuaternion(q))};});});
  let lastDirection=null,lastArea=0;
- return {dragArea(direction){
+ const maxCdArea=boxes.reduce((sum,b)=>sum+4*(b.half.x*b.half.y+b.half.y*b.half.z+b.half.z*b.half.x)*(b.type==='heatShield'?1.1:.4),0);
+ return {maxCdArea,dragArea(direction){
   if(direction.lengthSq()<1e-12)return 0;const wind=direction.clone().normalize();
   if(lastDirection&&lastDirection.distanceToSquared(wind)<1e-6)return lastArea;
   for(const box of boxes)box.wind=box.axes.map(a=>a.dot(wind));
@@ -40,6 +42,9 @@ export function createBodyAerodynamics(parts){
 }
 export function bodyDrag(model,orientation,velocity,density){
  const speed=velocity.length();if(speed<1e-8||density<=0)return {force:new T.Vector3(),cdArea:0};
+ // Near rest the wind direction is numerical noise, invalidating the directional
+ // cache every step. Skip quadrature only when even fully exposed drag is tiny.
+ if(.5*density*speed*speed*model.maxCdArea<MIN_BODY_DRAG_FORCE)return {force:new T.Vector3(),cdArea:0};
  const local=velocity.clone().applyQuaternion(orientation.clone().invert()),cdArea=model.dragArea(local);
  return {force:velocity.clone().multiplyScalar(-.5*density*speed*cdArea),cdArea};
 }

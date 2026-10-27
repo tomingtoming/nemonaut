@@ -21,11 +21,11 @@ for(const kind of requested?[requested]:['plane','plane-large','transport-cargo'
   if(!liftoff&&airborneTime>=1)liftoff={time:f.time,along,remaining:RUNWAY.length-along,cross:r.crossTrack,height:f.orbit.altitude};
   if(p.phase==='cruise'&&!handoff)handoff={time:f.time,...p.telemetry};
   if(handoff)minAfterHandoff=Math.min(minAfterHandoff,f.orbit.altitude);
-  if(i%(30*hz)===0||(i<60*hz&&i%hz===0)||(process.argv.includes('--trace-handoff')&&handoff&&f.time-handoff.time<60&&i%hz===0)){
+  if(!process.argv.includes('--quiet')&&(i%(30*hz)===0||(i<60*hz&&i%hz===0)||(process.argv.includes('--trace-handoff')&&handoff&&f.time-handoff.time<60&&i%hz===0))){
    const up=bodyUp(center,f.universalTime),actualPitch=Math.asin(T.MathUtils.clamp(new T.Vector3(0,0,1).applyQuaternion(f.q).dot(up),-1,1))*180/Math.PI;
    console.log(JSON.stringify({kind,fraction,rotation,t:f.time,phase:p.phase,...(p.cruise?.telemetry??p.telemetry),actualPitch,commands:f.telemetry.commands,stallCount:f.telemetry.stallCount,thrust:f.lastThrust,mass:f.stats.mass}));
   }
-  if(p.phase==='stopped')break;
+  if(p.phase==='stopped'&&!process.argv.includes('--continue-stopped'))break;
  }console.log(JSON.stringify({kind,fraction,final:true,phase:p.phase,abort:p.abort,handoff,clearance10m:liftoff,lastGround,groundExit,maxGroundCross,minAfterHandoff,peak,height:f.orbit.altitude,speed:f.telemetry.surfaceSpeed,crashed:f.crashed,parts:f.parts.length,cruise:p.cruise?.telemetry}));}
  finally{f.dispose();}
 }
