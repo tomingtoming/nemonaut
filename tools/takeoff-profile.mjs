@@ -11,7 +11,7 @@ for(const kind of requested?[requested]:['plane','plane-large','transport-cargo'
  const f=new Flight(preset(kind),'runway',161700);f.stageNext();
  for(const [id,amount]of f.fuel)f.fuel.set(id,amount*fraction);
  f.stats=statistics(f.parts,f.fuel,f.ballast,f.thermal);
- const p=new TakeoffPrototype(f,{speed:kind==='plane'?120:90,rotation,integral:process.argv.includes('--integral'),handoff:process.argv.find(s=>s.startsWith('--handoff='))?.split('=')[1]??'direct'});let handoff=null,peak=0,liftoff=null,lastGround=null,airborneTime=0,groundExit=null,minAfterHandoff=Infinity,maxGroundCross=0;
+ const p=new TakeoffPrototype(f,{speed:kind==='plane'?120:90,rotation,abortGuard:process.argv.includes('--abort-guard'),integral:process.argv.includes('--integral'),handoff:process.argv.find(s=>s.startsWith('--handoff='))?.split('=')[1]??'direct'});let handoff=null,peak=0,liftoff=null,lastGround=null,airborneTime=0,groundExit=null,minAfterHandoff=Infinity,maxGroundCross=0;
  try{for(let i=0;i<300*hz&&!f.crashed;i++){
   if(process.argv.includes('--turn')&&p.cruise&&i===180*hz)p.cruise.target.heading=(p.target.heading+20)%360;
   const input=p.update(f,1/hz);f.step(1/hz,input);peak=Math.max(peak,f.orbit.altitude);
@@ -25,6 +25,7 @@ for(const kind of requested?[requested]:['plane','plane-large','transport-cargo'
    const up=bodyUp(center,f.universalTime),actualPitch=Math.asin(T.MathUtils.clamp(new T.Vector3(0,0,1).applyQuaternion(f.q).dot(up),-1,1))*180/Math.PI;
    console.log(JSON.stringify({kind,fraction,rotation,t:f.time,phase:p.phase,...(p.cruise?.telemetry??p.telemetry),actualPitch,commands:f.telemetry.commands,stallCount:f.telemetry.stallCount,thrust:f.lastThrust,mass:f.stats.mass}));
   }
- }console.log(JSON.stringify({kind,fraction,final:true,phase:p.phase,handoff,clearance10m:liftoff,lastGround,groundExit,maxGroundCross,minAfterHandoff,peak,height:f.orbit.altitude,speed:f.telemetry.surfaceSpeed,crashed:f.crashed,parts:f.parts.length,cruise:p.cruise?.telemetry}));}
+  if(p.phase==='stopped')break;
+ }console.log(JSON.stringify({kind,fraction,final:true,phase:p.phase,abort:p.abort,handoff,clearance10m:liftoff,lastGround,groundExit,maxGroundCross,minAfterHandoff,peak,height:f.orbit.altitude,speed:f.telemetry.surfaceSpeed,crashed:f.crashed,parts:f.parts.length,cruise:p.cruise?.telemetry}));}
  finally{f.dispose();}
 }

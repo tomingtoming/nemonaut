@@ -6,9 +6,10 @@ import {atmosphere} from '../dist/planet.js';
 import {compassHeading} from '../dist/navigation.js';
 import {CruisePilot,cruiseReadiness,cruiseTargetReadiness} from '../dist/cruise-pilot.js';
 import {seedSasTrim} from '../dist/sas-trim.js';
+import {runwayApproach,RUNWAY} from '../dist/runway-navigation.js';
 const rad=Math.PI/180,clamp=T.MathUtils.clamp;
 export class TakeoffPrototype{
- constructor(f,{speed,altitude=600,rotation=8,integral=false,handoff='direct'}){this.handoffMode=handoff;this.integral=integral;this.pitchBias=0;this.rotation=rotation;this.owner=f.vesselId;this.target={speed,altitude,heading:compassHeading(new T.Vector3(0,0,1).applyQuaternion(f.q),f.pos,f.universalTime)};this.phase='roll';this.elapsed=0;this.commands={};this.cruise=null;}
+ constructor(f,{speed,altitude=600,rotation=8,integral=false,handoff='direct',abortGuard=false}){this.abortGuard=abortGuard;this.handoffMode=handoff;this.integral=integral;this.pitchBias=0;this.rotation=rotation;this.owner=f.vesselId;this.target={speed,altitude,heading:compassHeading(new T.Vector3(0,0,1).applyQuaternion(f.q),f.pos,f.universalTime)};this.phase='roll';this.elapsed=0;this.commands={};this.cruise=null;}
  update(f,dt){
   if(f.vesselId!==this.owner||f.crashed||!Number.isFinite(dt)||dt<0){this.phase='stopped';return {};}
   if(dt===0||this.phase==='stopped')return {};
@@ -20,6 +21,19 @@ export class TakeoffPrototype{
   const minimum=Math.sqrt(2*f.stats.mass*bodyGravity(center,f.universalTime).length()/(density*f.stats.aero.weight*4.5*12*rad));
   const pitch=Math.asin(clamp(new T.Vector3(0,0,1).applyQuaternion(f.q).dot(up),-1,1))/rad;
   const omega=f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(f.q.clone().invert()),pitchRate=-omega.x/rad;
+  if(this.abortGuard&&['roll','rotate'].includes(this.phase)&&f.telemetry.contacts){
+   const runway=runwayApproach(center,f.universalTime,'09',f.vel),remaining=RUNWAY.length+runway.remaining;
+   // Experimental margin: 6 m/s² is below the measured neutral ground braking
+   // deceleration. Rotation unloads wheels, so validate the full abort separately.
+   const stoppingDistance=speed*speed/12+speed*.5+50;
+   if(remaining<=stoppingDistance){this.phase='abort';this.abort={height,speed,pitch,remaining,stoppingDistance,time:f.time};}
+  }
+  if(this.phase==='abort'){
+   f.throttle=0;f.brake=true;f.trim=0;
+   this.telemetry={height,speed,vertical,pitch,reason:'runway stopping margin'};
+   if(speed<.5&&f.telemetry.contacts){this.phase='stopped';return {};}
+   return this.pitchServo(f,0,dt);
+  }
   if(this.phase==='roll'&&speed>minimum*.95)this.phase='rotate';
   if(this.phase==='rotate'&&height>30&&!f.telemetry.contacts)this.phase='climb';
   if(this.phase==='climb'&&height>this.target.altitude-100)this.phase='capture';
