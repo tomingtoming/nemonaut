@@ -13,6 +13,14 @@ export function cruiseSettings(value){
  if(!value||!['altitude','vertical'].includes(value.mode??'altitude')||!['speed','altitude','heading'].every(k=>Number.isFinite(value[k]))||value.speed<40||value.speed>350||value.altitude<300||value.altitude>15000||value.heading<0||value.heading>=360||!Number.isFinite(value.vertical??0)||Math.abs(value.vertical??0)>10)throw Error('巡航目標の範囲を確認してください');
  return {speed:value.speed,altitude:value.altitude,heading:value.heading,mode:value.mode??'altitude',vertical:value.vertical??0};
 }
+// Conservative pre-stall estimate at the requested altitude, including a
+// 20-degree bank. This is an admission check, not a certified stall speed.
+export function cruiseTargetReadiness(f,target){
+ const height=Math.max(bodyAltitude(f.pos,f.universalTime),target.mode==='vertical'?0:target.altitude);
+ const density=atmosphere(height).density,area=f.stats.aero.weight;
+ const minimum=Math.sqrt(2*f.stats.mass*bodyGravity(f.pos,f.universalTime).length()/(density*area*4.5*(12*rad)*Math.cos(20*rad)));
+ return !Number.isFinite(minimum)||target.speed<minimum?'巡航速度不足 · 目安 '+(Number.isFinite(minimum)?Math.ceil(minimum)+' m/s以上':'大気・翼面積を確認'):null;
+}
 export function cruiseAuthority(f){
  if(!f||f.crashed||f.rocketAxes||!f.parts.some(p=>PARTS[p.type].aircraftControl))return '航空機の制御装置が必要';
  if(!['pitch','roll'].every(name=>f.parts.some(p=>PARTS[p.type].controlAxis&&Math.abs(controlDeflection(p,f.stats.com,{[name]:1}))>1e-6)))return '昇降舵・補助翼の制御が必要';

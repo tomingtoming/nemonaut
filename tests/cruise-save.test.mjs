@@ -1,9 +1,20 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';import {preset} from '../dist/catalog.js';
-import {CruisePilot,cruiseSettings,cruiseReadiness} from '../dist/cruise-pilot.js';
+import {CruisePilot,cruiseSettings,cruiseReadiness,cruiseTargetReadiness} from '../dist/cruise-pilot.js';
 import {selectVessel} from '../dist/fleet.js';
 import {saveFlight,loadFlight} from '../dist/flight-save.js';
 import {bodyUp} from '../dist/celestial.js';
+test('cruise target admission rejects low lift at speed and altitude without mutating the aircraft',()=>{
+ for(const kind of ['plane','plane-large','transport-cargo']){
+  const f=new Flight(preset(kind),'runway');
+  try{const q=f.q.clone(),vel=f.vel.clone(),fuel=[...f.fuel];
+   assert.match(cruiseTargetReadiness(f,{speed:40,altitude:1000}),/巡航速度不足/);
+   assert.equal(cruiseTargetReadiness(f,{speed:kind==='plane'?120:90,altitude:1000}),null);
+   assert.match(cruiseTargetReadiness(f,{speed:90,altitude:15000}),/巡航速度不足/);
+   assert.deepEqual(f.q,q);assert.deepEqual(f.vel,vel);assert.deepEqual([...f.fuel],fuel);
+  }finally{f.dispose();}
+ }
+});
 test('cruise stops on lost fuel supply, disabled thrust or shutdown without moving the aircraft',()=>{
  for(const failure of ['empty','isolated','limited','shutdown']){
   const f=new Flight(preset('plane'),'runway');
