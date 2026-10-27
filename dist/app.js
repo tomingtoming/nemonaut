@@ -429,7 +429,7 @@ const descentPanel=mountDescentPanel(document.querySelector('#capturePanel'),()=
 mountFlightLayout();
 descentPanel.mountWindow();
 const runwayPanel=mountRunwayPanel(document,()=>({flight,atCenter}));
-const cruisePanel=mountCruisePanel(document,()=>({flight,atCenter}),{sync:()=>syncFlightControls(),claim:()=>{launchPilot=null;$('#autoLaunch').textContent='自動軌道投入（見本用）';$('#warp').value='1';}});
+const cruisePanel=mountCruisePanel(document,()=>({flight,atCenter}),{sync:()=>syncFlightControls(),claim:()=>{launchPilot=null;$('#autoLaunch').textContent='自動軌道投入（見本用）';$('#warp').value='1';physicsClock.reset();$('#warpStatus').textContent=flightPause.paused?'一時停止 · Pで再開':'通常速度へ：自動操縦を開始';}});
 const flightPause=mountFlightPause(document,{keys,clock:physicsClock,onChange:()=>{if(flight)updateFlightControls(document,flight);}});
 const dockingWindow=mountDockingWindow(()=>flight);
 const ascentPanel=mountAscentPanel(document.querySelector('#descentPanel'),()=>flight,()=>syncFlightControls());
