@@ -2,10 +2,21 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';import {preset} from '../dist/catalog.js';
 import {AircraftHoldPrototype} from '../tools/aircraft-hold-prototype.mjs';
 
+test('loss of enabled control surfaces releases cruise and restores manual settings',()=>{
+ const f=new Flight(preset('plane'),'runway');
+ try{f.stageNext();f.vel.z+=120;f.sas=false;f.trim=.12;f.throttle=.5;
+  const pilot=new AircraftHoldPrototype(f);pilot.update(f,1/120);assert.equal(pilot.running,true);
+  f.parts.forEach(p=>p.controlEnabled=false);const q=f.q.clone(),vel=f.vel.clone();
+  pilot.update(f,1/120);assert.equal(pilot.running,false);assert.match(pilot.faultMessage,/昇降舵/);
+  assert.equal(f.sas,false);assert.equal(f.trim,.12);assert.equal(f.throttle,0);
+  assert.deepEqual(f.q,q);assert.deepEqual(f.vel,vel);
+ }finally{f.dispose();}
+});
+
 test('experimental guidance commands actuators without changing physical state; pause and manual release are explicit',()=>{
  const f=new Flight(preset('plane'),'runway');
  try{
-  f.sas=false;f.trim=.12;f.sasMode='prograde';f.throttle=.5;
+  f.stageNext();f.sas=false;f.trim=.12;f.sasMode='prograde';f.throttle=.5;
   // Controlled moving state: this guidance is not a takeoff controller.
   f.vel.z+=120;
   const p=new AircraftHoldPrototype(f),pos=f.pos.clone(),vel=f.vel.clone(),q=f.q.clone(),omega=f.omega.clone();
@@ -20,7 +31,7 @@ test('experimental guidance commands actuators without changing physical state; 
 });
 test('guidance rejects zero aerodynamic authority without injecting motion',()=>{
  const f=new Flight(preset('plane'),'runway');
- try{f.stats.aero.weight=0;const pos=f.pos.clone(),q=f.q.clone(),p=new AircraftHoldPrototype(f);p.update(f,1/120);
+ try{f.stageNext();f.stats.aero.weight=0;const pos=f.pos.clone(),q=f.q.clone(),p=new AircraftHoldPrototype(f);p.update(f,1/120);
   assert.equal(p.running,false);assert.equal(f.throttle,0);assert.deepEqual(f.pos,pos);assert.deepEqual(f.q,q);
  }finally{f.dispose();}
 });

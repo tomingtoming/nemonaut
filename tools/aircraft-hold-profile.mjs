@@ -4,14 +4,18 @@ import {Flight} from '../dist/core.js';import {preset} from '../dist/catalog.js'
 import {bodyUp,bodyAltitude} from '../dist/celestial.js';
 import {surfaceVelocity} from '../dist/surface-frame.js';
 import {AircraftHoldPrototype} from './aircraft-hold-prototype.mjs';
+import {cruiseReadiness} from '../dist/cruise-pilot.js';
 import {PARTS} from '../dist/catalog.js';import {surfaceForce,partRotation,aeroPoint} from '../dist/aero.js';
 import {atmosphere} from '../dist/planet.js';import {surfaceRelativeVelocity,surfaceAngularVelocity} from '../dist/surface-frame.js';
 const normalDeparture=process.argv.includes('--departure');
+const fuelFraction=Number(process.argv.find(s=>s.startsWith('--fuel='))?.split('=')[1]??1);
+if(!Number.isFinite(fuelFraction)||fuelFraction<=0||fuelFraction>1)throw Error('Fuel fraction must be in (0, 1]');
 const requested=process.argv.slice(2).find(s=>!s.startsWith('--'));
 for(const kind of requested?[requested]:['plane','plane-large','transport-cargo']){
  const craft=preset(kind);if(!craft.length)throw Error('Unknown preset '+kind);
  const speed=kind==='plane'?120:90;
  const f=new Flight(craft,'runway',161700);f.stageNext();f.throttle=.5;
+ for(const [id,amount] of f.fuel)f.fuel.set(id,amount*fuelFraction);
  if(normalDeparture){
   f.throttle=1;
   let command=0;
@@ -33,8 +37,8 @@ for(const kind of requested?[requested]:['plane','plane-large','transport-cargo'
  f.vel.copy(surfaceVelocity(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.universalTime)).addScaledVector(forward,speed);
  }
  const targetHeight=normalDeparture?f.orbit.altitude:1000;
- const pilot=new AircraftHoldPrototype(f,{speed,altitude:targetHeight});let stall=0,minHeight=Infinity,maxHeight=-Infinity;const stalledParts=new Map();
- console.log(JSON.stringify({kind,normalDeparture,targetHeight,targetSpeed:speed,initialPitch:Math.asin(new T.Vector3(0,0,1).applyQuaternion(f.q).dot(bodyUp(f.pos,f.universalTime)))*180/Math.PI}));
+ const pilot=new AircraftHoldPrototype(f,{speed,altitude:targetHeight,heading:90});let stall=0,minHeight=Infinity,maxHeight=-Infinity;const stalledParts=new Map();
+ console.log(JSON.stringify({kind,normalDeparture,fuelFraction,startRejection:cruiseReadiness(f),targetHeight,targetSpeed:speed,initialPitch:Math.asin(new T.Vector3(0,0,1).applyQuaternion(f.q).dot(bodyUp(f.pos,f.universalTime)))*180/Math.PI}));
  try{for(let i=0;i<180*120&&!f.crashed;i++){
   if(i===90*120)pilot.target.heading=110;
   pilot.update(f,1/120);f.step(1/120);stall=Math.max(stall,f.telemetry.stallCount??0);minHeight=Math.min(minHeight,f.orbit.altitude);maxHeight=Math.max(maxHeight,f.orbit.altitude);
