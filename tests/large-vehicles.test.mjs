@@ -46,3 +46,22 @@ test('large submarine has ballast authority and survives dive, save and resurfac
   assert.equal(f.crashed,false);
  }}finally{f.dispose();}
 });
+
+ test('large landing gear keeps its physical radius through saves and brakes a taxi run',()=>{
+  for(const kind of ['plane','plane-large']){
+   let f=new Flight(preset(kind),'runway');
+   try{
+    for(const p of f.parts.filter(p=>PARTS[p.type].wheel))assert.ok(Math.abs(f.colliders.get(p.id).radius()-PARTS[p.type].size[1]/2)<1e-6);
+    f.stageNext();f.throttle=.45;
+    for(let i=0;i<8*120;i++)f.step(1/120);
+    assert.ok(surfaceRelativeVelocity(f.pos,f.vel,f.universalTime).length()>3);
+    assert.ok(f.telemetry.contacts>0);
+    const restored=loadFlight(saveFlight(f));f.dispose();f=restored;
+    for(const p of f.parts.filter(p=>PARTS[p.type].wheel))assert.ok(Math.abs(f.colliders.get(p.id).radius()-PARTS[p.type].size[1]/2)<1e-6);
+    f.throttle=0;f.brake=true;
+    for(let i=0;i<20*120;i++)f.step(1/120);
+    assert.ok(surfaceRelativeVelocity(f.pos,f.vel,f.universalTime).length()<.8);
+    assert.equal(f.crashed,false);assert.ok(f.telemetry.contacts>=3);
+   }finally{f.dispose();}
+  }
+ });
