@@ -9,8 +9,8 @@ import {ReturnSession} from '../tools/return-session.mjs';
 import {LandingPlanClient} from '../tools/landing-plan-client.mjs';
 import {extendWheelTrack} from '../dist/runway-wheel-track.js';
 import {RUNWAY} from '../dist/runway-navigation.js';
-const conditions=[...['plane','plane-large','transport-cargo'].map(kind=>({kind,fuelLoad:.5})),...['plane','plane-large'].map(kind=>({kind,fuelLoad:1})),{kind:'plane-large',fuelLoad:1,epoch:0}];
-for(const {kind,fuelLoad,epoch=161700} of conditions)test(`${kind} UT${epoch} ${fuelLoad===1?'full':'half'} fuel normal departure returns through real planning worker and lands`,async(t)=>{
+const conditions=[...['plane','plane-large','transport-cargo'].map(kind=>({kind,fuelLoad:.5})),...['plane','plane-large'].map(kind=>({kind,fuelLoad:1})),{kind:'plane-large',fuelLoad:1,epoch:0},{kind:'plane-large',fuelLoad:1,epoch:0,early:true}];
+for(const {kind,fuelLoad,epoch=161700,early=false} of conditions)test(`${kind} UT${epoch} ${early?'climbing':'level'} ${fuelLoad===1?'full':'half'} fuel normal departure returns through real planning worker and lands`,async(t)=>{
  const parts=preset(kind);for(const p of parts)if(PARTS[p.type].fuel)p.fuelLoad=fuelLoad;
  const f=new Flight(parts,'runway',epoch),id=f.vesselId,partCount=f.parts.length;
  const client=new LandingPlanClient(()=>{
@@ -23,7 +23,7 @@ for(const {kind,fuelLoad,epoch=161700} of conditions)test(`${kind} UT${epoch} ${
  f.stageNext();
  try{
   for(let i=0;i<1100*120&&!f.crashed;i++){
-   if(!started&&takeoff.cruise&&bodyAltitude(f.pos,f.universalTime)>580&&Math.abs(takeoff.cruise.telemetry.vertical)<1){
+   if(!started&&(early?bodyAltitude(f.pos,f.universalTime)>360:takeoff.cruise&&bodyAltitude(f.pos,f.universalTime)>580&&Math.abs(takeoff.cruise.telemetry.vertical)<1)){
     // The host relinquishes departure ownership before starting return.
     f.sas=true;f.sasMode='hold';f.trim=.07;session.start(f);started=true;
    }
@@ -42,7 +42,7 @@ for(const {kind,fuelLoad,epoch=161700} of conditions)test(`${kind} UT${epoch} ${
    assert.ok(!['recovery','recovery-hold'].includes(session.state),session.message);
   }
   assert.equal(session.state,'landed',session.message);assert.ok(planningSteps>2);assert.ok(approached);
-  t.diagnostic(JSON.stringify({kind,fuelLoad,epoch,planningSteps,touchdown,worstWheel,track}));
+  t.diagnostic(JSON.stringify({kind,fuelLoad,epoch,early,planningSteps,touchdown,worstWheel,track}));
   assert.ok(touchdown&&touchdown.impact>-3,JSON.stringify(touchdown));
   assert.ok(worstWheel&&worstWheel.impact>-3,JSON.stringify(worstWheel));
   assert.equal(f.crashed,false);assert.equal(f.landed,true);assert.equal(f.vesselId,id);assert.equal(f.parts.length,partCount);
