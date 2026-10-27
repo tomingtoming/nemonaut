@@ -65,3 +65,18 @@ test('large submarine has ballast authority and survives dive, save and resurfac
    }finally{f.dispose();}
   }
  });
+
+test('large submarine can dive under full propulsion without pitching back to the surface',()=>{
+ for(const epoch of [0,160378.2]){
+  const f=new Flight(preset('sub-large'),'water',epoch);f.sas=false;
+  try{
+   for(let i=0;i<19*120;i++)f.step(1/120);
+   f.ballast=1;f.stageNext();f.throttle=1;
+   for(let i=0;i<60*120;i++)f.step(1/120);
+   assert.ok(f.orbit.altitude<-7,`powered dive altitude ${f.orbit.altitude}`);
+   assert.ok(new T.Vector3(0,1,0).applyQuaternion(f.q).dot(bodyUp(f.pos,f.universalTime))>.98);
+   assert.ok(surfaceRelativeVelocity(f.pos,f.vel,f.universalTime).length()>1);
+   assert.equal(f.crashed,false);
+  }finally{f.dispose();}
+ }
+});

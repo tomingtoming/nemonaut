@@ -136,6 +136,8 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
   const base=kind.replace('-large',''),s=base==='plane'?3:4;
   const mapping=base==='plane'?{cockpit:'cockpitLarge',tank:'fuselageLarge',jet:'jetLarge',wing:'wingLarge',stabilizer:'stabilizerLarge',elevator:'elevatorLarge',aileron:'aileronLarge',rudder:'rudderLarge',nosegear:'nosegearLarge',maingear:'maingearLarge'}:{cockpit:'marineCabin',truss:'marineFrame',pontoon:'hullLarge',ballast:'ballastLarge',propeller:'propellerLarge'};
   a=preset(base);for(const p of a){p.type=mapping[p.type];p.p=p.p.map(v=>v*s);}
+  // Raise the submarine thrust line to counter the bow-up moment under power.
+  if(base==='sub')a.find(p=>p.type==='propellerLarge').p[1]=1;
   if(base==='plane'){
    const engine=a.find(p=>p.type==='jetLarge');engine.p=[3,2.7,-1.2];
    a.push(part('jetLarge',[-3,2.7,-1.2],[...engine.r],engine.parent,engine.stage));
