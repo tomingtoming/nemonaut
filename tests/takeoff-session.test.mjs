@@ -7,6 +7,18 @@ import {previewTakeoff} from '../tools/takeoff-preview.mjs';
 const target={speed:90,altitude:600,heading:110,mode:'altitude',vertical:0};
 function setup(){const f=new Flight(preset('plane-large'),'runway',161700);f.stageNext();f.brake=true;for(let i=0;i<120;i++)f.step(1/120,{});return f;}
 const good={status:'airborne',lastGround:{along:1245,cross:0,time:20},wheelTrack:{minAlong:100,maxAlong:1250,maxCross:5,samples:100}};
+
+test('full-fuel small jet can lift off yet lacks the required runway reserve',async()=>{
+ const f=new Flight(preset('plane'),'runway',674.2);
+ f.stageNext();f.brake=true;for(let i=0;i<120;i++)f.step(1/120,{});
+ const s=new TakeoffSession({cancel(){},async request(f,p){return previewTakeoff(f,p,{seconds:40});}});
+ try{
+  const result=await s.prepare(f,{...target,heading:90});
+  assert.equal(result.status,'airborne');assert.equal(result.accepted,false);
+  assert.ok(result.wheelTrack.maxAlong>1525&&result.wheelTrack.maxAlong<1600);
+  assert.throws(()=>s.start(f,{...target,heading:90}),/再予測/);
+ }finally{s.cancel();f.dispose();}
+});
 test('prepared departure uses isolated forecast and starts only explicitly with matching targets',async()=>{
  const f=setup(),s=new TakeoffSession({cancel(){},async request(f,p){return previewTakeoff(f,p,{seconds:40});}});
  try{const before=f.time,r=await s.prepare(f,target);assert.equal(r.accepted,true);assert.equal(f.time,before);assert.equal(f.throttle,0);assert.equal(f.brake,true);

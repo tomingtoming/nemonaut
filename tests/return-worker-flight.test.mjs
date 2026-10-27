@@ -9,7 +9,7 @@ import {ReturnSession} from '../tools/return-session.mjs';
 import {LandingPlanClient} from '../tools/landing-plan-client.mjs';
 import {extendWheelTrack} from '../dist/runway-wheel-track.js';
 import {RUNWAY,runwayApproach} from '../dist/runway-navigation.js';
-const conditions=[...['plane','plane-large','transport-cargo'].map(kind=>({kind,fuelLoad:.5,end:'27'})),...['plane','plane-large','transport-cargo'].map(kind=>({kind,fuelLoad:.5})),...['plane','plane-large'].map(kind=>({kind,fuelLoad:1})),{kind:'plane-large',fuelLoad:1,epoch:0},{kind:'plane-large',fuelLoad:1,epoch:0,early:true}];
+const conditions=[...['plane','plane-large'].map(kind=>({kind,fuelLoad:1,end:'27'})),{kind:'plane',fuelLoad:1,end:'27',epoch:674.2,early:true},...['plane','plane-large','transport-cargo'].map(kind=>({kind,fuelLoad:.5,end:'27'})),...['plane','plane-large','transport-cargo'].map(kind=>({kind,fuelLoad:.5})),...['plane','plane-large'].map(kind=>({kind,fuelLoad:1})),{kind:'plane-large',fuelLoad:1,epoch:0},{kind:'plane-large',fuelLoad:1,epoch:0,early:true}];
 for(const {kind,fuelLoad,epoch=161700,early=false,end='09'} of conditions)test(`${kind} ${end} UT${epoch} ${early?'climbing':'level'} ${fuelLoad===1?'full':'half'} fuel normal departure returns through real planning worker and lands`,async(t)=>{
  const parts=preset(kind);for(const p of parts)if(PARTS[p.type].fuel)p.fuelLoad=fuelLoad;
  const f=new Flight(parts,'runway',epoch),id=f.vesselId,partCount=f.parts.length;
