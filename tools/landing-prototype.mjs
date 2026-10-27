@@ -11,7 +11,7 @@ import {TakeoffPrototype} from './takeoff-prototype.mjs';
 import {extendWheelTrack} from '../dist/runway-wheel-track.js';
 const rad=Math.PI/180,clamp=T.MathUtils.clamp;
 export class LandingPrototype{
- constructor(f,{rollIntegral=false}={}){this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
+ constructor(f,{rollIntegral=false,lateralMode='heading',lateralTime=8}={}){this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
   this.inner=new TakeoffPrototype(f,{speed:90,integral:true,handoff:'attitude'});this.inner.cruise={running:true,telemetry:{pitch:0}};
  }
  update(f,dt){
@@ -36,8 +36,14 @@ export class LandingPrototype{
    const yawRate=f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(f.q.clone().invert()).y;
    return {pitch:0,roll:0,yaw:clamp(-headingError*.05+r.crossTrack*.03-yawRate*1.5,-1,1)};
   }
-  if(this.phase==='approach'&&agl<100&&r.remaining<2000&&(Math.abs(r.crossTrack)>40||Math.abs(headingError)>15||vs<-8||(agl<30&&Math.abs(r.crossTrack)+wheelHalfSpan>RUNWAY.width/2)||r.remaining<-(RUNWAY.length-speed*speed/12-150))){
-   this.phase='go-around';this.reason='unstable final';
+  if(this.phase==='approach'&&agl<100&&r.remaining<2000){
+   const reasons=[];
+   if(Math.abs(r.crossTrack)>40)reasons.push('cross-track');
+   if(Math.abs(headingError)>15)reasons.push('heading');
+   if(vs<-8)reasons.push('sink-rate');
+   if(agl<30&&Math.abs(r.crossTrack)+wheelHalfSpan>RUNWAY.width/2)reasons.push('wheel-clearance');
+   if(r.remaining<-(RUNWAY.length-speed*speed/12-150))reasons.push('stopping-distance');
+   if(reasons.length){this.phase='go-around';this.reason='unstable final';this.abort={reasons,time:f.time,agl,speed,vs,cross:r.crossTrack,remaining:r.remaining,heading};}
   }
   this.elapsed+=dt;
   if(this.elapsed>=.1){
@@ -53,15 +59,22 @@ export class LandingPrototype{
    const lift=f.stats.mass*g/(.5*density*speed*speed*area*4.5);
    const pitch=clamp(lift/rad+Math.asin(clamp(targetVs/Math.max(speed,1),-.5,.5))/rad+this.verticalBias+error*.4,-8,15);
    const targetHeading=90-clamp(Math.atan2(r.crossTrack+(r.track?.x??0)*8,Math.max(500,speed*8))/rad,-30,30);
-   const turn=((targetHeading-heading+540)%360)-180,bank=clamp(turn*.7,-20,20)*rad;
-   const frame=compassFrame(center,f.universalTime),yaw=(heading+clamp(turn,-5,5))*rad;
+   const turn=((targetHeading-heading+540)%360)-180;
+   const crossRate=r.track?.x??0,alongRate=-(r.track?.y??-speed);
+   const course=90+Math.atan2(crossRate,Math.max(alongRate,1))/rad;
+   // Experimental damped cross-track acceleration; yaw follows velocity to
+   // avoid demanding a skid while the bank supplies the lateral acceleration.
+   const acceleration=-r.crossTrack/(this.lateralTime*this.lateralTime)-2*crossRate/this.lateralTime;
+   const bank=this.lateralMode==='acceleration'?clamp(Math.atan2(acceleration,g),-20*rad,20*rad):clamp(turn*.7,-20,20)*rad;
+   const yawError=this.lateralMode==='acceleration'?((course-heading+540)%360)-180:turn;
+   const frame=compassFrame(center,f.universalTime),yaw=(heading+clamp(yawError,-5,5))*rad;
    const forward=frame.north.clone().multiplyScalar(Math.cos(yaw)).addScaledVector(frame.east,Math.sin(yaw)),right=up.clone().cross(forward).normalize();
    forward.multiplyScalar(Math.cos(pitch*rad)).addScaledVector(up,Math.sin(pitch*rad));
    f.holdQ=new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(right,forward.clone().cross(right).normalize(),forward)).multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),bank));
    this.inner.cruise.telemetry={pitch};
    this.powerBias=clamp(this.powerBias+(approachSpeed-speed)*.005*elapsed,0,1);
    f.throttle=this.phase==='go-around'?1:clamp(this.powerBias+(approachSpeed-speed)*.025,0,1);f.brake=false;f.trim=0;
-   this.telemetry={h,agl,speed,vs,remaining:r.remaining,cross:r.crossTrack,crossRate:r.track?.x??0,heading,targetHeading,targetBank:bank/rad,pitch,approachSpeed,targetVs,desiredHeight};
+   this.telemetry={h,agl,speed,vs,remaining:r.remaining,cross:r.crossTrack,crossRate,heading,course,targetHeading,targetBank:bank/rad,pitch,approachSpeed,targetVs,desiredHeight};
   }
   // Retained roll trim caused overshoot during reversing final-approach demands.
   // Keep the comparison available; pitch/yaw trim and the product servo are unchanged.

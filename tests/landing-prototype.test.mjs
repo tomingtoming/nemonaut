@@ -20,3 +20,19 @@ for(const kind of ['plane','plane-large','transport-cargo'])for(const sign of [-
  assert.ok(r.track.maxCross<RUNWAY.width/2);assert.ok(r.final.speed<.5);
  assert.ok(Math.abs(r.final.heading-90)<5,'rollout must not spin the aircraft');
 });
+for(const kind of ['plane','plane-large'])test(`${kind} full-fuel lateral counterexample is isolated from speed and flare`,()=>{
+ const options={kind,offset:200,headingOffset:10,fuelLoad:1};
+ const baseline=runLandingProfile(options);
+ assert.equal(baseline.result,'go-around');assert.deepEqual(baseline.abort.reasons,['wheel-clearance']);
+ assert.equal(baseline.touch,null);assert.equal(baseline.crashed,false);
+ const candidate=runLandingProfile({...options,lateralMode:'acceleration'});
+ assert.equal(candidate.result,'stopped');assert.equal(candidate.landed,true);assert.equal(candidate.crashed,false);
+ assert.ok(candidate.track.minAlong>=0&&candidate.track.maxAlong<RUNWAY.length);
+ assert.ok(candidate.track.maxCross<RUNWAY.width/2);assert.ok(candidate.touch.impact>-3);
+ assert.ok(Math.abs(candidate.final.heading-90)<5);
+});
+test('acceleration guidance is not yet a cargo replacement: preserve the go-around counterexample',()=>{
+ const r=runLandingProfile({kind:'transport-cargo',offset:200,headingOffset:10,lateralMode:'acceleration'});
+ assert.equal(r.result,'go-around');assert.deepEqual(r.abort.reasons,['wheel-clearance']);
+ assert.equal(r.touch,null);assert.equal(r.crashed,false);assert.ok(r.final.vs>0);
+});
