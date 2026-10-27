@@ -11,7 +11,7 @@ import {RUNWAY,runwayApproach} from '../dist/runway-navigation.js';
 const clamp=T.MathUtils.clamp;
 export function rolloutImpact({kind='plane-large',mode='baseline',fuelLoad=.5,offset=0,touchdownAlong=null}={}){
  if(touchdownAlong!==null&&(!Number.isFinite(touchdownAlong)||touchdownAlong<0))throw Error('Invalid touchdown location');
- const f=landingFixture({kind,offset,fuelLoad}),pilot=new LandingPrototype(f);
+ const f=landingFixture({kind,offset,fuelLoad}),pilot=new LandingPrototype(f,{rolloutControl:false});
  // Late-touchdown experiment: settle the identical approach to first contact,
  // then initialize a NEW rollout location. This is not a continuous mission.
  try{

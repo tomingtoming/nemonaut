@@ -9,12 +9,14 @@ import {PARTS} from '../dist/catalog.js';
 import {partCenter} from '../dist/aero.js';
 import {TakeoffPrototype} from './takeoff-prototype.mjs';
 import {extendWheelTrack} from '../dist/runway-wheel-track.js';
+import {RolloutControl} from './rollout-control.mjs';
 import {rollServo} from './roll-servo.mjs';
 import {planLandingTrim} from './landing-trim.mjs';
 import {landingPlanMatches,landingPlanCurrent} from './landing-plan-client.mjs';
 const rad=Math.PI/180,clamp=T.MathUtils.clamp;
 export class LandingPrototype{
- constructor(f,{rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12,speedFloor=90,approachAlpha=8,useTrimPlan=true,preparedPlan,preparedContext}={}){this.approachAlpha=approachAlpha;this.speedFloor=speedFloor;this.rollGain=rollGain;this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
+ constructor(f,{rolloutControl=true,rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12,speedFloor=90,approachAlpha=8,useTrimPlan=true,preparedPlan,preparedContext}={}){this.approachAlpha=approachAlpha;this.speedFloor=speedFloor;this.rollGain=rollGain;this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
+  this.rolloutControl=rolloutControl?new RolloutControl():null;
   this.inner=new TakeoffPrototype(f,{speed:90,integral:true,handoff:'attitude'});this.inner.cruise={running:true,telemetry:{pitch:0}};
   if(useTrimPlan){
    const center=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
@@ -45,8 +47,11 @@ export class LandingPrototype{
     this.phase=inside?'stopped':'failed';if(!inside)this.reason='off-runway touchdown';
    }
    this.telemetry={h,agl,speed,vs,remaining:r.remaining,cross:r.crossTrack,heading};
-   const yawRate=f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(f.q.clone().invert()).y;
-   return {pitch:0,roll:0,yaw:clamp(-headingError*.05+r.crossTrack*.03-yawRate*1.5,-1,1)};
+   const angular=f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(f.q.clone().invert());
+   const control=this.rolloutControl?.step({speed,pitchRate:-angular.x/rad,remaining:RUNWAY.length+r.remaining},dt);
+   if(control&&this.phase==='rollout')f.brake=control.brake;
+   const yawRate=angular.y;
+   return {pitch:control?.pitch??0,roll:0,yaw:clamp(-headingError*.05+r.crossTrack*.03-yawRate*1.5,-1,1)};
   }
   const actualPitch=Math.asin(clamp(new T.Vector3(0,0,1).applyQuaternion(f.q).dot(up),-1,1))/rad;
   const pitchShortfall=(this.inner.cruise.telemetry.pitch??actualPitch)-actualPitch;

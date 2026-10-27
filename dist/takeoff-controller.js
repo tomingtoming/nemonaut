@@ -410,6 +410,27 @@ import { PARTS as PARTS2 } from "./catalog.js";
 import { partCenter as partCenter2 } from "./aero.js";
 import { extendWheelTrack as extendWheelTrack2 } from "./runway-wheel-track.js";
 
+// tools/rollout-control.mjs
+var RolloutControl = class {
+  constructor() {
+    this.elapsed = 0;
+    this.braking = false;
+  }
+  step({ speed, pitchRate, remaining }, dt) {
+    if (![speed, pitchRate, remaining, dt].every(Number.isFinite) || speed < 0 || dt < 0) {
+      this.braking = true;
+      return { brake: true, pitch: 0, invalid: true };
+    }
+    const delay = Math.max(0, 1 - this.elapsed);
+    const required = speed * speed / 12 + speed * delay + 75;
+    if (dt > 0) {
+      this.braking ||= delay === 0 || remaining <= required;
+      this.elapsed += dt;
+    }
+    return { brake: this.braking, pitch: Math.max(-0.5, Math.min(0.5, pitchRate * 0.12)), required, delay };
+  }
+};
+
 // tools/roll-servo.mjs
 import * as T3 from "three";
 import { surfaceAngularVelocity as surfaceAngularVelocity2 } from "./surface-frame.js";
@@ -503,7 +524,7 @@ function landingTrim(f, { speed, density: density2 = 1.225, gravity = 9.81, slop
 var rad3 = Math.PI / 180;
 var clamp2 = T5.MathUtils.clamp;
 var LandingPrototype = class {
-  constructor(f, { rollIntegral = false, lateralMode = "acceleration", lateralTime = 8, rollGain = 12, speedFloor = 90, approachAlpha = 8, useTrimPlan = true, preparedPlan, preparedContext } = {}) {
+  constructor(f, { rolloutControl = true, rollIntegral = false, lateralMode = "acceleration", lateralTime = 8, rollGain = 12, speedFloor = 90, approachAlpha = 8, useTrimPlan = true, preparedPlan, preparedContext } = {}) {
     this.approachAlpha = approachAlpha;
     this.speedFloor = speedFloor;
     this.rollGain = rollGain;
@@ -515,6 +536,7 @@ var LandingPrototype = class {
     this.elapsed = 1;
     this.powerBias = f.throttle;
     this.verticalBias = 0;
+    this.rolloutControl = rolloutControl ? new RolloutControl() : null;
     this.inner = new TakeoffPrototype(f, { speed: 90, integral: true, handoff: "attitude" });
     this.inner.cruise = { running: true, telemetry: { pitch: 0 } };
     if (useTrimPlan) {
@@ -556,8 +578,11 @@ var LandingPrototype = class {
         if (!inside) this.reason = "off-runway touchdown";
       }
       this.telemetry = { h, agl, speed, vs, remaining: r.remaining, cross: r.crossTrack, heading };
-      const yawRate = f.omega.clone().sub(surfaceAngularVelocity3()).applyQuaternion(f.q.clone().invert()).y;
-      return { pitch: 0, roll: 0, yaw: clamp2(-headingError * 0.05 + r.crossTrack * 0.03 - yawRate * 1.5, -1, 1) };
+      const angular = f.omega.clone().sub(surfaceAngularVelocity3()).applyQuaternion(f.q.clone().invert());
+      const control = this.rolloutControl?.step({ speed, pitchRate: -angular.x / rad3, remaining: RUNWAY3.length + r.remaining }, dt);
+      if (control && this.phase === "rollout") f.brake = control.brake;
+      const yawRate = angular.y;
+      return { pitch: control?.pitch ?? 0, roll: 0, yaw: clamp2(-headingError * 0.05 + r.crossTrack * 0.03 - yawRate * 1.5, -1, 1) };
     }
     const actualPitch = Math.asin(clamp2(new T5.Vector3(0, 0, 1).applyQuaternion(f.q).dot(up), -1, 1)) / rad3;
     const pitchShortfall = (this.inner.cruise.telemetry.pitch ?? actualPitch) - actualPitch;

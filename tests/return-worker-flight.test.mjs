@@ -41,8 +41,9 @@ for(const kind of ['plane','plane-large','transport-cargo'])test(`${kind} normal
    assert.ok(!['recovery','recovery-hold'].includes(session.state),session.message);
   }
   assert.equal(session.state,'landed',session.message);assert.ok(planningSteps>2);assert.ok(approached);
-  t.diagnostic(JSON.stringify({kind,planningSteps,touchdown,worstWheel}));
+  t.diagnostic(JSON.stringify({kind,planningSteps,touchdown,worstWheel,track}));
   assert.ok(touchdown&&touchdown.impact>-3,JSON.stringify(touchdown));
+  assert.ok(worstWheel&&worstWheel.impact>-3,JSON.stringify(worstWheel));
   assert.equal(f.crashed,false);assert.equal(f.landed,true);assert.equal(f.vesselId,id);assert.equal(f.parts.length,partCount);
   assert.equal(f.sas,true);assert.equal(f.trim,.07);assert.equal(f.throttle,0);assert.equal(f.brake,true);
   assert.ok([...f.fuel.values()].reduce((a,b)=>a+b,0)>0);
