@@ -17,19 +17,19 @@ f.q.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-4*Math.PI
 f.pos.copy(center).sub(f.stats.com.clone().applyQuaternion(f.q));f.vel.copy(surfaceVelocity(center,f.universalTime)).addScaledVector(east,90);
 return f;
 }
-export function runLandingProfile({kind='plane-large',offset=200,headingOffset=0,seconds=180,rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12,fuelLoad=.5,log=()=>{}}={}){
+export function runLandingProfile({kind='plane-large',offset=200,headingOffset=0,seconds=180,rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12,speedFloor=90,approachAlpha=8,fuelLoad=.5,log=()=>{}}={}){
 const f=landingFixture({kind,offset,headingOffset,fuelLoad});
-const pilot=new LandingPrototype(f,{rollIntegral,lateralMode,lateralTime,rollGain});let touch=null,track=null;
+const pilot=new LandingPrototype(f,{rollIntegral,lateralMode,lateralTime,rollGain,speedFloor,approachAlpha});let touch=null,track=null;
 try{
  for(let i=0;i<seconds*120&&!f.crashed&&!['stopped','failed'].includes(pilot.phase);i++){
   const before={...pilot.telemetry};f.step(1/120,pilot.update(f,1/120));
   if(f.telemetry.contacts){touch??={...before,time:f.time,impact:f.telemetry.wheelImpactSpeed};track=extendWheelTrack(track,f.telemetry.wheelContacts);}
   if(i%120===0){
    const currentCenter=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),localUp=bodyUp(currentCenter,f.universalTime).applyQuaternion(f.q.clone().invert());
-   log({kind,t:f.time,phase:pilot.phase,...pilot.telemetry,bank:Math.atan2(localUp.x,localUp.y)*180/Math.PI,commands:f.telemetry.commands,angularRate:f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(f.q.clone().invert()).toArray()});
+   log({kind,t:f.time,phase:pilot.phase,...pilot.telemetry,actualPitch:Math.asin(T.MathUtils.clamp(localUp.z,-1,1))*180/Math.PI,bank:Math.atan2(localUp.x,localUp.y)*180/Math.PI,commands:f.telemetry.commands,angularRate:f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(f.q.clone().invert()).toArray()});
   }
  }
- return {kind,offset,headingOffset,rollIntegral,lateralMode,lateralTime,rollGain,fuelLoad,result:pilot.phase,reason:pilot.reason,abort:pilot.abort,crashed:f.crashed,landed:f.landed,touch,track,final:pilot.telemetry};
+ return {kind,offset,headingOffset,rollIntegral,lateralMode,lateralTime,rollGain,speedFloor,approachAlpha,fuelLoad,result:pilot.phase,reason:pilot.reason,abort:pilot.abort,crashed:f.crashed,landed:f.landed,touch,track,final:pilot.telemetry};
 }finally{f.dispose();}
 
 }

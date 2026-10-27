@@ -12,7 +12,7 @@ import {extendWheelTrack} from '../dist/runway-wheel-track.js';
 import {rollServo} from './roll-servo.mjs';
 const rad=Math.PI/180,clamp=T.MathUtils.clamp;
 export class LandingPrototype{
- constructor(f,{rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12}={}){this.rollGain=rollGain;this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
+ constructor(f,{rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12,speedFloor=90,approachAlpha=8}={}){this.approachAlpha=approachAlpha;this.speedFloor=speedFloor;this.rollGain=rollGain;this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
   this.inner=new TakeoffPrototype(f,{speed:90,integral:true,handoff:'attitude'});this.inner.cruise={running:true,telemetry:{pitch:0}};
  }
  update(f,dt){
@@ -37,14 +37,21 @@ export class LandingPrototype{
    const yawRate=f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(f.q.clone().invert()).y;
    return {pitch:0,roll:0,yaw:clamp(-headingError*.05+r.crossTrack*.03-yawRate*1.5,-1,1)};
   }
-  if(this.phase==='approach'&&agl<100&&r.remaining<2000){
+  const actualPitch=Math.asin(clamp(new T.Vector3(0,0,1).applyQuaternion(f.q).dot(up),-1,1))/rad;
+  const pitchShortfall=(this.inner.cruise.telemetry.pitch??actualPitch)-actualPitch;
+  const lostVerticalControl=vs<-8&&(f.telemetry.commands?.pitch??0)<-.95&&pitchShortfall>3;
+  this.sinkDuration=lostVerticalControl?(this.sinkDuration??0)+dt:0;
+  if(this.phase==='approach'){
    const reasons=[];
+   // Loss of vertical control can occur before reaching the final corridor.
+   if(this.sinkDuration>2||(agl<100&&r.remaining<2000&&vs<-8))reasons.push('sink-rate');
+   if(agl<100&&r.remaining<2000){
    if(Math.abs(r.crossTrack)>40)reasons.push('cross-track');
    if(Math.abs(headingError)>15)reasons.push('heading');
-   if(vs<-8)reasons.push('sink-rate');
    if(agl<30&&Math.abs(r.crossTrack)+wheelHalfSpan>RUNWAY.width/2)reasons.push('wheel-clearance');
    if(r.remaining<-(RUNWAY.length-speed*speed/12-150))reasons.push('stopping-distance');
-   if(reasons.length){this.phase='go-around';this.reason='unstable final';this.abort={reasons,time:f.time,agl,speed,vs,cross:r.crossTrack,remaining:r.remaining,heading};}
+   }
+   if(reasons.length){this.phase='go-around';this.reason='unstable final';this.abort={reasons,time:f.time,agl,speed,vs,pitchShortfall,controlLossDuration:this.sinkDuration,cross:r.crossTrack,remaining:r.remaining,heading};}
   }
   this.elapsed+=dt;
   if(this.elapsed>=.1){
@@ -52,7 +59,7 @@ export class LandingPrototype{
    const density=atmosphere(h).density,g=bodyGravity(center,f.universalTime).length(),area=f.stats.aero.weight;
    // Temporary floor: lift-only speed admitted cargo into unstable control.
    // This must be replaced by a validated control/flare envelope before release.
-   const approachSpeed=Math.max(90,Math.sqrt(2*f.stats.mass*g/(density*area*4.5*8*rad)));
+   const approachSpeed=Math.max(this.speedFloor,Math.sqrt(2*f.stats.mass*g/(density*area*4.5*this.approachAlpha*rad)));
    const desiredHeight=groundHeight+Math.max(0,(r.remaining+180)*Math.tan(3*rad));
    const sink=agl<8?-clamp(agl*.3,1,3):clamp(-speed*Math.tan(3*rad)+(desiredHeight-h)*.08,-6,3);
    const targetVs=this.phase==='go-around'?5:sink,error=targetVs-vs;

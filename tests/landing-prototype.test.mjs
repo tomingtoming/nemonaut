@@ -36,3 +36,11 @@ test('slow roll response makes acceleration guidance miss cargo final: preserve 
  assert.equal(r.result,'go-around');assert.deepEqual(r.abort.reasons,['wheel-clearance']);
  assert.equal(r.touch,null);assert.equal(r.crashed,false);assert.ok(r.final.vs>0);
 });
+test('sustained sink before the final corridor triggers recovery without contact',()=>{
+ const r=runLandingProfile({kind:'transport-cargo',fuelLoad:.25,speedFloor:0});
+ assert.equal(r.result,'go-around');assert.deepEqual(r.abort.reasons,['sink-rate']);
+ assert.ok(r.abort.remaining>2000);assert.ok(r.abort.agl>100);
+ assert.ok(r.abort.pitchShortfall>3);assert.ok(r.abort.controlLossDuration>2);
+ assert.equal(r.crashed,false);assert.equal(r.touch,null);assert.equal(r.track,null);
+ assert.ok(r.final.agl>500&&r.final.vs>0);
+});
