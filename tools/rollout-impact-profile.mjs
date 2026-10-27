@@ -5,9 +5,12 @@ import {landingFixture} from './landing-profile.mjs';
 import {LandingPrototype} from './landing-prototype.mjs';
 import {bodyUp} from '../dist/celestial.js';
 import {surfaceAngularVelocity} from '../dist/surface-frame.js';
+import {RolloutControl} from './rollout-control.mjs';
+import {RUNWAY} from '../dist/runway-navigation.js';
 const clamp=T.MathUtils.clamp;
 export function rolloutImpact({kind='plane-large',mode='baseline',fuelLoad=.5,offset=0}={}){
  const f=landingFixture({kind,offset,fuelLoad}),pilot=new LandingPrototype(f);
+ const rollout=new RolloutControl();
  let contactTime=null,touchdown=null,worst=null,rolloutStart=null;
  const initialParts=f.parts.length;
  try{
@@ -20,6 +23,11 @@ export function rolloutImpact({kind='plane-large',mode='baseline',fuelLoad=.5,of
     if(mode==='damp'||mode==='both'){
      const rate=-f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(f.q.clone().invert()).x*180/Math.PI;
      commands.pitch=clamp(rate*.12,-.5,.5);
+    }
+    if(mode==='guarded'){
+     const pitchRate=-f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(f.q.clone().invert()).x*180/Math.PI;
+     const control=rollout.step({speed:pilot.telemetry.speed,pitchRate,remaining:RUNWAY.length+pilot.telemetry.remaining},1/120);
+     f.brake=control.brake;commands.pitch=control.pitch;
     }
    }
    f.step(1/120,commands);
