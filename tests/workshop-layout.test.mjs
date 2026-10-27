@@ -4,12 +4,12 @@ import {PARTS,preset} from '../dist/catalog.js';import {workshopLayout,workshopF
 
 test('Actual Blender preset bounds clear the workshop floor without changing designs',async()=>{
  const assets=new Map();for(const [id,d]of Object.entries(PARTS)){const data=await readFile(new URL(`../dist/assets/parts/${d.model||id}.glb`,import.meta.url));const gltf=await new GLTFLoader().parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');assets.set(id,new T.Box3().setFromObject(gltf.scene));}
- for(const type of ['returner','launcher','twin','plane','rover','boat','sub']){
+ for(const type of ['returner','launcher','twin','plane','rover','boat','sub','plane-large','boat-large','sub-large']){
   const parts=preset(type),before=structuredClone(parts),bounds=new T.Box3();
   for(const p of parts){const matrix=new T.Matrix4().compose(new T.Vector3(...p.p),new T.Quaternion().setFromEuler(new T.Euler(...p.r)),new T.Vector3(1,1,1));bounds.union(assets.get(p.type).clone().applyMatrix4(matrix));}
   const layout=workshopLayout(bounds);assert.ok(layout.origin[1]<bounds.min.y,`${type}: lowest model above floor`);assert.deepEqual(parts,before);
   for(const aspect of [.45,1,2]){
-   const fit=workshopFrame(bounds,40,aspect),camera=new T.PerspectiveCamera(40,aspect,.05,4e6);camera.position.copy(fit.target).add(new T.Vector3(1,.65,1.3).normalize().multiplyScalar(fit.distance));camera.lookAt(fit.target);camera.updateMatrixWorld();
+   const room=workshopLayout(bounds,40,aspect),fit=workshopFrame(bounds,40,aspect);assert.ok(room.roomScale[0]*18>fit.distance);assert.ok(room.roomScale[2]*20>fit.distance);const camera=new T.PerspectiveCamera(40,aspect,.05,4e6);camera.position.copy(fit.target).add(new T.Vector3(1,.65,1.3).normalize().multiplyScalar(fit.distance));camera.lookAt(fit.target);camera.updateMatrixWorld();
    for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){const projected=new T.Vector3(x,y,z).project(camera);assert.ok(Math.abs(projected.x)<1&&Math.abs(projected.y)<1,`${type}: all corners fit ${aspect}`);}
   }
  }

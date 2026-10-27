@@ -1,3 +1,4 @@
+import {installLargeParts} from './large-parts.js';
 export const PARTS = {
  tankSmall:{name:'小型タンク',code:'FT-225',cat:'燃料',mass:25,fuel:225,size:[0.625,1,0.625],desc:'直径0.625 m・推進剤225 kg。接続したエンジンへ供給。'},
  tankLarge:{name:'大型タンク',code:'FT-14400',cat:'燃料',mass:1200,fuel:14400,size:[2.5,4,2.5],desc:'直径2.5 m・推進剤14400 kg。接続したエンジンへ供給。'},
@@ -18,7 +19,7 @@ export const PARTS = {
  rcs:{name:'RCSブロック',code:'RC-6',cat:'推進',mass:16,monoprop:12,rcsThrust:120,rcsIsp:65,size:[.48,.48,.48],desc:'6方向・各120 N。内蔵単一推進剤12 kg。配置と重心で姿勢制御の効きが変わります。'},
  capsule:{name:'コマンドポッド',code:'CP-1',cat:'指令',mass:620,size:[1.25,1.3,1.25],control:true,reactionTorque:7000,battery:1000,desc:'耐熱外殻と姿勢制御を備える有人カプセル。'},
  probe:{name:'探査コア',code:'OC-4',cat:'指令',mass:90,size:[1.25,.4,1.25],control:true,reactionTorque:1200,battery:200,desc:'小型無人機のための軽量制御ユニット。'},
- cockpit:{name:'コックピット',code:'FC-2',cat:'指令',mass:510,size:[1.25,2,1.25],control:true,battery:500,desc:'航空機・ローバー向けの広視界キャノピー。'},
+ cockpit:{aircraftControl:true,name:'コックピット',code:'FC-2',cat:'指令',mass:510,size:[1.25,2,1.25],control:true,battery:500,desc:'航空機・ローバー向けの広視界キャノピー。'},
  tank:{name:'中型タンク',code:'FT-200',cat:'燃料',mass:150,fuel:1800,size:[1.25,2,1.25],desc:'直径1.25 m・推進剤1800 kg。同じ燃料系統へ推進剤を供給。分離リングを越えては流れません。'},
  engine:{name:'液体燃料エンジン',code:'RE-45',cat:'推進',mass:270,thrust:45000,isp:300,size:[1.25,1.2,1.25],gimbal:6,gimbalPivot:[0,.16,0],desc:'45 kN・最大6度のジンバル。ノズルを傾けて推力方向を制御。'},
  jet:{name:'ターボジェット',code:'TJ-18',cat:'推進',mass:230,thrust:18000,isp:1800,air:true,size:[1.25,1.2,1.25],desc:'大気中専用。高度とともに推力が低下する。'},
@@ -26,8 +27,8 @@ export const PARTS = {
  nose:{name:'ノーズコーン',code:'NC-1',cat:'構造',mass:65,size:[1.25,1,1.25],desc:'機首を覆う軽量の整流コーン。'},
  decoupler:{name:'分離リング',code:'DC-12',cat:'構造',mass:40,size:[1.25,.22,1.25],decoupler:true,desc:'ステージ実行時、この部品から先の接続枝を分離。'},
  truss:{name:'構造フレーム',code:'TR-1',cat:'構造',mass:65,size:[1,1,1],desc:'ローバーや宇宙機の骨組み。6方向に接続可能。'},
- wing:{name:'主翼・固定翼',code:'SW-2',cat:'空力',mass:55,size:[2,1.6,.12],wing:2.1,ac:[.80,.13,0],massCenter:[.8,-.20,0],chord:1.1,desc:'空気速度と迎角から揚力が発生。基部はローカルX=0。'},
- fin:{name:'可動ロケットフィン',code:'RF-2',cat:'空力',mass:55,size:[2,1.6,.12],model:'wing',wing:2.1,ac:[.8,.13,0],massCenter:[.8,-.2,0],chord:1.1,controlAxis:'auto',maxDeflection:18,hingeY:.13,desc:'全遊動フィン。配置に合わせてピッチ・ヨー・ロールへ混合。気流が必要。'},
+ wing:{rootWing:true,name:'主翼・固定翼',code:'SW-2',cat:'空力',mass:55,size:[2,1.6,.12],wing:2.1,ac:[.80,.13,0],massCenter:[.8,-.20,0],chord:1.1,desc:'空気速度と迎角から揚力が発生。基部はローカルX=0。'},
+ fin:{rootWing:true,name:'可動ロケットフィン',code:'RF-2',cat:'空力',mass:55,size:[2,1.6,.12],model:'wing',wing:2.1,ac:[.8,.13,0],massCenter:[.8,-.2,0],chord:1.1,controlAxis:'auto',maxDeflection:18,hingeY:.13,desc:'全遊動フィン。配置に合わせてピッチ・ヨー・ロールへ混合。気流が必要。'},
  stabilizer:{name:'水平・垂直安定板',code:'ST-1',cat:'空力',mass:25,size:[1.8,.65,.09],wing:1.05,chord:.65,ac:[0,.16,0],desc:'固定安定板。回転させて垂直尾翼にも使えます。'},
  elevator:{name:'エレベーター',code:'EL-1',cat:'空力',mass:12,size:[1.8,.4,.08],wing:.72,chord:.4,ac:[0,.1,0],controlAxis:'pitch',maxDeflection:25,desc:'水平尾翼の昇降舵。空気速度と重心からの腕で効きが変化。'},
  aileron:{name:'エルロン',code:'AL-1',cat:'空力',mass:10,size:[1.4,.3,.07],wing:.42,chord:.3,ac:[0,.075,0],controlAxis:'roll',maxDeflection:22,desc:'主翼後縁の独立した補助翼。左右の揚力差でロール。'},
@@ -40,8 +41,9 @@ export const PARTS = {
  pontoon:{name:'フロート',code:'FL-3',cat:'船舶',mass:85,size:[1,3,.8],volume:1.9,desc:'水密の浮体。水没体積に応じた浮力を生む。'},
  ballast:{name:'バラストタンク',code:'BT-1',cat:'船舶',mass:110,size:[1.25,1,1.25],volume:1.05,ballast:1050,desc:'注排水で質量を変え、浮上・潜航を調整する。'}
 };
+installLargeParts(PARTS);
 export const CATEGORIES=['すべて','指令','燃料','推進','構造','空力','走行','装備','船舶'];
-export function nodes(type){const d=PARTS[type], [x,y,z]=d.size;if(type==='wing'||type==='fin')return [[0,0,0,-1,0,0],[x,0,0,1,0,0]];return [[0,y/2,0,0,1,0],[0,-y/2,0,0,-1,0],[x/2,0,0,1,0,0],[-x/2,0,0,-1,0,0],[0,0,z/2,0,0,1],[0,0,-z/2,0,0,-1]];}
+export function nodes(type){const d=PARTS[type], [x,y,z]=d.size;if(d.rootWing)return [[0,0,0,-1,0,0],[x,0,0,1,0,0]];return [[0,y/2,0,0,1,0],[0,-y/2,0,0,-1,0],[x/2,0,0,1,0,0],[-x/2,0,0,-1,0,0],[0,0,z/2,0,0,1],[0,0,-z/2,0,0,-1]];}
 export function part(type,p=[0,0,0],r=[0,0,0],parent=null,stage=0){return {id:crypto.randomUUID(),type,p,r,parent,stage};}
 export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{const o=part(t,p,r,a[par]?.id??null,stage);a.push(o);return a.length-1;};
  if(kind==='atlas'){
@@ -130,6 +132,15 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
  if(kind==='boat'||kind==='sub'){const r=[Math.PI/2,0,0];add('cockpit',[0,1,1],r);add('truss',[0,.8,-.5]);if(kind==='boat')for(const x of [-1,1])add('pontoon',[x,.3,0],r,1);add('propeller',[0,-.15,-1.7],r,1);if(kind==='sub'){add('ballast',[-.65,.3,-.3],r,1);add('ballast',[.65,.3,-.3],r,1);}}
  if(kind==='sub')for(const p of a){if(p.type==='cockpit')p.p=[0,0,.3];if(p.type==='truss')p.p=[0,1.2,0];if(p.type==='propeller')p.p=[0,.1,-2.1];if(p.type==='ballast')p.p=[Math.sign(p.p[0])*1.3,.2,0];}
  if(['plane','boat','sub'].includes(kind)){a[0].r=[Math.PI/2,Math.PI,0];}
+ if(['plane-large','boat-large','sub-large'].includes(kind)){
+  const base=kind.replace('-large',''),s=base==='plane'?3:4;
+  const mapping=base==='plane'?{cockpit:'cockpitLarge',tank:'fuselageLarge',jet:'jetLarge',wing:'wingLarge',stabilizer:'stabilizerLarge',elevator:'elevatorLarge',aileron:'aileronLarge',rudder:'rudderLarge',nosegear:'nosegearLarge',maingear:'maingearLarge'}:{cockpit:'marineCabin',truss:'marineFrame',pontoon:'hullLarge',ballast:'ballastLarge',propeller:'propellerLarge'};
+  a=preset(base);for(const p of a){p.type=mapping[p.type];p.p=p.p.map(v=>v*s);}
+  if(base==='plane'){
+   const engine=a.find(p=>p.type==='jetLarge');engine.p=[3,2.7,-1.2];
+   a.push(part('jetLarge',[-3,2.7,-1.2],[...engine.r],engine.parent,engine.stage));
+  }
+ }
  return a;
 }
 
