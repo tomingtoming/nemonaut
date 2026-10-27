@@ -3,7 +3,16 @@ import {saveFlight,loadFlight} from '../dist/flight-save.js';
 import {TakeoffPrototype} from './takeoff-prototype.mjs';
 import {runwayApproach} from '../dist/runway-navigation.js';
 export function previewTakeoff(f,p,{seconds=20,hz=120}={}){
- const clone=loadFlight(saveFlight(f));
+ return runTakeoffPreview(createTakeoffRequest(f,p,{seconds,hz}));
+}
+export function createTakeoffRequest(f,p,{seconds=20,hz=120}={}){
+ if(!Number.isFinite(seconds)||seconds<=0||seconds>60||![60,120].includes(hz))throw Error('Invalid forecast horizon');
+ if(p.owner!==f.vesselId||!['roll','rotate'].includes(p.phase))throw Error('Forecast requires the owned departure');
+ return {flight:saveFlight(f),pilot:{target:{...p.target},rotation:p.rotation,integral:p.integral,handoffMode:p.handoffMode,phase:p.phase,pitchBias:p.pitchBias},seconds,hz};
+}
+export function runTakeoffPreview({flight,pilot:p,seconds,hz}){
+ if(!Number.isFinite(seconds)||seconds<=0||seconds>60||![60,120].includes(hz))throw Error('Invalid forecast horizon');
+ const clone=loadFlight(flight);
  const pilot=new TakeoffPrototype(clone,{...p.target,rotation:p.rotation,integral:p.integral,handoff:p.handoffMode});
  pilot.phase=p.phase;pilot.pitchBias=p.pitchBias;pilot.target={...p.target};
  let lastGround=null,airborne=0;
