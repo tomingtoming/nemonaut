@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {Flight} from '../dist/core.js';
+import {preset} from '../dist/catalog.js';
+import {TakeoffSession} from '../tools/takeoff-session.mjs';
+import {previewTakeoff} from '../tools/takeoff-preview.mjs';
+const target={speed:90,altitude:600,heading:110,mode:'altitude',vertical:0};
+function setup(){const f=new Flight(preset('plane-large'),'runway',161700);f.stageNext();f.brake=true;for(let i=0;i<120;i++)f.step(1/120,{});return f;}
+const good={status:'airborne',lastGround:{along:1245,cross:0,time:20}};
+test('prepared departure uses isolated forecast and starts only explicitly with matching targets',async()=>{
+ const f=setup(),s=new TakeoffSession({cancel(){},async request(f,p){return previewTakeoff(f,p,{seconds:40});}});
+ try{const before=f.time,r=await s.prepare(f,target);assert.equal(r.accepted,true);assert.equal(f.time,before);assert.equal(f.throttle,0);assert.equal(f.brake,true);
+  const p=s.start(f,target);assert.equal(p.target.heading,110);assert.equal(p.phase,'roll');assert.throws(()=>s.start(f,target),/再予測/);
+ }finally{s.cancel();f.dispose();}
+});
+test('configuration, pose, time and target changes invalidate a prepared start',async()=>{
+ for(const change of [f=>f.fuel.set(f.fuel.keys().next().value,0),f=>f.parts[0].controlEnabled=false,f=>f.pos.x+=1,f=>f.universalTime+=6,f=>f.trim=.1,f=>f.brake=false]){
+  const f=setup(),s=new TakeoffSession({cancel(){},async request(){return good;}});
+  try{await s.prepare(f,target);change(f);assert.throws(()=>s.start(f,target),/再予測/);assert.equal(f.throttle,0);}finally{s.cancel();f.dispose();}
+ }
+ const f=setup(),s=new TakeoffSession({cancel(){},async request(){return good;}});
+ try{await s.prepare(f,target);assert.throws(()=>s.start(f,{...target,altitude:700}),/再予測/);}finally{s.cancel();f.dispose();}
+});
+test('cancelled preparation and runway overflow never grant start permission',async()=>{
+ const f=setup();let complete;
+ const s=new TakeoffSession({cancel(){},request(){return new Promise(resolve=>complete=resolve);}});
+ try{const work=s.prepare(f,target);s.cancel();complete(good);assert.equal((await work).status,'cancelled');assert.equal(s.state,'idle');
+  const other=s.prepare(f,target);complete({...good,lastGround:{along:1858,cross:0,time:25}});assert.equal((await other).accepted,false);assert.equal(s.state,'rejected');assert.throws(()=>s.start(f,target));
+ }finally{s.cancel();f.dispose();}
+});
