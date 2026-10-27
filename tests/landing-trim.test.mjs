@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {landingFixture} from '../tools/landing-profile.mjs';
-import {landingTrim} from '../tools/landing-trim.mjs';
+import {landingTrim,planLandingTrim} from '../tools/landing-trim.mjs';
 import {bodyUp,bodyGravity,bodyAltitude} from '../dist/celestial.js';
 import {surfaceVelocity,surfaceAngularVelocity} from '../dist/surface-frame.js';
 import {compassFrame} from '../dist/navigation.js';
@@ -36,5 +36,16 @@ test('light cargo lift-only speed lacks trim reserve; adequate speed restores it
   assert.ok(landingTrim(f,{speed:70}));
   for(const p of f.parts)p.controlEnabled=false;
   assert.equal(landingTrim(f,{speed:70}),null);
+ }finally{f.dispose();}
+});
+test('planning preserves live state and refuses an aircraft without pitch control',()=>{
+ const f=landingFixture({kind:'transport-cargo',fuelLoad:.25});
+ const snapshot=()=>JSON.stringify({parts:f.parts,fuel:[...f.fuel],pos:f.pos.toArray(),vel:f.vel.toArray(),q:f.q.toArray(),throttle:f.throttle,time:f.universalTime});
+ try{
+  const before=snapshot(),plan=planLandingTrim(f);
+  assert.ok(plan&&plan.speed>60&&plan.speed<90);assert.equal(snapshot(),before);
+  assert.ok(Math.abs(plan.pitchCommand)<.8);assert.ok(plan.throttle>0&&plan.throttle<1);
+  for(const p of f.parts)p.controlEnabled=false;
+  assert.equal(planLandingTrim(f),null);
  }finally{f.dispose();}
 });

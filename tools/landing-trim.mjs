@@ -5,6 +5,16 @@ import {partRotation,partCenter,aeroPoint,surfaceForce,controlDeflection} from '
 import {engineMaxThrust,fuelNetworks} from '../dist/resources.js';
 import {bodyDrag} from '../dist/body-drag.js';
 const rad=Math.PI/180;
+export function planLandingTrim(f,{density=1.225,gravity=9.81}={}){
+ // Bounded diagnostic search with 20% elevator travel held in reserve by
+ // landingTrim. The additional speed margin is a candidate for flight testing.
+ for(let speed=40;speed<=160;speed+=2){
+  if(!landingTrim(f,{speed,density,gravity}))continue;
+  const selected=landingTrim(f,{speed:speed*1.05,density,gravity});
+  if(selected)return {...selected,minimumSample:speed,density,gravity,mass:f.stats.mass};
+ }
+ return null;
+}
 export function trimForces(f,{speed,alpha,pitchCommand,density=1.225,gravity=9.81,slope=-3}){
  const flow=new T.Vector3(0,-Math.sin(alpha*rad),Math.cos(alpha*rad)),velocity=flow.clone().multiplyScalar(speed);
  const pitch=(alpha+slope)*rad,up=new T.Vector3(0,Math.cos(pitch),Math.sin(pitch));

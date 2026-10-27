@@ -10,10 +10,17 @@ import {partCenter} from '../dist/aero.js';
 import {TakeoffPrototype} from './takeoff-prototype.mjs';
 import {extendWheelTrack} from '../dist/runway-wheel-track.js';
 import {rollServo} from './roll-servo.mjs';
+import {planLandingTrim} from './landing-trim.mjs';
 const rad=Math.PI/180,clamp=T.MathUtils.clamp;
 export class LandingPrototype{
- constructor(f,{rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12,speedFloor=90,approachAlpha=8}={}){this.approachAlpha=approachAlpha;this.speedFloor=speedFloor;this.rollGain=rollGain;this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
+ constructor(f,{rollIntegral=false,lateralMode='acceleration',lateralTime=8,rollGain=12,speedFloor=90,approachAlpha=8,useTrimPlan=true}={}){this.approachAlpha=approachAlpha;this.speedFloor=speedFloor;this.rollGain=rollGain;this.lateralTime=lateralTime;this.lateralMode=lateralMode;this.rollIntegral=rollIntegral;this.owner=f.vesselId;this.phase='approach';this.elapsed=1;this.powerBias=f.throttle;this.verticalBias=0;
   this.inner=new TakeoffPrototype(f,{speed:90,integral:true,handoff:'attitude'});this.inner.cruise={running:true,telemetry:{pitch:0}};
+  if(useTrimPlan){
+   const center=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+   this.trimPlan=planLandingTrim(f,{density:atmosphere(bodyAltitude(center,f.universalTime)).density,gravity:bodyGravity(center,f.universalTime).length()});
+   this.commandedSpeed=surfaceRelativeVelocity(center,f.vel,f.universalTime).length();
+   if(!this.trimPlan){this.phase='failed';this.reason='no longitudinal trim in search range';}
+  }
  }
  update(f,dt){
   if(f.vesselId!==this.owner||f.crashed||!Number.isFinite(dt)||dt<0){this.phase='failed';return {};}
@@ -57,9 +64,11 @@ export class LandingPrototype{
   if(this.elapsed>=.1){
    const elapsed=this.elapsed;this.elapsed=0;
    const density=atmosphere(h).density,g=bodyGravity(center,f.universalTime).length(),area=f.stats.aero.weight;
-   // Temporary floor: lift-only speed admitted cargo into unstable control.
-   // This must be replaced by a validated control/flare envelope before release.
-   const approachSpeed=Math.max(this.speedFloor,Math.sqrt(2*f.stats.mass*g/(density*area*4.5*this.approachAlpha*rad)));
+   // The lift-only/fixed-floor branch remains for reproducing earlier trials.
+   // The trim plan is prepared before control starts, not inside the fast loop.
+   const selectedSpeed=this.trimPlan?.speed??Math.max(this.speedFloor,Math.sqrt(2*f.stats.mass*g/(density*area*4.5*this.approachAlpha*rad)));
+   if(this.trimPlan)this.commandedSpeed+=clamp(selectedSpeed-this.commandedSpeed,-.5*elapsed,.5*elapsed);
+   const approachSpeed=this.trimPlan?this.commandedSpeed:selectedSpeed;
    const desiredHeight=groundHeight+Math.max(0,(r.remaining+180)*Math.tan(3*rad));
    const sink=agl<8?-clamp(agl*.3,1,3):clamp(-speed*Math.tan(3*rad)+(desiredHeight-h)*.08,-6,3);
    const targetVs=this.phase==='go-around'?5:sink,error=targetVs-vs;

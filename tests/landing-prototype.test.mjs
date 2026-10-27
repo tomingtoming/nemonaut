@@ -10,7 +10,7 @@ test('twin approach captures a 200m offset and stops on pavement',()=>{
 test('centered cargo landing and the retained-integral counterexample remain distinct outcomes',()=>{
  const center=runLandingProfile({kind:'transport-cargo',offset:0});
  assert.equal(center.result,'stopped');assert.equal(center.landed,true);assert.equal(center.crashed,false);assert.ok(center.track.maxCross<RUNWAY.width/2);
- const offset=runLandingProfile({kind:'transport-cargo',offset:200,rollIntegral:true,lateralMode:'heading',rollGain:4});
+ const offset=runLandingProfile({kind:'transport-cargo',offset:200,rollIntegral:true,lateralMode:'heading',rollGain:4,useTrimPlan:false});
  assert.equal(offset.result,'go-around');assert.equal(offset.touch,null);assert.equal(offset.crashed,false);assert.ok(offset.final.agl>300);assert.ok(offset.final.vs>0);
 });
 for(const kind of ['plane','plane-large','transport-cargo'])for(const fuelLoad of [.25,.5,1])for(const sign of [-1,1])test(`${kind} fuel ${fuelLoad} captures ${sign*200}m and ${sign*10}deg before stopping inside the runway`,()=>{
@@ -21,7 +21,7 @@ for(const kind of ['plane','plane-large','transport-cargo'])for(const fuelLoad o
  assert.ok(Math.abs(r.final.heading-90)<5,'rollout must not spin the aircraft');
 });
 for(const kind of ['plane','plane-large'])test(`${kind} full-fuel lateral counterexample is isolated from speed and flare`,()=>{
- const options={kind,offset:200,headingOffset:10,fuelLoad:1};
+ const options={kind,offset:200,headingOffset:10,fuelLoad:1,useTrimPlan:false};
  const baseline=runLandingProfile({...options,lateralMode:'heading',rollGain:4});
  assert.equal(baseline.result,'go-around');assert.deepEqual(baseline.abort.reasons,['wheel-clearance']);
  assert.equal(baseline.touch,null);assert.equal(baseline.crashed,false);
@@ -32,12 +32,12 @@ for(const kind of ['plane','plane-large'])test(`${kind} full-fuel lateral counte
  assert.ok(Math.abs(candidate.final.heading-90)<5);
 });
 test('slow roll response makes acceleration guidance miss cargo final: preserve the counterexample',()=>{
- const r=runLandingProfile({kind:'transport-cargo',offset:200,headingOffset:10,lateralMode:'acceleration',rollGain:4});
+ const r=runLandingProfile({kind:'transport-cargo',offset:200,headingOffset:10,lateralMode:'acceleration',rollGain:4,useTrimPlan:false});
  assert.equal(r.result,'go-around');assert.deepEqual(r.abort.reasons,['wheel-clearance']);
  assert.equal(r.touch,null);assert.equal(r.crashed,false);assert.ok(r.final.vs>0);
 });
 test('sustained sink before the final corridor triggers recovery without contact',()=>{
- const r=runLandingProfile({kind:'transport-cargo',fuelLoad:.25,speedFloor:0});
+ const r=runLandingProfile({kind:'transport-cargo',fuelLoad:.25,speedFloor:0,useTrimPlan:false});
  assert.equal(r.result,'go-around');assert.deepEqual(r.abort.reasons,['sink-rate']);
  assert.ok(r.abort.remaining>2000);assert.ok(r.abort.agl>100);
  assert.ok(r.abort.pitchShortfall>3);assert.ok(r.abort.controlLossDuration>2);
