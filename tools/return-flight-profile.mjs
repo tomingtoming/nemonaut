@@ -12,8 +12,9 @@ import {LandingPrototype} from './landing-prototype.mjs';
 import {rollServo} from './roll-servo.mjs';
 import {planReturnRoute,routePoint} from './return-route.mjs';
 import {surfaceRelativeVelocity,surfaceOrientation} from '../dist/surface-frame.js';
+import {ReturnPilot} from './return-pilot.mjs';
 const wrap=a=>((a+540)%360)-180;
-export function runReturnFlight({kind='plane-large',fuelLoad=.5,seconds=1400,log=()=>{},curved=false,returnAfter=0,outboundHeading=null}={}){
+export function runReturnFlight({kind='plane-large',fuelLoad=.5,seconds=1400,log=()=>{},curved=false,returnAfter=0,outboundHeading=null,standalone=false}={}){
  const parts=preset(kind);for(const p of parts)if(PARTS[p.type].fuel)p.fuelLoad=fuelLoad;
  const f=new Flight(parts,'runway',161700),owner=f.vesselId;
  const takeoff=new TakeoffPrototype(f,{speed:90,altitude:600,rotation:12,integral:true,handoff:'attitude'});
@@ -22,7 +23,7 @@ export function runReturnFlight({kind='plane-large',fuelLoad=.5,seconds=1400,log
  let waypoint=-1,landing=null,departureTrack=null,everAirborne=false,handoff=null,previousPhase=null,unexpectedContact=null,landingTouch=null;
  const initialFuel=[...f.fuel.values()].reduce((a,b)=>a+b,0),initialParts=f.parts.length;
  const events=[];f.stageNext();
- let planned=null,progress=0,maxRouteError=0;
+ let planned=null,progress=0,maxRouteError=0,returning=null;
  try{
   for(let i=0;i<seconds*120&&!f.crashed;i++){
    const center=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),height=bodyAltitude(center,f.universalTime);
@@ -32,7 +33,15 @@ export function runReturnFlight({kind='plane-large',fuelLoad=.5,seconds=1400,log
    if(!landing&&takeoff.cruise){
     if(waypoint<0&&outboundHeading!==null)takeoff.cruise.target.heading=outboundHeading;
     if(waypoint<0&&f.time>=returnAfter&&height>580&&Math.abs(takeoff.cruise.telemetry.vertical??99)<1)waypoint=0;
-    if(waypoint>=0&&curved){
+    if(waypoint>=0&&standalone){
+     returning??=new ReturnPilot(f);
+     planned=returning.route;progress=returning.progress;maxRouteError=returning.maxRouteError;
+     if(!returning.running)break;
+     if(returning.phase==='capture'){
+      handoff={time:f.time,height,heading,remaining:runway.remaining,cross:runway.crossTrack,speed:f.telemetry.surfaceSpeed};
+      returning.stop('handoff');landing=new LandingPrototype(f);
+     }
+    }else if(waypoint>=0&&curved){
      if(!planned){
       const velocity=surfaceRelativeVelocity(center,f.vel,f.universalTime).applyQuaternion(surfaceOrientation(f.universalTime).invert()).applyQuaternion(inverse);
       const radius=Math.max(2500,f.telemetry.surfaceSpeed**2/(9.81*Math.tan(15*Math.PI/180)));
@@ -69,8 +78,8 @@ export function runReturnFlight({kind='plane-large',fuelLoad=.5,seconds=1400,log
    if(phase!==previousPhase){const event={time:f.time,phase,height,heading,x:local.x,z:local.z};events.push(event);log(event);previousPhase=phase;}
    if(i%(30*120)===0)log({time:f.time,phase,height,heading,x:local.x,z:local.z,speed:f.telemetry.surfaceSpeed});
    if(landing&&['stopped','failed','go-around'].includes(landing.phase))break;
-   const commands=landing?landing.update(f,1/120):takeoff.update(f,1/120);
-   if(!landing&&waypoint>=0&&takeoff.attitudeTarget){
+   const commands=landing?landing.update(f,1/120):returning?returning.update(f,1/120):takeoff.update(f,1/120);
+   if(!landing&&!returning&&waypoint>=0&&takeoff.attitudeTarget){
     if(takeoff.lateralBias)takeoff.lateralBias.z=0;
     commands.roll=rollServo(f,takeoff.attitudeTarget,12);
    }
@@ -85,4 +94,4 @@ export function runReturnFlight({kind='plane-large',fuelLoad=.5,seconds=1400,log
   return {kind,fuelLoad,time:f.time,initialFuel,remainingFuel:[...f.fuel.values()].reduce((a,b)=>a+b,0),initialParts,remainingParts:f.parts.length,ownerUnchanged:f.vesselId===owner,crashed:f.crashed,landed:f.landed,everAirborne,unexpectedContact,departureTrack,handoff,waypoint,route:planned?{family:planned.family,length:planned.length,radius:planned.radius,progress,maxRouteError}:null,result:landing?.phase??'incomplete',abort:landing?.abort,landingTouch,landingTrack:landing?.track,final:landing?.telemetry,events};
  }finally{f.dispose();}
 }
-if(process.argv[1]?.endsWith('return-flight-profile.mjs'))console.log(JSON.stringify(runReturnFlight({kind:process.argv[2]??'plane-large',curved:process.argv.includes('--curved'),log:r=>console.log(JSON.stringify(r))})));
+if(process.argv[1]?.endsWith('return-flight-profile.mjs'))console.log(JSON.stringify(runReturnFlight({kind:process.argv[2]??'plane-large',curved:process.argv.includes('--curved'),standalone:process.argv.includes('--standalone'),log:r=>console.log(JSON.stringify(r))})));
