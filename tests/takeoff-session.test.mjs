@@ -28,3 +28,13 @@ test('cancelled preparation and runway overflow never grant start permission',as
   const other=s.prepare(f,target);complete({...good,lastGround:{along:1858,cross:0,time:25}});assert.equal((await other).accepted,false);assert.equal(s.state,'rejected');assert.throws(()=>s.start(f,target));
  }finally{s.cancel();f.dispose();}
 });
+test('ready state expires before the UI offers a stale start',async()=>{
+ const f=setup(),s=new TakeoffSession({cancel(){},async request(){return good;}});
+ try{await s.prepare(f,target);assert.equal(s.readyFor(f,target),true);f.universalTime+=6;assert.equal(s.readyFor(f,target),false);assert.equal(s.state,'idle');assert.equal(f.throttle,0);assert.equal(f.brake,true);}finally{s.cancel();f.dispose();}
+});
+test('a late rejection from a cancelled worker cannot overwrite the newer session',async()=>{
+ const f=setup();let rejectOld;
+ const client={cancel(){},request(){return new Promise((resolve,reject)=>rejectOld=reject);}};
+ const s=new TakeoffSession(client);
+ try{const old=s.prepare(f,target);s.cancel();client.request=async()=>good;await s.prepare(f,target);rejectOld(Error('old worker failed'));assert.equal((await old).status,'cancelled');assert.equal(s.state,'ready');assert.equal(s.readyFor(f,target),true);}finally{s.cancel();f.dispose();}
+});

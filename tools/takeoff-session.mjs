@@ -35,11 +35,17 @@ export class TakeoffSession{
    if(['cancelled','stale'].includes(result.status)||stamp!==fingerprint(f)||!matchesPose(f,initialPose)||departureReadiness(f,target)){this.state='idle';return {status:'stale'};}
    if(result.status!=='airborne'||result.lastGround.along>RUNWAY.length-TAKEOFF_END_MARGIN||Math.abs(result.lastGround.cross)>RUNWAY.width/2){this.state='rejected';return {...result,accepted:false};}
    this.prepared={f,stamp,target,result,initialPose,epoch:f.universalTime};this.state='ready';return {...result,accepted:true};
-  }catch(error){if(generation===this.generation){this.state='idle';this.prepared=null;}throw error;}
+  }catch(error){if(generation!==this.generation)return {status:'cancelled'};this.state='idle';this.prepared=null;throw error;}
+ }
+ readyFor(f,settings){
+  const ready=this.prepared;
+  if(this.state!=='ready'||!ready)return false;
+  const valid=ready.f===f&&fingerprint(f)===ready.stamp&&matchesPose(f,ready.initialPose)&&JSON.stringify(cruiseSettings(settings))===JSON.stringify(ready.target)&&f.universalTime>=ready.epoch&&f.universalTime-ready.epoch<=5&&!departureReadiness(f,ready.target);
+  if(!valid)this.cancel();return valid;
  }
  start(f,settings){
-  const ready=this.prepared,target=cruiseSettings(settings);
-  if(!ready||this.state!=='ready'||ready.f!==f||fingerprint(f)!==ready.stamp||!matchesPose(f,ready.initialPose)||JSON.stringify(target)!==JSON.stringify(ready.target)||f.universalTime<ready.epoch||f.universalTime-ready.epoch>5||departureReadiness(f,target)){
+  const target=cruiseSettings(settings);
+  if(!this.readyFor(f,target)){
    this.cancel();throw Error('状態が変わりました。離陸を再予測してください');
   }
   this.prepared=null;this.state='running';
