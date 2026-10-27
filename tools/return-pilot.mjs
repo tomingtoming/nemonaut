@@ -38,11 +38,29 @@ export class ReturnPilot{
   Object.assign(this.owner,this.previous);this.owner.holdQ=this.owner.q.clone();
   if(reason==='fault')this.owner.throttle=0;
  }
+ recover(reason='着陸準備を中止しました'){
+  if(!this.running)return;
+  const f=this.owner,center=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+  this.phase='recovery';this.recoveryReason=reason;
+  this.driver.cruise.target.altitude=600;
+  this.driver.cruise.target.heading=compassHeading(new T.Vector3(0,0,1).applyQuaternion(f.q),center,f.universalTime);
+ }
+ drive(f,dt){
+  const commands=this.driver.update(f,dt);
+  if(!this.driver.cruise.running){this.faultMessage=this.driver.cruise.faultMessage;this.stop('fault');return {};}
+  if(this.driver.attitudeTarget){this.driver.lateralBias.z=0;commands.roll=rollServo(f,this.driver.attitudeTarget,12);}
+  return commands;
+ }
  update(f,dt,{manual=false}={}){
   if(!this.running)return {};
   if(f!==this.owner||manual){this.stop(manual?'manual':'vessel changed');return {};}
   if(f.crashed||!Number.isFinite(dt)||dt<0){this.stop('fault');return {};}
   if(dt===0)return {};
+  if(this.phase==='recovery'||this.phase==='recovery-hold'){
+   const commands=this.drive(f,dt);this.telemetry=this.driver.cruise.telemetry;
+   if(this.running)this.phase=this.driver.cruise.status==='保持'?'recovery-hold':'recovery';
+   return commands;
+  }
   this.elapsed+=dt;
   const center=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
   const local=inertialToFixed(center,f.universalTime).applyQuaternion(this.inverse),r=runwayApproach(center,f.universalTime,'09',f.vel);
@@ -52,18 +70,18 @@ export class ReturnPilot{
    if(e<error){error=e;nearest=d;}
   }
   this.progress=Math.max(this.progress,nearest);this.maxRouteError=Math.max(this.maxRouteError,error);
-  if(!r||!Number.isFinite(error)||error>2000||this.elapsed>1200||f.telemetry.contacts){this.faultMessage='帰投経路を維持できません';this.stop('fault');return {};}
   const nearEnd=this.progress>this.route.length-1200;
+  // After capture, distance to the finished route grows during normal final
+  // approach. Measure centreline deviation instead of distance to its endpoint.
+  if(!r||!Number.isFinite(error)||(nearEnd?Math.abs(r.crossTrack)>2000:error>2000)||this.elapsed>1200||f.telemetry.contacts){this.faultMessage='帰投経路を維持できません';this.stop('fault');return {};}
   const aim=routePoint(this.route,Math.min(this.route.length,this.progress+800));
   const target=fixedToInertial(new T.Vector3(aim.x,PRIMARY.radius,aim.y).normalize().multiplyScalar(PRIMARY.radius+350).applyQuaternion(this.orientation),f.universalTime);
   this.driver.cruise.target.heading=nearEnd?90-Math.atan2(r.crossTrack,1500)*180/Math.PI:compassHeading(target.sub(center),center,f.universalTime);
   this.phase=nearEnd&&!landingReadiness(f)?'capture':'return';
   // Reaching the end without an accepted landing handoff must not turn back
   // towards a waypoint behind the aircraft.
-  if(nearEnd&&r.remaining<5000){this.faultMessage='着陸準備の範囲を通過しました';this.stop('fault');return {};}
-  const commands=this.driver.update(f,dt);
-  if(!this.driver.cruise.running){this.faultMessage=this.driver.cruise.faultMessage;this.stop('fault');return {};}
-  if(this.driver.attitudeTarget){this.driver.lateralBias.z=0;commands.roll=rollServo(f,this.driver.attitudeTarget,12);}
+  if(nearEnd&&r.remaining<5000){this.recover('着陸準備の範囲を通過しました');return this.drive(f,dt);}
+  const commands=this.drive(f,dt);
   this.telemetry={...this.driver.cruise.telemetry,remaining:r.remaining,cross:r.crossTrack,progress:this.progress,length:this.route.length,error};
   return commands;
  }
