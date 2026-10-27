@@ -119,6 +119,25 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
  add('stabilizer',[0,2.1,-1.6],vertical,1);add('rudder',[0,2.45,-2.125],vertical,11);
  add('nosegear',[0,.4,2.0],[0,0,0],0);add('maingear',[1.05,.4,-.25],[0,0,0],1);add('maingear',[-1.05,.4,-.25],[0,0,0],1);
  }
+ if(kind==='transport'){
+  const r=[Math.PI/2,0,0],left=[Math.PI/2,Math.PI,0],vertical=[Math.PI/2,Math.PI/2,0];
+  add('transportCockpit',[0,5,19.2],[Math.PI/2,Math.PI,0]);
+  const front=add('transportFuselage',[0,5,9.6],r),mid=add('transportFuselage',[0,5,0],r,front),rear=add('transportFuselage',[0,5,-9.6],r,mid);
+  add('transportTail',[0,5,-16.8],[-Math.PI/2,0,0],rear);
+  for(const sign of [-1,1]){
+   const wr=sign>0?[Math.PI/2-.045,0,0]:[Math.PI/2-.045,Math.PI,0],sr=sign>0?r:left;
+   const wing=add('transportWingRoot',[sign*2.8,7.5,1],wr,mid);
+   const outer=add('transportWing',[sign*16.8,7.5,1],wr,wing);
+   for(const x of [8,16,24]){const pylon=add('enginePylon',[sign*x,6.75,1],[0,0,0],x<17?wing:outer);add('transportJet',[sign*x,4.5,1],r,pylon);}
+   for(const x of [12,22,28])add('aileronLarge',[sign*x,7.5,-4.4],sr,x<17?wing:outer);
+   const tail=add('transportStabilizer',[sign*4.5,6,-12.5],sr,rear);
+   add('transportElevator',[sign*4.5,6,-15.125],sr,tail);
+   const fin=add('transportStabilizer',[sign*8,10,-12.5],vertical,tail);
+   add('rudderLarge',[sign*8,10,-14.7],vertical,fin);
+   for(const z of [-6,-4,-2,0,2,4,6])for(const x of [3.2,4.25])add('maingearLarge',[sign*x,1.05,z],[0,0,0],mid);
+   for(const z of [15,17])add('nosegearLarge',[sign*.65,1.05,z],[0,0,0],front);
+  }
+ }
  if(kind==='courier'){
   add('probe',[0,1.6,-1.345]);add('solar',[0,2,-1.345],[-Math.PI/2,0,0]);
   const sep=add('decoupler',[0,1.6,-.61],[Math.PI/2,0,0],0,1);

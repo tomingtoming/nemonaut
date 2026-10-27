@@ -1,5 +1,14 @@
 // Explicit catalog sizes, not a per-vessel visual scale. Existing craft stay unchanged.
 export const LARGE_VARIANTS={
+ transportCockpit:{base:'cockpit',scale:4.8,factor:25,name:'輸送機コックピット',code:'TC-6'},
+ transportFuselage:{base:'tank',scale:4.8,factor:25,name:'輸送機燃料胴体',code:'TF-45000'},
+ transportTail:{base:'nose',scale:4.8,factor:25,name:'輸送機テールコーン',code:'TT-6'},
+ transportWingRoot:{base:'wing',scale:7,factor:49,name:'大型内翼区画',code:'WI-14'},
+ enginePylon:{base:'truss',scale:1.5,factor:4,name:'エンジンパイロン',code:'PY-15'},
+ transportWing:{base:'wing',scale:7,factor:49,name:'大型外翼区画',code:'TW-14'},
+ transportJet:{base:'jet',scale:3,factor:10,name:'輸送機ターボファン',code:'TF-180'},
+ transportStabilizer:{base:'stabilizer',scale:5,factor:25,name:'大型安定板 9 m',code:'TS-9'},
+ transportElevator:{base:'elevator',scale:5,factor:25,name:'大型エレベーター 9 m',code:'TE-9'},
  cockpitLarge:{base:'cockpit',scale:3,factor:9,name:'大型コックピット',code:'FC-6'},
  fuselageLarge:{base:'tank',scale:3,factor:9,name:'大型航空燃料胴体',code:'AF-16200'},
  jetLarge:{base:'jet',scale:3,factor:5,name:'大型ターボファン',code:'TF-90'},
@@ -25,6 +34,7 @@ export function installLargeParts(parts){
   for(const key of ['ac','massCenter'])if(d[key])d[key]=d[key].map(v=>v*s);
   for(const key of ['chord','hingeY'])if(d[key])d[key]*=s;
   if(d.wing)d.wing*=s*s;
+  if(id==='transportWingRoot'){d.wing=156.8;d.chord=11.2;d.ac=[7,0,0];d.massCenter=[7,0,0];}
   d.desc=d.wing?`面積 ${d.wing.toFixed(2)} m²。大型胴体用。重心からの配置と気流で効きが変わります。`:
    d.fuel?`直径 ${d.size[0]} m・燃料 ${d.fuel} kg。複数基の航空エンジンへ供給。`:
    d.ballast?`排水容積 ${d.volume.toFixed(1)} m³。注排水 ${d.ballast} kgで浮沈を調整。`:
