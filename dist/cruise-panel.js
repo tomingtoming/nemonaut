@@ -12,7 +12,7 @@ export function mountCruisePanel(root,getState,{claim,sync}){
  let panel=null,pilot=null,owner=null,shown=null,message='待機',inputError=null;
  let takeoff=null,takeoffPrevious=null;
  const departure=new TakeoffSession(new TakeoffPreviewClient(()=>new Worker(new URL('./takeoff-forecast-worker.js',import.meta.url),{type:'module'})));
- const takeoffStatus=()=>takeoff?.cruise?.status??({roll:'滑走',rotate:'機首上げ',climb:'上昇',capture:'巡航へ移行',abort:'離陸中止',stopped:'停止'}[takeoff?.phase]??'待機');
+ const takeoffStatus=()=>takeoff?.cruise&&Math.abs(takeoff.cruise.target.speed-takeoff.target.speed)>1?'捕捉中':takeoff?.cruise?.status??({roll:'滑走',rotate:'機首上げ',climb:'上昇',capture:'巡航へ移行',abort:'離陸中止',stopped:'停止'}[takeoff?.phase]??'待機');
  const button=root.createElement('button');button.id='openCruise';button.textContent='自動操縦';root.querySelector('#flightSystems').append(button);
  const close=()=>{panel?.remove();panel=null;shown=null;};
  const stop=(reason='手動操縦')=>{const pending=departure.state!=='idle';departure.cancel();if(takeoff){Object.assign(owner,takeoffPrevious);owner.holdQ=owner.q.clone();if(reason==='異常停止')owner.throttle=0;takeoff=null;message=reason;sync();}if(pilot){pilot.stop(owner,reason==='異常停止'?'fault':'manual');pilot=null;message=reason;sync();}else if(pending)message=reason;};

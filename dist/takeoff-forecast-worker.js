@@ -297,8 +297,8 @@ function engineIsp(p, pressure2 = 0) {
   const d = PARTS[p.type];
   return d.ispSeaLevel === void 0 ? d.isp : d.isp + (d.ispSeaLevel - d.isp) * Math.max(0, Math.min(1, pressure2 / 101325));
 }
-var createFuel = (parts) => new Map(parts.filter((p) => PARTS[p.type].fuel || PARTS[p.type].monoprop).map((p) => [p.id, PARTS[p.type].fuel || PARTS[p.type].monoprop]));
-var fuelMass = (p, fuel) => fuel instanceof Map ? fuel.get(p.id) || 0 : (PARTS[p.type].fuel || PARTS[p.type].monoprop || 0) * fuel;
+var createFuel = (parts) => new Map(parts.filter((p) => PARTS[p.type].fuel || PARTS[p.type].monoprop).map((p) => [p.id, (PARTS[p.type].fuel || PARTS[p.type].monoprop) * (p.fuelLoad ?? 1)]));
+var fuelMass = (p, fuel) => fuel instanceof Map ? fuel.get(p.id) || 0 : (PARTS[p.type].fuel || PARTS[p.type].monoprop || 0) * fuel * (p.fuelLoad ?? 1);
 function fuelNetworks(parts) {
   const byId = new Map(parts.map((p) => [p.id, p])), groups = /* @__PURE__ */ new Map(), network = /* @__PURE__ */ new Map();
   for (const p of parts) {
@@ -1326,6 +1326,7 @@ function validateCraft(value) {
     if (p.cargoOpen !== void 0 && !PARTS[p.type].cargoBay) throw Error("\u8CA8\u7269\u6249\u306F\u8CA8\u7269\u80F4\u4F53\u306E\u8A2D\u5B9A\u3067\u3059\u3002");
     if (p.fuelEnabled !== void 0 && !PARTS[p.type].fuel && !PARTS[p.type].monoprop) throw Error("\u71C3\u6599\u4F7F\u7528\u306F\u63A8\u9032\u5264\u3092\u6301\u3064\u90E8\u54C1\u306E\u8A2D\u5B9A\u3067\u3059\u3002");
     if (p.fuelCrossfeed !== void 0 && !PARTS[p.type].docking) throw Error("\u71C3\u6599\u901A\u904E\u306F\u30DD\u30FC\u30C8\u306E\u8A2D\u5B9A\u3067\u3059\u3002");
+    if (p.fuelLoad !== void 0 && (!(PARTS[p.type].fuel || PARTS[p.type].monoprop) || !Number.isFinite(p.fuelLoad) || p.fuelLoad < 0 || p.fuelLoad > 1)) throw Error("\u71C3\u6599\u642D\u8F09\u91CF\u306F0\u301C100%\u3067\u3059\u3002");
     if (p.thrustLimit !== void 0 && (!PARTS[p.type].thrust || !Number.isFinite(p.thrustLimit) || p.thrustLimit < 0 || p.thrustLimit > 1)) throw Error("\u63A8\u529B\u4E0A\u9650\u306F0\u301C100%\u3067\u3059\u3002");
     if (p.controlLimit !== void 0 && (!PARTS[p.type].controlAxis || !Number.isFinite(p.controlLimit) || p.controlLimit < 0 || p.controlLimit > 1)) throw Error("\u8235\u89D2\u4E0A\u9650\u304C\u4E0D\u6B63\u3067\u3059\u3002");
     if (p.missionOrigin !== void 0) {
@@ -1370,7 +1371,7 @@ function statistics(parts, fuelRatio = 1, ballast = 0, thermal = null) {
   for (const p of parts) {
     const d = PARTS[p.type], m = partMass(p, fuelRatio, ballast, thermal);
     mass += m;
-    dry += d.mass + (thermal?.get(p.id)?.ablator ?? d.ablator ?? 0) + (d.monoprop ? fuelRatio instanceof Map ? fuelRatio.get(p.id) || 0 : d.monoprop * fuelRatio : 0);
+    dry += d.mass + (thermal?.get(p.id)?.ablator ?? d.ablator ?? 0) + (d.monoprop ? fuelRatio instanceof Map ? fuelRatio.get(p.id) || 0 : d.monoprop * fuelRatio * (p.fuelLoad ?? 1) : 0);
     fuel += d.fuel || 0;
     thrust += engineMaxThrust(p);
     weightedIsp += engineMaxThrust(p) * (d.isp || 0);
