@@ -6,7 +6,7 @@ import {TakeoffSession} from '../tools/takeoff-session.mjs';
 import {previewTakeoff} from '../tools/takeoff-preview.mjs';
 const target={speed:90,altitude:600,heading:110,mode:'altitude',vertical:0};
 function setup(){const f=new Flight(preset('plane-large'),'runway',161700);f.stageNext();f.brake=true;for(let i=0;i<120;i++)f.step(1/120,{});return f;}
-const good={status:'airborne',lastGround:{along:1245,cross:0,time:20}};
+const good={status:'airborne',lastGround:{along:1245,cross:0,time:20},wheelTrack:{minAlong:100,maxAlong:1250,maxCross:5,samples:100}};
 test('prepared departure uses isolated forecast and starts only explicitly with matching targets',async()=>{
  const f=setup(),s=new TakeoffSession({cancel(){},async request(f,p){return previewTakeoff(f,p,{seconds:40});}});
  try{const before=f.time,r=await s.prepare(f,target);assert.equal(r.accepted,true);assert.equal(f.time,before);assert.equal(f.throttle,0);assert.equal(f.brake,true);
@@ -25,12 +25,19 @@ test('cancelled preparation and runway overflow never grant start permission',as
  const f=setup();let complete;
  const s=new TakeoffSession({cancel(){},request(){return new Promise(resolve=>complete=resolve);}});
  try{const work=s.prepare(f,target);s.cancel();complete(good);assert.equal((await work).status,'cancelled');assert.equal(s.state,'idle');
-  const other=s.prepare(f,target);complete({...good,lastGround:{along:1858,cross:0,time:25}});assert.equal((await other).accepted,false);assert.equal(s.state,'rejected');assert.throws(()=>s.start(f,target));
+  const other=s.prepare(f,target);complete({...good,wheelTrack:{...good.wheelTrack,maxAlong:1858}});assert.equal((await other).accepted,false);assert.equal(s.state,'rejected');assert.throws(()=>s.start(f,target));
  }finally{s.cancel();f.dispose();}
 });
 test('ready state expires before the UI offers a stale start',async()=>{
  const f=setup(),s=new TakeoffSession({cancel(){},async request(){return good;}});
  try{await s.prepare(f,target);assert.equal(s.readyFor(f,target),true);f.universalTime+=6;assert.equal(s.readyFor(f,target),false);assert.equal(s.state,'idle');assert.equal(f.throttle,0);assert.equal(f.brake,true);}finally{s.cancel();f.dispose();}
+});
+test('COM inside pavement does not excuse wheel excursions or missing track evidence',async()=>{
+ const f=setup();
+ try{for(const wheelTrack of [null,{...good.wheelTrack,maxCross:9.1},{...good.wheelTrack,minAlong:-.1},{...good.wheelTrack,maxAlong:1526},{...good.wheelTrack,maxCross:NaN}]){
+  const s=new TakeoffSession({cancel(){},async request(){return {...good,wheelTrack};}});
+  assert.equal((await s.prepare(f,target)).accepted,false);assert.throws(()=>s.start(f,target));
+ }}finally{f.dispose();}
 });
 test('a late rejection from a cancelled worker cannot overwrite the newer session',async()=>{
  const f=setup();let rejectOld;

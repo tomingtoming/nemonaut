@@ -1707,6 +1707,7 @@ var Flight = class _Flight {
     } else sasTrim(this, null, null, null, dt, false);
     commands.pitch = T28.MathUtils.clamp(commands.pitch + this.trim, -1, 1);
     this.engineThrust = engineBurn(this.networks, this.fuel, this.started ? this.active : /* @__PURE__ */ new Set(), this.throttle, density, dt, air.pressure);
+    const wheelContacts = [];
     let stallCount = 0, contacts = 0, wheelImpactSpeed = 0;
     this.lastThrust = 0;
     const wheelCount = this.parts.filter((p) => PARTS[p.type].wheel).length;
@@ -1774,6 +1775,7 @@ var Flight = class _Flight {
           forward.addScaledVector(normal, -forward.dot(normal));
           forward.normalize();
           const side = normal.clone().cross(forward), load = Math.max(spring, share * gravity(wp).length() * 0.25), point = wp.clone().addScaledVector(normal, -radius);
+          wheelContacts.push({ id: p.id, point: point.toArray(), halfAxle: new T28.Vector3(d.size[0] / 2, 0, 0).applyQuaternion(orientation).toArray(), time: startTime });
           apply(side.multiplyScalar(T28.MathUtils.clamp(-pv.dot(side) * share * 6, -load * 0.8, load * 0.8)), point);
           apply(forward.clone().multiplyScalar(T28.MathUtils.clamp(-pv.dot(forward) * share * (this.brake ? 8 : 0.012), -load * 0.8, load * 0.8)), point);
           if (p.type === "wheel" && this.driveEnabled && p.driveEnabled !== false && this.started && !this.brake) {
@@ -1803,7 +1805,7 @@ var Flight = class _Flight {
     advanceManeuver(this.maneuver, engineForce.clone().multiplyScalar(dt / mass));
     if (!maneuverWasComplete && this.maneuver?.complete && this.maneuver.stopAtTarget === true) this.throttle = 0;
     const thermal = thermalStep(this.parts, this.thermal, this.q, relativeVelocity, air, dt);
-    this.telemetry = { thermal, force, torque, engineForce, power, stallCount, contacts, wheelImpactSpeed, commands, engine: "Rapier 0.21" };
+    this.telemetry = { thermal, force, torque, engineForce, power, stallCount, contacts, wheelContacts, wheelImpactSpeed, commands, engine: "Rapier 0.21" };
     const impactSpeed = relativeVelocity.dot(normal);
     this.world.timestep = dt;
     this.world.step();
@@ -2175,6 +2177,24 @@ var TakeoffPrototype = class {
   }
 };
 
+// dist/runway-wheel-track.js
+import * as T32 from "./vendor/three/three.module.js";
+function extendWheelTrack(previous, contacts) {
+  const track = previous ? { ...previous } : { minAlong: Infinity, maxAlong: -Infinity, maxCross: 0, samples: 0 };
+  for (const contact of contacts) {
+    for (const sign of [-1, 1]) {
+      const point = new T32.Vector3().fromArray(contact.point).addScaledVector(new T32.Vector3().fromArray(contact.halfAxle), sign);
+      const r = runwayApproach(point, contact.time, "09");
+      if (!r) continue;
+      track.minAlong = Math.min(track.minAlong, -r.remaining);
+      track.maxAlong = Math.max(track.maxAlong, -r.remaining);
+      track.maxCross = Math.max(track.maxCross, Math.abs(r.crossTrack));
+      track.samples++;
+    }
+  }
+  return track.samples ? track : null;
+}
+
 // tools/takeoff-preview.mjs
 function runTakeoffPreview({ flight, pilot: p, seconds, hz }) {
   if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 60 || ![60, 120].includes(hz)) throw Error("Invalid forecast horizon");
@@ -2183,17 +2203,18 @@ function runTakeoffPreview({ flight, pilot: p, seconds, hz }) {
   pilot.phase = p.phase;
   pilot.pitchBias = p.pitchBias;
   pilot.target = { ...p.target };
-  let lastGround = null, airborne = 0;
+  let lastGround = null, airborne = 0, wheelTrack = null;
   const begin = performance.now();
   try {
     for (let i = 0; i < seconds * hz && !clone.crashed; i++) {
       clone.step(1 / hz, pilot.update(clone, 1 / hz));
+      wheelTrack = extendWheelTrack(wheelTrack, clone.telemetry.wheelContacts || []);
       const center2 = clone.pos.clone().add(clone.stats.com.clone().applyQuaternion(clone.q)), r = runwayApproach(center2, clone.universalTime, "09", clone.vel);
       if (clone.telemetry.contacts) lastGround = { along: -r.remaining, cross: r.crossTrack, time: clone.time };
       airborne = !clone.telemetry.contacts && clone.orbit.altitude > 10 ? airborne + 1 / hz : 0;
-      if (airborne >= 1) return { status: "airborne", lastGround, elapsedMs: performance.now() - begin };
+      if (airborne >= 1) return { status: "airborne", lastGround, wheelTrack, elapsedMs: performance.now() - begin };
     }
-    return { status: clone.crashed ? "crashed" : "unresolved", lastGround, elapsedMs: performance.now() - begin };
+    return { status: clone.crashed ? "crashed" : "unresolved", lastGround, wheelTrack, elapsedMs: performance.now() - begin };
   } finally {
     clone.dispose();
   }

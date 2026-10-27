@@ -5,7 +5,7 @@ import * as T from 'three';
 import {runwayApproach,RUNWAY} from '../dist/runway-navigation.js';
 import {bodyAltitude} from '../dist/celestial.js';
 import {TakeoffPrototype} from './takeoff-prototype.mjs';
-// The clearance is still experimental; wheel/obstacle clearance is a separate gate.
+// Runway-end reserve is experimental; obstacle clearance is a separate gate.
 export const TAKEOFF_END_MARGIN=75;
 export function departureReadiness(f,target){
  const problem=cruiseAuthority(f)||cruisePropulsion(f);if(problem)return problem;
@@ -33,7 +33,8 @@ export class TakeoffSession{
    const result=await this.client.request(f,pilot,{seconds:40});
    if(generation!==this.generation)return {status:'cancelled'};
    if(['cancelled','stale'].includes(result.status)||stamp!==fingerprint(f)||!matchesPose(f,initialPose)||departureReadiness(f,target)){this.state='idle';return {status:'stale'};}
-   if(result.status!=='airborne'||result.lastGround.along>RUNWAY.length-TAKEOFF_END_MARGIN||Math.abs(result.lastGround.cross)>RUNWAY.width/2){this.state='rejected';return {...result,accepted:false};}
+   const track=result.wheelTrack;
+   if(result.status!=='airborne'||!track||!['minAlong','maxAlong','maxCross','samples'].every(k=>Number.isFinite(track[k]))||track.samples<=0||track.minAlong<0||track.maxAlong>RUNWAY.length-TAKEOFF_END_MARGIN||track.maxCross>RUNWAY.width/2){this.state='rejected';return {...result,accepted:false};}
    this.prepared={f,stamp,target,result,initialPose,epoch:f.universalTime};this.state='ready';return {...result,accepted:true};
   }catch(error){if(generation!==this.generation)return {status:'cancelled'};this.state='idle';this.prepared=null;throw error;}
  }

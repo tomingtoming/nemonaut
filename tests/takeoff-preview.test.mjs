@@ -6,6 +6,7 @@ import {saveFlight} from '../dist/flight-save.js';
 import {TakeoffPrototype} from '../tools/takeoff-prototype.mjs';
 import {previewTakeoff} from '../tools/takeoff-preview.mjs';
 import {runwayApproach,RUNWAY} from '../dist/runway-navigation.js';
+import {extendWheelTrack} from '../dist/runway-wheel-track.js';
 
 for(const fraction of [1,.5])test(`cargo forecast preserves live state and distinguishes runway capacity (${fraction} fuel)`,()=>{
  const f=new Flight(preset('transport-cargo'),'runway',161700);f.stageNext();
@@ -22,12 +23,16 @@ for(const fraction of [1,.5])test(`cargo forecast preserves live state and disti
   const prediction=previewTakeoff(f,p);
   assert.deepEqual(saveFlight(f),before);assert.equal(p.pitchBias,bias);assert.equal(p.phase,phase);
   assert.equal(prediction.status,'airborne');assert.equal(prediction.lastGround.along<RUNWAY.length-75,fraction===.5);
-  let actual=null;
+  let actual=null,actualTrack=null;
   for(let i=0;i<20*120;i++){
    f.step(1/120,p.update(f,1/120));
+   assert.equal(f.telemetry.wheelContacts.length,f.telemetry.contacts);
+   actualTrack=extendWheelTrack(actualTrack,f.telemetry.wheelContacts);
    if(f.telemetry.contacts)actual=-runwayApproach(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.universalTime,'09',f.vel).remaining;
    if(!f.telemetry.contacts&&f.orbit.altitude>10)break;
   }
   assert.equal(f.crashed,false);assert.ok(actual!==null);assert.ok(Math.abs(actual-prediction.lastGround.along)<1);
+  assert.ok(actualTrack);assert.ok(Math.abs(actualTrack.maxAlong-prediction.wheelTrack.maxAlong)<1);
+  assert.ok(Math.abs(actualTrack.maxCross-prediction.wheelTrack.maxCross)<.05);
  }finally{f.dispose();}
 });

@@ -184,7 +184,8 @@ var TakeoffSession = class {
         this.state = "idle";
         return { status: "stale" };
       }
-      if (result.status !== "airborne" || result.lastGround.along > RUNWAY2.length - TAKEOFF_END_MARGIN || Math.abs(result.lastGround.cross) > RUNWAY2.width / 2) {
+      const track = result.wheelTrack;
+      if (result.status !== "airborne" || !track || !["minAlong", "maxAlong", "maxCross", "samples"].every((k) => Number.isFinite(track[k])) || track.samples <= 0 || track.minAlong < 0 || track.maxAlong > RUNWAY2.length - TAKEOFF_END_MARGIN || track.maxCross > RUNWAY2.width / 2) {
         this.state = "rejected";
         return { ...result, accepted: false };
       }
@@ -222,6 +223,7 @@ var TakeoffSession = class {
 // tools/takeoff-preview.mjs
 import { saveFlight, loadFlight } from "./flight-save.js";
 import { runwayApproach as runwayApproach3 } from "./runway-navigation.js";
+import { extendWheelTrack } from "./runway-wheel-track.js";
 function createTakeoffRequest(f, p, { seconds = 20, hz = 120 } = {}) {
   if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 60 || ![60, 120].includes(hz)) throw Error("Invalid forecast horizon");
   if (p.owner !== f.vesselId || !["roll", "rotate"].includes(p.phase)) throw Error("Forecast requires the owned departure");
