@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as T from 'three';
+import {DockingSession} from '../tools/docking-session.mjs';
 import {preset} from '../dist/catalog.js';
 import {withRendezvousTarget} from '../dist/rendezvous-practice.js';
 import {worldFromFlight,flightFromWorld} from '../dist/world-save.js';
@@ -59,13 +59,14 @@ for(const burnThrottle of [null,.1])test(`generated automatic transfer and relat
   t.diagnostic(JSON.stringify({start,plannedStart:p.epoch,distance:relative.distance,speed:relative.speed}));
   const ai=f.parts.find(p=>p.type==='dockingPort').id,bi=g.parts.find(p=>p.type==='dockingPort').id;
   f.dockingPorts={own:ai,target:bi};f.rcsEnabled=true;f.sas=true;f.sasMode='dock';f.portTranslationEnabled=true;
-  const clamp=x=>T.MathUtils.clamp(x,-1,1);let i=0;
-  // Existing RCS guidance is the handoff oracle, not a product docking autopilot.
-  for(;i<180*120;i++){
-   const nav=portGuidance(f,ai,g,bi);if(dockingStatus(f,ai,g,bi).ready)break;
-   const desired=clamp((nav.axial-(nav.lateral>1?20:0))*.12)*.6;
-   f.step(1/120,{portForward:clamp((desired-nav.closing)*2),portRight:clamp(-nav.horizontal*.15-nav.horizontalSpeed*2),portUp:clamp(-nav.vertical*.15-nav.verticalSpeed*2)});
+  const entry=portGuidance(f,ai,g,bi);t.diagnostic(JSON.stringify({entryAxial:entry.axial,entryLateral:entry.lateral,entryAngle:entry.angle,targetSpin:g.omega.length()}));
+  const docking=new DockingSession(),runtime=new WorldRuntime(f);let i=0;
+  // Prototype session consumes the actual burn result, without repositioning.
+  docking.start(f);
+  for(;i<180*120&&docking.owner;i++){
+   const input=docking.step(f,1/120);runtime.replace(f);runtime.step(1/120,input);
   }
+  assert.equal(docking.state,'complete',docking.message);
   assert.ok(i<180*120);assert.ok(dockingStatus(f,ai,g,bi).ready);assert.ok(dockingStatus(f,ai,g,bi).speed<.03);
   const fuelBefore=[...f.fuel.values(),...g.fuel.values()].reduce((a,b)=>a+b,0);
   f=dockVessels(f,g,ai,bi);assert.equal(f.parts.length,20);assert.equal(f.detached.length,0);
