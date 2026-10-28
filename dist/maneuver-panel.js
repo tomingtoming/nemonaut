@@ -8,7 +8,7 @@ export function mountManeuverPanel(root,getState,{claim,sync}){
  let panel=null,bound=null,node=null,message='待機',power=null,timing=null,start=null,status=null,readout=null;
  const close=()=>{panel?.remove();panel=null;};
  const stop=()=>{if(session.owner){session.stop();message='待機';sync();}};
- const fixed=n=>!!(n?.capture||n?.returnPlan||n?.departure||n?.plannedThrottle!==undefined);
+ const fixed=n=>!!(n?.capture||n?.returnPlan||n?.departure||n?.rendezvous||n?.plannedThrottle!==undefined);
  function update(){
   const {flight:f,atCenter}=getState();
   if(session.owner&&(session.owner!==f||atCenter||session.node!==f?.maneuver))stop();
@@ -21,7 +21,7 @@ export function mountManeuverPanel(root,getState,{claim,sync}){
   status.textContent=session.owner?session.message:!node?'マップで計画を固定してください':message;
   readout.textContent=node?`残り ${Math.hypot(...node.remaining).toFixed(2)} m/s`+(session.owner?` · 開始まで ${Math.max(0,session.plan.startTime-f.universalTime).toFixed(1)}秒`:''):'';
  }
- function configure(){power.querySelector('[value="1"]').textContent=node?.returnPlan||node?.departure?'100→10→1%':'100%';power.value=String(fixed(node)?node.plannedThrottle??1:.1);timing.value=fixed(node)?'start':'center';}
+ function configure(){power.querySelector('[value="1"]').textContent=node?.returnPlan||node?.departure||node?.rendezvous?.burnThrottle===null?'100→10→1%':'100%';power.value=String(fixed(node)?(node.rendezvous?(node.rendezvous.burnThrottle??1):node.plannedThrottle??1):.1);timing.value=fixed(node)?'start':'center';}
  function open(){
   if(panel){panel.front();return;}
   panel=floatingWindow(root.body,{title:'自動噴射',x:innerWidth-330,y:160,onClose:close});

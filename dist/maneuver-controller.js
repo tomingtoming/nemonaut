@@ -1,5 +1,6 @@
 // tools/maneuver-session.mjs
 import * as T from "three";
+import { transferBurnTiming } from "./timed-rendezvous.js";
 import { canControl } from "./fleet.js";
 import { PARTS } from "./catalog.js";
 import { bodyOrbitState } from "./celestial.js";
@@ -8,12 +9,13 @@ import { captureBurnEstimate } from "./lunar-capture.js";
 import { maneuverDirection, validateManeuverNode } from "./maneuver-node.js";
 
 // tools/maneuver-execution-plan.mjs
+import { transferThrottle } from "./rendezvous-burn.js";
 import { terminalBurnThrottle } from "./maneuver-thrust-profile.js";
 function maneuverExecutionPlan(node, now, fullDuration, { throttle, timing = "center" } = {}) {
   if (!node || node.complete) throw Error("\u672A\u5B9F\u884C\u306E\u30DE\u30CB\u30E5\u30FC\u30D0\u3092\u56FA\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044");
   if (!Number.isFinite(now) || !Number.isFinite(node.universalTime) || !Number.isFinite(fullDuration) || fullDuration <= 0) throw Error("\u5674\u5C04\u6642\u523B\u307E\u305F\u306F\u6240\u8981\u6642\u9593\u304C\u4E0D\u6B63\u3067\u3059");
-  const fixed = !!(node.capture || node.returnPlan || node.departure || node.plannedThrottle !== void 0);
-  const planned = node.plannedThrottle ?? 1, power = throttle ?? (fixed ? planned : 0.1);
+  const fixed = !!(node.capture || node.returnPlan || node.departure || node.rendezvous || node.plannedThrottle !== void 0);
+  const planned = node.rendezvous ? node.rendezvous.burnThrottle ?? 1 : node.plannedThrottle ?? 1, power = throttle ?? (fixed ? planned : 0.1);
   if (!Number.isFinite(power) || power <= 0 || power > 1 || !["start", "center"].includes(timing)) throw Error("\u5674\u5C04\u8A2D\u5B9A\u304C\u4E0D\u6B63\u3067\u3059");
   if (fixed && power !== planned) throw Error("\u56FA\u5B9A\u6E08\u307F\u306E\u8A08\u753B\u63A8\u529B\u3092\u5909\u66F4\u3067\u304D\u307E\u305B\u3093");
   const duration = fullDuration / power, startTime = node.universalTime - (!fixed && timing === "center" ? duration / 2 : 0);
@@ -22,11 +24,11 @@ function maneuverExecutionPlan(node, now, fullDuration, { throttle, timing = "ce
   return { startTime, duration, throttle: power, timing: fixed ? "start" : timing };
 }
 function maneuverExecutionThrottle(node, plan, remaining) {
-  return node.returnPlan || node.departure ? terminalBurnThrottle(remaining) : plan.throttle;
+  return node.rendezvous ? node.rendezvous.burnThrottle ?? transferThrottle(remaining) : node.returnPlan || node.departure ? terminalBurnThrottle(remaining) : plan.throttle;
 }
 
 // tools/maneuver-session.mjs
-var planKey = (n) => JSON.stringify([n.universalTime, n.time, n.impulse, n.plannedThrottle, n.tolerance, n.capture, n.returnPlan, n.departure]);
+var planKey = (n) => JSON.stringify([n.universalTime, n.time, n.impulse, n.plannedThrottle, n.tolerance, n.capture, n.returnPlan, n.departure, n.rendezvous]);
 var craftKey = (f) => JSON.stringify([f.stage, [...f.active], f.parts.map((p) => [p.id, p.thrustLimit, p.fuelEnabled, p.fuelCrossfeed])]);
 var ManeuverSession = class {
   constructor() {
@@ -43,9 +45,11 @@ var ManeuverSession = class {
     const n = validateManeuverNode(f.maneuver);
     if (!n || n.complete) throw Error("\u672A\u5B9F\u884C\u306E\u30DE\u30CB\u30E5\u30FC\u30D0\u3092\u56FA\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044");
     if (new T.Vector3(...n.remaining).distanceTo(new T.Vector3(...n.impulse)) > 1e-5) throw Error("\u5674\u5C04\u6E08\u307F\u306E\u8A08\u753B\u306F\u518D\u5B9F\u884C\u3067\u304D\u307E\u305B\u3093");
+    if (n.rendezvous && (f.targetPartId !== n.rendezvous.targetPartId || !f.navigationTarget || f.navigationTarget.crashed)) throw Error("\u4F1A\u5408\u8A08\u753B\u306E\u76EE\u6A19\u304C\u5909\u66F4\u3055\u308C\u305F\u304B\u5931\u308F\u308C\u307E\u3057\u305F");
     const estimate = captureBurnEstimate(f, new T.Vector3(...n.remaining).length());
     if (!estimate.enough) throw Error("\u73FE\u5728\u306E\u70B9\u706B\u6BB5\u306E\u71C3\u6599\u304C\u4E0D\u8DB3\u3057\u3066\u3044\u307E\u3059");
     this.plan = maneuverExecutionPlan(n, f.universalTime, estimate.duration, settings);
+    if (n.rendezvous) this.plan.duration = transferBurnTiming(f, new T.Vector3(...n.remaining).length(), { burnThrottle: n.rendezvous.burnThrottle }).duration;
     if (n.returnPlan || n.departure) {
       this.plan.duration = terminalBurnDuration(new T.Vector3(...n.remaining).length(), (dv) => captureBurnEstimate(f, dv).duration, n.tolerance ?? 0.5);
       if (this.plan.duration > 1200) throw Error("20\u5206\u3092\u8D85\u3048\u308B\u5674\u5C04\u306F\u672A\u5BFE\u5FDC\u3067\u3059");
@@ -93,6 +97,10 @@ var ManeuverSession = class {
     }
     if (f.maneuver !== this.node || planKey(this.node) !== this.signature || craftKey(f) !== this.craft) {
       this.stop("cancelled", "\u6A5F\u4F53\u307E\u305F\u306F\u8A08\u753B\u304C\u5909\u66F4\u3055\u308C\u307E\u3057\u305F");
+      return;
+    }
+    if (this.node.rendezvous && (f.targetPartId !== this.node.rendezvous.targetPartId || !f.navigationTarget || f.navigationTarget.crashed)) {
+      this.stop("cancelled", "\u4F1A\u5408\u8A08\u753B\u306E\u76EE\u6A19\u304C\u5909\u66F4\u3055\u308C\u305F\u304B\u5931\u308F\u308C\u307E\u3057\u305F");
       return;
     }
     if (this.node.complete) {

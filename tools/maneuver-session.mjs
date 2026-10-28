@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {transferBurnTiming} from '../dist/timed-rendezvous.js';
 import {canControl} from '../dist/fleet.js';
 import {PARTS} from '../dist/catalog.js';
 import {bodyOrbitState} from '../dist/celestial.js';
@@ -7,7 +8,7 @@ import {captureBurnEstimate} from '../dist/lunar-capture.js';
 import {maneuverDirection,validateManeuverNode} from '../dist/maneuver-node.js';
 import {maneuverExecutionPlan,maneuverExecutionThrottle} from './maneuver-execution-plan.mjs';
 
-const planKey=n=>JSON.stringify([n.universalTime,n.time,n.impulse,n.plannedThrottle,n.tolerance,n.capture,n.returnPlan,n.departure]);
+const planKey=n=>JSON.stringify([n.universalTime,n.time,n.impulse,n.plannedThrottle,n.tolerance,n.capture,n.returnPlan,n.departure,n.rendezvous]);
 const craftKey=f=>JSON.stringify([f.stage,[...f.active],f.parts.map(p=>[p.id,p.thrustLimit,p.fuelEnabled,p.fuelCrossfeed])]);
 export class ManeuverSession{
  constructor(){this.owner=null;this.state='idle';this.message='待機';}
@@ -19,9 +20,11 @@ export class ManeuverSession{
   if(orbit.altitude<Math.max(1000,orbit.body.atmosphereTop??0))throw Error('大気圏外で開始してください');
   const n=validateManeuverNode(f.maneuver);if(!n||n.complete)throw Error('未実行のマニューバを固定してください');
   if(new T.Vector3(...n.remaining).distanceTo(new T.Vector3(...n.impulse))>1e-5)throw Error('噴射済みの計画は再実行できません');
+  if(n.rendezvous&&(f.targetPartId!==n.rendezvous.targetPartId||!f.navigationTarget||f.navigationTarget.crashed))throw Error('会合計画の目標が変更されたか失われました');
   const estimate=captureBurnEstimate(f,new T.Vector3(...n.remaining).length());
   if(!estimate.enough)throw Error('現在の点火段の燃料が不足しています');
   this.plan=maneuverExecutionPlan(n,f.universalTime,estimate.duration,settings);
+  if(n.rendezvous)this.plan.duration=transferBurnTiming(f,new T.Vector3(...n.remaining).length(),{burnThrottle:n.rendezvous.burnThrottle}).duration;
   if(n.returnPlan||n.departure){
    this.plan.duration=terminalBurnDuration(new T.Vector3(...n.remaining).length(),dv=>captureBurnEstimate(f,dv).duration,n.tolerance??.5);
    if(this.plan.duration>1200)throw Error('20分を超える噴射は未対応です');
@@ -44,6 +47,7 @@ export class ManeuverSession{
   if(!Number.isFinite(dt)||dt<0){this.stop('failed','無効な時間刻み');return;}if(dt===0)return;
   if(!canControl(f)){this.stop('failed','機体の制御を失いました');return;}
   if(f.maneuver!==this.node||planKey(this.node)!==this.signature||craftKey(f)!==this.craft){this.stop('cancelled','機体または計画が変更されました');return;}
+  if(this.node.rendezvous&&(f.targetPartId!==this.node.rendezvous.targetPartId||!f.navigationTarget||f.navigationTarget.crashed)){this.stop('cancelled','会合計画の目標が変更されたか失われました');return;}
   if(this.node.complete){this.stop('complete','予定噴射を完了しました');return;}
   const orbit=bodyOrbitState(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.vel,f.universalTime);
   if(orbit.bodyId!==this.body||orbit.altitude<Math.max(1000,orbit.body.atmosphereTop??0)){this.stop('failed','噴射の適用範囲を外れました');return;}

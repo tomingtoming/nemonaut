@@ -4,6 +4,17 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {preserveManualControlEdit} from '../dist/manual-control-edit.js';
 
+test('timed rendezvous precision remains fixed through the real stop panel',()=>{
+ const elements=[];const document={createElement(tag){const e={tag,append(){},setAttribute(){}};elements.push(e);return e;},createTextNode:t=>t};
+ const context=vm.createContext({document,canControl:()=>true});
+ const source=readFileSync(new URL('../dist/maneuver-stop.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replaceAll('export function ','function ');
+ vm.runInContext(source,context);
+ const f={maneuver:{rendezvous:{burnThrottle:.1},tolerance:.05,complete:false},throttle:0};
+ const panel=context.mountManeuverStop({append(){}},()=>f);panel.update();const precision=elements.find(e=>e.tag==='select');
+ assert.equal(precision.disabled,true);precision.value='0.5';precision.onchange();assert.equal(f.maneuver.tolerance,.05);assert.equal(precision.value,'0.05');
+ delete f.maneuver.rendezvous;panel.update();assert.equal(precision.disabled,false);precision.value='0.5';precision.onchange();assert.equal(f.maneuver.tolerance,.5);
+});
+
 // Exercise the real capture listener with a minimal DOM and a controller double.
 // Physics and controller lifecycle are covered by maneuver-session.test.mjs.
 function harness(kind='maneuver'){

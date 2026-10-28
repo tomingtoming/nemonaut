@@ -6,7 +6,8 @@ import {maneuverPreview} from './maneuver.js';
 import {coastDrift} from './coast-orbit.js';
 import {relativeStopPlan} from './relative-stop-plan.js';
 
-export const transferThrottle=remaining=>remaining<.5?.01:remaining<2?.1:1;
+import {transferThrottle} from './rendezvous-burn.js';
+export {transferThrottle} from './rendezvous-burn.js';
 // Weight time by delivered delta-v: a long low-throttle tail is not half the burn.
 export function transferBurnTiming(vessel,deltaV,{burnThrottle=null}={}){
  if(burnThrottle!==null&&(!Number.isFinite(burnThrottle)||burnThrottle<=0||burnThrottle>1))throw Error('噴射推力は0より大きく100%以下にしてください');
