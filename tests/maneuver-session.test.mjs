@@ -7,6 +7,7 @@ import {ManeuverSession} from '../tools/maneuver-session.mjs';
 import {maneuverExecutionPlan,maneuverExecutionThrottle} from '../tools/maneuver-execution-plan.mjs';
 import {AscentSession} from '../tools/ascent-session.mjs';
 import {WorldRuntime} from '../dist/world-runtime.js';
+import {terminalBurnDuration} from '../dist/maneuver-thrust-profile.js';
 import {saveFlight,loadFlight} from '../dist/flight-save.js';
 
 function vessel(dv=30){
@@ -32,6 +33,14 @@ test('predicted lunar tail power differs from constant-power finite return and c
  }
  assert.equal(maneuverExecutionThrottle({capture:{}},{throttle:1},1),1);
  assert.equal(maneuverExecutionThrottle({plannedThrottle:.1},{throttle:.1},1),.1);
+});
+test('terminal duration counts slow tails and plans shorter than either transition',()=>{
+ assert.ok(Math.abs(terminalBurnDuration(100,dv=>dv/10)-32)<1e-10);
+ assert.ok(Math.abs(terminalBurnDuration(5,dv=>dv/10)-18)<1e-10);
+ assert.ok(Math.abs(terminalBurnDuration(1,dv=>dv/10)-5)<1e-10);
+ assert.ok(Math.abs(terminalBurnDuration(100,dv=>dv/10,.05)-36.5)<1e-10);
+ assert.throws(()=>terminalBurnDuration(0,dv=>dv));
+ assert.throws(()=>terminalBurnDuration(100,()=>NaN));
 });
 for(const [name,dv,throttle]of [['prograde',30,.1],['retrograde',-30,.1],['normal',{prograde:0,normal:30,radial:0},1]])test(`real ${name} burn aligns, waits, consumes fuel and cuts off`,()=>{
  const f=vessel(dv),s=new ManeuverSession();try{

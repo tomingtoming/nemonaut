@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {terminalBurnThrottle} from './maneuver-thrust-profile.js';
 import {MOON,bodyState,bodyOrbitState,advanceCelestialOrbit} from './celestial.js';
 import {PLANET} from './planet.js';
 import {keplerDrift,coastDrift} from './coast-orbit.js';
@@ -62,7 +63,7 @@ export function predictReturnBurn(vessel,plan){
  const at=coastDrift(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,start-vessel.universalTime);
  let pos=at.position,vel=at.velocity,time=start,mass=vessel.stats.mass,remaining=plan.deltaV;
  for(let i=0;i<144000&&remaining>=.5;i++){
-  const dt=1/120,throttle=remaining<2?.01:remaining<10?.1:1,before=[...fuel.values()].reduce((a,b)=>a+b,0);
+  const dt=1/120,throttle=terminalBurnThrottle(remaining),before=[...fuel.values()].reduce((a,b)=>a+b,0);
   const thrust=[...engineBurn(vessel.networks,fuel,vessel.active,throttle,0,dt).values()].reduce((a,b)=>a+b,0),used=before-[...fuel.values()].reduce((a,b)=>a+b,0);
   if(thrust<=0)return null;
   const next=advanceCelestialOrbit(pos,vel,direction.clone().multiplyScalar(thrust/mass),dt,time);pos=next.pos;vel=next.vel;time+=dt;

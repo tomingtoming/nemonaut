@@ -1,4 +1,5 @@
 import {PLANET,center,orbitState} from './planet.js';
+import {terminalBurnThrottle} from './maneuver-thrust-profile.js';
 import {MOON,bodyState,advanceCelestialOrbit} from './celestial.js';
 import {coastDrift} from './coast-orbit.js';
 import {lambertArc} from './lambert.js';
@@ -52,7 +53,7 @@ function evaluateFiniteDeparture(vessel,plan){
  const at=coastDrift(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,plan.startTime-vessel.universalTime),fuel=new Map(vessel.fuel),direction=plan.impulse.clone().normalize();
  let pos=at.position,vel=at.velocity,time=plan.startTime,mass=vessel.stats.mass,left=plan.deltaV;
  for(let i=0;i<144000&&left>=.5;i++){
-  const dt=1/120,before=[...fuel.values()].reduce((a,b)=>a+b,0),throttle=left<2?.01:left<10?.1:1;
+  const dt=1/120,before=[...fuel.values()].reduce((a,b)=>a+b,0),throttle=terminalBurnThrottle(left);
   const thrust=[...engineBurn(vessel.networks,fuel,vessel.active,throttle,0,dt).values()].reduce((a,b)=>a+b,0),used=before-[...fuel.values()].reduce((a,b)=>a+b,0);
   if(thrust<=0)break;
   const next=advanceCelestialOrbit(pos,vel,direction.clone().multiplyScalar(thrust/mass),dt,time);pos=next.pos;vel=next.vel;time+=dt;left-=thrust/mass*dt;mass-=used;

@@ -2,6 +2,7 @@ import * as T from 'three';
 import {canControl} from '../dist/fleet.js';
 import {PARTS} from '../dist/catalog.js';
 import {bodyOrbitState} from '../dist/celestial.js';
+import {terminalBurnDuration} from '../dist/maneuver-thrust-profile.js';
 import {captureBurnEstimate} from '../dist/lunar-capture.js';
 import {maneuverDirection,validateManeuverNode} from '../dist/maneuver-node.js';
 import {maneuverExecutionPlan,maneuverExecutionThrottle} from './maneuver-execution-plan.mjs';
@@ -21,6 +22,10 @@ export class ManeuverSession{
   const estimate=captureBurnEstimate(f,new T.Vector3(...n.remaining).length());
   if(!estimate.enough)throw Error('現在の点火段の燃料が不足しています');
   this.plan=maneuverExecutionPlan(n,f.universalTime,estimate.duration,settings);
+  if(n.returnPlan||n.departure){
+   this.plan.duration=terminalBurnDuration(new T.Vector3(...n.remaining).length(),dv=>captureBurnEstimate(f,dv).duration,n.tolerance??.5);
+   if(this.plan.duration>1200)throw Error('20分を超える噴射は未対応です');
+  }
   this.previous={sas:f.sas,sasMode:f.sasMode,navigationAuto:f.navigationAuto,navigationFrame:f.navigationFrame};
   this.node=f.maneuver;this.previousStop=this.node.stopAtTarget;
   this.signature=planKey(this.node);this.craft=craftKey(f);this.body=orbit.bodyId;

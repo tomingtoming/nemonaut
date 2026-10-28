@@ -1,3 +1,4 @@
+import {terminalBurnThrottle} from '../dist/maneuver-thrust-profile.js';
 // Ordinary nodes name an impulse epoch. Finite-return and lunar nodes already
 // name a burn start; never apply the half-duration correction to those twice.
 export function maneuverExecutionPlan(node,now,fullDuration,{throttle,timing='center'}={}){
@@ -16,5 +17,5 @@ export function maneuverExecutionPlan(node,now,fullDuration,{throttle,timing='ce
 // Lunar return/departure predictions include this terminal throttle sequence.
 // Capture and explicit finite-return nodes use their constant planned power.
 export function maneuverExecutionThrottle(node,plan,remaining){
- return node.returnPlan||node.departure?(remaining<2?.01:remaining<10?.1:1):plan.throttle;
+ return node.returnPlan||node.departure?terminalBurnThrottle(remaining):plan.throttle;
 }
