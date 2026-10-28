@@ -1,3 +1,4 @@
+import {ManeuverSession} from '../dist/maneuver-controller.js';
 import test from 'node:test';import assert from 'node:assert/strict';
 import {preset} from '../dist/catalog.js';import {LaunchPilot} from '../dist/launch-pilot.js';
 import {WorldRuntime} from '../dist/world-runtime.js';import {launchWorld,selectWorldVessel} from '../dist/world-operations.js';
@@ -9,7 +10,7 @@ import {createManeuverNode} from '../dist/maneuver-node.js';
 import {portGuidance} from '../dist/port-navigation.js';import {dockingStatus,dockVessels,undockVessel} from '../dist/docking.js';
 import {setPartAction} from '../dist/part-actions.js';
 
-test('two surface launches rendezvous, dock, refuel, separate and resume independently',()=>{
+for(const automatic of [false,true])test(`two surface launches ${automatic?'automatically':'manually'} rendezvous, dock, refuel, separate and resume independently`,()=>{
  let world=worldFromFlight(null),firstId,firstFuel,firstTime;
  for(let n=0;n<2;n++){
   world=launchWorld(world,{parts:preset('tug-launcher'),environment:'land',name:'Tug '+(n+1)});
@@ -31,18 +32,19 @@ test('two surface launches rendezvous, dock, refuel, separate and resume indepen
     const arrival=keplerDrift(preview.orbit.r,preview.orbit.relativeVelocity,own.body.mu,impulse.duration),destination=keplerDrift(other.r,other.relativeVelocity,own.body.mu,impulse.arrivalTime-other.universalTime);
     assert.ok(Math.abs(arrival.position.distanceTo(destination.position)-100)<.05);
     setTarget(f,f,target);const targetFuel=[...target.fuel];
-    const schedule=(epoch,components)=>{
-     f.maneuver=createManeuverNode(maneuverPreview(centerOfVessel(f),f.vel,{universalTime:epoch},components,f.universalTime),f.time);
+    const schedule=(epoch,components,burn)=>{
+     f.maneuver=createManeuverNode(maneuverPreview(centerOfVessel(f),f.vel,{universalTime:epoch},components,f.universalTime),f.time,automatic?{rendezvous:{burnThrottle:burn.burnThrottle,duration:burn.duration,targetPartId:f.targetPartId}}:{});
      f.maneuver.stopAtTarget=true;f.maneuver.tolerance=.05;f.sasMode='maneuver';
     };
-    const advanceTo=epoch=>{while(f.universalTime<epoch-1e-6)runtime.step(Math.min(1/120,epoch-f.universalTime));};
+    const advanceTo=epoch=>{if(automatic)return;while(f.universalTime<epoch-1e-6)runtime.step(Math.min(1/120,epoch-f.universalTime));};
     const burn=()=>{
+     if(automatic){const session=new ManeuverSession();session.start(f);assert.equal(session.plan.startTime,f.maneuver.universalTime);for(let i=0;i<300*120&&session.owner;i++){session.step(f,1/120);runtime.replace(f);runtime.step(1/120);}assert.equal(session.state,'complete',session.message);}
      for(let i=0;i<120*180&&!f.maneuver.complete&&!f.crashed;i++){f.throttle=transferThrottle(Math.hypot(...f.maneuver.remaining));runtime.step(1/120);}
      assert.equal(f.maneuver.complete,true);assert.equal(f.throttle,0);assert.equal(f.crashed,false);
     };
-    schedule(plan.epoch,plan.components);advanceTo(plan.epoch);burn();
+    schedule(plan.epoch,plan.components,plan.burn);advanceTo(plan.epoch);burn();
     const stop=timedRelativeStopPlan(f,bodyOrbitState(centerOfVessel(target),target.vel,target.universalTime));
-    schedule(stop.location.universalTime,stop.components);
+    schedule(stop.location.universalTime,stop.components,stop.burn);
     const coast=runtime.coast(stop.time,{maxSteps:10000});assert.equal(coast.reason,'予定噴射の直前');
     assert.ok(Math.abs(stop.location.universalTime-f.universalTime-60)<.05);
     advanceTo(stop.location.universalTime);burn();
