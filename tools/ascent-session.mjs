@@ -1,6 +1,6 @@
 import {AscentPrototype} from './ascent-prototype.mjs';
 import {PARTS} from '../dist/catalog.js';
-import {referenceBody} from '../dist/celestial.js';
+import {ascentReadiness} from './ascent-readiness.mjs';
 
 // Experimental lifecycle; product UI admission and manual-input wiring follow separately.
 export class AscentSession{
@@ -8,7 +8,7 @@ export class AscentSession{
  start(f,settings){
   if(this.owner)throw Error('Stop the current ascent first');
   const pilot=new AscentPrototype(settings);
-  if(!f||f.crashed||!f.rocketAxes||!f.parts.some(p=>PARTS[p.type].control)||referenceBody(f.pos,f.universalTime).id!=='planet')throw Error('母星の制御可能なロケットが必要');
+  const reason=ascentReadiness(f);if(reason)throw Error(reason);
   this.previous={sas:f.sas,sasMode:f.sasMode,navigationAuto:f.navigationAuto,navigationFrame:f.navigationFrame};
   this.owner=f;this.pilot=pilot;this.elapsed=0;this.state='running';this.message='離昇';
  }

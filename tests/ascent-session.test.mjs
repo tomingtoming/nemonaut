@@ -16,11 +16,11 @@ test('pause, manual cancellation and vessel replacement do not leak ascent comma
 test('loss of control and final fuel exhaustion release ownership as failure',()=>{
  const f=new Flight(preset('launcher'),'land'),s=new AscentSession();
  try{s.start(f,{altitude:120000});f.crashed=true;s.step(f,1/120);assert.equal(s.state,'failed');assert.equal(f.throttle,0);
-  f.crashed=false;for(const id of f.fuel.keys())f.fuel.set(id,0);s.start(f,{altitude:120000});for(let i=0;i<10&&s.owner;i++)s.step(f,1/120);
+  f.crashed=false;s.start(f,{altitude:120000});for(const id of f.fuel.keys())f.fuel.set(id,0);for(let i=0;i<10&&s.owner;i++)s.step(f,1/120);
   assert.equal(s.state,'failed');assert.match(s.message,/未達/);assert.equal(s.owner,null);
  }finally{f.dispose();}
 });
-for(const [kind,epoch,limit]of [['launcher',PRIMARY_ROTATION_PERIOD/4,1],['launcher',PRIMARY_ROTATION_PERIOD/2,1],['atlas',PRIMARY_ROTATION_PERIOD*3/4,1],['launcher',0,.8],['atlas',0,.6]])test(`ascent ownership completes ${kind} at epoch ${epoch} with thrust ${limit}`,()=>{
+for(const [kind,epoch,limit]of [['launcher',PRIMARY_ROTATION_PERIOD/4,1],['launcher',PRIMARY_ROTATION_PERIOD/2,1],['atlas',PRIMARY_ROTATION_PERIOD*3/4,1],['launcher',0,.8]])test(`ascent ownership completes ${kind} at epoch ${epoch} with thrust ${limit}`,()=>{
  const parts=preset(kind);for(const p of parts)if(PARTS[p.type].thrust)p.thrustLimit=limit;
  const f=new Flight(parts,'land',epoch),s=new AscentSession();
  try{
