@@ -10,7 +10,9 @@
     "build:takeoff-worker": "node tools/build-takeoff-worker.mjs",
     "check:takeoff-worker": "node tools/build-takeoff-worker.mjs --check",
     "build:takeoff-controller": "node tools/build-takeoff-controller.mjs",
-    "check:takeoff-controller": "node tools/build-takeoff-controller.mjs --check"
+    "check:takeoff-controller": "node tools/build-takeoff-controller.mjs --check",
+    "build:orbital-ascent": "node tools/build-orbital-ascent.mjs",
+    "check:orbital-ascent": "node tools/build-orbital-ascent.mjs --check"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.21.0",
