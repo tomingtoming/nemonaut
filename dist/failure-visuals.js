@@ -12,8 +12,9 @@ export function markWreckVisual(object,vessel){
  if(!vessel.failureDynamics||object.userData.wreckTinted)return;
  object.userData.wreckTinted=true;
  const event=vessel.failureEvents?.find(e=>e.partId===object.userData.partId),burned=event?.effect==='fuel-burst'||event?.cause==='thermal';
- object.traverse(o=>{if(!o.isMesh)return;const tint=m=>{const copy=m.clone();if(copy.color)copy.color.multiplyScalar(burned?.18:.55);if(copy.emissive)copy.emissive.set(0);return copy;};o.material=Array.isArray(o.material)?o.material.map(tint):tint(o.material);});
+ object.traverse(o=>{if(!o.isMesh)return;o.userData.wreckMaterials=true;const tint=m=>{const copy=m.clone();if(copy.color)copy.color.multiplyScalar(burned?.18:.55);if(copy.emissive)copy.emissive.set(0);return copy;};o.material=Array.isArray(o.material)?o.material.map(tint):tint(o.material);});
 }
+export function disposeWreckVisual(object){object.traverse(o=>{if(!o.userData.wreckMaterials)return;for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();delete o.userData.wreckMaterials;});}
 function plumeTexture(){
  const size=64,data=new Uint8Array(size*size*4);
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){

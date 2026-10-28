@@ -350,3 +350,5 @@ body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
 #flightQuickNav>#openDescent{grid-column:auto}#flightQuickNav>#deliveryGuide{grid-column:1/-1;width:100%}
 
 .runwayWindow{width:280px}.runwayWindow output{display:block;white-space:pre-line;line-height:1.8;font-variant-numeric:tabular-nums}.runwayWindow select{width:100%}
+
+#failureLog{flex-basis:100%;font:11px monospace}#failureLog summary{cursor:pointer;padding:5px 0}#failureLog ol{margin:0;padding:0 0 0 18px;max-height:160px;overflow:auto}#failureLog li{padding:4px 0;overflow-wrap:anywhere}

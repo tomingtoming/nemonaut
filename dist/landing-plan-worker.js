@@ -1825,6 +1825,7 @@ var Flight = class _Flight {
         const rollingDirection = new T29.Vector3(Math.sin(steer), 0, Math.cos(steer)).applyQuaternion(this.q);
         const motion = this.wheelMotion.get(p.id) || { angle: 0, speed: 0, steer: 0 };
         const bottom = altitude(wp) - radius;
+        motion.extension = T29.MathUtils.clamp(bottom, 0, 0.18);
         motion.steer = steer;
         motion.speed = bottom < 0.18 ? pv.dot(rollingDirection) / radius : motion.speed * Math.exp(-dt * (this.brake ? 12 : 0.3));
         motion.angle = (motion.angle + motion.speed * dt) % (2 * Math.PI);
@@ -2009,7 +2010,8 @@ function loadFlight(value, { debris = false, depth = 0, budget = { count: 0, ids
     return v;
   }), gimbals = entries(value.gimbals, ids, (v) => new T30.Vector3(...vector(v, 3, Math.PI))), wheelMotion = entries(value.wheelMotion, ids, (v) => {
     check(v && ["angle", "speed", "steer"].every((k) => Number.isFinite(v[k]) && Math.abs(v[k]) < 1e6));
-    return { angle: v.angle, speed: v.speed, steer: v.steer };
+    check(v.extension === void 0 || Number.isFinite(v.extension) && v.extension >= 0 && v.extension <= 0.18);
+    return { angle: v.angle, speed: v.speed, steer: v.steer, ...v.extension === void 0 ? {} : { extension: v.extension } };
   }), chuteIds = new Set(parts.filter((p) => PARTS[p.type].parachute).map((p) => p.id)), chutes = entries(value.chutes, chuteIds, (v) => {
     check(v && ["stowed", "armed", "reefed", "open", "landed", "cut"].includes(v.status) && Number.isFinite(v.fraction) && v.fraction >= 0 && v.fraction <= 1);
     return { status: v.status, fraction: v.fraction };

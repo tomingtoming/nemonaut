@@ -8,7 +8,7 @@ test('invalid saved sound settings recover and clamp independently',()=>{
 });
 test('engine and RCS audio follow produced forces, not throttle commands',()=>{
  const f={throttle:1,lastThrust:0,rcsJets:[],orbit:{altitude:80000}};
- assert.deepEqual(soundState(f),{scene:'space',thrust:0,jets:0,crashed:false});
+ assert.deepEqual(soundState(f),{scene:'space',thrust:0,rolling:0,jets:0,crashed:false});
  f.lastThrust=45000;f.rcsJets=[{level:.5}];assert.equal(soundState(f).thrust,.5);assert.equal(soundState(f).jets,1);
  f.crashed=true;assert.equal(soundState(f).thrust,0);assert.equal(soundState(f).jets,0);
  assert.equal(soundState(null,true).scene,'center');assert.equal(soundState(null).scene,'workshop');
