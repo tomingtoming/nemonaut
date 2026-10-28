@@ -45,7 +45,7 @@ for(const automatic of [false,true])test(`two surface launches ${automatic?'auto
     schedule(plan.epoch,plan.components,plan.burn);advanceTo(plan.epoch);burn();
     const stop=timedRelativeStopPlan(f,bodyOrbitState(centerOfVessel(target),target.vel,target.universalTime));
     schedule(stop.location.universalTime,stop.components,stop.burn);
-    const coast=runtime.coast(stop.time,{maxSteps:10000});assert.equal(coast.reason,'予定噴射の直前');
+    const coast=runtime.coast(stop.time,{maxSteps:10000});assert.equal(coast.reason,'予定噴射の直前',JSON.stringify(coast.blocker));
     assert.ok(Math.abs(stop.location.universalTime-f.universalTime-60)<.05);
     advanceTo(stop.location.universalTime);burn();
     const close=relativeState(f,target);assert.ok(close.distance<500,`separation ${close.distance}`);assert.ok(close.speed<.2,`relative speed ${close.speed}`);

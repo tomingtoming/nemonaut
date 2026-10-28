@@ -1,6 +1,7 @@
 import {PARTS} from './catalog.js';
 
 export const FAILURE_EVENT_LIMIT=64;
+export function failureCaption(e){return (PARTS[e.type]?.code??e.type)+' · '+({impact:'衝突で破損',thermal:'熱損傷',structural:'荷重で破断'}[e.cause]??'破損')+(e.effect==='fuel-burst'?' · 推進剤破裂':'');}
 // History is simulation data. Rendering must never invent a failure or consume fuel.
 export function recordFailure(f,part,cause,{speed=0,position}={}){
  if(!part||!['impact','thermal','structural'].includes(cause))throw Error('Invalid failure cause');

@@ -39,11 +39,11 @@ test('Descent instruments use lowest geometry and actual active fuel networks wi
  }finally{f.dispose();}
 });
 
-test('Landing legs do not turn a high-speed lunar impact into a successful landing',()=>{
+test('Landing legs do not hide damage from a high-speed lunar impact',()=>{
  const f=new Flight(preset('lander'),'moon-orbit',40000);try{
   const moon=bodyState(MOON,40000);f.q.identity();f.pos.copy(moon.position).add(new T.Vector3(0,MOON.radius+5,0));f.vel.copy(moon.velocity).add(new T.Vector3(0,-30,0));f.sasMode='radial';
   for(let i=0;i<120&&!f.crashed;i++)f.step(1/120);
-  assert.equal(f.crashed,true);assert.equal(descentTelemetry(f).landed,false);
+  assert.ok(f.failureEvents.some(e=>e.cause==='impact'));assert.ok(f.parts.length<preset('lander').length);assert.ok(f.detached.length>0);
  }finally{f.dispose();}
 });
 

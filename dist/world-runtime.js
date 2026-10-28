@@ -18,7 +18,7 @@ export class WorldRuntime{
  get active(){return this.vessels.get(this.activeVesselId);}
  step(dt,input={}){
   const vessels=[...this.vessels.values()];resolveWorldTargets(vessels);
-  this.universalTime=advanceWorldPhysics(vessels,this.universalTime,dt,this.activeVesselId,input);
+  const root=this.active;this.universalTime=advanceWorldPhysics(vessels,this.universalTime,dt,this.activeVesselId,input);this.replace(root);
  }
  coast(duration,options={}){
   const result=advanceWorldCoast([...this.vessels.values()],this.universalTime,this.activeVesselId,duration,options);

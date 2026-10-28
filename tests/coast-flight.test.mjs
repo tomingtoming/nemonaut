@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {Flight} from '../dist/core.js';
-import {preset} from '../dist/catalog.js';
+import {preset,part} from '../dist/catalog.js';
 import {advanceCoastFleet,coastEligibility,coolVacuum,isParked,coolStationary} from '../dist/coast-flight.js';
 import {atmosphere} from '../dist/planet.js';
 import {thermalStep,createThermal} from '../dist/thermal.js';
@@ -129,4 +129,15 @@ test('parked rover survives repeated coast, physics and save restoration without
    assert.equal(advanceCoastFleet(f,1000).advanced,0);
   }finally{f.dispose();}
  }
+});
+
+ test('parking rejects spinning extremities and a resting rover wakes on drive input',()=>{
+ const f=new Flight(preset('rover'),'land');try{
+  for(let i=0;i<1200;i++)f.step(1/120);assert.ok(isParked(f));
+  f.stageNext();f.brake=false;for(let i=0;i<240;i++)f.step(1/120,{drive:1});
+  assert.ok(surfaceSpeed(f)>.5);assert.equal(isParked(f),false);
+ }finally{f.dispose();}
+ const rod=new Flight([part('probe',[0,0,0]),part('truss',[0,100,0])],'land');try{
+  rod.landed=true;rod.landedTime=10;rod.omega.x+=.015;assert.equal(isParked(rod),false);
+ }finally{rod.dispose();}
 });

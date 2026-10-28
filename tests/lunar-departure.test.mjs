@@ -34,7 +34,7 @@ test('Surface launch, lunar orbit, return burn and capsule touchdown form one co
   assert.equal(world.history.at(-1).type,'moon-arrival');
   const capture=lunarCapturePlan(f);assert.ok(capture.ready,capture.warnings.join(' / '));assert.equal(capture.burn.enough,true);assert.ok(capture.burn.fuelRemaining>0);
   f.maneuver=captureNode(capture,f);f.sasMode='maneuver';for(let i=0;i<120;i++)f.step(.25);
-  assert.equal(advanceCoastFleet(f,capture.startTime-f.universalTime-60,{maxSteps:10000}).remaining,0);
+  const captureCoast=advanceCoastFleet(f,capture.startTime-f.universalTime-60,{maxSteps:10000});assert.equal(captureCoast.remaining,0,JSON.stringify(captureCoast));
   const burn=start=>{while(f.universalTime<start)f.step(Math.min(1/120,start-f.universalTime));for(let i=0;i<14400&&!f.maneuver.complete;i++){const left=new T.Vector3(...f.maneuver.remaining).length();f.throttle=left<2?.01:left<10?.1:1;f.step(1/120);}f.throttle=0;assert.ok(f.maneuver.complete);};
   burn(capture.startTime);assert.ok(f.orbit.energy<0);assert.ok(f.orbit.stable);
   // Finite burn must capture within 1% of the planned circular radius.
@@ -42,7 +42,7 @@ test('Surface launch, lunar orbit, return burn and capsule touchdown form one co
   assert.ok(Math.abs(f.orbit.periapsis-capture.afterOrbit.periapsis)<captureTolerance);
   assert.ok(Math.abs(f.orbit.apoapsis-capture.afterOrbit.apoapsis)<captureTolerance);
   const ret=lunarReturnPlan(f,{targetPeriapsis:15000});assert.ok(ret.ready,ret.warnings.join(' / '));assert.equal(ret.burn.enough,true);assert.ok(ret.burn.fuelRemaining>0,'capture must leave enough fuel for the actual return plan');f.maneuver=lunarReturnNode(ret,f);f.sasMode='maneuver';
-  const returnCoast=advanceCoastFleet(f,ret.startTime-f.universalTime-60,{maxSteps:10000});assert.ok(returnCoast.remaining<1e-8);assert.ok(Math.abs(f.universalTime-(ret.startTime-60))<1e-8);burn(ret.startTime);assert.ok(f.fuelRatio>0,'complete the return burn without exhausting propulsion');
+  const returnCoast=advanceCoastFleet(f,ret.startTime-f.universalTime-60,{maxSteps:10000});assert.ok(returnCoast.remaining<1e-8,JSON.stringify(returnCoast));assert.ok(Math.abs(f.universalTime-(ret.startTime-60))<1e-8);burn(ret.startTime);assert.ok(f.fuelRatio>0,'complete the return burn without exhausting propulsion');
   assert.equal(advanceCoastFleet(f,50000,{maxSteps:10000}).reason,'月重力圏の境界');
   for(let i=0;i<120&&f.orbit.bodyId==='moon';i++)f.step(1);for(let i=0;i<120;i++)f.step(.25);
   assert.equal(advanceCoastFleet(f,60000,{maxSteps:10000}).reason,'大気・地表への接近');assert.ok(Math.abs(f.orbit.periapsis-ret.finite.exit.orbit.periapsis)<1000);
