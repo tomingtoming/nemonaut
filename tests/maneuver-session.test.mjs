@@ -4,7 +4,7 @@ import {Flight} from '../dist/core.js';import {preset} from '../dist/catalog.js'
 import {maneuverPreview} from '../dist/maneuver.js';
 import {createManeuverNode} from '../dist/maneuver-node.js';
 import {ManeuverSession} from '../tools/maneuver-session.mjs';
-import {maneuverExecutionPlan} from '../tools/maneuver-execution-plan.mjs';
+import {maneuverExecutionPlan,maneuverExecutionThrottle} from '../tools/maneuver-execution-plan.mjs';
 import {AscentSession} from '../tools/ascent-session.mjs';
 import {WorldRuntime} from '../dist/world-runtime.js';
 import {saveFlight,loadFlight} from '../dist/flight-save.js';
@@ -25,6 +25,13 @@ test('ordinary center and start times differ, already timed nodes are never shif
  const finite={...n,plannedThrottle:.1};assert.equal(maneuverExecutionPlan(finite,0,4).startTime,100);
  assert.throws(()=>maneuverExecutionPlan(n,85,4),/過去/);
  assert.throws(()=>maneuverExecutionPlan(n,0,4,{throttle:0}));
+});
+test('predicted lunar tail power differs from constant-power finite return and capture',()=>{
+ for(const node of [{returnPlan:{}},{departure:{}}]){
+  for(const [left,power]of [[11,1],[10,1],[9,.1],[2,.1],[1,.01]])assert.equal(maneuverExecutionThrottle(node,{throttle:1},left),power);
+ }
+ assert.equal(maneuverExecutionThrottle({capture:{}},{throttle:1},1),1);
+ assert.equal(maneuverExecutionThrottle({plannedThrottle:.1},{throttle:.1},1),.1);
 });
 for(const [name,dv,throttle]of [['prograde',30,.1],['retrograde',-30,.1],['normal',{prograde:0,normal:30,radial:0},1]])test(`real ${name} burn aligns, waits, consumes fuel and cuts off`,()=>{
  const f=vessel(dv),s=new ManeuverSession();try{

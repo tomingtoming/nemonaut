@@ -12,3 +12,9 @@ export function maneuverExecutionPlan(node,now,fullDuration,{throttle,timing='ce
  if(startTime<=now)throw Error('噴射開始が過去になります。計画を先へ移してください');
  return {startTime,duration,throttle:power,timing:fixed?'start':timing};
 }
+
+// Lunar return/departure predictions include this terminal throttle sequence.
+// Capture and explicit finite-return nodes use their constant planned power.
+export function maneuverExecutionThrottle(node,plan,remaining){
+ return node.returnPlan||node.departure?(remaining<2?.01:remaining<10?.1:1):plan.throttle;
+}

@@ -4,7 +4,7 @@ import {PARTS} from '../dist/catalog.js';
 import {bodyOrbitState} from '../dist/celestial.js';
 import {captureBurnEstimate} from '../dist/lunar-capture.js';
 import {maneuverDirection,validateManeuverNode} from '../dist/maneuver-node.js';
-import {maneuverExecutionPlan} from './maneuver-execution-plan.mjs';
+import {maneuverExecutionPlan,maneuverExecutionThrottle} from './maneuver-execution-plan.mjs';
 
 const planKey=n=>JSON.stringify([n.universalTime,n.time,n.impulse,n.plannedThrottle,n.tolerance,n.capture,n.returnPlan,n.departure]);
 const craftKey=f=>JSON.stringify([f.stage,[...f.active],f.parts.map(p=>[p.id,p.thrustLimit,p.fuelEnabled,p.fuelCrossfeed])]);
@@ -55,6 +55,6 @@ export class ManeuverSession{
   if(angle>5*Math.PI/180){this.offAxis+=dt;this.message='方向ずれで噴射停止';if(this.offAxis>5)this.stop('failed','噴射方向を維持できませんでした');return;}this.offAxis=0;
   const engines=f.parts.filter(p=>f.active.has(p.id)&&PARTS[p.type].thrust&&!PARTS[p.type].air&&!PARTS[p.type].water);
   if(!engines.some(p=>f.networks.network.get(p.id)?.tanks.some(t=>(f.fuel.get(t.id)||0)>0))){this.stop('failed','燃料切れ · 噴射未達');return;}
-  this.state='burning';this.message='予定噴射';f.throttle=this.plan.throttle;
+  this.state='burning';this.message='予定噴射';f.throttle=maneuverExecutionThrottle(this.node,this.plan,new T.Vector3(...this.node.remaining).length());
  }
 }
