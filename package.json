@@ -11,6 +11,8 @@
     "check:takeoff-worker": "node tools/build-takeoff-worker.mjs --check",
     "build:takeoff-controller": "node tools/build-takeoff-controller.mjs",
     "check:takeoff-controller": "node tools/build-takeoff-controller.mjs --check",
+    "build:maneuver": "node tools/build-maneuver.mjs",
+    "check:maneuver": "node tools/build-maneuver.mjs --check",
     "build:orbital-ascent": "node tools/build-orbital-ascent.mjs",
     "check:orbital-ascent": "node tools/build-orbital-ascent.mjs --check"
   },
