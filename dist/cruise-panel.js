@@ -6,6 +6,7 @@ import {compassHeading} from './navigation.js';
 import {bodyAltitude} from './celestial.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
 import {acceptsFlightKey} from './flight-keyboard.js';
+import {preserveManualControlEdit} from './manual-control-edit.js';
 import {PARTS} from './catalog.js';
 import * as T from 'three';
 
@@ -76,7 +77,7 @@ export function mountCruisePanel(root,getState,{claim,sync}){
  }
  button.onclick=()=>{if(panel){panel.front();return;}panel=floatingWindow(root.body,{title:'自動操縦',x:innerWidth-330,y:150,onClose:close});render(getState().flight);update();};
  const direct='#throttle,#trim,#sas,#sasDirections,#stage,#autoLaunch,#autoReturn,#navigationFrame,#navigationAuto,#brake';
- for(const type of ['input','click'])root.addEventListener(type,e=>{if(e.target.closest?.(direct)){stop();update();}},true);
+ for(const type of ['input','click'])root.addEventListener(type,e=>{if(e.target.closest?.(direct))preserveManualControlEdit(e.target,()=>{stop();update();});},true);
  window.addEventListener('keydown',e=>{if(!acceptsFlightKey(e.target,e.code))return;if(/^(Key[WASDQEZXTB]|Space|ShiftLeft|ShiftRight|ControlLeft|ControlRight)$/.test(e.code)){
   const controlled=pilot||takeoff||landing.pilot||returning.owner?owner:null;stop();
   // Floating windows stop bubbling keyboard events. Preserve the throttle

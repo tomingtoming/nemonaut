@@ -2,6 +2,7 @@ import {AscentSession} from './orbital-ascent-controller.js';
 import {orbitalAscentSettings} from './orbital-ascent-settings.js';
 import {floatingWindow} from './floating-window.js';
 import {acceptsFlightKey} from './flight-keyboard.js';
+import {preserveManualControlEdit} from './manual-control-edit.js';
 
 export function mountOrbitalAscent(root,getState,{claim,sync,onRemoved}){
  const session=new AscentSession(),button=root.createElement('button');
@@ -38,8 +39,8 @@ export function mountOrbitalAscent(root,getState,{claim,sync,onRemoved}){
   if(stage!==f.stage||sas!==f.sas||!session.owner)sync();
  }
  button.onclick=()=>{if(panel){panel.front();return;}panel=floatingWindow(root.body,{title:'自動投入',x:innerWidth-330,y:150,onClose:close});render(getState().flight);update();};
- const direct='#throttle,#trim,#sas,#sasDirections,#sasMode,#stage,#autoLaunch,#autoReturn,#navigationFrame,#navigationAuto,#brake,#mapCutoff,#alignManeuver';
- for(const type of ['input','click','change'])root.addEventListener(type,e=>{if(e.target.closest?.(direct))stop();},true);
+ const direct='#throttle,#trim,#sas,#sasDirections,#sasMode,#stage,#autoLaunch,#autoReturn,#navigationFrame,#navigationAuto,#brake,#rcsEnabled,#reactionEnabled,#mapCutoff,#alignManeuver';
+ for(const type of ['input','click','change'])root.addEventListener(type,e=>{if(session.owner&&e.target.closest?.(direct))preserveManualControlEdit(e.target,stop);},true);
  window.addEventListener('keydown',e=>{
   if(!session.owner||!acceptsFlightKey(e.target,e.code)||! /^(Key[WASDQEZXTB]|Space|ShiftLeft|ShiftRight|ControlLeft|ControlRight)$/.test(e.code))return;
   const f=session.owner;stop();if(['KeyX','KeyZ'].includes(e.code)&&!e.ctrlKey&&!e.metaKey&&!e.altKey){f.throttle=e.code==='KeyZ'?1:0;sync();}update();

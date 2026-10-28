@@ -1,6 +1,7 @@
 import {ManeuverSession} from './maneuver-controller.js';
 import {floatingWindow} from './floating-window.js';
 import {acceptsFlightKey} from './flight-keyboard.js';
+import {preserveManualControlEdit} from './manual-control-edit.js';
 
 export function mountManeuverPanel(root,getState,{claim,sync}){
  const session=new ManeuverSession(),button=root.createElement('button');button.textContent='自動噴射';root.querySelector('#flightSystems').append(button);
@@ -39,10 +40,7 @@ export function mountManeuverPanel(root,getState,{claim,sync}){
  const direct='#throttle,#trim,#sas,#sasDirections,#sasMode,#stage,#autoLaunch,#autoReturn,#navigationFrame,#navigationAuto,#brake,#rcsEnabled,#reactionEnabled,#mapCutoff,#alignManeuver,#fixManeuver,#clearManeuver,#transferIgnite,#transferFine,#transferCutoff,#capturePanel button,#returnPanel button,#departurePanel button';
  for(const type of ['input','click','change'])root.addEventListener(type,e=>{
   if(!session.owner||!e.target.closest?.(direct))return;
-  // sync restores the previous flight controls; preserve the user's pending edit
-  // until the target's normal handler applies it after this capture listener.
-  const control=e.target,value=control.value,checked=control.checked;
-  stop();if(value!==undefined)control.value=value;if(checked!==undefined)control.checked=checked;
+  preserveManualControlEdit(e.target,stop);
  },true);
  window.addEventListener('keydown',e=>{
   if(!session.owner||!acceptsFlightKey(e.target,e.code)||!/^(Key[WASDQEZXTBHRIJKLUO]|Space|ShiftLeft|ShiftRight|ControlLeft|ControlRight)$/.test(e.code))return;
