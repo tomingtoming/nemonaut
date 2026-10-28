@@ -6,7 +6,7 @@ import {acceptsFlightKey} from './flight-keyboard.js';
 export function mountOrbitalAscent(root,getState,{claim,sync,onRemoved}){
  const session=new AscentSession(),button=root.createElement('button');
  button.textContent='自動投入';root.querySelector('#flightSystems').append(button);
- let panel=null,shown=null,message='待機';
+ let panel=null,shown=null,bound=null,message='待機';
  const close=()=>{panel?.remove();panel=null;shown=null;};
  const stop=()=>{if(session.owner){session.stop();message='待機';sync();}};
  function render(f){
@@ -23,6 +23,7 @@ export function mountOrbitalAscent(root,getState,{claim,sync,onRemoved}){
  }
  function update(){
   const {flight:f,atCenter}=getState();if(session.owner&&(session.owner!==f||atCenter))stop();
+  if(bound!==f){bound=f;message='待機';}
   button.hidden=!f||atCenter||!f.rocketAxes;
   if(button.hidden){close();return;}
   button.textContent=session.owner?'自動投入 · '+session.pilot.phase:'自動投入';
