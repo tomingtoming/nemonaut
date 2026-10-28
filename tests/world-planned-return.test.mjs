@@ -7,6 +7,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {preset} from '../dist/catalog.js';
 import {LaunchPilot} from '../dist/launch-pilot.js';
+import {AscentSession} from '../dist/orbital-ascent-controller.js';
+import {ManeuverSession} from '../dist/maneuver-controller.js';
 import {deorbitPlan} from '../dist/deorbit-plan.js';
 import {createManeuverNode} from '../dist/maneuver-node.js';
 import {centerOfVessel} from '../dist/relative-navigation.js';
@@ -18,7 +20,8 @@ import {gameRecord,validateGame} from '../dist/game-save.js';
 
 // Both vehicles actually depart from the rotating surface. Demonstration pilots
 // use the same staging/throttle/SAS actuators; no positions or velocities are set.
-for(const finite of [false,true])test(`surface-launched A survives B ${finite?'corrected':'instantaneous'} planned return, recovery and reload`,t=>{
+for(const mode of ['instantaneous','corrected','automatic'])test(`surface-launched A survives B ${mode} planned return, recovery and reload`,t=>{
+ const finite=mode!=='instantaneous',automatic=mode==='automatic';
  let world=launchWorld(worldFromFlight(null),{parts:preset('launcher'),name:'Satellite A',environment:'land'});
  const aId=world.activeVesselId;
  let runtime;let f=loadFlight(flightFromWorld(world));runtime=new WorldRuntime(f);
@@ -37,10 +40,11 @@ for(const finite of [false,true])test(`surface-launched A survives B ${finite?'c
   const prior=structuredClone(world),draft={parts:preset('returner'),name:'Return B',bay:'vab',environment:'land'};
   world=launchWorld(world,draft);const bId=world.activeVesselId;
   assert.deepEqual(world.vessels.find(v=>v.vesselId===aId).pos,prior.vessels.find(v=>v.vesselId===aId).pos);
-  f=loadFlight(flightFromWorld(world));runtime=new WorldRuntime(f);const launchTime=f.universalTime,launch=new LaunchPilot();
+  f=loadFlight(flightFromWorld(world));runtime=new WorldRuntime(f);const launchTime=f.universalTime,launch=automatic?new AscentSession():new LaunchPilot();
+  if(automatic)launch.start(f,{altitude:120000,inclination:90});
   assert.ok(launchTime>100,'B begins at the epoch reached by A');
-  for(let i=0;i<500*120&&!launch.done&&!f.crashed;i++){launch.update(f);runtime.replace(f);runtime.step(1/120);}
-  assert.ok(launch.done,'B reaches orbit from ground at the later epoch');assert.ok(f.orbit.stable);assert.equal(f.crashed,false);
+  for(let i=0;i<1200*120&&(automatic?launch.owner:!launch.done)&&!f.crashed;i++){if(automatic)launch.step(f,1/120);else launch.update(f);runtime.replace(f);runtime.step(1/120);}
+  assert.ok(automatic?launch.state==='complete':launch.done,'B reaches orbit from ground at the later epoch');assert.ok(f.orbit.stable);assert.equal(f.crashed,false);
   world.history=recordOrbitAchievements(world.history,f);
   world=worldFromFlight(saveFlight(f),{history:world.history});f.dispose();f=null;
   world=selectWorldVessel(world,aId).world;
@@ -49,12 +53,19 @@ for(const finite of [false,true])test(`surface-launched A survives B ${finite?'c
   world=selectWorldVessel(world,bId).world;f=loadFlight(flightFromWorld(world));runtime=new WorldRuntime(f);
   const plan=finite?finiteReturnPlan(f,{throttle:.1}):deorbitPlan(centerOfVessel(f),f.vel,f.universalTime);
   const expectedPeriapsis=finite?plan.prediction.orbit.periapsis:plan.preview.orbit.periapsis;
-  f.maneuver=createManeuverNode(plan.preview,f.time);f.maneuver.stopAtTarget=true;f.maneuver.tolerance=.05;f.sas=true;f.sasMode='maneuver';
+  f.maneuver=createManeuverNode(plan.preview,f.time,automatic?{plannedThrottle:plan.throttle}:{});f.maneuver.stopAtTarget=true;f.maneuver.tolerance=.05;f.sas=true;f.sasMode='maneuver';
   // Save/reload the scheduled node before executing it, as during a real session.
   world=worldFromFlight(saveFlight(f),{history:world.history});f.dispose();f=loadFlight(flightFromWorld(world));runtime=new WorldRuntime(f);
-  while(f.universalTime<plan.location.universalTime)runtime.step(Math.min(1/120,plan.location.universalTime-f.universalTime));
-  const burnStart=f.universalTime;
-  for(let i=0;i<120*180&&!f.maneuver.complete&&!f.crashed;i++){f.throttle=.1;runtime.step(1/120);}
+  let burnStart;
+  if(automatic){
+   const maneuver=new ManeuverSession();maneuver.start(f);burnStart=maneuver.plan.startTime;
+   for(let i=0;i<300*120&&maneuver.owner;i++){maneuver.step(f,1/120);runtime.replace(f);runtime.step(1/120);}
+   assert.equal(maneuver.state,'complete',maneuver.message);
+  }else{
+   while(f.universalTime<plan.location.universalTime)runtime.step(Math.min(1/120,plan.location.universalTime-f.universalTime));
+   burnStart=f.universalTime;
+   for(let i=0;i<120*180&&!f.maneuver.complete&&!f.crashed;i++){f.throttle=.1;runtime.step(1/120);}
+  }
   assert.equal(f.maneuver.complete,true);assert.equal(f.throttle,0);assert.equal(f.crashed,false);
   const actualPeriapsis=f.orbit.periapsis;
   assert.ok(Math.abs(actualPeriapsis-expectedPeriapsis)<100,`actual periapsis ${actualPeriapsis}`);

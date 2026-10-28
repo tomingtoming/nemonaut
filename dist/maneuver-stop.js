@@ -20,7 +20,7 @@ export function mountManeuverStop(panel,getFlight,kind=null){
   const f=getFlight(),node=accepts(f?.maneuver)?f.maneuver:null;
   input.checked=node?.stopAtTarget===true;input.disabled=!node||node.complete||!canControl(f);precision.disabled=input.disabled;precision.value=String(node?.tolerance??.5);
   const seconds=node?remainingBurnSeconds(f):null;
-  estimate.textContent=!node?'計画固定後に停止支援を選べます。':node.complete?(node.stopAtTarget?'目標到達 · 停止支援を選択済み':'目標到達 · 手動で噴射を停止してください。'):seconds!==null?`現在の推力なら残り約 ${seconds.toFixed(1)} 秒（整列時の目安）。`:'点火・開始時刻・方向を確認してください。停止支援は点火しません。';
+  estimate.textContent=!node?'計画固定後に停止支援を選べます。':node.complete?(f.throttle>0?'目標到達 · 推力が残っています':'目標到達 · 推力0'):seconds!==null?`現在の推力なら残り約 ${seconds.toFixed(1)} 秒（整列時の目安）。`:'点火・開始時刻・方向を確認してください。停止支援は点火しません。';
  }
  return {update};
 }
