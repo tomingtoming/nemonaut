@@ -1,0 +1,45 @@
+import * as T from 'three';
+import {fleet} from './fleet.js';
+import {bodyUp} from './celestial.js';
+import {PARTS} from './catalog.js';
+
+export function failureEnvelope(event,now){
+ const age=now-event.time,hot=event.effect==='fuel-burst';
+ const radius=hot?Math.min(12,.8+Math.cbrt(event.fuel)*.65):.25;
+ return {age,radius,alive:age>=0&&age<(hot?8:2),flash:Math.max(0,1-age/.5),smoke:hot?Math.max(0,1-age/8):0};
+}
+// Bounded cosmetic particles only. Actual parts remain owned by physics.
+export class FailureVisuals{
+ constructor(scene){this.scene=scene;this.items=new Map();this.geometry=new T.IcosahedronGeometry(1,1);}
+ clear(){for(const id of [...this.items.keys()])this.remove(id);}
+ remove(id){const item=this.items.get(id);if(!item)return;this.scene.remove(item.root);for(const m of item.materials)m.dispose();this.items.delete(id);}
+ update(f){
+  if(!f){this.clear();return;}
+  const now=f.universalTime,events=fleet(f).flatMap(v=>v.failureEvents??[]).filter(e=>failureEnvelope(e,now).alive).slice(-16),live=new Set(events.map(e=>e.id));
+  for(const id of this.items.keys())if(!live.has(id))this.remove(id);
+  for(const e of events){
+   let item=this.items.get(e.id);const env=failureEnvelope(e,now);
+   if(!item){
+    const root=new T.Group(),materials=[],particles=[];
+    for(let i=0;i<32;i++){
+     const smoke=e.effect==='fuel-burst'&&i>=20;
+     const material=new T.MeshBasicMaterial({color:smoke?'#4b4844':i%3?'#ff6a10':'#fff3b0',transparent:true,depthWrite:false,toneMapped:false,blending:smoke||e.effect==='fragments'?T.NormalBlending:T.AdditiveBlending});materials.push(material);
+     const mesh=new T.Mesh(this.geometry,material);root.add(mesh);
+     const y=1-2*(i+.5)/32,theta=i*2.3999632297,r=Math.sqrt(1-y*y);
+     particles.push({mesh,smoke,direction:new T.Vector3(Math.cos(theta)*r,y,Math.sin(theta)*r)});
+    }
+    item={root,materials,particles};this.scene.add(root);this.items.set(e.id,item);
+   }
+   const age=env.age,up=bodyUp(new T.Vector3(...e.position),e.time);
+   item.root.position.fromArray(e.position).addScaledVector(new T.Vector3(...e.velocity),age);
+   for(const {mesh,smoke,direction}of item.particles){
+    const life=smoke?env.smoke:Math.max(0,1-age/(e.effect==='fuel-burst'?1.6:1.1));
+    mesh.visible=life>0;mesh.material.opacity=life*(smoke?.45:.9);
+    const shell=e.effect==='fragments'?Math.max(...(PARTS[e.type]?.size??[1]))*.55:0;
+    mesh.position.copy(direction).multiplyScalar(shell+(smoke?.45:4)*env.radius*age).addScaledVector(up,smoke?age*env.radius*.35:-age*age*.35);
+    mesh.scale.setScalar(smoke?env.radius*(.35+age*.14):e.effect==='fuel-burst'?env.radius*(.12+env.flash*.45):.05+.04*(1-life));
+   }
+  }
+ }
+ dispose(){this.clear();this.geometry.dispose();}
+}

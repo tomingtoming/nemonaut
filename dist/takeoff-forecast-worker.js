@@ -1,147 +1,3 @@
-// dist/cruise-pilot.js
-import * as T6 from "./vendor/three/three.module.js";
-
-// dist/celestial.js
-import * as T2 from "./vendor/three/three.module.js";
-
-// dist/planet.js
-import * as T from "./vendor/three/three.module.js";
-var PLANET = { radius: 6e5, mu: 35316e8, atmosphereTop: 7e4 };
-var center = new T.Vector3(0, -PLANET.radius, 0);
-var pressure = [[0, 101.325, 0, -0.01501631], [1241.025, 84.02916, -0.01289846, -0.01289826], [2439.593, 69.68138, -0.01107876, -0.01107859], [3597.11, 57.78001, -9515483e-9, -9515338e-9], [4714.942, 47.90862, -817254e-8, -8172415e-9], [5794.409, 39.72148, -701892e-8, -7018813e-9], [6836.791, 32.93169, -6027969e-9, -6027877e-9], [7843.328, 27.30109, -5176778e-9, -51767e-7], [8815.22, 22.63206, -4445662e-9, -4445578e-9], [10786.42, 15.3684, -3016528e-9, -301646e-8], [12101.4, 11.87313, -2329273e-9, -232922e-8], [13417.05, 9.172798, -1798594e-9, -1798554e-9], [16678.47, 4.842261, -9448537e-10, -9448319e-10], [21143.1, 2.050097, -3894095e-10, -3894005e-10], [26977.92, 0.6905929, -1252565e-10, -1252534e-10], [33593.82, 0.2201734, -3626878e-11, -3626788e-11], [42081.87, 0.05768469, -9063159e-12, -9062975e-12], [49312.13, 0.01753794, -3029397e-12, -3029335e-12], [56669.95, 4591824e-9, -8827175e-13, -8826996e-13], [62300.84, 1497072e-9, -3077091e-13, -3077031e-13], [7e4, 0, 0, 0]];
-var temperature = [[0, 288.15, 0, -8125e-6], [8815.22, 216.65, -8096968e-9, 0], [16050.39, 216.65, 0, 1242164e-9], [25729.23, 228.65, 1237475e-9, 3464929e-9], [37879.44, 270.65, 344855e-8, 0], [41129.24, 270.65, 0, -3444189e-9], [57440.13, 214.65, -3422425e-9, -2444589e-9], [68797.88, 186.946, -2433851e-9, 0], [7e4, 186.946, 0, 0]];
-function curve(points, h) {
-  h = Math.max(0, h);
-  for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1], b = points[i];
-    if (h <= b[0]) {
-      const width = b[0] - a[0], t = (h - a[0]) / width, t2 = t * t, t3 = t2 * t;
-      return (2 * t3 - 3 * t2 + 1) * a[1] + (t3 - 2 * t2 + t) * width * a[3] + (-2 * t3 + 3 * t2) * b[1] + (t3 - t2) * width * b[2];
-    }
-  }
-  return points.at(-1)[1];
-}
-function atmosphere(h) {
-  const temp = curve(temperature, h), p = h >= PLANET.atmosphereTop ? 0 : Math.max(0, curve(pressure, h)) * 1e3;
-  return { pressure: p, temperature: temp, density: p * 0.0289644 / (8.314462618 * temp) };
-}
-
-// dist/celestial.js
-var MOON = Object.freeze({ id: "moon", name: "\u6708", radius: 2e5, mu: 651383975207807e-4, atmosphereTop: 0, orbitRadius: 12e6, phase: 1.70000004768372, sphereOfInfluence: 242955911656475e-8 });
-var PRIMARY = Object.freeze({ ...PLANET, id: "planet", name: "\u6BCD\u661F" });
-var MOON_RATE = Math.sqrt(PRIMARY.mu / MOON.orbitRadius ** 3);
-var MOON_PERIOD = 2 * Math.PI / MOON_RATE;
-function bodyState(body, time = 0) {
-  if (body.id === "planet") return { position: center.clone(), velocity: new T2.Vector3() };
-  if (body.id !== "moon") throw Error("\u672A\u77E5\u306E\u5929\u4F53\u3067\u3059");
-  const angle = MOON.phase + time % MOON_PERIOD * MOON_RATE, c = Math.cos(angle), s = Math.sin(angle), r = MOON.orbitRadius;
-  return { position: center.clone().add(new T2.Vector3(0, r * c, r * s)), velocity: new T2.Vector3(0, -r * MOON_RATE * s, r * MOON_RATE * c) };
-}
-function referenceBody(position, time = 0) {
-  return position.distanceToSquared(bodyState(MOON, time).position) < MOON.sphereOfInfluence ** 2 ? MOON : PRIMARY;
-}
-function relativeMotion(position, velocity, time = 0, body = referenceBody(position, time)) {
-  const state = bodyState(body, time);
-  return { body, center: state.position, bodyVelocity: state.velocity, r: position.clone().sub(state.position), velocity: velocity.clone().sub(state.velocity) };
-}
-function bodyAltitude(position, time = 0, body = referenceBody(position, time)) {
-  return position.distanceTo(bodyState(body, time).position) - body.radius;
-}
-function bodyUp(position, time = 0, body = referenceBody(position, time)) {
-  return position.clone().sub(bodyState(body, time).position).normalize();
-}
-function bodyGravity(position, time = 0, body = referenceBody(position, time)) {
-  const r = position.clone().sub(bodyState(body, time).position);
-  return r.multiplyScalar(-body.mu / Math.max(1, r.length()) ** 3);
-}
-function bodyOrbitState(position, velocity, time = 0, body = referenceBody(position, time)) {
-  const relative = relativeMotion(position, velocity, time, body), r = relative.r, v = relative.velocity, radius = r.length(), h = r.clone().cross(v), evec = v.clone().cross(h).divideScalar(body.mu).sub(r.clone().divideScalar(radius)), e = evec.length(), energy = v.lengthSq() / 2 - body.mu / radius, p = h.lengthSq() / body.mu, a = energy < 0 ? -body.mu / (2 * energy) : Infinity;
-  const periapsis = p / (1 + e) - body.radius, apoapsis = energy < 0 ? a * (1 + e) - body.radius : Infinity;
-  return { body, bodyId: body.id, center: relative.center, bodyVelocity: relative.bodyVelocity, relativeVelocity: v, universalTime: time, altitude: radius - body.radius, speed: v.length(), vertical: v.dot(r) / radius, circularSpeed: Math.sqrt(body.mu / radius), gravity: body.mu / radius ** 2, eccentricity: e, energy, periapsis, apoapsis, period: energy < 0 ? 2 * Math.PI * Math.sqrt(a ** 3 / body.mu) : Infinity, p, evec, normal: h.normalize(), radius, r, stable: energy < 0 && periapsis > body.atmosphereTop };
-}
-function localStep(r, v, acceleration, mu, dt) {
-  const gravity = (r2) => r2.clone().multiplyScalar(-mu / Math.max(1, r2.length()) ** 3);
-  const half = v.clone().addScaledVector(gravity(r).add(acceleration), dt / 2), next = r.clone().addScaledVector(half, dt);
-  return { position: next, velocity: half.addScaledVector(gravity(next).add(acceleration), dt / 2) };
-}
-function advanceCelestialOrbit(position, velocity, acceleration, dt, time = 0) {
-  const relative = relativeMotion(position, velocity, time), body = relative.body;
-  const next = localStep(relative.r, relative.velocity, acceleration, body.mu, dt), end = bodyState(body, time + dt);
-  const pos = next.position.add(end.position), vel = next.velocity.add(end.velocity);
-  return { pos, vel, bodyId: referenceBody(pos, time + dt).id };
-}
-function lunarTrial(time = 0, altitude = 2e4) {
-  const state = bodyState(MOON, time), r = MOON.radius + altitude;
-  return { pos: state.position.add(new T2.Vector3(0, r, 0)), vel: state.velocity.add(new T2.Vector3(0, 0, Math.sqrt(MOON.mu / r))) };
-}
-
-// dist/surface-frame.js
-import * as T3 from "./vendor/three/three.module.js";
-var PRIMARY_ROTATION_PERIOD = 21549.4251830898;
-var PRIMARY_ROTATION_RATE = 2 * Math.PI / PRIMARY_ROTATION_PERIOD;
-function surfaceAngularVelocity(body = PRIMARY) {
-  return new T3.Vector3(body.id === "planet" ? PRIMARY_ROTATION_RATE : 0, 0, 0);
-}
-function surfaceOrientation(time = 0, body = PRIMARY) {
-  return new T3.Quaternion().setFromAxisAngle(new T3.Vector3(1, 0, 0), body.id === "planet" ? time % PRIMARY_ROTATION_PERIOD * PRIMARY_ROTATION_RATE : 0);
-}
-function launchSiteOrientation(environment) {
-  return new T3.Quaternion().setFromAxisAngle(new T3.Vector3(0, 0, 1), (environment === "runway" ? -2e3 : environment === "water" ? 4e3 : 0) / PRIMARY.radius);
-}
-function fixedToInertial(point, time = 0, body = PRIMARY) {
-  return point.clone().applyQuaternion(surfaceOrientation(time, body)).add(bodyState(body, time).position);
-}
-function inertialToFixed(point, time = 0, body = referenceBody(point, time)) {
-  return point.clone().sub(bodyState(body, time).position).applyQuaternion(surfaceOrientation(time, body).invert());
-}
-function surfaceVelocity(point, time = 0, body = referenceBody(point, time)) {
-  const state = bodyState(body, time);
-  return surfaceAngularVelocity(body).cross(point.clone().sub(state.position)).add(state.velocity);
-}
-function surfaceRelativeVelocity(point, velocity, time = 0, body = referenceBody(point, time)) {
-  return velocity.clone().sub(surfaceVelocity(point, time, body));
-}
-function rotatingFrameCorrection(point, relativeVelocity, time = 0, body = referenceBody(point, time)) {
-  const omega = surfaceAngularVelocity(body), r = point.clone().sub(bodyState(body, time).position);
-  return omega.clone().cross(relativeVelocity).multiplyScalar(-2).sub(omega.clone().cross(omega.clone().cross(r)));
-}
-function frozenSurfaceState(v, time, dt) {
-  const body = referenceBody(v.pos, time), turn = surfaceOrientation(dt, body);
-  const pos = fixedToInertial(inertialToFixed(v.pos, time, body), time + dt, body);
-  const q = v.q.clone().premultiply(turn).normalize();
-  const com = pos.clone().add(v.stats.com.clone().applyQuaternion(q));
-  return { pos, q, vel: surfaceVelocity(com, time + dt, body), omega: surfaceAngularVelocity(body), turn };
-}
-
-// dist/navigation.js
-import * as T4 from "./vendor/three/three.module.js";
-var SAS_MODES = { dock: "\u30DD\u30FC\u30C8\u9762\u3092\u6574\u5217", target: "\u76EE\u6A19\u65B9\u5411", relativeRetrograde: "\u76F8\u5BFE\u901F\u5EA6\u3092\u6E1B\u3089\u3059\u65B9\u5411", maneuver: "\u4E88\u5B9A\u5674\u5C04", hold: "\u59FF\u52E2\u4FDD\u6301", prograde: "\u9806\u884C", retrograde: "\u9006\u884C", radial: "\u5929\u9802", antiradial: "\u5929\u5E95", normal: "\u8ECC\u9053\u9762\uFF0B", antinormal: "\u8ECC\u9053\u9762\u2212" };
-function navigationVelocity(pos, vel, time = 0, frame = "orbit") {
-  return frame === "surface" ? surfaceRelativeVelocity(pos, vel, time) : relativeMotion(pos, vel, time).velocity;
-}
-function navDirections(pos, vel, time = 0, frame = "orbit") {
-  const velocity = navigationVelocity(pos, vel, time, frame), radial = bodyUp(pos, time), prograde = velocity.length() > 0.5 ? velocity.clone().normalize() : null, normal = prograde ? radial.clone().cross(prograde) : null;
-  if (normal && normal.lengthSq() > 1e-8) normal.normalize();
-  else if (normal) normal.set(0, 0, 0);
-  return { radial, antiradial: radial.clone().negate(), prograde, retrograde: prograde?.clone().negate(), normal: normal?.lengthSq() ? normal : null, antinormal: normal?.lengthSq() ? normal.clone().negate() : null };
-}
-function attitudeTarget(q, forward, target) {
-  if (!target) return null;
-  return new T4.Quaternion().setFromUnitVectors(forward.clone().applyQuaternion(q).normalize(), target.clone().normalize()).multiply(q).normalize();
-}
-function compassFrame(pos, time = 0) {
-  const up2 = bodyUp(pos, time), north = new T4.Vector3(1, 0, 0).addScaledVector(up2, -up2.x);
-  if (north.lengthSq() < 1e-10) return null;
-  north.normalize();
-  return { north, east: north.clone().cross(up2).normalize() };
-}
-function compassHeading(forward, pos, time = 0) {
-  const frame = compassFrame(pos, time);
-  if (!frame) return null;
-  const n = forward.dot(frame.north), e = forward.dot(frame.east);
-  return n * n + e * e < 1e-8 ? null : (Math.atan2(e, n) * 180 / Math.PI + 360) % 360;
-}
-
 // dist/cargo-geometry.js
 function cargoShellBoxes(d, open = false) {
   const [w, l, h] = d.size, t = d.cargoBay.wall, r = w / 2 - t / 2, N = 24, boxes = [];
@@ -286,6 +142,231 @@ function nodes(type) {
   if (d.attachmentNodes) return d.attachmentNodes.map((n) => [...n]);
   if (d.rootWing) return [[0, 0, 0, -1, 0, 0], [x, 0, 0, 1, 0, 0]];
   return [[0, y / 2, 0, 0, 1, 0], [0, -y / 2, 0, 0, -1, 0], [x / 2, 0, 0, 1, 0, 0], [-x / 2, 0, 0, -1, 0, 0], [0, 0, z / 2, 0, 0, 1], [0, 0, -z / 2, 0, 0, -1]];
+}
+
+// dist/failure-events.js
+var FAILURE_EVENT_LIMIT = 64;
+function recordFailure(f, part, cause, { speed = 0, position } = {}) {
+  if (!part || !["impact", "thermal", "structural"].includes(cause)) throw Error("Invalid failure cause");
+  f.failureEvents ??= [];
+  if (f.failureEvents.some((e) => e.partId === part.id)) return null;
+  const d = PARTS[part.type], fuel = Math.max(0, f.fuel.get(part.id) || 0);
+  const event = {
+    id: crypto.randomUUID(),
+    partId: part.id,
+    type: part.type,
+    cause,
+    time: f.universalTime,
+    position: position?.toArray() ?? f.pos.toArray(),
+    velocity: f.vel.toArray(),
+    speed: Math.max(0, speed),
+    fuel,
+    temperature: f.thermal.get(part.id)?.temperature ?? 288.15,
+    effect: fuel > 0 && (d.fuel || d.monoprop) ? "fuel-burst" : "fragments"
+  };
+  f.failureEvents.push(event);
+  if (f.failureEvents.length > FAILURE_EVENT_LIMIT) f.failureEvents.shift();
+  return event;
+}
+function validateFailureEvents(value) {
+  if (value === void 0) return [];
+  const fail = () => {
+    throw Error("\u7834\u640D\u5C65\u6B74\u304C\u4E0D\u6B63\u3067\u3059");
+  }, ids = /* @__PURE__ */ new Set();
+  if (!Array.isArray(value) || value.length > FAILURE_EVENT_LIMIT) fail();
+  let last = -1;
+  for (const e of value) {
+    if (!e || typeof e.id !== "string" || !e.id.length || e.id.length > 200 || ids.has(e.id) || typeof e.partId !== "string" || !e.partId.length || e.partId.length > 200 || !Object.hasOwn(PARTS, e.type) || !["impact", "thermal", "structural"].includes(e.cause)) fail();
+    ids.add(e.id);
+    if (!["time", "speed", "fuel", "temperature"].every((k) => Number.isFinite(e[k]) && e[k] >= 0 && e[k] <= 1e12) || e.time < last) fail();
+    last = e.time;
+    for (const k of ["position", "velocity"]) if (!Array.isArray(e[k]) || e[k].length !== 3 || e[k].some((n) => !Number.isFinite(n) || Math.abs(n) > 1e12)) fail();
+    const d = PARTS[e.type];
+    if (e.fuel > (d.fuel || d.monoprop || 0) || e.effect !== (e.fuel > 0 && (d.fuel || d.monoprop) ? "fuel-burst" : "fragments")) fail();
+  }
+  return structuredClone(value);
+}
+
+// dist/orbital-ascent-settings.js
+function orbitalAscentSettings(value = {}) {
+  const altitude = value.altitude ?? 12e4, inclination = value.inclination ?? 0;
+  if (!Number.isFinite(altitude) || altitude < 8e4 || altitude > 5e5 || !Number.isFinite(inclination) || inclination < 0 || inclination > 180) throw Error("\u9AD8\u5EA680\u301C500 km\u30FB\u50BE\u659C\u89D20\u301C180\xB0\u3067\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044");
+  return { altitude, inclination };
+}
+
+// dist/runway-selection.js
+function runwayEnd(value = "09") {
+  if (!["09", "27"].includes(value)) throw Error("Unknown runway end");
+  return value;
+}
+function createRunwaySelection() {
+  let end = "09", flight = null;
+  const listeners = /* @__PURE__ */ new Set();
+  const publish = (value) => {
+    if (value === end) return;
+    end = value;
+    for (const listener of listeners) listener(end);
+  };
+  return { get end() {
+    return end;
+  }, bind(next) {
+    if (next === flight) return;
+    const value = runwayEnd(next?.runwayEnd);
+    flight = next;
+    publish(value);
+  }, set(value) {
+    value = runwayEnd(value);
+    if (flight) flight.runwayEnd = value;
+    publish(value);
+  }, subscribe(listener) {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  } };
+}
+var runwaySelection = createRunwaySelection();
+
+// dist/cruise-pilot.js
+import * as T6 from "./vendor/three/three.module.js";
+
+// dist/celestial.js
+import * as T2 from "./vendor/three/three.module.js";
+
+// dist/planet.js
+import * as T from "./vendor/three/three.module.js";
+var PLANET = { radius: 6e5, mu: 35316e8, atmosphereTop: 7e4 };
+var center = new T.Vector3(0, -PLANET.radius, 0);
+var pressure = [[0, 101.325, 0, -0.01501631], [1241.025, 84.02916, -0.01289846, -0.01289826], [2439.593, 69.68138, -0.01107876, -0.01107859], [3597.11, 57.78001, -9515483e-9, -9515338e-9], [4714.942, 47.90862, -817254e-8, -8172415e-9], [5794.409, 39.72148, -701892e-8, -7018813e-9], [6836.791, 32.93169, -6027969e-9, -6027877e-9], [7843.328, 27.30109, -5176778e-9, -51767e-7], [8815.22, 22.63206, -4445662e-9, -4445578e-9], [10786.42, 15.3684, -3016528e-9, -301646e-8], [12101.4, 11.87313, -2329273e-9, -232922e-8], [13417.05, 9.172798, -1798594e-9, -1798554e-9], [16678.47, 4.842261, -9448537e-10, -9448319e-10], [21143.1, 2.050097, -3894095e-10, -3894005e-10], [26977.92, 0.6905929, -1252565e-10, -1252534e-10], [33593.82, 0.2201734, -3626878e-11, -3626788e-11], [42081.87, 0.05768469, -9063159e-12, -9062975e-12], [49312.13, 0.01753794, -3029397e-12, -3029335e-12], [56669.95, 4591824e-9, -8827175e-13, -8826996e-13], [62300.84, 1497072e-9, -3077091e-13, -3077031e-13], [7e4, 0, 0, 0]];
+var temperature = [[0, 288.15, 0, -8125e-6], [8815.22, 216.65, -8096968e-9, 0], [16050.39, 216.65, 0, 1242164e-9], [25729.23, 228.65, 1237475e-9, 3464929e-9], [37879.44, 270.65, 344855e-8, 0], [41129.24, 270.65, 0, -3444189e-9], [57440.13, 214.65, -3422425e-9, -2444589e-9], [68797.88, 186.946, -2433851e-9, 0], [7e4, 186.946, 0, 0]];
+function curve(points, h) {
+  h = Math.max(0, h);
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1], b = points[i];
+    if (h <= b[0]) {
+      const width = b[0] - a[0], t = (h - a[0]) / width, t2 = t * t, t3 = t2 * t;
+      return (2 * t3 - 3 * t2 + 1) * a[1] + (t3 - 2 * t2 + t) * width * a[3] + (-2 * t3 + 3 * t2) * b[1] + (t3 - t2) * width * b[2];
+    }
+  }
+  return points.at(-1)[1];
+}
+function atmosphere(h) {
+  const temp = curve(temperature, h), p = h >= PLANET.atmosphereTop ? 0 : Math.max(0, curve(pressure, h)) * 1e3;
+  return { pressure: p, temperature: temp, density: p * 0.0289644 / (8.314462618 * temp) };
+}
+
+// dist/celestial.js
+var MOON = Object.freeze({ id: "moon", name: "\u6708", radius: 2e5, mu: 651383975207807e-4, atmosphereTop: 0, orbitRadius: 12e6, phase: 1.70000004768372, sphereOfInfluence: 242955911656475e-8 });
+var PRIMARY = Object.freeze({ ...PLANET, id: "planet", name: "\u6BCD\u661F" });
+var MOON_RATE = Math.sqrt(PRIMARY.mu / MOON.orbitRadius ** 3);
+var MOON_PERIOD = 2 * Math.PI / MOON_RATE;
+function bodyState(body, time = 0) {
+  if (body.id === "planet") return { position: center.clone(), velocity: new T2.Vector3() };
+  if (body.id !== "moon") throw Error("\u672A\u77E5\u306E\u5929\u4F53\u3067\u3059");
+  const angle = MOON.phase + time % MOON_PERIOD * MOON_RATE, c = Math.cos(angle), s = Math.sin(angle), r = MOON.orbitRadius;
+  return { position: center.clone().add(new T2.Vector3(0, r * c, r * s)), velocity: new T2.Vector3(0, -r * MOON_RATE * s, r * MOON_RATE * c) };
+}
+function referenceBody(position, time = 0) {
+  return position.distanceToSquared(bodyState(MOON, time).position) < MOON.sphereOfInfluence ** 2 ? MOON : PRIMARY;
+}
+function relativeMotion(position, velocity, time = 0, body = referenceBody(position, time)) {
+  const state = bodyState(body, time);
+  return { body, center: state.position, bodyVelocity: state.velocity, r: position.clone().sub(state.position), velocity: velocity.clone().sub(state.velocity) };
+}
+function bodyAltitude(position, time = 0, body = referenceBody(position, time)) {
+  return position.distanceTo(bodyState(body, time).position) - body.radius;
+}
+function bodyUp(position, time = 0, body = referenceBody(position, time)) {
+  return position.clone().sub(bodyState(body, time).position).normalize();
+}
+function bodyGravity(position, time = 0, body = referenceBody(position, time)) {
+  const r = position.clone().sub(bodyState(body, time).position);
+  return r.multiplyScalar(-body.mu / Math.max(1, r.length()) ** 3);
+}
+function bodyOrbitState(position, velocity, time = 0, body = referenceBody(position, time)) {
+  const relative = relativeMotion(position, velocity, time, body), r = relative.r, v = relative.velocity, radius = r.length(), h = r.clone().cross(v), evec = v.clone().cross(h).divideScalar(body.mu).sub(r.clone().divideScalar(radius)), e = evec.length(), energy = v.lengthSq() / 2 - body.mu / radius, p = h.lengthSq() / body.mu, a = energy < 0 ? -body.mu / (2 * energy) : Infinity;
+  const periapsis = p / (1 + e) - body.radius, apoapsis = energy < 0 ? a * (1 + e) - body.radius : Infinity;
+  return { body, bodyId: body.id, center: relative.center, bodyVelocity: relative.bodyVelocity, relativeVelocity: v, universalTime: time, altitude: radius - body.radius, speed: v.length(), vertical: v.dot(r) / radius, circularSpeed: Math.sqrt(body.mu / radius), gravity: body.mu / radius ** 2, eccentricity: e, energy, periapsis, apoapsis, period: energy < 0 ? 2 * Math.PI * Math.sqrt(a ** 3 / body.mu) : Infinity, p, evec, normal: h.normalize(), radius, r, stable: energy < 0 && periapsis > body.atmosphereTop };
+}
+function localStep(r, v, acceleration, mu, dt) {
+  const gravity = (r2) => r2.clone().multiplyScalar(-mu / Math.max(1, r2.length()) ** 3);
+  const half = v.clone().addScaledVector(gravity(r).add(acceleration), dt / 2), next = r.clone().addScaledVector(half, dt);
+  return { position: next, velocity: half.addScaledVector(gravity(next).add(acceleration), dt / 2) };
+}
+function advanceCelestialOrbit(position, velocity, acceleration, dt, time = 0) {
+  const relative = relativeMotion(position, velocity, time), body = relative.body;
+  const next = localStep(relative.r, relative.velocity, acceleration, body.mu, dt), end = bodyState(body, time + dt);
+  const pos = next.position.add(end.position), vel = next.velocity.add(end.velocity);
+  return { pos, vel, bodyId: referenceBody(pos, time + dt).id };
+}
+function lunarTrial(time = 0, altitude = 2e4) {
+  const state = bodyState(MOON, time), r = MOON.radius + altitude;
+  return { pos: state.position.add(new T2.Vector3(0, r, 0)), vel: state.velocity.add(new T2.Vector3(0, 0, Math.sqrt(MOON.mu / r))) };
+}
+
+// dist/surface-frame.js
+import * as T3 from "./vendor/three/three.module.js";
+var PRIMARY_ROTATION_PERIOD = 21549.4251830898;
+var PRIMARY_ROTATION_RATE = 2 * Math.PI / PRIMARY_ROTATION_PERIOD;
+function surfaceAngularVelocity(body = PRIMARY) {
+  return new T3.Vector3(body.id === "planet" ? PRIMARY_ROTATION_RATE : 0, 0, 0);
+}
+function surfaceOrientation(time = 0, body = PRIMARY) {
+  return new T3.Quaternion().setFromAxisAngle(new T3.Vector3(1, 0, 0), body.id === "planet" ? time % PRIMARY_ROTATION_PERIOD * PRIMARY_ROTATION_RATE : 0);
+}
+function launchSiteOrientation(environment) {
+  return new T3.Quaternion().setFromAxisAngle(new T3.Vector3(0, 0, 1), (environment === "runway" ? -2e3 : environment === "water" ? 4e3 : 0) / PRIMARY.radius);
+}
+function fixedToInertial(point, time = 0, body = PRIMARY) {
+  return point.clone().applyQuaternion(surfaceOrientation(time, body)).add(bodyState(body, time).position);
+}
+function inertialToFixed(point, time = 0, body = referenceBody(point, time)) {
+  return point.clone().sub(bodyState(body, time).position).applyQuaternion(surfaceOrientation(time, body).invert());
+}
+function surfaceVelocity(point, time = 0, body = referenceBody(point, time)) {
+  const state = bodyState(body, time);
+  return surfaceAngularVelocity(body).cross(point.clone().sub(state.position)).add(state.velocity);
+}
+function surfaceRelativeVelocity(point, velocity, time = 0, body = referenceBody(point, time)) {
+  return velocity.clone().sub(surfaceVelocity(point, time, body));
+}
+function rotatingFrameCorrection(point, relativeVelocity, time = 0, body = referenceBody(point, time)) {
+  const omega = surfaceAngularVelocity(body), r = point.clone().sub(bodyState(body, time).position);
+  return omega.clone().cross(relativeVelocity).multiplyScalar(-2).sub(omega.clone().cross(omega.clone().cross(r)));
+}
+function frozenSurfaceState(v, time, dt) {
+  const body = referenceBody(v.pos, time), turn = surfaceOrientation(dt, body);
+  const pos = fixedToInertial(inertialToFixed(v.pos, time, body), time + dt, body);
+  const q = v.q.clone().premultiply(turn).normalize();
+  const com = pos.clone().add(v.stats.com.clone().applyQuaternion(q));
+  return { pos, q, vel: surfaceVelocity(com, time + dt, body), omega: surfaceAngularVelocity(body), turn };
+}
+
+// dist/navigation.js
+import * as T4 from "./vendor/three/three.module.js";
+var SAS_MODES = { dock: "\u30DD\u30FC\u30C8\u9762\u3092\u6574\u5217", target: "\u76EE\u6A19\u65B9\u5411", relativeRetrograde: "\u76F8\u5BFE\u901F\u5EA6\u3092\u6E1B\u3089\u3059\u65B9\u5411", maneuver: "\u4E88\u5B9A\u5674\u5C04", hold: "\u59FF\u52E2\u4FDD\u6301", prograde: "\u9806\u884C", retrograde: "\u9006\u884C", radial: "\u5929\u9802", antiradial: "\u5929\u5E95", normal: "\u8ECC\u9053\u9762\uFF0B", antinormal: "\u8ECC\u9053\u9762\u2212" };
+function navigationVelocity(pos, vel, time = 0, frame = "orbit") {
+  return frame === "surface" ? surfaceRelativeVelocity(pos, vel, time) : relativeMotion(pos, vel, time).velocity;
+}
+function navDirections(pos, vel, time = 0, frame = "orbit") {
+  const velocity = navigationVelocity(pos, vel, time, frame), radial = bodyUp(pos, time), prograde = velocity.length() > 0.5 ? velocity.clone().normalize() : null, normal = prograde ? radial.clone().cross(prograde) : null;
+  if (normal && normal.lengthSq() > 1e-8) normal.normalize();
+  else if (normal) normal.set(0, 0, 0);
+  return { radial, antiradial: radial.clone().negate(), prograde, retrograde: prograde?.clone().negate(), normal: normal?.lengthSq() ? normal : null, antinormal: normal?.lengthSq() ? normal.clone().negate() : null };
+}
+function attitudeTarget(q, forward, target) {
+  if (!target) return null;
+  return new T4.Quaternion().setFromUnitVectors(forward.clone().applyQuaternion(q).normalize(), target.clone().normalize()).multiply(q).normalize();
+}
+function compassFrame(pos, time = 0) {
+  const up2 = bodyUp(pos, time), north = new T4.Vector3(1, 0, 0).addScaledVector(up2, -up2.x);
+  if (north.lengthSq() < 1e-10) return null;
+  north.normalize();
+  return { north, east: north.clone().cross(up2).normalize() };
+}
+function compassHeading(forward, pos, time = 0) {
+  const frame = compassFrame(pos, time);
+  if (!frame) return null;
+  const n = forward.dot(frame.north), e = forward.dot(frame.east);
+  return n * n + e * e < 1e-8 ? null : (Math.atan2(e, n) * 180 / Math.PI + 360) % 360;
 }
 
 // dist/aero.js
@@ -847,6 +928,12 @@ function powerStep(parts, charge, pos, q, commands, enabled, dt, time = 0, load 
   return { stored: next, capacity, generation, demand, consumption: consumed / dt, ratio, eclipse: inEclipse(pos, time), net: change / dt };
 }
 
+// dist/rendezvous-burn.js
+function validateRendezvousBurn(value) {
+  if (!value || ![null, 0.1].includes(value.burnThrottle) || !Number.isFinite(value.duration) || value.duration <= 0 || value.duration > 1200 || typeof value.targetPartId !== "string" || !value.targetPartId.length || value.targetPartId.length > 200) throw Error("\u4F1A\u5408\u5674\u5C04\u8A08\u753B\u306E\u4FDD\u5B58\u5024\u304C\u4E0D\u6B63\u3067\u3059");
+  return value;
+}
+
 // dist/maneuver-node.js
 import * as T14 from "./vendor/three/three.module.js";
 function maneuverDirection(node) {
@@ -860,6 +947,11 @@ function advanceManeuver(node, engineDeltaV) {
 }
 function validateManeuverNode(value) {
   if (value == null) return null;
+  if (value.rendezvous !== void 0) {
+    if (!Number.isFinite(value.universalTime)) throw Error("\u4F1A\u5408\u5674\u5C04\u6642\u523B\u304C\u4E0D\u6B63\u3067\u3059");
+    validateRendezvousBurn(value.rendezvous);
+    if (value.plannedThrottle !== void 0 || value.capture !== void 0 || value.returnPlan !== void 0 || value.departure !== void 0 || value.tolerance !== 0.05) throw Error("\u4F1A\u5408\u5674\u5C04\u5951\u7D04\u304C\u4E0D\u6B63\u3067\u3059");
+  }
   if (value.plannedThrottle !== void 0 && ![0.01, 0.1, 1].includes(value.plannedThrottle)) throw Error("\u8A08\u753B\u63A8\u529B\u306E\u4FDD\u5B58\u5024\u304C\u4E0D\u6B63\u3067\u3059");
   if (value.tolerance !== void 0 && ![0.5, 0.05].includes(value.tolerance)) throw Error("\u5674\u5C04\u7CBE\u5EA6\u306E\u4FDD\u5B58\u5024\u304C\u4E0D\u6B63\u3067\u3059");
   if (value.stopAtTarget !== void 0 && typeof value.stopAtTarget !== "boolean") throw Error("\u5674\u5C04\u505C\u6B62\u652F\u63F4\u306E\u4FDD\u5B58\u5024\u304C\u4E0D\u6B63\u3067\u3059");
@@ -1392,6 +1484,7 @@ var Flight = class _Flight {
     this.parts = structuredClone(parts);
     this.vesselName = "";
     this.separationCount = 0;
+    this.failureEvents = [];
     this.environment = environment;
     this.physicsOrigin = null;
     this.q = new T28.Quaternion();
@@ -1829,7 +1922,21 @@ var Flight = class _Flight {
     const endRelativeVelocity = surfaceRelativeVelocity(this.pos.clone().add(st.com.clone().applyQuaternion(this.q)), this.vel, this.universalTime, reference);
     this.telemetry.atmosphere = air;
     this.telemetry.surfaceSpeed = endRelativeVelocity.length();
-    if (!water && !freeFlight && (wheelImpactSpeed < -9 || impactSpeed < -9 && endRelativeVelocity.dot(normal) > impactSpeed * 0.4)) this.crashed = true;
+    if (!water && !freeFlight && (wheelImpactSpeed < -9 || impactSpeed < -9 && endRelativeVelocity.dot(normal) > impactSpeed * 0.4)) {
+      this.crashed = true;
+      const candidates = this.parts.map((p) => {
+        const point = partCenter(p).applyQuaternion(this.q).add(this.pos), rotation2 = this.q.clone().multiply(partRotation(p)), localNormal = normal.clone().applyQuaternion(rotation2.invert()), size = PARTS[p.type].size;
+        const clearance = bodyAltitude(point, this.universalTime, reference) - (Math.abs(localNormal.x) * size[0] + Math.abs(localNormal.y) * size[1] + Math.abs(localNormal.z) * size[2]) / 2;
+        let impulse = 0;
+        if (this.ground) for (const { collider } of this.colliderGroups.get(p.id)) this.world.contactPair(collider, this.ground, (m) => {
+          for (let i = 0; i < m.numContacts(); i++) impulse += m.contactImpulse(i);
+        });
+        return { p, point, clearance, impulse };
+      });
+      candidates.sort((a, b) => b.impulse - a.impulse || a.clearance - b.clearance);
+      const hit = candidates[0];
+      recordFailure(this, hit.p, "impact", { speed: Math.max(-wheelImpactSpeed, -impactSpeed, 0), position: hit.point });
+    }
     const touching = !freeFlight && this.parts.some((p) => {
       const point = partCenter(p).applyQuaternion(this.q).add(this.pos), axes2 = new T28.Matrix4().makeRotationFromQuaternion(this.q.clone().multiply(partRotation(p))).elements, d = PARTS[p.type], extent = (Math.abs(normal.x * axes2[0] + normal.y * axes2[1] + normal.z * axes2[2]) * d.size[0] + Math.abs(normal.x * axes2[4] + normal.y * axes2[5] + normal.z * axes2[6]) * d.size[1] + Math.abs(normal.x * axes2[8] + normal.y * axes2[9] + normal.z * axes2[10]) * d.size[2]) / 2;
       return bodyAltitude(point, this.universalTime, reference) - extent < 0.1;
@@ -1845,6 +1952,10 @@ var Flight = class _Flight {
     this.landedTime = (touching || supported || contacts > 0) && endRelativeVelocity.length() < 0.8 && this.lastThrust === 0 ? this.landedTime + dt : 0;
     this.landed = this.landedTime > 0.5;
     if (thermal.failed.length) {
+      for (const id of thermal.failed) {
+        const p = this.parts.find((p2) => p2.id === id);
+        recordFailure(this, p, "thermal", { position: partCenter(p).applyQuaternion(this.q).add(this.pos) });
+      }
       this.crashed = true;
       this.throttle = 0;
     }
@@ -1959,9 +2070,15 @@ function loadFlight(value, { debris = false, depth = 0, budget = { count: 0, ids
   check(value.vesselName === void 0 || typeof value.vesselName === "string" && value.vesselName.length <= 80);
   check(value.separationCount === void 0 || Number.isSafeInteger(value.separationCount) && value.separationCount >= 0 && value.separationCount <= 1e9);
   if (value.universalTime !== void 0) validUniversalTime(value.universalTime);
+  const failureEvents = validateFailureEvents(value.failureEvents);
+  const ascent = value.orbitalAscentSettings ? orbitalAscentSettings(value.orbitalAscentSettings) : null;
+  const arrivalEnd = runwayEnd(value.runwayEnd);
   const cruise = value.cruiseSettings ? cruiseSettings(value.cruiseSettings) : null;
   const f = new Flight(parts, value.environment);
+  f.failureEvents = failureEvents;
+  f.orbitalAscentSettings = ascent;
   f.cruiseSettings = cruise;
+  f.runwayEnd = arrivalEnd;
   f.vesselId = vesselId;
   f.separationCount = value.separationCount ?? 0;
   f.legacyPhysics = value.physicsModel === void 0;
