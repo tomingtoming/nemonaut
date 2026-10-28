@@ -1,6 +1,8 @@
 import {AscentPrototype} from './ascent-prototype.mjs';
 import {PARTS} from '../dist/catalog.js';
 import {ascentReadiness} from './ascent-readiness.mjs';
+import {ascentPlane} from './ascent-plane.mjs';
+import {bodyUp} from '../dist/celestial.js';
 
 // Experimental lifecycle; product UI admission and manual-input wiring follow separately.
 export class AscentSession{
@@ -9,6 +11,7 @@ export class AscentSession{
   if(this.owner)throw Error('Stop the current ascent first');
   const pilot=new AscentPrototype(settings);
   const reason=ascentReadiness(f);if(reason)throw Error(reason);
+  pilot.plane=ascentPlane(bodyUp(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),f.universalTime),pilot.inclination);
   this.previous={sas:f.sas,sasMode:f.sasMode,navigationAuto:f.navigationAuto,navigationFrame:f.navigationFrame};
   this.owner=f;this.pilot=pilot;this.elapsed=0;this.state='running';this.message='離昇';
  }
