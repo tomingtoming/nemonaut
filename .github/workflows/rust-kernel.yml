@@ -23,7 +23,9 @@ jobs:
       - name: Compare Rust Wasm with existing JS Rapier
         run: node tools/golden/compare-kernel.mjs
       - name: Check game baseline remains unchanged
-        run: node --test tests/golden-replay.test.mjs
+        run: |
+          npm ci --ignore-scripts
+          node --test tests/golden-replay.test.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: diagnostic-wasm
