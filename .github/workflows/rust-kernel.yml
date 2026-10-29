@@ -1,0 +1,31 @@
+name: Rust kernel parity
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'engine/**'
+      - 'tools/golden/**'
+      - 'tests/golden/**'
+      - 'tests/golden-replay.test.mjs'
+      - '.github/workflows/rust-kernel.yml'
+permissions:
+  contents: read
+jobs:
+  parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install pinned compiler and Wasm target
+        run: rustup toolchain install 1.97.0 --profile minimal --target wasm32-unknown-unknown
+      - name: Compile diagnostic Wasm
+        run: cargo +1.97.0 build --manifest-path engine/Cargo.toml --locked --release --target wasm32-unknown-unknown
+      - name: Compare Rust Wasm with existing JS Rapier
+        run: node tools/golden/compare-kernel.mjs
+      - name: Check game baseline remains unchanged
+        run: node --test tests/golden-replay.test.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: diagnostic-wasm
+          path: engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm
+          retention-days: 7
