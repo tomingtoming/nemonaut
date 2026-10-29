@@ -21,7 +21,9 @@ jobs:
       - name: Compile diagnostic Wasm
         run: cargo +1.97.0 build --manifest-path engine/Cargo.toml --locked --release --target wasm32-unknown-unknown
       - name: Compare Rust Wasm with existing JS Rapier
-        run: node tools/golden/compare-kernel.mjs
+        run: |
+          node tools/golden/compare-kernel.mjs
+          node tools/golden/checkpoint-kernel.mjs
       - name: Check game baseline remains unchanged
         run: |
           npm ci --ignore-scripts
