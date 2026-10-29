@@ -22,11 +22,12 @@ jobs:
         run: cargo +1.97.0 build --manifest-path engine/Cargo.toml --locked --release --target wasm32-unknown-unknown
       - name: Compare Rust Wasm with existing JS Rapier
         run: |
+          npm ci --ignore-scripts
           node tools/golden/compare-kernel.mjs
           node tools/golden/checkpoint-kernel.mjs
+          node tools/golden/craft-kernel.mjs
       - name: Check game baseline remains unchanged
         run: |
-          npm ci --ignore-scripts
           node --test tests/golden-replay.test.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
