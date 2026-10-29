@@ -135,6 +135,11 @@ pub extern "C" fn kernel_shift(x: f64, y: f64, z: f64) -> u32 {
         let Some(k) = state.as_mut() else {
             return 0;
         };
+        // Contact-space relocation is not accepted yet: f32 coordinate changes
+        // alter contact trajectories beyond the diagnostic parity threshold.
+        if k.initial[1] == 1.0 {
+            return 0;
+        }
         if k.commands.len() >= 7200 {
             return 0;
         }

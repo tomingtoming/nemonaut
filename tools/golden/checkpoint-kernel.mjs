@@ -13,9 +13,9 @@ for(const ground of [0,1]){
  for(let tick=0;tick<360;tick++){
   if(tick===60||tick===180){
    const d=tick===60?[100,-20,50]:[-100,20,-50];
-   const before=state(shifted);assert.equal(shifted.kernel_shift(...d),1);
+   const before=state(shifted);assert.equal(shifted.kernel_shift(...d),ground?0:1);
    const after=state(shifted);for(let i=0;i<14;i++)assert.ok(Math.abs(after[i]-before[i])<=(i<3?.00001:0));
-   if(restored)assert.equal(restored.kernel_shift(...d),1);
+   if(restored)assert.equal(restored.kernel_shift(...d),ground?0:1);
   }
   const command=[ground?0:2,0,0,0,ground?0:.1,0,1,ground?-9.81:0];
   assert.equal(control.kernel_step(...command),1);assert.equal(shifted.kernel_step(...command),1);
@@ -33,7 +33,7 @@ for(const ground of [0,1]){
    assert.equal(restored.kernel_shift(NaN,0,0),0);assert.deepEqual(state(restored),before);
   }
  }
- console.log(JSON.stringify({case:ground?'contact-rebase-save':'rotating-flight-rebase-save',ticks:360,shiftTolerance:.001,restoreDifference:0,pass:true}));
+ console.log(JSON.stringify({case:ground?'contact-save-rebase-rejected':'rotating-flight-rebase-save',ticks:360,shiftTolerance:.001,restoreDifference:0,pass:true}));
  for(const a of [control,shifted,restored])a.kernel_dispose();
 }
 console.log('Replay save transfer, continued contact state, world-coordinate invariance and failed-load rollback: pass');
