@@ -257,9 +257,13 @@ pub extern "C" fn craft_clear_shapes() -> u32 {
             return 0;
         };
         for h in c.shapes.drain(..) {
-            c.world
-                .colliders
-                .remove(h, &mut c.world.islands, &mut c.world.bodies, true);
+            c.world.colliders.remove(
+                h,
+                &mut c.world.islands,
+                &mut c.world.bodies,
+                &mut c.world.soft_bodies,
+                true,
+            );
         }
         c.world.bodies[c.body].recompute_mass_properties_from_colliders(&c.world.colliders);
         1
