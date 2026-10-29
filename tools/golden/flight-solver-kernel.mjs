@@ -3,7 +3,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {Flight} from '../../dist/core.js';
-import {preset} from '../../dist/catalog.js';
+import {preset,part} from '../../dist/catalog.js';
 import R from '../../dist/vendor/rapier/rapier.mjs';
 import {bodyUp} from '../../dist/celestial.js';
 const bytes=await readFile(new URL('../../engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm',import.meta.url));
@@ -12,11 +12,11 @@ const vec=v=>[v.x,v.y,v.z];
 function state(b){const q=b.rotation();return [...vec(b.translation()),...vec(b.linvel()),q.x,q.y,q.z,q.w,...vec(b.angvel())];}
 function groundState(f){if(!f.ground)return null;const g=f.ground,q=g.rotation(),h=g.halfExtents();assert.deepEqual(vec(h),[2000,1,2000]);return [g.isEnabled()?1:0,...vec(g.translation()),q.x,q.y,q.z,q.w,g.friction()];}
 const traces=[];
-for(const name of ['orbiter','returner','plane','rover-ground','plane-touchdown']){
- const grounded=name==='rover-ground'||name==='plane-touchdown',kind=name==='rover-ground'?'rover':name==='plane-touchdown'?'plane':name;
- const f=new Flight(preset(kind),kind==='rover'?'land':kind==='plane'?'runway':'orbit');f.sas=false;
+for(const name of ['orbiter','returner','plane','rover-ground','plane-touchdown','probe-touchdown']){
+ const grounded=name==='rover-ground'||name.endsWith('-touchdown'),kind=name==='rover-ground'?'rover':name==='plane-touchdown'?'plane':name==='probe-touchdown'?'probe':name;
+ const f=new Flight(kind==='probe'?[part('probe',[0,0,0])]:preset(kind),kind==='rover'||kind==='probe'?'land':kind==='plane'?'runway':'orbit');f.sas=false;
  if(name==='plane'){f.pos.y+=1000;f.vel.set(0,0,100);}
- if(name==='plane-touchdown'){const up=bodyUp(f.pos,0);f.pos.addScaledVector(up,.25);f.vel.addScaledVector(up,-2);}
+ if(name.endsWith('-touchdown')){const up=bodyUp(f.pos,0);f.pos.addScaledVector(up,.25);f.vel.addScaledVector(up,-2);}
  if(!grounded&&name!=='orbiter'){f.stageNext();f.throttle=.35;}
  if(name==='rover-ground'){f.stageNext();f.reactionEnabled=false;f.brake=false;}
  const trace={name,initialShapes:[],frames:[]};let maxDifference=0,nonzeroForce=0,nonzeroTorque=0,groundFrames=0,contactFrames=0;
@@ -53,16 +53,16 @@ for(const name of ['orbiter','returner','plane','rover-ground','plane-touchdown'
    if(Math.hypot(...force)>0)nonzeroForce++;if(Math.hypot(...torque)>0)nonzeroTorque++;
    trace.frames.push({before,masses,input,ground,contacts,after});
   };
-  const ticks=name==='rover-ground'?1200:name==='plane-touchdown'?480:120;
+  const ticks=name==='rover-ground'?1200:name.endsWith('-touchdown')?480:120;
   for(let tick=0;tick<ticks;tick++){
    if(name==='rover-ground'&&tick===720)f.brake=true;
-   const input=name==='rover-ground'?{drive:tick<720?1:0,yaw:tick>=240&&tick<600?.3:0}:name==='plane-touchdown'?{}:{pitch:tick<60?.2:0,yaw:.1};
+   const input=name==='rover-ground'?{drive:tick<720?1:0,yaw:tick>=240&&tick<600?.3:0}:name.endsWith('-touchdown')?{}:{pitch:tick<60?.2:0,yaw:.1};
    f.step(1/120,input);
   }
   if(!grounded){assert.equal(trace.frames.length,120);assert.ok(nonzeroTorque>0,'must exercise actual control torque');}
   else {assert.ok(trace.frames.length>100);assert.ok(groundFrames>100);assert.equal(f.crashed,false,'gentle ground cases must remain intact');}
-  if(name==='plane-touchdown')assert.ok(contactFrames>0,'touchdown must exercise Rapier contact');
-  if(name!=='orbiter')assert.ok(nonzeroForce>0,'case must exercise actual force');
+  if(name==='probe-touchdown')assert.ok(contactFrames>0,'wheel-free touchdown must exercise Rapier contact');
+  if(name!=='orbiter'&&name!=='probe-touchdown')assert.ok(nonzeroForce>0,'case must exercise actual force');
   const digest=createHash('sha256').update(JSON.stringify(trace)).digest('hex');
   console.log(JSON.stringify({case:name,frames:trace.frames.length,groundFrames,contactFrames,nonzeroForce,nonzeroTorque,maxDifference,traceSHA256:digest,pass:true}));traces.push(trace);
  }finally{f.dispose();a.craft_dispose();}
