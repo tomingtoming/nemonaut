@@ -27,6 +27,7 @@ jobs:
           node tools/golden/checkpoint-kernel.mjs
           node tools/golden/craft-kernel.mjs
           node tools/golden/flight-solver-kernel.mjs
+          node tools/golden/fleet-kernel.mjs
       - name: Check game baseline remains unchanged
         run: |
           node --test tests/golden-replay.test.mjs

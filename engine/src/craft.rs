@@ -223,7 +223,7 @@ pub extern "C" fn craft_shape(
         let Some(c) = state.as_mut() else {
             return 0;
         };
-        if c.ticks != 0 || c.shapes.len() >= 3200 {
+        if c.shapes.len() >= 3200 {
             return 0;
         }
         let shape = if kind == 0.0 {
@@ -245,6 +245,23 @@ pub extern "C" fn craft_shape(
             .colliders
             .insert_with_parent(col, c.body, &mut c.world.bodies);
         c.shapes.push(handle);
+        1
+    })
+}
+/// Mirror Flight.buildColliders without resetting the body or solver clock.
+#[unsafe(no_mangle)]
+pub extern "C" fn craft_clear_shapes() -> u32 {
+    CRAFT.with(|s| {
+        let mut state = s.borrow_mut();
+        let Some(c) = state.as_mut() else {
+            return 0;
+        };
+        for h in c.shapes.drain(..) {
+            c.world
+                .colliders
+                .remove(h, &mut c.world.islands, &mut c.world.bodies, true);
+        }
+        c.world.bodies[c.body].recompute_mass_properties_from_colliders(&c.world.colliders);
         1
     })
 }
