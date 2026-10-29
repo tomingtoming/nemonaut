@@ -5,6 +5,7 @@ struct Craft {
     world: PhysicsWorld,
     body: RigidBodyHandle,
     shapes: Vec<ColliderHandle>,
+    ground: Option<ColliderHandle>,
     ticks: u32,
 }
 
@@ -127,9 +128,63 @@ pub extern "C" fn craft_reset() {
             world,
             body,
             shapes: Vec::new(),
+            ground: None,
             ticks: 0,
         })
     });
+}
+
+/// Existing Flight ground geometry: a 2000 x 1 x 2000 half-extent box.
+/// Call before adding craft shapes to preserve the reference insertion order.
+#[unsafe(no_mangle)]
+pub extern "C" fn craft_ground(
+    enabled: f64,
+    px: f64,
+    py: f64,
+    pz: f64,
+    qx: f64,
+    qy: f64,
+    qz: f64,
+    qw: f64,
+    friction: f64,
+) -> u32 {
+    if ![enabled, px, py, pz, qx, qy, qz, qw, friction]
+        .iter()
+        .all(|v| v.is_finite())
+        || (enabled != 0.0 && enabled != 1.0)
+        || [px, py, pz].iter().any(|v| v.abs() > 1e9)
+        || !(0.0..=10.0).contains(&friction)
+        || (qx * qx + qy * qy + qz * qz + qw * qw - 1.0).abs() > 0.0001
+    {
+        return 0;
+    }
+    CRAFT.with(|s| {
+        let mut state = s.borrow_mut();
+        let Some(c) = state.as_mut() else {
+            return 0;
+        };
+        let handle = if let Some(h) = c.ground {
+            h
+        } else {
+            if !c.shapes.is_empty() || c.ticks != 0 {
+                return 0;
+            }
+            let h = c
+                .world
+                .colliders
+                .insert(ColliderBuilder::cuboid(2000.0, 1.0, 2000.0));
+            c.ground = Some(h);
+            h
+        };
+        let g = &mut c.world.colliders[handle];
+        g.set_enabled(enabled == 1.0);
+        g.set_translation(Vector::new(px as f32, py as f32, pz as f32));
+        g.set_rotation(Rotation::from_xyzw(
+            qx as f32, qy as f32, qz as f32, qw as f32,
+        ));
+        g.set_friction(friction as f32);
+        1
+    })
 }
 /// kind 0 cuboid (half extents), 1 ball (radius x, y/z ignored but finite).
 #[unsafe(no_mangle)]
