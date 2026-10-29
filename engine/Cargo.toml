@@ -1,0 +1,15 @@
+[package]
+name = "orbital-engine"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+rapier3d = { git = "https://github.com/dimforge/rapier", rev = "b716d375efc0201003f0cd9ef7168eee0b62c177" }
+
+[profile.release]
+lto = true
+opt-level = 3

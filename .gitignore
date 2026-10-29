@@ -4,3 +4,4 @@ artifacts/
 dist/_diagnostics/
 *.blend1
 assets-source/*.log
+engine/target/
