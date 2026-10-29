@@ -7,6 +7,105 @@ struct Craft {
     shapes: Vec<ColliderHandle>,
     ticks: u32,
 }
+
+/// Shadow replay only: import the exact solver pre-state owned by the JS game.
+#[unsafe(no_mangle)]
+pub extern "C" fn craft_state(
+    px: f64,
+    py: f64,
+    pz: f64,
+    vx: f64,
+    vy: f64,
+    vz: f64,
+    qx: f64,
+    qy: f64,
+    qz: f64,
+    qw: f64,
+    wx: f64,
+    wy: f64,
+    wz: f64,
+) -> u32 {
+    if ![px, py, pz, vx, vy, vz, qx, qy, qz, qw, wx, wy, wz]
+        .iter()
+        .all(|v| v.is_finite() && v.abs() <= 1e9)
+        || (qx * qx + qy * qy + qz * qz + qw * qw - 1.0).abs() > 0.0001
+    {
+        return 0;
+    }
+    CRAFT.with(|s| {
+        let mut state = s.borrow_mut();
+        let Some(c) = state.as_mut() else {
+            return 0;
+        };
+        let b = &mut c.world.bodies[c.body];
+        b.recompute_mass_properties_from_colliders(&c.world.colliders);
+        b.set_translation(Vector::new(px as f32, py as f32, pz as f32), true);
+        b.set_rotation(
+            Rotation::from_xyzw(qx as f32, qy as f32, qz as f32, qw as f32),
+            true,
+        );
+        b.set_linvel(Vector::new(vx as f32, vy as f32, vz as f32), true);
+        b.set_angvel(Vector::new(wx as f32, wy as f32, wz as f32), true);
+        1
+    })
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn craft_solver_step(
+    fx: f64,
+    fy: f64,
+    fz: f64,
+    tx: f64,
+    ty: f64,
+    tz: f64,
+    gx: f64,
+    gy: f64,
+    gz: f64,
+    dt: f64,
+    scale: f64,
+    error: f64,
+    prediction: f64,
+) -> u32 {
+    if ![
+        fx, fy, fz, tx, ty, tz, gx, gy, gz, dt, scale, error, prediction,
+    ]
+    .iter()
+    .all(|v| v.is_finite() && v.abs() <= 1e9)
+        || dt <= 0.0
+        || dt > 0.1
+        || !(1.0..=100.0).contains(&scale)
+        || error < 0.0
+        || prediction < 0.0
+    {
+        return 0;
+    }
+    CRAFT.with(|s| {
+        let mut state = s.borrow_mut();
+        let Some(c) = state.as_mut() else {
+            return 0;
+        };
+        if c.shapes.is_empty() || c.ticks >= 7200 {
+            return 0;
+        }
+        let b = &mut c.world.bodies[c.body];
+        b.recompute_mass_properties_from_colliders(&c.world.colliders);
+        if b.mass() <= 0.0 {
+            return 0;
+        }
+        b.reset_forces(true);
+        b.reset_torques(true);
+        b.add_force(Vector::new(fx as f32, fy as f32, fz as f32), true);
+        b.add_torque(Vector::new(tx as f32, ty as f32, tz as f32), true);
+        c.world.gravity = Vector::new(gx as f32, gy as f32, gz as f32);
+        let p = &mut c.world.integration_parameters;
+        p.dt = dt as f32;
+        p.length_unit = scale as f32;
+        p.normalized_allowed_linear_error = error as f32;
+        p.normalized_prediction_distance = prediction as f32;
+        c.world.step();
+        c.ticks += 1;
+        1
+    })
+}
 thread_local! { static CRAFT: RefCell<Option<Craft>> = const { RefCell::new(None) }; }
 #[unsafe(no_mangle)]
 pub extern "C" fn craft_reset() {
