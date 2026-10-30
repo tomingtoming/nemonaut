@@ -14,3 +14,13 @@ test('impact golden permits divergent fragment trajectories but still rejects wr
 });
 
 test('impact comparison still rejects nonfinite diagnostic trajectories',()=>{const original=baseline.cases.find(c=>c.definition.mode==='impact').expected,changed=structuredClone(original);changed.samples.at(-1).vessels[0].position[0]=NaN;assert.equal(compareGolden(original,changed,{mode:'impact'}).pass,false);});
+
+// Golden v2 (sprint 303): the failed part is decided by contact impulse ranking.
+const v2=JSON.parse(readFileSync(new URL('./golden/js-v2.json',import.meta.url),'utf8').replace(/^﻿/,''));
+for(const {definition,expected} of v2.cases)test('JS golden v2: '+definition.name,()=>assertGolden(expected,replay(definition),{mode:definition.mode,limits:v2.tolerances}));
+test('golden v2 rejects contact impulses that are read as zero',async()=>{
+ const R=(await import('../dist/vendor/rapier/rapier.mjs')).default,original=R.World.prototype.contactPair;
+ R.World.prototype.contactPair=function(a,b,callback){original.call(this,a,b,m=>callback({numContacts:()=>m.numContacts(),contactImpulse:()=>0},false));};
+ try{for(const {definition,expected} of v2.cases)assert.equal(compareGolden(expected,replay(definition),{mode:definition.mode,limits:v2.tolerances}).pass,false,definition.name);}
+ finally{R.World.prototype.contactPair=original;}
+});

@@ -2,14 +2,15 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import R from '../../dist/vendor/rapier/rapier.mjs';
 import {replay} from './replay-js.mjs';
-import {assertGolden} from './compare.mjs';
+import {assertGolden,compareGolden} from './compare.mjs';
 // Test-only delegation: every Rapier step in the frozen Goldens is computed by the Rust Wasm
 // world and written back to the JS body. The JS solver is never called; game logic stays JS.
 const module=await WebAssembly.compile(await readFile(new URL('../../engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm',import.meta.url)));
-const baseline=JSON.parse((await readFile(new URL('../../tests/golden/js-v1.json',import.meta.url),'utf8')).replace(/^﻿/,''));
+const load=async v=>JSON.parse((await readFile(new URL(`../../tests/golden/js-v${v}.json`,import.meta.url),'utf8')).replace(/^﻿/,''));
+const baselines=[await load(1),await load(2)];
 const vec=v=>[v.x,v.y,v.z];
 const bodyState=b=>{const q=b.rotation();return [...vec(b.translation()),...vec(b.linvel()),q.x,q.y,q.z,q.w,...vec(b.angvel())];};
-const worlds=new Map();let stats;
+const worlds=new Map();let stats,zeroImpulses=false;
 function single(world){
  const bodies=[];world.bodies.forEach(b=>bodies.push(b));assert.equal(bodies.length,1,'one craft body per world');
  const grounds=[];world.colliders.forEach(c=>{if(!c.parent())grounds.push(c);});assert.ok(grounds.length<=1,'at most one static ground');
@@ -53,20 +54,26 @@ R.World.prototype.contactPair=function(collider,other,callback){
  assert.ok(ground&&other.handle===ground.handle,'only craft-ground contact queries are delegated');
  const i=s.index.get(collider.handle);assert.ok(i!==undefined,'collider of the current craft shapes');
  const n=s.a.craft_contact_count(i);assert.ok(Number.isInteger(n)&&n>=0);stats.contactQueries++;
- if(n>0){stats.contactPoints+=n;callback({numContacts:()=>n,contactImpulse:k=>s.a.craft_contact_impulse(i,k)},false);}
+ if(n>0){stats.contactPoints+=n;callback({numContacts:()=>n,contactImpulse:k=>zeroImpulses?0:s.a.craft_contact_impulse(i,k)},false);}
 };
 const results=[];
 try{
- for(const {definition:d,expected} of baseline.cases){
+ for(const baseline of baselines)for(const {definition:d,expected} of baseline.cases){
   stats={frames:0,rebuilds:0,contactFrames:0,contactQueries:0,contactPoints:0};worlds.clear();
   try{
    const result=assertGolden(expected,replay(d),{mode:d.mode,limits:baseline.tolerances});
    assert.ok(stats.frames>=d.ticks,'every tick stepped through Rust');
-   const summary={case:d.name,mode:d.mode,ticks:d.ticks,frames:stats.frames,worlds:worlds.size,rebuilds:stats.rebuilds,contactFrames:stats.contactFrames,contactQueries:stats.contactQueries,contactPoints:stats.contactPoints,maxToleranceRatio:result.maxRatio,pass:true};
+   const summary={golden:baseline.version,case:d.name,mode:d.mode,ticks:d.ticks,frames:stats.frames,worlds:worlds.size,rebuilds:stats.rebuilds,contactFrames:stats.contactFrames,contactQueries:stats.contactQueries,contactPoints:stats.contactPoints,maxToleranceRatio:result.maxRatio,pass:true};
    results.push(summary);console.log(JSON.stringify(summary));
   }finally{for(const {a}of worlds.values())a.craft_dispose();}
  }
- assert.equal(results.length,8,'all frozen Golden cases');
+ assert.deepEqual(baselines.map(b=>results.filter(r=>r.golden===b.version).length),[8,2],'all frozen Golden cases');
+ // Negative control: v2 must detect Rust contact impulses that are read as zero.
+ zeroImpulses=true;
+ for(const {definition:d,expected} of baselines[1].cases){stats={frames:0,rebuilds:0,contactFrames:0,contactQueries:0,contactPoints:0};worlds.clear();
+  try{assert.equal(compareGolden(expected,replay(d),{mode:d.mode,limits:baselines[1].tolerances}).pass,false,'zeroed impulses must fail '+d.name);console.log(JSON.stringify({negativeControl:d.name,zeroImpulses:true,rejected:true}));}
+  finally{for(const {a}of worlds.values())a.craft_dispose();}}
+ zeroImpulses=false;
  assert.ok(results.some(r=>r.worlds>1&&r.rebuilds>0),'staging/fracture must create and rebuild Rust worlds');
  assert.ok(results.filter(r=>r.case.endsWith('tank-impact')).every(r=>r.contactPoints>0),'ground impacts must read Rust contact impulses');
  assert.ok(results.some(r=>r.contactFrames>0),'some case must touch the ground in Rust');
