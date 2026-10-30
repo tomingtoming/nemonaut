@@ -69,3 +69,19 @@ test('a pair already touching when first seen does not collide until it separate
   b.pos.copy(a.pos).addScaledVector(axis,5.17);assert.equal(resolveVesselCollisions([a,b],dt).length,1,'collides after separating once');
  }finally{a.dispose();}
 });
+test('a rover rolling into a parked rover pushes it instead of passing through or being frozen',async()=>{
+ const {referenceBody}=await import('../dist/celestial.js'),{surfaceRelativeVelocity}=await import('../dist/surface-frame.js'),{isParked}=await import('../dist/ground-rest.js');
+ const a=new Flight(preset('rover'),'land');a.brake=true;const settle=new WorldRuntime(a);for(let i=0;i<240;i++)settle.step(dt,{});
+ assert.ok(isParked(a),'target rover starts parked');
+ const b=new Flight(preset('rover'),'land');b.universalTime=a.universalTime;b.time=a.time;const axis=new T.Vector3(1,0,0).applyQuaternion(a.q);
+ b.pos.copy(a.pos).addScaledVector(axis,4);b.q.copy(a.q);b.vel.copy(a.vel).addScaledVector(axis,-9);a.detached.push(b);
+ const runtime=new WorldRuntime(a),surface=v=>surfaceRelativeVelocity(centerOfVessel(v),v.vel,v.universalTime,referenceBody(v.pos,v.universalTime));
+ try{
+  let minimum=Infinity,pushed=0,unparked=false;
+  for(let i=0;i<360;i++){runtime.step(dt,{});minimum=Math.min(minimum,b.pos.clone().sub(a.pos).dot(axis));pushed=Math.min(pushed,surface(a).dot(axis));unparked||=!isParked(a);}
+  assert.ok(minimum>1.5,'rovers do not pass through each other: '+minimum);
+  assert.ok(pushed<-.2,'the parked rover is pushed away from the impact: '+pushed);assert.ok(unparked,'the hit releases the parked state');
+  assert.ok(surface(a).length()<.05&&surface(b).length()<.05,'both come to rest afterwards');
+  assert.equal(fleet(a).flatMap(v=>v.failureEvents).length,0,'a roll-in that has slowed below 9 m/s is not a damaging impact');
+ }finally{a.dispose();}
+});
