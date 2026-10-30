@@ -1,3 +1,4 @@
+import {resolveVesselCollisions} from './vessel-collision.js';
 // The scheduler owns the epoch and reads every target at the same step boundary.
 // It accepts a flat fleet; neither its order nor its selected vessel owns time.
 export function advanceWorldPhysics(vessels,universalTime,dt,activeVesselId,input={}){
@@ -15,5 +16,7 @@ export function advanceWorldPhysics(vessels,universalTime,dt,activeVesselId,inpu
  const endTime=universalTime+dt;
  for(const v of vessels)v.universalTime=endTime;
  for(const v of vessels)v.stepBody(dt,v.vesselId===activeVesselId?input:{},snapshots.get(v.navigationTarget)??null);
+ // Vessels step in separate worlds; contacts between them are resolved afterwards.
+ resolveVesselCollisions(vessels,dt);
  return endTime;
 }

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {loadFlight,saveFlight} from '../../dist/flight-save.js';
 import {fleet,canControl} from '../../dist/fleet.js';
 import {WorldRuntime} from '../../dist/world-runtime.js';
+import {VESSEL_COLLISION} from '../../dist/vessel-collision.js';
 export function snapshot(f,labels,tick){
  const key=v=>v.parts.map(p=>labels.get(p.id)).sort().join(',');
  const vessels=fleet(f).map(v=>({key:key(v),parts:v.parts.map(p=>({id:labels.get(p.id),type:p.type,parent:p.parent?labels.get(p.parent):null})).sort((a,b)=>a.id.localeCompare(b.id)),
@@ -25,6 +26,8 @@ function invariants(f,labels,previousFuel){
  assert.ok(fuel<=previousFuel+1e-7,'propellant created');return fuel;
 }
 export function replay(scenario){
+ // v1/v2 were recorded before vessel-vessel collision existed; only v3 scenarios enable it.
+ const collision=VESSEL_COLLISION.enabled;VESSEL_COLLISION.enabled=scenario.vesselCollision===true;
  let f=loadFlight(scenario.initial),world=new WorldRuntime(f),input={};const ids=fleet(f).flatMap(v=>v.parts.map(p=>p.id)),labels=new Map(ids.map((id,i)=>[id,'p'+String(i).padStart(3,'0')]));
  let previousFuel=Infinity;const samples=[],at=new Set(scenario.checkpoints);
  try{
@@ -40,5 +43,5 @@ export function replay(scenario){
    world.step(scenario.dt,input);
   }
   return {name:scenario.name,mode:scenario.mode,samples};
- }finally{f.dispose();}
+ }finally{f.dispose();VESSEL_COLLISION.enabled=collision;}
 }

@@ -9,6 +9,8 @@ const fail=message=>{throw Error('Rust物理: '+message);};
 const check=(ok,message)=>{if(!ok)fail(message);};
 const installed=new WeakMap();
 // Fetch, compile and install once per Rapier module (page or Worker).
+// Vessel-vessel contact queries (pair_*) of the installed engine, or null before installation.
+export function rustPairQuery(R){return installed.get(R)?.pair??null;}
 export async function loadRustEngine(R,url){
  if(installed.has(R))return installed.get(R);
  const module=await WebAssembly.compile(await (await fetch(url)).arrayBuffer());
@@ -75,6 +77,7 @@ export function installRustEngine(R,module,{zeroImpulses=()=>false}={}){
  R.World.prototype.free=function(){const s=worlds.get(this);if(s){s.a.craft_dispose();worlds.delete(this);}return original.free.call(this);};
  // Test-only geometry oracle for non-game worlds (e.g. a fixed hollow part with free balls).
  R.World.prototype.referenceSolverStep=original.step;
- const controller={stats,worlds,uninstall(){for(const {a}of worlds.values())a.craft_dispose();worlds.clear();Object.assign(R.World.prototype,original);Object.assign(R.RigidBody.prototype,body);delete R.World.prototype.referenceSolverStep;installed.delete(R);}};
+ const pair=new WebAssembly.Instance(module,{}).exports;
+ const controller={stats,worlds,pair,uninstall(){for(const {a}of worlds.values())a.craft_dispose();worlds.clear();Object.assign(R.World.prototype,original);Object.assign(R.RigidBody.prototype,body);delete R.World.prototype.referenceSolverStep;installed.delete(R);}};
  installed.set(R,controller);return controller;
 }
