@@ -72,7 +72,8 @@ pub extern "C" fn craft_solver_step(
     .iter()
     .all(|v| v.is_finite() && v.abs() <= 1e9)
         || dt <= 0.0
-        || dt > 0.1
+        // JS Rapier accepts any positive dt; coast updates use 0.25 s. Only guard runaway values.
+        || dt > 10000.0
         || !(1.0..=100.0).contains(&scale)
         || error < 0.0
         || prediction < 0.0
