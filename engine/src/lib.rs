@@ -2,6 +2,7 @@
 use rapier3d::prelude::*;
 use std::cell::RefCell;
 mod craft;
+mod pair;
 
 struct Kernel {
     world: PhysicsWorld,
