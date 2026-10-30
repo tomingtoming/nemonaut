@@ -358,6 +358,40 @@ pub extern "C" fn craft_read(index: u32) -> f64 {
         values.get(index as usize).map_or(f64::NAN, |v| *v as f64)
     })
 }
+/// Ground contact points of one craft shape, matching JS contactPair/numContacts over all manifolds.
+/// Returns 0 without ground or contact, NaN for a missing shape.
+#[unsafe(no_mangle)]
+pub extern "C" fn craft_contact_count(index: u32) -> f64 {
+    with_ground_contact(index, |points| points.len() as f64)
+}
+/// Normal impulse of the point-th ground contact point of a shape, in the order counted above.
+#[unsafe(no_mangle)]
+pub extern "C" fn craft_contact_impulse(index: u32, point: u32) -> f64 {
+    with_ground_contact(index, |points| {
+        points.get(point as usize).map_or(f64::NAN, |v| *v as f64)
+    })
+}
+fn with_ground_contact(index: u32, f: impl FnOnce(&[f32]) -> f64) -> f64 {
+    CRAFT.with(|s| {
+        let state = s.borrow();
+        let Some(c) = state.as_ref() else {
+            return f64::NAN;
+        };
+        let Some(shape) = c.shapes.get(index as usize) else {
+            return f64::NAN;
+        };
+        let mut points = Vec::new();
+        if let Some(pair) = c
+            .ground
+            .and_then(|g| c.world.narrow_phase.contact_pair(*shape, g))
+        {
+            for m in pair.manifolds() {
+                points.extend(m.points.iter().map(|p| p.data.impulse));
+            }
+        }
+        f(&points)
+    })
+}
 #[unsafe(no_mangle)]
 pub extern "C" fn craft_dispose() {
     CRAFT.with(|s| *s.borrow_mut() = None);
