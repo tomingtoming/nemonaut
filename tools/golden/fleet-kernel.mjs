@@ -13,7 +13,7 @@ const bodyState=b=>{const q=b.rotation();return [...vec(b.translation()),...vec(
 for(const test of baseline.cases.filter(c=>['orbital-stage-resources','fuel-tank-impact'].includes(c.definition.name))){
  const {definition:d,expected}=test;let f=loadFlight(d.initial),runtime=new WorldRuntime(f),input={};
  const ids=fleet(f).flatMap(v=>v.parts.map(p=>p.id)),labels=new Map(ids.map((id,i)=>[id,'p'+String(i).padStart(3,'0')]));
- const shadows=new Map(),samples=[];let frames=0,rebuilds=0,maxFleet=1,maxDifference=0,previousFuel=Infinity;
+ const shadows=new Map(),samples=[];let frames=0,rebuilds=0,contactPoints=0,maxImpulseDifference=0,maxFleet=1,maxDifference=0,previousFuel=Infinity;
  function watch(v){
   if(shadows.has(v.world))return;
   const a=new WebAssembly.Instance(module,{}).exports; a.craft_reset();
@@ -43,6 +43,13 @@ for(const test of baseline.cases.filter(c=>['orbital-stage-resources','fuel-tank
    assert.equal(a.craft_state(...before),1);
    assert.equal(a.craft_solver_step(...vec(v.body.userForce()),...vec(v.body.userTorque()),...vec(v.world.gravity),v.world.timestep,p.lengthUnit,p.normalizedAllowedLinearError,p.normalizedPredictionDistance),1);
    original(...args);const after=bodyState(v.body);
+   // Contact readback parity: the game picks impact failures from these per-collider impulses.
+   if(v.ground)for(let i=0;i<v.body.numColliders();i++){
+    const expected=[];v.world.contactPair(v.body.collider(i),v.ground,m=>{for(let k=0;k<m.numContacts();k++)expected.push(m.contactImpulse(k));});
+    assert.equal(a.craft_contact_count(i),expected.length,JSON.stringify({case:d.name,frame:frames,shape:i,contacts:expected.length}));
+    expected.forEach((e,k)=>{const delta=Math.abs(a.craft_contact_impulse(i,k)-e);maxImpulseDifference=Math.max(maxImpulseDifference,delta);assert.ok(delta<=1e-6*Math.max(1,Math.abs(e)),JSON.stringify({case:d.name,frame:frames,shape:i,k,expected:e,delta}));});
+    contactPoints+=expected.length;
+   }
    for(let i=0;i<13;i++){
     const actual=a.craft_read(i),delta=Math.abs(actual-after[i]),allowed=i<3?.05:i<6?.02:.002;
     maxDifference=Math.max(maxDifference,delta);assert.ok(Number.isFinite(actual)&&delta<=allowed,JSON.stringify({case:d.name,frame:frames,i,actual,expected:after[i],delta,allowed}));
@@ -70,7 +77,8 @@ for(const test of baseline.cases.filter(c=>['orbital-stage-resources','fuel-tank
   assertGolden(expected,{name:d.name,mode:d.mode,samples},{mode:d.mode,limits:baseline.tolerances});
   assert.ok(maxFleet>1&&shadows.size>1&&frames>100,'must exercise multiple worlds');
   assert.ok(rebuilds>0,'must exercise shape changes in an existing world');
+  if(d.name==='fuel-tank-impact')assert.ok(contactPoints>0,'impact must compare real contact impulses');
   assert.ok([...shadows.values()].filter(s=>s.frames>0).length>1,'detached worlds must actually step');
-  console.log(JSON.stringify({case:d.name,frames,worlds:shadows.size,maxFleet,rebuilds,maxDifference,golden:true,pass:true}));
+  console.log(JSON.stringify({case:d.name,frames,worlds:shadows.size,maxFleet,rebuilds,maxDifference,contactPoints,maxImpulseDifference,golden:true,pass:true}));
  }finally{f.dispose();for(const {a}of shadows.values())a.craft_dispose();}
 }
