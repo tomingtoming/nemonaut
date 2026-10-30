@@ -1,0 +1,4145 @@
+{
+  "version": 3,
+  "provenance": {
+    "revision": "53d4953152c3cb577e0ae39f2047868c000d8015",
+    "node": "v24.18.0",
+    "platform": "win32",
+    "arch": "x64",
+    "rapier": "0.21.0",
+    "physics": "rust-wasm",
+    "runtimeJavaScriptSHA256": "2feb4629376e6270ba4daefed97a7b3b3afa6e286d11b9a5fb0e7f4470dfa949",
+    "recordedAt": "2026-10-30T06:01:28.500Z"
+  },
+  "tolerances": {
+    "position": 0.05,
+    "velocity": 0.02,
+    "angularVelocity": 0.002,
+    "quaternionRadians": 0.002,
+    "time": 0.0001,
+    "eventTime": 0.1,
+    "fuelAbsolute": 0.0001,
+    "fuelRelative": 0.00001,
+    "charge": 0.001,
+    "temperature": 0.1,
+    "ablator": 0.0001
+  },
+  "cases": [
+    {
+      "definition": {
+        "name": "orbit-bump-2ms",
+        "dt": 0.008333333333333333,
+        "ticks": 600,
+        "mode": "trajectory",
+        "vesselCollision": true,
+        "initial": {
+          "kind": "orbital-foundry-flight",
+          "version": 1,
+          "vesselId": "fef3d565-ab88-409d-9a3e-c0c67970c7ee",
+          "physicsModel": "rotating-primary-v1",
+          "physicsMigration": null,
+          "universalTime": 0,
+          "vesselName": "",
+          "separationCount": 0,
+          "failureEvents": [],
+          "failureDynamics": false,
+          "parts": [
+            {
+              "id": "4f3bc63c-2da0-4cc9-9720-3cab0c4be389",
+              "type": "probe",
+              "p": [
+                0,
+                2.5,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": null,
+              "stage": 0
+            },
+            {
+              "id": "33ed81f7-b84a-4dee-ba24-29c967a44b0e",
+              "type": "tank",
+              "p": [
+                0,
+                1.3,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": "4f3bc63c-2da0-4cc9-9720-3cab0c4be389",
+              "stage": 0
+            },
+            {
+              "id": "df8fbbe2-e6b9-448e-be52-b8aaa5cfa08a",
+              "type": "engine",
+              "p": [
+                0,
+                -0.3,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": "33ed81f7-b84a-4dee-ba24-29c967a44b0e",
+              "stage": 0
+            },
+            {
+              "id": "0a81557d-42d5-4f70-b7dc-45636199bdd4",
+              "type": "solar",
+              "p": [
+                1.6,
+                2.5,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": "4f3bc63c-2da0-4cc9-9720-3cab0c4be389",
+              "stage": 0
+            },
+            {
+              "id": "cc73e110-8131-4518-88a1-9bf871013d87",
+              "type": "solar",
+              "p": [
+                -1.6,
+                2.5,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": "4f3bc63c-2da0-4cc9-9720-3cab0c4be389",
+              "stage": 0
+            }
+          ],
+          "environment": "orbit",
+          "pos": [
+            0,
+            80000,
+            -1.1847918436703484
+          ],
+          "vel": [
+            0,
+            0,
+            2278.931638238564
+          ],
+          "q": [
+            0.7071067811865475,
+            0,
+            0,
+            0.7071067811865476
+          ],
+          "omega": [
+            0,
+            0,
+            0
+          ],
+          "holdQ": null,
+          "sasMode": "hold",
+          "navigationFrame": "orbit",
+          "navigationAuto": true,
+          "orbitalAscentSettings": null,
+          "runwayEnd": "09",
+          "cruiseSettings": null,
+          "targetPartId": null,
+          "dockingPorts": null,
+          "portTranslationEnabled": false,
+          "maneuver": null,
+          "transferGuide": null,
+          "state": {
+            "started": false,
+            "crashed": false,
+            "landed": false,
+            "sas": false,
+            "brake": true,
+            "reactionEnabled": true,
+            "steeringEnabled": true,
+            "driveEnabled": true,
+            "time": 0,
+            "stage": -1,
+            "throttle": 0,
+            "ballast": 0,
+            "trim": 0,
+            "maxAltitude": 0,
+            "landedTime": 0
+          },
+          "rcsEnabled": false,
+          "fuel": [
+            [
+              "33ed81f7-b84a-4dee-ba24-29c967a44b0e",
+              1800
+            ]
+          ],
+          "charge": [
+            [
+              "4f3bc63c-2da0-4cc9-9720-3cab0c4be389",
+              200
+            ]
+          ],
+          "observations": [
+            [
+              "4f3bc63c-2da0-4cc9-9720-3cab0c4be389",
+              {
+                "enabled": false,
+                "day": 0,
+                "night": 0
+              }
+            ]
+          ],
+          "thermal": [
+            [
+              "4f3bc63c-2da0-4cc9-9720-3cab0c4be389",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ],
+            [
+              "33ed81f7-b84a-4dee-ba24-29c967a44b0e",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ],
+            [
+              "df8fbbe2-e6b9-448e-be52-b8aaa5cfa08a",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ],
+            [
+              "0a81557d-42d5-4f70-b7dc-45636199bdd4",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ],
+            [
+              "cc73e110-8131-4518-88a1-9bf871013d87",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ]
+          ],
+          "active": [],
+          "deflections": [],
+          "gimbals": [],
+          "wheelMotion": [],
+          "chutes": [],
+          "detached": [
+            {
+              "kind": "orbital-foundry-flight",
+              "version": 1,
+              "vesselId": "8c184e3d-2c42-4aaa-9b39-5c3bf5d3124f",
+              "physicsModel": "rotating-primary-v1",
+              "physicsMigration": null,
+              "universalTime": 0,
+              "vesselName": "",
+              "separationCount": 0,
+              "failureEvents": [],
+              "failureDynamics": false,
+              "parts": [
+                {
+                  "id": "ad5986eb-20fe-4bc7-a9df-7a433f5a1e7d",
+                  "type": "probe",
+                  "p": [
+                    0,
+                    2.5,
+                    0
+                  ],
+                  "r": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "parent": null,
+                  "stage": 0
+                },
+                {
+                  "id": "79d74d05-cea9-42a3-9e54-f700d604e928",
+                  "type": "tank",
+                  "p": [
+                    0,
+                    1.3,
+                    0
+                  ],
+                  "r": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "parent": "ad5986eb-20fe-4bc7-a9df-7a433f5a1e7d",
+                  "stage": 0
+                },
+                {
+                  "id": "02da8901-96bd-4b70-beaa-dc3434ca0feb",
+                  "type": "engine",
+                  "p": [
+                    0,
+                    -0.3,
+                    0
+                  ],
+                  "r": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "parent": "79d74d05-cea9-42a3-9e54-f700d604e928",
+                  "stage": 0
+                },
+                {
+                  "id": "b63f0e45-62ac-462c-8fc5-cc4a229703c6",
+                  "type": "solar",
+                  "p": [
+                    1.6,
+                    2.5,
+                    0
+                  ],
+                  "r": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "parent": "ad5986eb-20fe-4bc7-a9df-7a433f5a1e7d",
+                  "stage": 0
+                },
+                {
+                  "id": "1ea0f6f0-499a-469a-87b3-332374f039a6",
+                  "type": "solar",
+                  "p": [
+                    -1.6,
+                    2.5,
+                    0
+                  ],
+                  "r": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "parent": "ad5986eb-20fe-4bc7-a9df-7a433f5a1e7d",
+                  "stage": 0
+                }
+              ],
+              "environment": "orbit",
+              "pos": [
+                6,
+                80000,
+                -1.1847918436703484
+              ],
+              "vel": [
+                -2,
+                0,
+                2278.931638238564
+              ],
+              "q": [
+                0.7071067811865475,
+                0,
+                0,
+                0.7071067811865476
+              ],
+              "omega": [
+                0,
+                0,
+                0
+              ],
+              "holdQ": null,
+              "sasMode": "hold",
+              "navigationFrame": "orbit",
+              "navigationAuto": true,
+              "orbitalAscentSettings": null,
+              "runwayEnd": "09",
+              "cruiseSettings": null,
+              "targetPartId": null,
+              "dockingPorts": null,
+              "portTranslationEnabled": false,
+              "maneuver": null,
+              "transferGuide": null,
+              "state": {
+                "started": false,
+                "crashed": false,
+                "landed": false,
+                "sas": false,
+                "brake": true,
+                "reactionEnabled": true,
+                "steeringEnabled": true,
+                "driveEnabled": true,
+                "time": 0,
+                "stage": -1,
+                "throttle": 0,
+                "ballast": 0,
+                "trim": 0,
+                "maxAltitude": 0,
+                "landedTime": 0
+              },
+              "rcsEnabled": false,
+              "fuel": [
+                [
+                  "79d74d05-cea9-42a3-9e54-f700d604e928",
+                  1800
+                ]
+              ],
+              "charge": [
+                [
+                  "ad5986eb-20fe-4bc7-a9df-7a433f5a1e7d",
+                  200
+                ]
+              ],
+              "observations": [
+                [
+                  "ad5986eb-20fe-4bc7-a9df-7a433f5a1e7d",
+                  {
+                    "enabled": false,
+                    "day": 0,
+                    "night": 0
+                  }
+                ]
+              ],
+              "thermal": [
+                [
+                  "ad5986eb-20fe-4bc7-a9df-7a433f5a1e7d",
+                  {
+                    "temperature": 288.15,
+                    "ablator": 0,
+                    "failed": false
+                  }
+                ],
+                [
+                  "79d74d05-cea9-42a3-9e54-f700d604e928",
+                  {
+                    "temperature": 288.15,
+                    "ablator": 0,
+                    "failed": false
+                  }
+                ],
+                [
+                  "02da8901-96bd-4b70-beaa-dc3434ca0feb",
+                  {
+                    "temperature": 288.15,
+                    "ablator": 0,
+                    "failed": false
+                  }
+                ],
+                [
+                  "b63f0e45-62ac-462c-8fc5-cc4a229703c6",
+                  {
+                    "temperature": 288.15,
+                    "ablator": 0,
+                    "failed": false
+                  }
+                ],
+                [
+                  "1ea0f6f0-499a-469a-87b3-332374f039a6",
+                  {
+                    "temperature": 288.15,
+                    "ablator": 0,
+                    "failed": false
+                  }
+                ]
+              ],
+              "active": [],
+              "deflections": [],
+              "gimbals": [],
+              "wheelMotion": [],
+              "chutes": [],
+              "detached": [],
+              "meta": {}
+            }
+          ],
+          "meta": {}
+        },
+        "actions": [
+          {
+            "tick": 300,
+            "kind": "restore"
+          }
+        ],
+        "checkpoints": [
+          0,
+          150,
+          300,
+          600
+        ]
+      },
+      "expected": {
+        "name": "orbit-bump-2ms",
+        "mode": "trajectory",
+        "samples": [
+          {
+            "tick": 0,
+            "vessels": [
+              {
+                "key": "p000,p001,p002,p003,p004",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "probe",
+                    "parent": null
+                  },
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": "p000"
+                  },
+                  {
+                    "id": "p002",
+                    "type": "engine",
+                    "parent": "p001"
+                  },
+                  {
+                    "id": "p003",
+                    "type": "solar",
+                    "parent": "p000"
+                  },
+                  {
+                    "id": "p004",
+                    "type": "solar",
+                    "parent": "p000"
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 0,
+                "position": [
+                  0,
+                  80000,
+                  0
+                ],
+                "velocity": [
+                  0,
+                  0,
+                  2278.931638238564
+                ],
+                "quaternion": [
+                  0.7071067811865475,
+                  0,
+                  0,
+                  0.7071067811865476
+                ],
+                "angularVelocity": [
+                  0,
+                  0,
+                  0
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p001",
+                    "fuel": 1800,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p002",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p003",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p004",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p005,p006,p007,p008,p009",
+                "parts": [
+                  {
+                    "id": "p005",
+                    "type": "probe",
+                    "parent": null
+                  },
+                  {
+                    "id": "p006",
+                    "type": "tank",
+                    "parent": "p005"
+                  },
+                  {
+                    "id": "p007",
+                    "type": "engine",
+                    "parent": "p006"
+                  },
+                  {
+                    "id": "p008",
+                    "type": "solar",
+                    "parent": "p005"
+                  },
+                  {
+                    "id": "p009",
+                    "type": "solar",
+                    "parent": "p005"
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 0,
+                "position": [
+                  6,
+                  80000,
+                  0
+                ],
+                "velocity": [
+                  -2,
+                  0,
+                  2278.931638238564
+                ],
+                "quaternion": [
+                  0.7071067811865475,
+                  0,
+                  0,
+                  0.7071067811865476
+                ],
+                "angularVelocity": [
+                  0,
+                  0,
+                  0
+                ],
+                "resources": [
+                  {
+                    "id": "p005",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p006",
+                    "fuel": 1800,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p007",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p008",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p009",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": []
+          },
+          {
+            "tick": 150,
+            "vessels": [
+              {
+                "key": "p000,p001,p002,p003,p004",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "probe",
+                    "parent": null
+                  },
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": "p000"
+                  },
+                  {
+                    "id": "p002",
+                    "type": "engine",
+                    "parent": "p001"
+                  },
+                  {
+                    "id": "p003",
+                    "type": "solar",
+                    "parent": "p000"
+                  },
+                  {
+                    "id": "p004",
+                    "type": "solar",
+                    "parent": "p000"
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 1.249999999999998,
+                "position": [
+                  -0.42024622212416435,
+                  79994.03317806136,
+                  2848.6562161078673
+                ],
+                "velocity": [
+                  -0.49509994734227625,
+                  -9.546901138654594,
+                  2278.9116412600492
+                ],
+                "quaternion": [
+                  0.6834800592256238,
+                  -0.18125950634639207,
+                  0.18125950634639207,
+                  0.6834800592256238
+                ],
+                "angularVelocity": [
+                  0.000001817941665649414,
+                  -0.6107082366943359,
+                  -4.6468349523820507e-7
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.1252701759695,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p001",
+                    "fuel": 1800,
+                    "charge": 0,
+                    "temperature": 288.1120039902442,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p002",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.13532193268253,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p003",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.06160365376087,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p004",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.06160365376087,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p005,p006,p007,p008,p009",
+                "parts": [
+                  {
+                    "id": "p005",
+                    "type": "probe",
+                    "parent": null
+                  },
+                  {
+                    "id": "p006",
+                    "type": "tank",
+                    "parent": "p005"
+                  },
+                  {
+                    "id": "p007",
+                    "type": "engine",
+                    "parent": "p006"
+                  },
+                  {
+                    "id": "p008",
+                    "type": "solar",
+                    "parent": "p005"
+                  },
+                  {
+                    "id": "p009",
+                    "type": "solar",
+                    "parent": "p005"
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 1.249999999999998,
+                "position": [
+                  3.9202008856563557,
+                  79994.03317805787,
+                  2848.6562160291114
+                ],
+                "velocity": [
+                  -1.504966740544432,
+                  -9.546901142937799,
+                  2278.9116411603213
+                ],
+                "quaternion": [
+                  0.6834798960982342,
+                  0.1812601214540776,
+                  -0.1812601214540776,
+                  0.6834798960982342
+                ],
+                "angularVelocity": [
+                  2.9802322387695312e-8,
+                  0.6107127666473389,
+                  -3.4573915286273404e-7
+                ],
+                "resources": [
+                  {
+                    "id": "p005",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.1252701759695,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p006",
+                    "fuel": 1800,
+                    "charge": 0,
+                    "temperature": 288.1120039902442,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p007",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.13532193268253,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p008",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.06160365376087,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p009",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.06160365376087,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": []
+          },
+          {
+            "tick": 300,
+            "vessels": [
+              {
+                "key": "p000,p001,p002,p003,p004",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "probe",
+                    "parent": null
+                  },
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": "p000"
+                  },
+                  {
+                    "id": "p002",
+                    "type": "engine",
+                    "parent": "p001"
+                  },
+                  {
+                    "id": "p003",
+                    "type": "solar",
+                    "parent": "p000"
+                  },
+                  {
+                    "id": "p004",
+                    "type": "solar",
+                    "parent": "p000"
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 2.499999999999994,
+                "position": [
+                  -1.4351477827666161,
+                  79976.13281698455,
+                  5697.2634436936105
+                ],
+                "velocity": [
+                  -1.000758234137729,
+                  -19.09363470316984,
+                  2278.8529622870747
+                ],
+                "quaternion": [
+                  0.6496504586191831,
+                  -0.27920293984104994,
+                  0.27920293984104994,
+                  0.6496504586191831
+                ],
+                "angularVelocity": [
+                  0.0000033604451947402224,
+                  -0.010593478443525402,
+                  -0.000002696666742692405
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.1005488392865,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p001",
+                    "fuel": 1800,
+                    "charge": 0,
+                    "temperature": 288.07402801349645,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p002",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.12064685565275,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p003",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 287.97331567821334,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p004",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 287.97331567821334,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p005,p006,p007,p008,p009",
+                "parts": [
+                  {
+                    "id": "p005",
+                    "type": "probe",
+                    "parent": null
+                  },
+                  {
+                    "id": "p006",
+                    "type": "tank",
+                    "parent": "p005"
+                  },
+                  {
+                    "id": "p007",
+                    "type": "engine",
+                    "parent": "p006"
+                  },
+                  {
+                    "id": "p008",
+                    "type": "solar",
+                    "parent": "p005"
+                  },
+                  {
+                    "id": "p009",
+                    "type": "solar",
+                    "parent": "p005"
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 2.499999999999994,
+                "position": [
+                  2.4349956874596077,
+                  79976.1328169239,
+                  5697.261435730886
+                ],
+                "velocity": [
+                  -0.9993400415127696,
+                  -19.093634774208223,
+                  2278.8503386648913
+                ],
+                "quaternion": [
+                  0.6502962177693324,
+                  0.2776955692028607,
+                  -0.2776955692028607,
+                  0.6502962177693324
+                ],
+                "angularVelocity": [
+                  0.000002221669492685812,
+                  0.004528072274369051,
+                  0.0000019763582095839815
+                ],
+                "resources": [
+                  {
+                    "id": "p005",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.1005488392865,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p006",
+                    "fuel": 1800,
+                    "charge": 0,
+                    "temperature": 288.07402801349645,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p007",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.12064685565275,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p008",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 287.97331567821334,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p009",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 287.97331567821334,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": []
+          },
+          {
+            "tick": 600,
+            "vessels": [
+              {
+                "key": "p000,p001,p002,p003,p004",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "probe",
+                    "parent": null
+                  },
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": "p000"
+                  },
+                  {
+                    "id": "p002",
+                    "type": "engine",
+                    "parent": "p001"
+                  },
+                  {
+                    "id": "p003",
+                    "type": "solar",
+                    "parent": "p000"
+                  },
+                  {
+                    "id": "p004",
+                    "type": "solar",
+                    "parent": "p000"
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 5.000000000000038,
+                "position": [
+                  -3.9370790507206146,
+                  79904.53294335795,
+                  11394.129262697508
+                ],
+                "velocity": [
+                  -1.0007756183858956,
+                  -38.185929111267626,
+                  2278.6130314335023
+                ],
+                "quaternion": [
+                  0.6459075611702036,
+                  -0.28775583820864453,
+                  0.28775583820864453,
+                  0.6459075611702036
+                ],
+                "angularVelocity": [
+                  0.0000036323912453900206,
+                  -0.010553151282488257,
+                  -0.0000035503269046370885
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.0511316075842,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p001",
+                    "fuel": 1800,
+                    "charge": 0,
+                    "temperature": 287.9981360851423,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p002",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.0913056681934,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p003",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 287.797063910749,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p004",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 287.797063910749,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p005,p006,p007,p008,p009",
+                "parts": [
+                  {
+                    "id": "p005",
+                    "type": "probe",
+                    "parent": null
+                  },
+                  {
+                    "id": "p006",
+                    "type": "tank",
+                    "parent": "p005"
+                  },
+                  {
+                    "id": "p007",
+                    "type": "engine",
+                    "parent": "p006"
+                  },
+                  {
+                    "id": "p008",
+                    "type": "solar",
+                    "parent": "p005"
+                  },
+                  {
+                    "id": "p009",
+                    "type": "solar",
+                    "parent": "p005"
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 5.000000000000038,
+                "position": [
+                  -0.06329532681387318,
+                  79904.53294311359,
+                  11394.120627883778
+                ],
+                "velocity": [
+                  -0.9992805308220126,
+                  -38.185929189409975,
+                  2278.61035417284
+                ],
+                "quaternion": [
+                  0.6487401010496079,
+                  0.28131171552238016,
+                  -0.28131171552238016,
+                  0.6487401010496079
+                ],
+                "angularVelocity": [
+                  0.0000029826766260656675,
+                  0.004358137239066123,
+                  0.0000030717446164287014
+                ],
+                "resources": [
+                  {
+                    "id": "p005",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.0511316075842,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p006",
+                    "fuel": 1800,
+                    "charge": 0,
+                    "temperature": 287.9981360851423,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p007",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.0913056681934,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p008",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 287.797063910749,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p009",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 287.797063910749,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": []
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "name": "orbit-crash-30ms",
+        "dt": 0.008333333333333333,
+        "ticks": 240,
+        "mode": "impact",
+        "vesselCollision": true,
+        "initial": {
+          "kind": "orbital-foundry-flight",
+          "version": 1,
+          "vesselId": "81614c3c-938e-4b1f-923b-c5bd46267de1",
+          "physicsModel": "rotating-primary-v1",
+          "physicsMigration": null,
+          "universalTime": 0,
+          "vesselName": "",
+          "separationCount": 0,
+          "failureEvents": [],
+          "failureDynamics": false,
+          "parts": [
+            {
+              "id": "0d265e90-2851-4155-a594-1c46b9c9175d",
+              "type": "probe",
+              "p": [
+                0,
+                2.5,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": null,
+              "stage": 0
+            },
+            {
+              "id": "8ee9a608-c29a-445d-bf41-656454cdc2af",
+              "type": "tank",
+              "p": [
+                0,
+                1.3,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": "0d265e90-2851-4155-a594-1c46b9c9175d",
+              "stage": 0
+            },
+            {
+              "id": "01f77df4-3606-4b5e-9bf7-c8b6070ab705",
+              "type": "engine",
+              "p": [
+                0,
+                -0.3,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": "8ee9a608-c29a-445d-bf41-656454cdc2af",
+              "stage": 0
+            },
+            {
+              "id": "4d8f399e-5b8e-4e23-8fa2-6bf7607cef21",
+              "type": "solar",
+              "p": [
+                1.6,
+                2.5,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": "0d265e90-2851-4155-a594-1c46b9c9175d",
+              "stage": 0
+            },
+            {
+              "id": "f422f32f-08c8-4fa6-a3ae-481906f5ec84",
+              "type": "solar",
+              "p": [
+                -1.6,
+                2.5,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": "0d265e90-2851-4155-a594-1c46b9c9175d",
+              "stage": 0
+            }
+          ],
+          "environment": "orbit",
+          "pos": [
+            0,
+            80000,
+            -1.1847918436703484
+          ],
+          "vel": [
+            0,
+            0,
+            2278.931638238564
+          ],
+          "q": [
+            0.7071067811865475,
+            0,
+            0,
+            0.7071067811865476
+          ],
+          "omega": [
+            0,
+            0,
+            0
+          ],
+          "holdQ": null,
+          "sasMode": "hold",
+          "navigationFrame": "orbit",
+          "navigationAuto": true,
+          "orbitalAscentSettings": null,
+          "runwayEnd": "09",
+          "cruiseSettings": null,
+          "targetPartId": null,
+          "dockingPorts": null,
+          "portTranslationEnabled": false,
+          "maneuver": null,
+          "transferGuide": null,
+          "state": {
+            "started": false,
+            "crashed": false,
+            "landed": false,
+            "sas": false,
+            "brake": true,
+            "reactionEnabled": true,
+            "steeringEnabled": true,
+            "driveEnabled": true,
+            "time": 0,
+            "stage": -1,
+            "throttle": 0,
+            "ballast": 0,
+            "trim": 0,
+            "maxAltitude": 0,
+            "landedTime": 0
+          },
+          "rcsEnabled": false,
+          "fuel": [
+            [
+              "8ee9a608-c29a-445d-bf41-656454cdc2af",
+              1800
+            ]
+          ],
+          "charge": [
+            [
+              "0d265e90-2851-4155-a594-1c46b9c9175d",
+              200
+            ]
+          ],
+          "observations": [
+            [
+              "0d265e90-2851-4155-a594-1c46b9c9175d",
+              {
+                "enabled": false,
+                "day": 0,
+                "night": 0
+              }
+            ]
+          ],
+          "thermal": [
+            [
+              "0d265e90-2851-4155-a594-1c46b9c9175d",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ],
+            [
+              "8ee9a608-c29a-445d-bf41-656454cdc2af",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ],
+            [
+              "01f77df4-3606-4b5e-9bf7-c8b6070ab705",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ],
+            [
+              "4d8f399e-5b8e-4e23-8fa2-6bf7607cef21",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ],
+            [
+              "f422f32f-08c8-4fa6-a3ae-481906f5ec84",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ]
+          ],
+          "active": [],
+          "deflections": [],
+          "gimbals": [],
+          "wheelMotion": [],
+          "chutes": [],
+          "detached": [
+            {
+              "kind": "orbital-foundry-flight",
+              "version": 1,
+              "vesselId": "9b16337d-fa19-4e7f-9b68-d9e95c424ca0",
+              "physicsModel": "rotating-primary-v1",
+              "physicsMigration": null,
+              "universalTime": 0,
+              "vesselName": "",
+              "separationCount": 0,
+              "failureEvents": [],
+              "failureDynamics": false,
+              "parts": [
+                {
+                  "id": "ea94cfa9-66bf-4f3f-b58c-04a58a32993a",
+                  "type": "probe",
+                  "p": [
+                    0,
+                    2.5,
+                    0
+                  ],
+                  "r": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "parent": null,
+                  "stage": 0
+                },
+                {
+                  "id": "1a0ac759-b5fa-4b3d-be76-2eec8a64aa47",
+                  "type": "tank",
+                  "p": [
+                    0,
+                    1.3,
+                    0
+                  ],
+                  "r": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "parent": "ea94cfa9-66bf-4f3f-b58c-04a58a32993a",
+                  "stage": 0
+                },
+                {
+                  "id": "6bc72c7d-25e2-4a18-84d6-4976b1a03d03",
+                  "type": "engine",
+                  "p": [
+                    0,
+                    -0.3,
+                    0
+                  ],
+                  "r": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "parent": "1a0ac759-b5fa-4b3d-be76-2eec8a64aa47",
+                  "stage": 0
+                },
+                {
+                  "id": "7a1ab1a0-d273-41e4-be66-69757aed7b8f",
+                  "type": "solar",
+                  "p": [
+                    1.6,
+                    2.5,
+                    0
+                  ],
+                  "r": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "parent": "ea94cfa9-66bf-4f3f-b58c-04a58a32993a",
+                  "stage": 0
+                },
+                {
+                  "id": "f4e89901-2b04-4771-ba94-274015eba9e3",
+                  "type": "solar",
+                  "p": [
+                    -1.6,
+                    2.5,
+                    0
+                  ],
+                  "r": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "parent": "ea94cfa9-66bf-4f3f-b58c-04a58a32993a",
+                  "stage": 0
+                }
+              ],
+              "environment": "orbit",
+              "pos": [
+                6,
+                80000,
+                -1.1847918436703484
+              ],
+              "vel": [
+                -30,
+                0,
+                2278.931638238564
+              ],
+              "q": [
+                0.7071067811865475,
+                0,
+                0,
+                0.7071067811865476
+              ],
+              "omega": [
+                0,
+                0,
+                0
+              ],
+              "holdQ": null,
+              "sasMode": "hold",
+              "navigationFrame": "orbit",
+              "navigationAuto": true,
+              "orbitalAscentSettings": null,
+              "runwayEnd": "09",
+              "cruiseSettings": null,
+              "targetPartId": null,
+              "dockingPorts": null,
+              "portTranslationEnabled": false,
+              "maneuver": null,
+              "transferGuide": null,
+              "state": {
+                "started": false,
+                "crashed": false,
+                "landed": false,
+                "sas": false,
+                "brake": true,
+                "reactionEnabled": true,
+                "steeringEnabled": true,
+                "driveEnabled": true,
+                "time": 0,
+                "stage": -1,
+                "throttle": 0,
+                "ballast": 0,
+                "trim": 0,
+                "maxAltitude": 0,
+                "landedTime": 0
+              },
+              "rcsEnabled": false,
+              "fuel": [
+                [
+                  "1a0ac759-b5fa-4b3d-be76-2eec8a64aa47",
+                  1800
+                ]
+              ],
+              "charge": [
+                [
+                  "ea94cfa9-66bf-4f3f-b58c-04a58a32993a",
+                  200
+                ]
+              ],
+              "observations": [
+                [
+                  "ea94cfa9-66bf-4f3f-b58c-04a58a32993a",
+                  {
+                    "enabled": false,
+                    "day": 0,
+                    "night": 0
+                  }
+                ]
+              ],
+              "thermal": [
+                [
+                  "ea94cfa9-66bf-4f3f-b58c-04a58a32993a",
+                  {
+                    "temperature": 288.15,
+                    "ablator": 0,
+                    "failed": false
+                  }
+                ],
+                [
+                  "1a0ac759-b5fa-4b3d-be76-2eec8a64aa47",
+                  {
+                    "temperature": 288.15,
+                    "ablator": 0,
+                    "failed": false
+                  }
+                ],
+                [
+                  "6bc72c7d-25e2-4a18-84d6-4976b1a03d03",
+                  {
+                    "temperature": 288.15,
+                    "ablator": 0,
+                    "failed": false
+                  }
+                ],
+                [
+                  "7a1ab1a0-d273-41e4-be66-69757aed7b8f",
+                  {
+                    "temperature": 288.15,
+                    "ablator": 0,
+                    "failed": false
+                  }
+                ],
+                [
+                  "f4e89901-2b04-4771-ba94-274015eba9e3",
+                  {
+                    "temperature": 288.15,
+                    "ablator": 0,
+                    "failed": false
+                  }
+                ]
+              ],
+              "active": [],
+              "deflections": [],
+              "gimbals": [],
+              "wheelMotion": [],
+              "chutes": [],
+              "detached": [],
+              "meta": {}
+            }
+          ],
+          "meta": {}
+        },
+        "actions": [
+          {
+            "tick": 120,
+            "kind": "restore"
+          }
+        ],
+        "checkpoints": [
+          0,
+          60,
+          120,
+          240
+        ]
+      },
+      "expected": {
+        "name": "orbit-crash-30ms",
+        "mode": "impact",
+        "samples": [
+          {
+            "tick": 0,
+            "vessels": [
+              {
+                "key": "p000,p001,p002,p003,p004",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "probe",
+                    "parent": null
+                  },
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": "p000"
+                  },
+                  {
+                    "id": "p002",
+                    "type": "engine",
+                    "parent": "p001"
+                  },
+                  {
+                    "id": "p003",
+                    "type": "solar",
+                    "parent": "p000"
+                  },
+                  {
+                    "id": "p004",
+                    "type": "solar",
+                    "parent": "p000"
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 0,
+                "position": [
+                  0,
+                  80000,
+                  0
+                ],
+                "velocity": [
+                  0,
+                  0,
+                  2278.931638238564
+                ],
+                "quaternion": [
+                  0.7071067811865475,
+                  0,
+                  0,
+                  0.7071067811865476
+                ],
+                "angularVelocity": [
+                  0,
+                  0,
+                  0
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p001",
+                    "fuel": 1800,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p002",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p003",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p004",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p005,p006,p007,p008,p009",
+                "parts": [
+                  {
+                    "id": "p005",
+                    "type": "probe",
+                    "parent": null
+                  },
+                  {
+                    "id": "p006",
+                    "type": "tank",
+                    "parent": "p005"
+                  },
+                  {
+                    "id": "p007",
+                    "type": "engine",
+                    "parent": "p006"
+                  },
+                  {
+                    "id": "p008",
+                    "type": "solar",
+                    "parent": "p005"
+                  },
+                  {
+                    "id": "p009",
+                    "type": "solar",
+                    "parent": "p005"
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 0,
+                "position": [
+                  6,
+                  80000,
+                  0
+                ],
+                "velocity": [
+                  -30,
+                  0,
+                  2278.931638238564
+                ],
+                "quaternion": [
+                  0.7071067811865475,
+                  0,
+                  0,
+                  0.7071067811865476
+                ],
+                "angularVelocity": [
+                  0,
+                  0,
+                  0
+                ],
+                "resources": [
+                  {
+                    "id": "p005",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p006",
+                    "fuel": 1800,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p007",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p008",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p009",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": []
+          },
+          {
+            "tick": 60,
+            "vessels": [
+              {
+                "key": "p000",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "probe",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.5000000000000007,
+                "position": [
+                  -5.634127988308466,
+                  79998.4585826298,
+                  1141.4701523467631
+                ],
+                "velocity": [
+                  -16.038843300667523,
+                  -5.406037661581787,
+                  2281.3346471363698
+                ],
+                "quaternion": [
+                  -0.19698838096256846,
+                  0.936971101524178,
+                  -0.2718494034602797,
+                  0.09684335037887021
+                ],
+                "angularVelocity": [
+                  -1.5674408674240112,
+                  7.903048038482666,
+                  6.972503185272217
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.14010705157983,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p001",
+                "parts": [
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.5000000000000007,
+                "position": [
+                  -5.065347504386119,
+                  79999.10485311004,
+                  1139.5437061569673
+                ],
+                "velocity": [
+                  -14.368013071389596,
+                  -3.8605980379882086,
+                  2279.1262722065667
+                ],
+                "quaternion": [
+                  0.32780684217705186,
+                  0.7276517348578008,
+                  0.44250196764680816,
+                  0.40897143617744924
+                ],
+                "angularVelocity": [
+                  -0.7978825569152832,
+                  0.6355063319206238,
+                  3.8044638633728027
+                ],
+                "resources": [
+                  {
+                    "id": "p001",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1347991909534,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p002",
+                "parts": [
+                  {
+                    "id": "p002",
+                    "type": "engine",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.5000000000000007,
+                "position": [
+                  -3.6028627317925848,
+                  80000.24870038545,
+                  1137.2483782500858
+                ],
+                "velocity": [
+                  -10.513674375283294,
+                  -0.6742163731614795,
+                  2276.632299518206
+                ],
+                "quaternion": [
+                  -0.07747610734659414,
+                  0.9094081332041911,
+                  0.4086202328326692,
+                  -0.0019507363384464343
+                ],
+                "angularVelocity": [
+                  -2.2933804988861084,
+                  2.796736717224121,
+                  8.235321998596191
+                ],
+                "resources": [
+                  {
+                    "id": "p002",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1441284141702,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p003",
+                "parts": [
+                  {
+                    "id": "p003",
+                    "type": "solar",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.5000000000000007,
+                "position": [
+                  -2.8430601350924025,
+                  79998.80710337544,
+                  1144.7836130667918
+                ],
+                "velocity": [
+                  -9.353807176226288,
+                  -4.320252628541034,
+                  2287.356046812435
+                ],
+                "quaternion": [
+                  0.23280452327699527,
+                  -0.6756709853505302,
+                  0.6675560513355793,
+                  0.20890115323392547
+                ],
+                "angularVelocity": [
+                  -0.15236520767211914,
+                  -5.272795677185059,
+                  -0.20011502504348755
+                ],
+                "resources": [
+                  {
+                    "id": "p003",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1146284421252,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p004",
+                "parts": [
+                  {
+                    "id": "p004",
+                    "type": "solar",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": false
+                },
+                "time": 0.5000000000000007,
+                "position": [
+                  -4.866458187028226,
+                  79995.72875349305,
+                  1144.8067474967056
+                ],
+                "velocity": [
+                  -8.852038071679548,
+                  -11.599629277299124,
+                  2293.077596568525
+                ],
+                "quaternion": [
+                  0.08397225993330837,
+                  0.7250803076489665,
+                  -0.6381518808670953,
+                  0.2448864715886968
+                ],
+                "angularVelocity": [
+                  -5.483704566955566,
+                  5.915542125701904,
+                  4.737536430358887
+                ],
+                "resources": [
+                  {
+                    "id": "p004",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1146284421252,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p005",
+                "parts": [
+                  {
+                    "id": "p005",
+                    "type": "probe",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.5000000000000007,
+                "position": [
+                  -3.6333174948317932,
+                  79998.78837055212,
+                  1141.6516547927038
+                ],
+                "velocity": [
+                  -15.196948586583012,
+                  -4.47096912693079,
+                  2281.752491241459
+                ],
+                "quaternion": [
+                  -0.1975805284870987,
+                  -0.9640574320962462,
+                  -0.033300917131723916,
+                  0.17448854203338515
+                ],
+                "angularVelocity": [
+                  0.36389851570129395,
+                  -5.449466705322266,
+                  -8.614717483520508
+                ],
+                "resources": [
+                  {
+                    "id": "p005",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.14010705157983,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p006",
+                "parts": [
+                  {
+                    "id": "p006",
+                    "type": "tank",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.5000000000000007,
+                "position": [
+                  -3.5800474251668537,
+                  79998.95110438205,
+                  1139.5135158427745
+                ],
+                "velocity": [
+                  -14.389695230361893,
+                  -3.830909417164405,
+                  2278.4763863675525
+                ],
+                "quaternion": [
+                  0.5131838930516239,
+                  -0.36203616947716055,
+                  -0.4735670697565227,
+                  0.6175000682954658
+                ],
+                "angularVelocity": [
+                  -1.0436583757400513,
+                  0.7865383625030518,
+                  -3.137941598892212
+                ],
+                "resources": [
+                  {
+                    "id": "p006",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1347991909534,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p007",
+                "parts": [
+                  {
+                    "id": "p007",
+                    "type": "engine",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.5000000000000007,
+                "position": [
+                  -5.621110617231222,
+                  79999.370430195,
+                  1137.5044032255487
+                ],
+                "velocity": [
+                  -20.070589485593384,
+                  -2.959042121574417,
+                  2277.195976477701
+                ],
+                "quaternion": [
+                  0.05099012610143949,
+                  -0.8514576969764013,
+                  -0.44418572308264515,
+                  0.2740781653276118
+                ],
+                "angularVelocity": [
+                  -2.7141759395599365,
+                  -2.3911232948303223,
+                  -6.520980358123779
+                ],
+                "resources": [
+                  {
+                    "id": "p007",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1441284141702,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p008",
+                "parts": [
+                  {
+                    "id": "p008",
+                    "type": "solar",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": false
+                },
+                "time": 0.5000000000000007,
+                "position": [
+                  -3.4474794701216864,
+                  79996.14211074158,
+                  1145.3082096567114
+                ],
+                "velocity": [
+                  -19.241800071282743,
+                  -10.681630912403564,
+                  2294.69042486085
+                ],
+                "quaternion": [
+                  0.08560342377504043,
+                  -0.6598482181327064,
+                  0.708180309274622,
+                  0.23612080048310824
+                ],
+                "angularVelocity": [
+                  -4.8965983390808105,
+                  -7.0480427742004395,
+                  -4.540675640106201
+                ],
+                "resources": [
+                  {
+                    "id": "p008",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1146284421252,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p009",
+                "parts": [
+                  {
+                    "id": "p009",
+                    "type": "solar",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.5000000000000007,
+                "position": [
+                  -6.156940320247962,
+                  79998.8070979052,
+                  1144.7836144534106
+                ],
+                "velocity": [
+                  -20.646182398801365,
+                  -4.320264144804734,
+                  2287.356049731629
+                ],
+                "quaternion": [
+                  0.23280006800481973,
+                  0.6756724923306369,
+                  -0.6675579164568564,
+                  0.20889528386356088
+                ],
+                "angularVelocity": [
+                  -0.1523573398590088,
+                  5.272858142852783,
+                  0.2001165747642517
+                ],
+                "resources": [
+                  {
+                    "id": "p009",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1146284421252,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": [
+              {
+                "part": "p003",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.025,
+                "fuel": 0
+              },
+              {
+                "part": "p009",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.025,
+                "fuel": 0
+              },
+              {
+                "part": "p002",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.11666666666666665,
+                "fuel": 0
+              },
+              {
+                "part": "p007",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.11666666666666665,
+                "fuel": 0
+              },
+              {
+                "part": "p001",
+                "cause": "impact",
+                "effect": "fuel-burst",
+                "time": 0.175,
+                "fuel": 1800
+              },
+              {
+                "part": "p006",
+                "cause": "impact",
+                "effect": "fuel-burst",
+                "time": 0.175,
+                "fuel": 1800
+              },
+              {
+                "part": "p000",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.21666666666666665,
+                "fuel": 0
+              },
+              {
+                "part": "p005",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.21666666666666665,
+                "fuel": 0
+              }
+            ]
+          },
+          {
+            "tick": 120,
+            "vessels": [
+              {
+                "key": "p000",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "probe",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.9999999999999989,
+                "position": [
+                  -13.65353797656738,
+                  79994.8008709827,
+                  2282.1353396596296
+                ],
+                "velocity": [
+                  -16.0387891421794,
+                  -9.22480770993029,
+                  2281.3250338794387
+                ],
+                "quaternion": [
+                  0.14139502342616694,
+                  -0.6237033805521738,
+                  0.22963058980299697,
+                  -0.733669770853912
+                ],
+                "angularVelocity": [
+                  -2.654531955718994,
+                  7.726706504821777,
+                  6.842985153198242
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.13021546162463,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p001",
+                "parts": [
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.9999999999999989,
+                "position": [
+                  -12.529895388214042,
+                  79996.19500288449,
+                  2279.126211555233
+                ],
+                "velocity": [
+                  -14.944638424025802,
+                  -7.729852135679607,
+                  2279.160313800196
+                ],
+                "quaternion": [
+                  -0.062246538877685866,
+                  0.944344165656785,
+                  0.24867416989793065,
+                  -0.20615679084937927
+                ],
+                "angularVelocity": [
+                  -1.156541109085083,
+                  2.150336980819702,
+                  2.1060166358947754
+                ],
+                "resources": [
+                  {
+                    "id": "p001",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1196015889631,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p002",
+                "parts": [
+                  {
+                    "id": "p002",
+                    "type": "engine",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.9999999999999989,
+                "position": [
+                  -8.85969240177334,
+                  79998.95690657455,
+                  2275.5623988061475
+                ],
+                "velocity": [
+                  -10.513639381736443,
+                  -4.4929532640996825,
+                  2276.6227167027496
+                ],
+                "quaternion": [
+                  -0.4882605005209742,
+                  -0.5566171070885535,
+                  -0.3898948016553651,
+                  -0.5475044505476656
+                ],
+                "angularVelocity": [
+                  -2.379075288772583,
+                  2.9441089630126953,
+                  8.159699440002441
+                ],
+                "resources": [
+                  {
+                    "id": "p002",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1382573068888,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p003",
+                "parts": [
+                  {
+                    "id": "p003",
+                    "type": "solar",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.9999999999999989,
+                "position": [
+                  -7.519957543534122,
+                  79995.69228577381,
+                  2288.4594941624428
+                ],
+                "velocity": [
+                  -9.353778077645229,
+                  -8.139015502766656,
+                  2287.3464065219396
+                ],
+                "quaternion": [
+                  -0.6060669042897522,
+                  -0.3973215867800609,
+                  0.36537481048173653,
+                  -0.5842257372528585
+                ],
+                "angularVelocity": [
+                  -0.11814141273498535,
+                  -5.280208587646484,
+                  -0.04951447248458862
+                ],
+                "resources": [
+                  {
+                    "id": "p003",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.0792742459075,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p004",
+                "parts": [
+                  {
+                    "id": "p004",
+                    "type": "solar",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": false
+                },
+                "time": 0.9999999999999989,
+                "position": [
+                  -10.544230549532859,
+                  79987.93539858458,
+                  2291.5934072122013
+                ],
+                "velocity": [
+                  -11.627571404834953,
+                  -17.692241394006388,
+                  2293.6197529385736
+                ],
+                "quaternion": [
+                  -0.8866726811323352,
+                  0.39080274348488175,
+                  -0.1799612652543636,
+                  -0.16940695152895682
+                ],
+                "angularVelocity": [
+                  -3.300889015197754,
+                  4.215492248535156,
+                  1.5307878255844116
+                ],
+                "resources": [
+                  {
+                    "id": "p004",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.0792742459075,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p005",
+                "parts": [
+                  {
+                    "id": "p005",
+                    "type": "probe",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.9999999999999989,
+                "position": [
+                  -11.231783132080144,
+                  79995.59819453815,
+                  2282.5257638103117
+                ],
+                "velocity": [
+                  -15.196906846474283,
+                  -8.28973283350446,
+                  2281.7428764036335
+                ],
+                "quaternion": [
+                  0.08205810985013169,
+                  0.3875147426233083,
+                  0.17977298907268,
+                  -0.9004334863038408
+                ],
+                "angularVelocity": [
+                  0.34012842178344727,
+                  -5.448573112487793,
+                  -8.629293441772461
+                ],
+                "resources": [
+                  {
+                    "id": "p005",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.13021546162463,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p006",
+                "parts": [
+                  {
+                    "id": "p006",
+                    "type": "tank",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.9999999999999989,
+                "position": [
+                  -10.494334827183664,
+                  79996.10581985919,
+                  2278.7280738739905
+                ],
+                "velocity": [
+                  -13.812980951913946,
+                  -7.599174088443728,
+                  2278.4231472646375
+                ],
+                "quaternion": [
+                  0.16201310929258217,
+                  -0.7087929064796445,
+                  -0.6088231643926985,
+                  0.31733062039511584
+                ],
+                "angularVelocity": [
+                  -0.7619072198867798,
+                  -0.5047658681869507,
+                  -2.2028675079345703
+                ],
+                "resources": [
+                  {
+                    "id": "p006",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1196015889631,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p007",
+                "parts": [
+                  {
+                    "id": "p007",
+                    "type": "engine",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.9999999999999989,
+                "position": [
+                  -15.656392773162164,
+                  79996.93621997861,
+                  2276.1002617577838
+                ],
+                "velocity": [
+                  -20.07052974019495,
+                  -6.777795273873297,
+                  2277.186391369159
+                ],
+                "quaternion": [
+                  -0.6823436811289327,
+                  -0.02537455260045861,
+                  0.1849614123644375,
+                  -0.7067902863225387
+                ],
+                "angularVelocity": [
+                  -2.6739847660064697,
+                  -2.5618863105773926,
+                  -6.4730224609375
+                ],
+                "resources": [
+                  {
+                    "id": "p007",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1382573068888,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p008",
+                "parts": [
+                  {
+                    "id": "p008",
+                    "type": "solar",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": false
+                },
+                "time": 0.9999999999999989,
+                "position": [
+                  -11.816607934354408,
+                  79990.88543049875,
+                  2292.401272133172
+                ],
+                "velocity": [
+                  -16.466180603814777,
+                  -12.22664717544888,
+                  2294.1289660984257
+                ],
+                "quaternion": [
+                  -0.4111783040622988,
+                  0.7906088510165555,
+                  -0.11958059186238512,
+                  -0.4376877071755335
+                ],
+                "angularVelocity": [
+                  -4.020882606506348,
+                  -12.527276039123535,
+                  1.0382380485534668
+                ],
+                "resources": [
+                  {
+                    "id": "p008",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.0792742459075,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p009",
+                "parts": [
+                  {
+                    "id": "p009",
+                    "type": "solar",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.9999999999999989,
+                "position": [
+                  -16.480018045805817,
+                  79995.69227454474,
+                  2288.459497008657
+                ],
+                "velocity": [
+                  -20.646118835909895,
+                  -8.139027017782174,
+                  2287.346409441122
+                ],
+                "quaternion": [
+                  -0.6060757921545168,
+                  0.3973086960865099,
+                  -0.365358638033733,
+                  -0.5842353975859799
+                ],
+                "angularVelocity": [
+                  -0.11814093589782715,
+                  5.280294895172119,
+                  0.04952307045459747
+                ],
+                "resources": [
+                  {
+                    "id": "p009",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.0792742459075,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": [
+              {
+                "part": "p003",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.025,
+                "fuel": 0
+              },
+              {
+                "part": "p009",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.025,
+                "fuel": 0
+              },
+              {
+                "part": "p002",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.11666666666666665,
+                "fuel": 0
+              },
+              {
+                "part": "p007",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.11666666666666665,
+                "fuel": 0
+              },
+              {
+                "part": "p001",
+                "cause": "impact",
+                "effect": "fuel-burst",
+                "time": 0.175,
+                "fuel": 1800
+              },
+              {
+                "part": "p006",
+                "cause": "impact",
+                "effect": "fuel-burst",
+                "time": 0.175,
+                "fuel": 1800
+              },
+              {
+                "part": "p000",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.21666666666666665,
+                "fuel": 0
+              },
+              {
+                "part": "p005",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.21666666666666665,
+                "fuel": 0
+              }
+            ]
+          },
+          {
+            "tick": 240,
+            "vessels": [
+              {
+                "key": "p000",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "probe",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 1.9999999999999953,
+                "position": [
+                  -29.69222042014139,
+                  79981.75730983121,
+                  4563.443287074968
+                ],
+                "velocity": [
+                  -16.038545716667503,
+                  -16.862298933951894,
+                  2281.286589785417
+                ],
+                "quaternion": [
+                  0.25750510091947965,
+                  0.6628381319539614,
+                  0.360588209568369,
+                  -0.6035833637108546
+                ],
+                "angularVelocity": [
+                  -4.043994903564453,
+                  8.29947280883789,
+                  5.331760406494141
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.11043635580427,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p001",
+                "parts": [
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 1.9999999999999953,
+                "position": [
+                  -27.474435472790827,
+                  79984.64641827357,
+                  4558.269459988036
+                ],
+                "velocity": [
+                  -14.944413765833367,
+                  -15.367295969287385,
+                  2279.121916033875
+                ],
+                "quaternion": [
+                  -0.06847588184277112,
+                  -0.047732298804679024,
+                  -0.5739457784456956,
+                  -0.8146280897814905
+                ],
+                "angularVelocity": [
+                  -2.328878164291382,
+                  1.4622553586959839,
+                  1.6834348440170288
+                ],
+                "resources": [
+                  {
+                    "id": "p001",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.0892160014178,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p002",
+                "parts": [
+                  {
+                    "id": "p002",
+                    "type": "engine",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 1.9999999999999953,
+                "position": [
+                  -19.373262350549915,
+                  79990.64526362927,
+                  4552.16807520248
+                ],
+                "velocity": [
+                  -10.513480832974228,
+                  -12.130299552220755,
+                  2276.5843739815755
+                ],
+                "quaternion": [
+                  -0.4445581137652181,
+                  0.8056324123463081,
+                  0.30268010493812686,
+                  -0.24841347334076744
+                ],
+                "angularVelocity": [
+                  -2.1493115425109863,
+                  2.8748741149902344,
+                  8.248368263244629
+                ],
+                "resources": [
+                  {
+                    "id": "p002",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.12651652769836,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p003",
+                "parts": [
+                  {
+                    "id": "p003",
+                    "type": "solar",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 1.9999999999999953,
+                "position": [
+                  -16.87367588162264,
+                  79983.73453155055,
+                  4575.788767534797
+                ],
+                "velocity": [
+                  -9.353641086339742,
+                  -15.776472874526903,
+                  2287.307857844102
+                ],
+                "quaternion": [
+                  0.35276531031725783,
+                  0.6287995969446378,
+                  -0.614416996625709,
+                  0.32040514505306084
+                ],
+                "angularVelocity": [
+                  0.14391088485717773,
+                  -5.277731418609619,
+                  -0.10822276771068573
+                ],
+                "resources": [
+                  {
+                    "id": "p003",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.0086178788317,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p004",
+                "parts": [
+                  {
+                    "id": "p004",
+                    "type": "solar",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": false
+                },
+                "time": 1.9999999999999953,
+                "position": [
+                  -22.171720970759733,
+                  79966.42429600039,
+                  4585.195996802435
+                ],
+                "velocity": [
+                  -11.627387665943472,
+                  -25.329979178272993,
+                  2293.5811316116133
+                ],
+                "quaternion": [
+                  0.14352085313737856,
+                  -0.9658107577025994,
+                  0.21589418684408063,
+                  -0.0010223050343097122
+                ],
+                "angularVelocity": [
+                  -4.2903852462768555,
+                  1.5288726091384888,
+                  3.073812246322632
+                ],
+                "resources": [
+                  {
+                    "id": "p004",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.0086178788317,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p005",
+                "parts": [
+                  {
+                    "id": "p005",
+                    "type": "probe",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 1.9999999999999953,
+                "position": [
+                  -26.428598456570928,
+                  79983.48972075805,
+                  4564.2515508618735
+                ],
+                "velocity": [
+                  -15.196695350712664,
+                  -15.927195542728208,
+                  2281.704425801829
+                ],
+                "quaternion": [
+                  -0.19196719560094827,
+                  -0.9812671101943342,
+                  0.010404696221271742,
+                  -0.012457791156968441
+                ],
+                "angularVelocity": [
+                  0.29335659742355347,
+                  -5.44754695892334,
+                  -8.657442092895508
+                ],
+                "resources": [
+                  {
+                    "id": "p005",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.11043635580427,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p006",
+                "parts": [
+                  {
+                    "id": "p006",
+                    "type": "tank",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 1.9999999999999953,
+                "position": [
+                  -24.307230989261175,
+                  79984.68791273108,
+                  4557.1341593836805
+                ],
+                "velocity": [
+                  -13.812785511635477,
+                  -15.236618596946885,
+                  2278.3847581062982
+                ],
+                "quaternion": [
+                  -0.4507848855661021,
+                  -0.6666860487600699,
+                  -0.2367277261430318,
+                  -0.5443185492053269
+                ],
+                "angularVelocity": [
+                  -0.9542317986488342,
+                  -0.7885966300964355,
+                  -2.038808822631836
+                ],
+                "resources": [
+                  {
+                    "id": "p006",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.0892160014178,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p007",
+                "parts": [
+                  {
+                    "id": "p007",
+                    "type": "engine",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 1.9999999999999953,
+                "position": [
+                  -35.72679702188902,
+                  79986.33970383636,
+                  4553.269608528869
+                ],
+                "velocity": [
+                  -20.07024118167444,
+                  -14.415212456350279,
+                  2277.1480388857303
+                ],
+                "quaternion": [
+                  0.45427550272460665,
+                  -0.4828410277314367,
+                  -0.34190608852110876,
+                  0.6660319333153266
+                ],
+                "angularVelocity": [
+                  -2.7540957927703857,
+                  -2.4619033336639404,
+                  -6.479053497314453
+                ],
+                "resources": [
+                  {
+                    "id": "p007",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.12651652769836,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p008",
+                "parts": [
+                  {
+                    "id": "p008",
+                    "type": "solar",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": false
+                },
+                "time": 1.9999999999999953,
+                "position": [
+                  -28.282691353396547,
+                  79974.83997580549,
+                  4586.513069772039
+                ],
+                "velocity": [
+                  -16.465955404597022,
+                  -19.864257113875126,
+                  2294.0903338588123
+                ],
+                "quaternion": [
+                  -0.9197677745425366,
+                  0.0664695485102885,
+                  0.26009335479064843,
+                  -0.2862874199605243
+                ],
+                "angularVelocity": [
+                  3.157346725463867,
+                  -10.843181610107422,
+                  -6.795380592346191
+                ],
+                "resources": [
+                  {
+                    "id": "p008",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.0086178788317,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p009",
+                "parts": [
+                  {
+                    "id": "p009",
+                    "type": "solar",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 1.9999999999999953,
+                "position": [
+                  -37.12600568655691,
+                  79983.73450881173,
+                  4575.78877330019
+                ],
+                "velocity": [
+                  -20.645817791820495,
+                  -15.776484375110549,
+                  2287.3078607633133
+                ],
+                "quaternion": [
+                  0.3528120612167613,
+                  -0.628775679545132,
+                  0.6143913510561637,
+                  0.32044978080803754
+                ],
+                "angularVelocity": [
+                  0.14394068717956543,
+                  5.277893543243408,
+                  0.10818836092948914
+                ],
+                "resources": [
+                  {
+                    "id": "p009",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.0086178788317,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": [
+              {
+                "part": "p003",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.025,
+                "fuel": 0
+              },
+              {
+                "part": "p009",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.025,
+                "fuel": 0
+              },
+              {
+                "part": "p002",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.11666666666666665,
+                "fuel": 0
+              },
+              {
+                "part": "p007",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.11666666666666665,
+                "fuel": 0
+              },
+              {
+                "part": "p001",
+                "cause": "impact",
+                "effect": "fuel-burst",
+                "time": 0.175,
+                "fuel": 1800
+              },
+              {
+                "part": "p006",
+                "cause": "impact",
+                "effect": "fuel-burst",
+                "time": 0.175,
+                "fuel": 1800
+              },
+              {
+                "part": "p000",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.21666666666666665,
+                "fuel": 0
+              },
+              {
+                "part": "p005",
+                "cause": "impact",
+                "effect": "fragments",
+                "time": 0.21666666666666665,
+                "fuel": 0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "name": "fuel-tank-impact-fragments-collide",
+        "dt": 0.008333333333333333,
+        "ticks": 360,
+        "mode": "impact",
+        "vesselCollision": true,
+        "initial": {
+          "kind": "orbital-foundry-flight",
+          "version": 1,
+          "vesselId": "fdc31605-a071-4184-86ff-bdcf28eea6b3",
+          "physicsModel": "rotating-primary-v1",
+          "physicsMigration": null,
+          "universalTime": 0,
+          "vesselName": "",
+          "separationCount": 0,
+          "failureEvents": [],
+          "failureDynamics": false,
+          "parts": [
+            {
+              "id": "8b259416-6ec1-4fea-a150-3ab18f191da9",
+              "type": "probe",
+              "p": [
+                0,
+                2,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": null,
+              "stage": 0
+            },
+            {
+              "id": "8fa75d00-7190-488c-81ae-d841cb3508bb",
+              "type": "tank",
+              "p": [
+                0,
+                0,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": "8b259416-6ec1-4fea-a150-3ab18f191da9",
+              "stage": 0,
+              "fuelLoad": 1
+            }
+          ],
+          "environment": "land",
+          "pos": [
+            0,
+            4.099999999976717,
+            0
+          ],
+          "vel": [
+            0,
+            -20,
+            174.94288679071644
+          ],
+          "q": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "omega": [
+            0.0002915709005598028,
+            0,
+            0
+          ],
+          "holdQ": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "sasMode": "hold",
+          "navigationFrame": "surface",
+          "navigationAuto": true,
+          "orbitalAscentSettings": null,
+          "runwayEnd": "09",
+          "cruiseSettings": null,
+          "targetPartId": null,
+          "dockingPorts": null,
+          "portTranslationEnabled": false,
+          "maneuver": null,
+          "transferGuide": null,
+          "state": {
+            "started": false,
+            "crashed": false,
+            "landed": false,
+            "sas": true,
+            "brake": true,
+            "reactionEnabled": true,
+            "steeringEnabled": true,
+            "driveEnabled": true,
+            "time": 0,
+            "stage": -1,
+            "throttle": 0,
+            "ballast": 0,
+            "trim": 0,
+            "maxAltitude": 0,
+            "landedTime": 0
+          },
+          "rcsEnabled": false,
+          "fuel": [
+            [
+              "8fa75d00-7190-488c-81ae-d841cb3508bb",
+              1800
+            ]
+          ],
+          "charge": [
+            [
+              "8b259416-6ec1-4fea-a150-3ab18f191da9",
+              200
+            ]
+          ],
+          "observations": [
+            [
+              "8b259416-6ec1-4fea-a150-3ab18f191da9",
+              {
+                "enabled": false,
+                "day": 0,
+                "night": 0
+              }
+            ]
+          ],
+          "thermal": [
+            [
+              "8b259416-6ec1-4fea-a150-3ab18f191da9",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ],
+            [
+              "8fa75d00-7190-488c-81ae-d841cb3508bb",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ]
+          ],
+          "active": [],
+          "deflections": [],
+          "gimbals": [],
+          "wheelMotion": [],
+          "chutes": [],
+          "detached": [],
+          "meta": {}
+        },
+        "actions": [
+          {
+            "tick": 240,
+            "kind": "restore"
+          }
+        ],
+        "checkpoints": [
+          0,
+          90,
+          180,
+          360
+        ]
+      },
+      "expected": {
+        "name": "fuel-tank-impact-fragments-collide",
+        "mode": "impact",
+        "samples": [
+          {
+            "tick": 0,
+            "vessels": [
+              {
+                "key": "p000,p001",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "probe",
+                    "parent": null
+                  },
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": "p000"
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 0,
+                "position": [
+                  0,
+                  4.188235294094364,
+                  0
+                ],
+                "velocity": [
+                  0,
+                  -20,
+                  174.94288679071644
+                ],
+                "quaternion": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "angularVelocity": [
+                  0.0002915709005598028,
+                  0,
+                  0
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 200,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p001",
+                    "fuel": 1800,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": []
+          },
+          {
+            "tick": 90,
+            "vessels": [
+              {
+                "key": "p000",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "probe",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 0.7499999999999998,
+                "position": [
+                  -1.027141872120213,
+                  2.030492445281226,
+                  133.65647202937885
+                ],
+                "velocity": [
+                  -1.629699771217316,
+                  -4.019355755011787,
+                  178.9822598395422
+                ],
+                "quaternion": [
+                  0.00479419057164756,
+                  -0.000037813475604587166,
+                  0.002081393443318192,
+                  0.9999863409608343
+                ],
+                "angularVelocity": [
+                  1.9636533825102065,
+                  -0.09261164780430747,
+                  2.010677879571946
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 199.97754903020277,
+                    "temperature": 288.1500043903645,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p001",
+                "parts": [
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.7499999999999998,
+                "position": [
+                  -0.4418476428836584,
+                  1.147453797981143,
+                  132.08078000283493
+                ],
+                "velocity": [
+                  -0.20994804226648228,
+                  -0.18790034193191957,
+                  175.71280794100403
+                ],
+                "quaternion": [
+                  0.19243487253034094,
+                  -0.007194585378746379,
+                  0.0014681039160371007,
+                  0.9812822746011218
+                ],
+                "angularVelocity": [
+                  1.1836888785667719,
+                  -0.12026709912008905,
+                  0.015267918278815438
+                ],
+                "resources": [
+                  {
+                    "id": "p001",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1499899522574,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": [
+              {
+                "part": "p001",
+                "cause": "impact",
+                "effect": "fuel-burst",
+                "time": 0.15833333333333333,
+                "fuel": 1800
+              }
+            ]
+          },
+          {
+            "tick": 180,
+            "vessels": [
+              {
+                "key": "p000",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "probe",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 1.4999999999999971,
+                "position": [
+                  -1.8200079271599916,
+                  0.14061661518876978,
+                  266.6948558667074
+                ],
+                "velocity": [
+                  -0.30808836221694946,
+                  -0.07798546909150358,
+                  175.5449059996426
+                ],
+                "quaternion": [
+                  0.0002500723038593605,
+                  -0.00022926583975263124,
+                  0.0000060412942442400465,
+                  0.9999999424322586
+                ],
+                "angularVelocity": [
+                  0.0002958870095304728,
+                  3.057991127987611e-8,
+                  -0.00006955213750055016
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 199.9250508894576,
+                    "temperature": 288.1500054728288,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p001",
+                "parts": [
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 1.4999999999999971,
+                "position": [
+                  -0.4568829443305731,
+                  1.0320980761898682,
+                  263.94053619266424
+                ],
+                "velocity": [
+                  -0.01827678084373474,
+                  -0.591164922360864,
+                  176.19416848457402
+                ],
+                "quaternion": [
+                  0.4574502134594781,
+                  -0.006443386613666935,
+                  0.0033116324690659555,
+                  0.88920572314016
+                ],
+                "angularVelocity": [
+                  1.1439343540655378,
+                  -0.000012119780167286394,
+                  0.016699023515389527
+                ],
+                "resources": [
+                  {
+                    "id": "p001",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.14997856050496,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": [
+              {
+                "part": "p001",
+                "cause": "impact",
+                "effect": "fuel-burst",
+                "time": 0.15833333333333333,
+                "fuel": 1800
+              }
+            ]
+          },
+          {
+            "tick": 360,
+            "vessels": [
+              {
+                "key": "p000",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "probe",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": true,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 2.999999999999992,
+                "position": [
+                  -1.8526998792084846,
+                  -0.033417310182395354,
+                  529.1728683293026
+                ],
+                "velocity": [
+                  -0.0000618464473518543,
+                  -0.15443693690341223,
+                  174.94251513162155
+                ],
+                "quaternion": [
+                  0.00043852853910567095,
+                  -0.00022924080381446174,
+                  0.0000015214737065920653,
+                  0.9999998775695224
+                ],
+                "angularVelocity": [
+                  0.00021489582603555663,
+                  -2.70740994540599e-7,
+                  0.0003092648105645881
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 199.90157449693615,
+                    "temperature": 288.1500054642816,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p001",
+                "parts": [
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": true,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 2.999999999999992,
+                "position": [
+                  -0.478264763019979,
+                  0.3935325621860102,
+                  527.0211584926166
+                ],
+                "velocity": [
+                  0,
+                  -0.15366403379576277,
+                  174.94265507852523
+                ],
+                "quaternion": [
+                  0.7073981330636562,
+                  -0.005130449709218933,
+                  0.005126375884957793,
+                  0.7067780981992304
+                ],
+                "angularVelocity": [
+                  0.0002915709005598028,
+                  0,
+                  0
+                ],
+                "resources": [
+                  {
+                    "id": "p001",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1499649692717,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": [
+              {
+                "part": "p001",
+                "cause": "impact",
+                "effect": "fuel-burst",
+                "time": 0.15833333333333333,
+                "fuel": 1800
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

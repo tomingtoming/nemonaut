@@ -24,3 +24,10 @@ test('golden v2 rejects contact impulses that are read as zero',async()=>{
  try{for(const {definition,expected} of v2.cases)assert.equal(compareGolden(expected,replay(definition),{mode:definition.mode,limits:v2.tolerances}).pass,false,definition.name);}
  finally{R.World.prototype.contactPair=original;}
 });
+
+// Golden v3 (sprint 307): vessel-vessel collision on Rust physics.
+const v3=JSON.parse(readFileSync(new URL('./golden/js-v3.json',import.meta.url),'utf8').replace(/^﻿/,''));
+for(const {definition,expected} of v3.cases)test('Rust golden v3: '+definition.name,()=>assertGolden(expected,replay(definition),{mode:definition.mode,limits:v3.tolerances}));
+test('golden v3 rejects replay without vessel-vessel collision',()=>{
+ for(const {definition,expected} of v3.cases)assert.equal(compareGolden(expected,replay({...definition,vesselCollision:false}),{mode:definition.mode,limits:v3.tolerances}).pass,false,definition.name);
+});
