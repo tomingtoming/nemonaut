@@ -110,8 +110,8 @@ import {installRustEngine} from './rust-engine.js';
 // Forecast Workers bundle their own Rapier and stay JS.
 if(new URLSearchParams(location.search).get('engine')==='rust'){
  const badge=document.createElement('div');badge.id='physicsEngine';badge.setAttribute('role','status');
- badge.style.cssText='position:fixed;left:8px;bottom:8px;z-index:1000;padding:2px 8px;border-radius:4px;font:12px system-ui;background:#1b3a2a;color:#d7f5e3;pointer-events:none';
- try{const module=await WebAssembly.compile(await (await fetch('./engine/orbital_engine.wasm')).arrayBuffer());installRustEngine(RAPIER,module);document.documentElement.dataset.physics='rust';badge.textContent='物理: Rust Wasm（試験）';}
+ badge.style.cssText='position:fixed;left:284px;top:8px;z-index:1000;padding:2px 8px;border-radius:4px;font:12px system-ui;background:#1b3a2a;color:#d7f5e3;pointer-events:none';
+ try{const module=await WebAssembly.compile(await (await fetch('./engine/orbital_engine.wasm')).arrayBuffer());globalThis.orbitalRustPhysics=installRustEngine(RAPIER,module).stats;document.documentElement.dataset.physics='rust';badge.textContent='物理: Rust Wasm（試験）';}
  catch(error){badge.style.background='#5a1e1e';badge.textContent='Rust物理を読み込めません: '+error.message;throw error;}
  addEventListener('error',e=>{if(String(e.message).includes('Rust物理')){badge.style.background='#5a1e1e';badge.textContent=e.message;}});
  document.body.append(badge);
