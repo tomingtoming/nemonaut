@@ -36,7 +36,8 @@ jobs:
           node tools/golden/rust-driven.mjs
       - name: Check game baseline remains unchanged
         run: |
-          node --test tests/golden-replay.test.mjs
+          # Golden v3 needs vessel-vessel collision, which exists only on Rust physics (dist/engine).
+          node --import ./tools/golden/rust-preload.mjs --test tests/golden-replay.test.mjs
       - name: Check product Wasm matches this source build
         run: |
           sha256sum engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm dist/engine/orbital_engine.wasm
