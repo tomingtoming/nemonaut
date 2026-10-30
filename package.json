@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "vendor": "node tools/vendor.mjs",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --import ./tools/golden/rust-preload.mjs --test tests/*.test.mjs",
     "dev": "node tools/serve.mjs",
     "build:takeoff-worker": "node tools/build-takeoff-worker.mjs",
     "check:takeoff-worker": "node tools/build-takeoff-worker.mjs --check",

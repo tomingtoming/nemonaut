@@ -1,4 +1,5 @@
-// Opt-in Rust physics (?engine=rust). Each Rapier JS world gets one Rust Wasm craft world:
+// Rust physics: the game's only solver. Rapier JS objects remain the data model for bodies and
+// colliders; each Rapier JS world gets one Rust Wasm craft world:
 // every step imports the JS body pre-state, forces, masses and ground, steps Rust, and writes
 // the result back to the JS body. The JS solver is not called while installed. Game logic,
 // staging/failure decisions, saves and planetary translation stay JS-owned.
@@ -6,7 +7,15 @@
 const vec=v=>[v.x,v.y,v.z];
 const fail=message=>{throw Error('Rust物理: '+message);};
 const check=(ok,message)=>{if(!ok)fail(message);};
+const installed=new WeakMap();
+// Fetch, compile and install once per Rapier module (page or Worker).
+export async function loadRustEngine(R,url){
+ if(installed.has(R))return installed.get(R);
+ const module=await WebAssembly.compile(await (await fetch(url)).arrayBuffer());
+ return installRustEngine(R,module);
+}
 export function installRustEngine(R,module,{zeroImpulses=()=>false}={}){
+ if(installed.has(R))return installed.get(R);
  const worlds=new Map(),stats={worlds:0,frames:0,rebuilds:0,contactFrames:0,contactQueries:0,contactPoints:0};
  const original={step:R.World.prototype.step,contactPair:R.World.prototype.contactPair,free:R.World.prototype.free},body={rotation:R.RigidBody.prototype.rotation,setRotation:R.RigidBody.prototype.setRotation};
  // JS setRotation renormalizes, so reading back would differ from the solver output by an ulp,
@@ -64,5 +73,8 @@ export function installRustEngine(R,module,{zeroImpulses=()=>false}={}){
   if(n>0){stats.contactPoints+=n;callback({numContacts:()=>n,contactImpulse:k=>zeroImpulses()?0:s.a.craft_contact_impulse(i,k)},false);}
  };
  R.World.prototype.free=function(){const s=worlds.get(this);if(s){s.a.craft_dispose();worlds.delete(this);}return original.free.call(this);};
- return {stats,worlds,uninstall(){for(const {a}of worlds.values())a.craft_dispose();worlds.clear();Object.assign(R.World.prototype,original);Object.assign(R.RigidBody.prototype,body);}};
+ // Test-only geometry oracle for non-game worlds (e.g. a fixed hollow part with free balls).
+ R.World.prototype.referenceSolverStep=original.step;
+ const controller={stats,worlds,uninstall(){for(const {a}of worlds.values())a.craft_dispose();worlds.clear();Object.assign(R.World.prototype,original);Object.assign(R.RigidBody.prototype,body);delete R.World.prototype.referenceSolverStep;installed.delete(R);}};
+ installed.set(R,controller);return controller;
 }

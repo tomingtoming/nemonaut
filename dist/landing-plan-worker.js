@@ -1,3 +1,135 @@
+// tools/landing-plan-worker.mjs
+import RAPIER3 from "./vendor/rapier/rapier.mjs";
+
+// dist/rust-engine.js
+var vec = (v) => [v.x, v.y, v.z];
+var fail = (message) => {
+  throw Error("Rust\u7269\u7406: " + message);
+};
+var check = (ok, message) => {
+  if (!ok) fail(message);
+};
+var installed = /* @__PURE__ */ new WeakMap();
+async function loadRustEngine(R, url) {
+  if (installed.has(R)) return installed.get(R);
+  const module = await WebAssembly.compile(await (await fetch(url)).arrayBuffer());
+  return installRustEngine(R, module);
+}
+function installRustEngine(R, module, { zeroImpulses = () => false } = {}) {
+  if (installed.has(R)) return installed.get(R);
+  const worlds = /* @__PURE__ */ new Map(), stats = { worlds: 0, frames: 0, rebuilds: 0, contactFrames: 0, contactQueries: 0, contactPoints: 0 };
+  const original = { step: R.World.prototype.step, contactPair: R.World.prototype.contactPair, free: R.World.prototype.free }, body = { rotation: R.RigidBody.prototype.rotation, setRotation: R.RigidBody.prototype.setRotation };
+  const exactRotation = /* @__PURE__ */ new WeakMap();
+  R.RigidBody.prototype.rotation = function() {
+    return exactRotation.get(this) ?? body.rotation.call(this);
+  };
+  R.RigidBody.prototype.setRotation = function(...args) {
+    exactRotation.delete(this);
+    return body.setRotation.apply(this, args);
+  };
+  function single(world) {
+    const bodies = [];
+    world.bodies.forEach((b) => bodies.push(b));
+    check(bodies.length === 1, "world must own one craft body");
+    const grounds = [];
+    world.colliders.forEach((c) => {
+      if (!c.parent()) grounds.push(c);
+    });
+    check(grounds.length <= 1, "at most one static ground");
+    return { body: bodies[0], ground: grounds[0] };
+  }
+  function rust(world) {
+    let s = worlds.get(world);
+    if (s) return s;
+    const a = new WebAssembly.Instance(module, {}).exports;
+    a.craft_reset();
+    s = { a, signature: null, index: /* @__PURE__ */ new Map(), frames: 0 };
+    worlds.set(world, s);
+    stats.worlds++;
+    return s;
+  }
+  function syncGround(a, g) {
+    if (!g) return;
+    const h = g.halfExtents(), q = g.rotation();
+    check(h.x === 2e3 && h.y === 1 && h.z === 2e3, "unsupported ground shape");
+    check(a.craft_ground(g.isEnabled() ? 1 : 0, ...vec(g.translation()), q.x, q.y, q.z, q.w, g.friction()) === 1, "ground rejected");
+  }
+  R.World.prototype.step = function() {
+    const { body: body2, ground } = single(this), s = rust(this), a = s.a;
+    syncGround(a, ground);
+    const shapes = [];
+    for (let i = 0; i < body2.numColliders(); i++) {
+      const c = body2.collider(i), p2 = c.translationWrtParent(), q = c.rotationWrtParent(), ball = c.shapeType() === R.ShapeType.Ball;
+      check(ball || c.shapeType() === R.ShapeType.Cuboid, "only box/ball colliders are supported");
+      const h = ball ? { x: c.radius(), y: 0, z: 0 } : c.halfExtents();
+      shapes.push({ handle: c.handle, geometry: [ball ? 1 : 0, h.x, h.y, h.z, p2.x, p2.y, p2.z, q.x, q.y, q.z, q.w], mass: c.mass(), friction: c.friction() });
+    }
+    const signature = JSON.stringify(shapes.map((x) => [x.handle, x.geometry, x.friction]));
+    if (signature !== s.signature) {
+      if (s.signature !== null) {
+        check(a.craft_clear_shapes() === 1, "shape clear rejected");
+        stats.rebuilds++;
+      }
+      for (const x of shapes) check(a.craft_shape(...x.geometry, x.mass, x.friction) === 1, "shape rejected");
+      s.signature = signature;
+      s.index = new Map(shapes.map((x, i) => [x.handle, i]));
+    }
+    shapes.forEach((x, i) => check(a.craft_mass(i, x.mass) === 1, "mass rejected"));
+    const p = this.integrationParameters, t = body2.translation(), v = body2.linvel(), r = body2.rotation(), w = body2.angvel();
+    check(a.craft_state(t.x, t.y, t.z, v.x, v.y, v.z, r.x, r.y, r.z, r.w, w.x, w.y, w.z) === 1, "state rejected");
+    check(a.craft_solver_step(...vec(body2.userForce()), ...vec(body2.userTorque()), ...vec(this.gravity), this.timestep, p.lengthUnit, p.normalizedAllowedLinearError, p.normalizedPredictionDistance) === 1, "step rejected");
+    const out = Array.from({ length: 13 }, (_, i) => a.craft_read(i));
+    check(out.every(Number.isFinite), "nonfinite state");
+    check(Math.abs(a.craft_read(13) - body2.mass()) < 0.02, "mass differs from JS");
+    body2.setTranslation({ x: out[0], y: out[1], z: out[2] }, true);
+    body2.setLinvel({ x: out[3], y: out[4], z: out[5] }, true);
+    body2.setRotation({ x: out[6], y: out[7], z: out[8], w: out[9] }, true);
+    body2.setAngvel({ x: out[10], y: out[11], z: out[12] }, true);
+    exactRotation.set(body2, new R.Quaternion(out[6], out[7], out[8], out[9]));
+    s.frames++;
+    stats.frames++;
+    if (ground) {
+      for (let i = 0; i < shapes.length; i++) if (a.craft_contact_count(i) > 0) {
+        stats.contactFrames++;
+        break;
+      }
+    }
+  };
+  R.World.prototype.contactPair = function(collider, other, callback) {
+    const s = worlds.get(this), { ground } = single(this);
+    if (!s) return;
+    check(ground && other.handle === ground.handle, "only craft-ground contact queries are supported");
+    const i = s.index.get(collider.handle);
+    check(i !== void 0, "collider is not a current craft shape");
+    const n = s.a.craft_contact_count(i);
+    check(Number.isInteger(n) && n >= 0, "contact count");
+    stats.contactQueries++;
+    if (n > 0) {
+      stats.contactPoints += n;
+      callback({ numContacts: () => n, contactImpulse: (k) => zeroImpulses() ? 0 : s.a.craft_contact_impulse(i, k) }, false);
+    }
+  };
+  R.World.prototype.free = function() {
+    const s = worlds.get(this);
+    if (s) {
+      s.a.craft_dispose();
+      worlds.delete(this);
+    }
+    return original.free.call(this);
+  };
+  R.World.prototype.referenceSolverStep = original.step;
+  const controller = { stats, worlds, uninstall() {
+    for (const { a } of worlds.values()) a.craft_dispose();
+    worlds.clear();
+    Object.assign(R.World.prototype, original);
+    Object.assign(R.RigidBody.prototype, body);
+    delete R.World.prototype.referenceSolverStep;
+    installed.delete(R);
+  } };
+  installed.set(R, controller);
+  return controller;
+}
+
 // dist/cargo-geometry.js
 function cargoShellBoxes(d, open = false) {
   const [w, l, h] = d.size, t = d.cargoBay.wall, r = w / 2 - t / 2, N = 24, boxes = [];
@@ -170,19 +302,19 @@ function recordFailure(f, part, cause, { speed = 0, position } = {}) {
 }
 function validateFailureEvents(value) {
   if (value === void 0) return [];
-  const fail = () => {
+  const fail2 = () => {
     throw Error("\u7834\u640D\u5C65\u6B74\u304C\u4E0D\u6B63\u3067\u3059");
   }, ids = /* @__PURE__ */ new Set();
-  if (!Array.isArray(value) || value.length > FAILURE_EVENT_LIMIT) fail();
+  if (!Array.isArray(value) || value.length > FAILURE_EVENT_LIMIT) fail2();
   let last = -1;
   for (const e of value) {
-    if (!e || typeof e.id !== "string" || !e.id.length || e.id.length > 200 || ids.has(e.id) || typeof e.partId !== "string" || !e.partId.length || e.partId.length > 200 || !Object.hasOwn(PARTS, e.type) || !["impact", "thermal", "structural"].includes(e.cause)) fail();
+    if (!e || typeof e.id !== "string" || !e.id.length || e.id.length > 200 || ids.has(e.id) || typeof e.partId !== "string" || !e.partId.length || e.partId.length > 200 || !Object.hasOwn(PARTS, e.type) || !["impact", "thermal", "structural"].includes(e.cause)) fail2();
     ids.add(e.id);
-    if (!["time", "speed", "fuel", "temperature"].every((k) => Number.isFinite(e[k]) && e[k] >= 0 && e[k] <= 1e12) || e.time < last) fail();
+    if (!["time", "speed", "fuel", "temperature"].every((k) => Number.isFinite(e[k]) && e[k] >= 0 && e[k] <= 1e12) || e.time < last) fail2();
     last = e.time;
-    for (const k of ["position", "velocity"]) if (!Array.isArray(e[k]) || e[k].length !== 3 || e[k].some((n) => !Number.isFinite(n) || Math.abs(n) > 1e12)) fail();
+    for (const k of ["position", "velocity"]) if (!Array.isArray(e[k]) || e[k].length !== 3 || e[k].some((n) => !Number.isFinite(n) || Math.abs(n) > 1e12)) fail2();
     const d = PARTS[e.type];
-    if (e.fuel > (d.fuel || d.monoprop || 0) || e.effect !== (e.fuel > 0 && (d.fuel || d.monoprop) ? "fuel-burst" : "fragments")) fail();
+    if (e.fuel > (d.fuel || d.monoprop || 0) || e.effect !== (e.fuel > 0 && (d.fuel || d.monoprop) ? "fuel-burst" : "fragments")) fail2();
   }
   return structuredClone(value);
 }
@@ -1946,113 +2078,113 @@ var Flight = class _Flight {
 // dist/flight-save.js
 var flags = ["started", "crashed", "landed", "sas", "brake", "reactionEnabled", "steeringEnabled", "driveEnabled"];
 var numbers = { time: [0, 1e12], stage: [-1, 1e3], throttle: [0, 1], ballast: [0, 1], trim: [-0.6, 0.6], maxAltitude: [0, 1e10], landedTime: [0, 1e12] };
-var check = (ok) => {
+var check2 = (ok) => {
   if (!ok) throw Error("\u98DB\u884C\u4FDD\u5B58\u30C7\u30FC\u30BF\u306E\u5F62\u5F0F\u307E\u305F\u306F\u5024\u304C\u4E0D\u6B63\u3067\u3059");
 };
 var vector = (a, n, limit) => {
-  check(Array.isArray(a) && a.length === n && a.every((v) => Number.isFinite(v) && Math.abs(v) <= limit));
+  check2(Array.isArray(a) && a.length === n && a.every((v) => Number.isFinite(v) && Math.abs(v) <= limit));
   return a;
 };
 var quaternion = (a) => {
   vector(a, 4, 1.01);
-  check(Math.abs(a.reduce((s, v) => s + v * v, 0) - 1) < 0.01);
+  check2(Math.abs(a.reduce((s, v) => s + v * v, 0) - 1) < 0.01);
   return a;
 };
 function entries(values, allowed, read) {
-  check(Array.isArray(values) && values.length <= 400);
+  check2(Array.isArray(values) && values.length <= 400);
   const out = /* @__PURE__ */ new Map();
   for (const row of values) {
-    check(Array.isArray(row) && row.length === 2 && allowed.has(row[0]) && !out.has(row[0]));
+    check2(Array.isArray(row) && row.length === 2 && allowed.has(row[0]) && !out.has(row[0]));
     out.set(row[0], read(row[1], row[0]));
   }
   return out;
 }
 function loadFlight(value, { debris = false, depth = 0, budget = { count: 0, ids: /* @__PURE__ */ new Set(), vesselIds: /* @__PURE__ */ new Set() } } = {}) {
-  check(depth <= 32);
-  check(value?.kind === "orbital-foundry-flight" && value.version === 1);
-  check(value.physicsModel === void 0 || value.physicsModel === PHYSICS_MODEL);
-  if (value.physicsMigration != null) check(["surface", "inertial"].every((k) => Number.isInteger(value.physicsMigration[k]) && value.physicsMigration[k] >= 0 && value.physicsMigration[k] <= 400));
+  check2(depth <= 32);
+  check2(value?.kind === "orbital-foundry-flight" && value.version === 1);
+  check2(value.physicsModel === void 0 || value.physicsModel === PHYSICS_MODEL);
+  if (value.physicsMigration != null) check2(["surface", "inertial"].every((k) => Number.isInteger(value.physicsMigration[k]) && value.physicsMigration[k] >= 0 && value.physicsMigration[k] <= 400));
   const parts = validateCraft({ version: 1, parts: value.parts }), byId = new Map(parts.map((p) => [p.id, p]));
-  check(parts.filter((p) => !p.parent).length === 1);
+  check2(parts.filter((p) => !p.parent).length === 1);
   const vesselId = value.vesselId === void 0 ? "legacy:" + parts[0].id : value.vesselId;
-  check(typeof vesselId === "string" && vesselId.length > 0 && vesselId.length <= 256 && !budget.vesselIds.has(vesselId));
+  check2(typeof vesselId === "string" && vesselId.length > 0 && vesselId.length <= 256 && !budget.vesselIds.has(vesselId));
   budget.vesselIds.add(vesselId);
   budget.count += parts.length;
-  check(budget.count <= 400);
+  check2(budget.count <= 400);
   for (const p of parts) {
-    check(!budget.ids.has(p.id));
+    check2(!budget.ids.has(p.id));
     budget.ids.add(p.id);
   }
   const children = value.detached ?? [];
-  check(Array.isArray(children) && children.length <= 400);
-  check(["land", "runway", "water", "orbit", "drop", "entry", "moon-orbit", "moon-surface", "transfer"].includes(value.environment));
+  check2(Array.isArray(children) && children.length <= 400);
+  check2(["land", "runway", "water", "orbit", "drop", "entry", "moon-orbit", "moon-surface", "transfer"].includes(value.environment));
   vector(value.pos, 3, 1e10);
   vector(value.vel, 3, 1e6);
   vector(value.omega, 3, 1e4);
   quaternion(value.q);
   if (value.holdQ !== null) quaternion(value.holdQ);
-  check(Object.hasOwn(SAS_MODES, value.sasMode));
-  check(value.navigationAuto === void 0 || typeof value.navigationAuto === "boolean");
-  check(value.navigationFrame === void 0 || ["orbit", "surface"].includes(value.navigationFrame));
-  check(value.state && typeof value.state === "object");
-  for (const k of flags) check(typeof value.state[k] === "boolean");
-  for (const [k, [min, max]] of Object.entries(numbers)) check(Number.isFinite(value.state[k]) && value.state[k] >= min && value.state[k] <= max);
-  check(Number.isInteger(value.state.stage));
+  check2(Object.hasOwn(SAS_MODES, value.sasMode));
+  check2(value.navigationAuto === void 0 || typeof value.navigationAuto === "boolean");
+  check2(value.navigationFrame === void 0 || ["orbit", "surface"].includes(value.navigationFrame));
+  check2(value.state && typeof value.state === "object");
+  for (const k of flags) check2(typeof value.state[k] === "boolean");
+  for (const [k, [min, max]] of Object.entries(numbers)) check2(Number.isFinite(value.state[k]) && value.state[k] >= min && value.state[k] <= max);
+  check2(Number.isInteger(value.state.stage));
   const ids = new Set(byId.keys()), tankIds = new Set(parts.filter((p) => PARTS[p.type].fuel || PARTS[p.type].monoprop).map((p) => p.id));
   const fuel = entries(value.fuel, tankIds, (v, id) => {
-    check(Number.isFinite(v) && v >= 0 && v <= (PARTS[byId.get(id).type].fuel || PARTS[byId.get(id).type].monoprop));
+    check2(Number.isFinite(v) && v >= 0 && v <= (PARTS[byId.get(id).type].fuel || PARTS[byId.get(id).type].monoprop));
     return v;
   });
-  check(fuel.size === tankIds.size);
-  check(Array.isArray(value.active) && value.active.length <= 400 && new Set(value.active).size === value.active.length && value.active.every((id) => byId.has(id) && PARTS[byId.get(id).type].thrust));
+  check2(fuel.size === tankIds.size);
+  check2(Array.isArray(value.active) && value.active.length <= 400 && new Set(value.active).size === value.active.length && value.active.every((id) => byId.has(id) && PARTS[byId.get(id).type].thrust));
   const deflections = entries(value.deflections, ids, (v) => {
-    check(Number.isFinite(v) && Math.abs(v) <= Math.PI);
+    check2(Number.isFinite(v) && Math.abs(v) <= Math.PI);
     return v;
   }), gimbals = entries(value.gimbals, ids, (v) => new T30.Vector3(...vector(v, 3, Math.PI))), wheelMotion = entries(value.wheelMotion, ids, (v) => {
-    check(v && ["angle", "speed", "steer"].every((k) => Number.isFinite(v[k]) && Math.abs(v[k]) < 1e6));
-    check(v.extension === void 0 || Number.isFinite(v.extension) && v.extension >= 0 && v.extension <= 0.18);
+    check2(v && ["angle", "speed", "steer"].every((k) => Number.isFinite(v[k]) && Math.abs(v[k]) < 1e6));
+    check2(v.extension === void 0 || Number.isFinite(v.extension) && v.extension >= 0 && v.extension <= 0.18);
     return { angle: v.angle, speed: v.speed, steer: v.steer, ...v.extension === void 0 ? {} : { extension: v.extension } };
   }), chuteIds = new Set(parts.filter((p) => PARTS[p.type].parachute).map((p) => p.id)), chutes = entries(value.chutes, chuteIds, (v) => {
-    check(v && ["stowed", "armed", "reefed", "open", "landed", "cut"].includes(v.status) && Number.isFinite(v.fraction) && v.fraction >= 0 && v.fraction <= 1);
+    check2(v && ["stowed", "armed", "reefed", "open", "landed", "cut"].includes(v.status) && Number.isFinite(v.fraction) && v.fraction >= 0 && v.fraction <= 1);
     return { status: v.status, fraction: v.fraction };
   });
-  check(chutes.size === chuteIds.size);
+  check2(chutes.size === chuteIds.size);
   const observationIds = new Set(parts.filter((p) => p.type === "probe").map((p) => p.id)), observations = value.observations === void 0 ? createObservations(parts) : entries(value.observations, observationIds, (s) => {
-    check(s && typeof s.enabled === "boolean" && ["day", "night"].every((k) => Number.isFinite(s[k]) && s[k] >= 0 && s[k] <= 1e12));
+    check2(s && typeof s.enabled === "boolean" && ["day", "night"].every((k) => Number.isFinite(s[k]) && s[k] >= 0 && s[k] <= 1e12));
     if (s.sites !== void 0) {
-      check(s.sites && typeof s.sites === "object" && !Array.isArray(s.sites));
+      check2(s.sites && typeof s.sites === "object" && !Array.isArray(s.sites));
       for (const [id, data] of Object.entries(s.sites)) {
-        check(id !== DELIVERY_SITE.id && !!deliverySite(id) && data && ["day", "night"].every((k) => Number.isFinite(data[k]) && data[k] >= 0 && data[k] <= 1e12));
+        check2(id !== DELIVERY_SITE.id && !!deliverySite(id) && data && ["day", "night"].every((k) => Number.isFinite(data[k]) && data[k] >= 0 && data[k] <= 1e12));
         copyObservationQuality(data.quality, data);
       }
     }
     const quality = copyObservationQuality(s.quality, s);
     return { enabled: s.enabled, day: s.day, night: s.night, ...quality ? { quality } : {}, ...s.sites ? { sites: structuredClone(s.sites) } : {} };
   });
-  check(observations.size === observationIds.size);
+  check2(observations.size === observationIds.size);
   const batteryIds = new Set(parts.filter((p) => PARTS[p.type].battery).map((p) => p.id)), charge = value.charge === void 0 ? createCharge(parts) : entries(value.charge, batteryIds, (v, id) => {
-    check(Number.isFinite(v) && v >= 0 && v <= PARTS[byId.get(id).type].battery);
+    check2(Number.isFinite(v) && v >= 0 && v <= PARTS[byId.get(id).type].battery);
     return v;
   });
-  check(charge.size === batteryIds.size);
+  check2(charge.size === batteryIds.size);
   const maneuver = validateManeuverNode(value.maneuver), transferGuide = validateTransferGuide(value.transferGuide);
-  check(value.sasMode !== "maneuver" || maneuver !== null);
-  check(value.rcsEnabled === void 0 || typeof value.rcsEnabled === "boolean");
-  check(value.targetPartId === void 0 || value.targetPartId === null || typeof value.targetPartId === "string" && value.targetPartId.length <= 200);
-  check(value.dockingPorts === void 0 || value.dockingPorts === null || typeof value.dockingPorts === "object" && ["own", "target"].every((k) => typeof value.dockingPorts[k] === "string" && value.dockingPorts[k].length <= 200));
-  check(value.portTranslationEnabled === void 0 || typeof value.portTranslationEnabled === "boolean");
+  check2(value.sasMode !== "maneuver" || maneuver !== null);
+  check2(value.rcsEnabled === void 0 || typeof value.rcsEnabled === "boolean");
+  check2(value.targetPartId === void 0 || value.targetPartId === null || typeof value.targetPartId === "string" && value.targetPartId.length <= 200);
+  check2(value.dockingPorts === void 0 || value.dockingPorts === null || typeof value.dockingPorts === "object" && ["own", "target"].every((k) => typeof value.dockingPorts[k] === "string" && value.dockingPorts[k].length <= 200));
+  check2(value.portTranslationEnabled === void 0 || typeof value.portTranslationEnabled === "boolean");
   const thermal = value.thermal === void 0 ? createThermal(parts) : entries(value.thermal, ids, (v, id) => {
     const d = PARTS[byId.get(id).type];
-    check(v && Number.isFinite(v.temperature) && v.temperature >= 0 && v.temperature <= 1e9 && Number.isFinite(v.ablator) && v.ablator >= 0 && v.ablator <= (d.ablator || 0) && typeof v.failed === "boolean");
+    check2(v && Number.isFinite(v.temperature) && v.temperature >= 0 && v.temperature <= 1e9 && Number.isFinite(v.ablator) && v.ablator >= 0 && v.ablator <= (d.ablator || 0) && typeof v.failed === "boolean");
     return { temperature: v.temperature, ablator: v.ablator, failed: v.failed };
   });
-  check(thermal.size === ids.size);
-  check(![...thermal.values()].some((s) => s.failed) || value.state.crashed);
-  check(value.vesselName === void 0 || typeof value.vesselName === "string" && value.vesselName.length <= 80);
-  check(value.separationCount === void 0 || Number.isSafeInteger(value.separationCount) && value.separationCount >= 0 && value.separationCount <= 1e9);
+  check2(thermal.size === ids.size);
+  check2(![...thermal.values()].some((s) => s.failed) || value.state.crashed);
+  check2(value.vesselName === void 0 || typeof value.vesselName === "string" && value.vesselName.length <= 80);
+  check2(value.separationCount === void 0 || Number.isSafeInteger(value.separationCount) && value.separationCount >= 0 && value.separationCount <= 1e9);
   if (value.universalTime !== void 0) validUniversalTime(value.universalTime);
-  check(value.failureDynamics === void 0 || typeof value.failureDynamics === "boolean");
-  check(!value.failureDynamics || value.state.crashed);
+  check2(value.failureDynamics === void 0 || typeof value.failureDynamics === "boolean");
+  check2(!value.failureDynamics || value.state.crashed);
   const failureEvents = validateFailureEvents(value.failureEvents);
   const ascent = value.orbitalAscentSettings ? orbitalAscentSettings(value.orbitalAscentSettings) : null;
   const arrivalEnd = runwayEnd(value.runwayEnd);
@@ -2209,6 +2341,7 @@ function handleLandingPlan({ id, vesselId, epoch, flight }) {
     clone?.dispose();
   }
 }
+if (typeof WorkerGlobalScope !== "undefined") await loadRustEngine(RAPIER3, new URL("./engine/orbital_engine.wasm", import.meta.url));
 globalThis.onmessage = ({ data }) => globalThis.postMessage(handleLandingPlan(data));
 if (typeof globalThis.postMessage === "function") globalThis.postMessage({ type: "ready" });
 export {
