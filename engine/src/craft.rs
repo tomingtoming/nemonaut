@@ -84,7 +84,8 @@ pub extern "C" fn craft_solver_step(
         let Some(c) = state.as_mut() else {
             return 0;
         };
-        if c.shapes.is_empty() || c.ticks >= 7200 {
+        // No tick cap: the product steps for whole flights. craft_step keeps its diagnostic cap.
+        if c.shapes.is_empty() {
             return 0;
         }
         let b = &mut c.world.bodies[c.body];
@@ -103,7 +104,7 @@ pub extern "C" fn craft_solver_step(
         p.normalized_allowed_linear_error = error as f32;
         p.normalized_prediction_distance = prediction as f32;
         c.world.step();
-        c.ticks += 1;
+        c.ticks = c.ticks.saturating_add(1);
         1
     })
 }

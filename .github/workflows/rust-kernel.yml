@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'engine/**'
+      - 'dist/rust-engine.js'
+      - 'dist/engine/**'
       - 'tools/golden/**'
       - 'tests/golden/**'
       - 'tests/golden-replay.test.mjs'
@@ -32,7 +34,12 @@ jobs:
       - name: Check game baseline remains unchanged
         run: |
           node --test tests/golden-replay.test.mjs
+      - name: Check product Wasm matches this source build
+        run: |
+          sha256sum engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm dist/engine/orbital_engine.wasm
+          cmp engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm dist/engine/orbital_engine.wasm
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
         with:
           name: diagnostic-wasm
           path: engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm
