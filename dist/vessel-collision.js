@@ -12,7 +12,8 @@ import {Flight,statistics} from './core.js';
 // Vessel-vessel collision after every vessel has stepped in its own world. Rust (parry) finds
 // the contacts; this pass applies equal and opposite impulses to the game state, which is
 // what the next step imports. Momentum is conserved; restitution is 0 like the colliders.
-export const VESSEL_COLLISION={enabled:true,prediction:.05,slop:.005,correction:.8,friction:.5,iterations:4,impactSpeed:9};
+// onContact(event) observes resolved vessel contacts (tests, diagnostics); null by default.
+export const VESSEL_COLLISION={enabled:true,onContact:null,prediction:.05,slop:.005,correction:.8,friction:.5,iterations:4,impactSpeed:9};
 // Pairs that were already touching when first seen (fresh stages, fracture fragments, restored
 // saves) do not collide until they have separated once.
 const ignored=new Map();
@@ -92,7 +93,7 @@ export function resolveVesselCollisions(vessels,dt){
   const depth=Math.max(0,...contacts.map(c=>-c.distance-VESSEL_COLLISION.slop));
   if(depth>0){const n=contacts.reduce((m,c)=>c.distance<m.distance?c:m).normal,total=A.mass+B.mass,shift=depth*VESSEL_COLLISION.correction;a.pos.addScaledVector(n,-shift*B.mass/total);b.pos.addScaledVector(n,shift*A.mass/total);}
   if(!impact.contact&&depth<=0)continue;// within prediction range but not touching this step
-  events.push({a:a.vesselId,b:b.vesselId,contacts:contacts.length,speed:impact.speed});
+  const event={a:a.vesselId,b:b.vesselId,contacts:contacts.length,speed:impact.speed};events.push(event);VESSEL_COLLISION.onContact?.(event);
   if(impact.speed>VESSEL_COLLISION.impactSpeed)for(const [v,p]of [[a,impact.contact.parts[0]],[b,impact.contact.parts[1]]]){
    if(!p||v.failureDynamics)continue;
    recordFailure(v,p,'impact',{speed:impact.speed,position:impact.contact.point.clone()});v.crashed=true;
