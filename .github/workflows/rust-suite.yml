@@ -1,0 +1,22 @@
+name: Full suite on Rust physics
+# Manual only: the whole suite takes about 8 minutes on a many-core workstation but exceeded
+# 40 minutes on one hosted runner (run 41005960242), so it is sharded and not run per push.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  suite:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Run shard ${{ matrix.shard }}/4 with dist/engine Wasm
+        run: |
+          npm ci --ignore-scripts
+          node --version
+          node --import ./tools/golden/rust-preload.mjs --test --test-shard=${{ matrix.shard }}/4 tests/*.test.mjs
