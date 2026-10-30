@@ -35,3 +35,21 @@ export function constrainSurfaceCamera(controls,center,radius){
  camera.lookAt(controls.target);
  return true;
 }
+
+// Arrow-key orbit: Left/Right turn around the local vertical (camera.up); Up raises the camera
+// to look down more, Down lowers it.
+// Keeps the distance and stays inside the controls' polar range, short of the poles.
+export const ARROW_ORBIT={azimuthRate:Math.PI/2,polarRate:Math.PI/3};
+export function orbitByArrows(controls,held,dt){
+ const turn=(held.has('ArrowLeft')?1:0)-(held.has('ArrowRight')?1:0),tilt=(held.has('ArrowUp')?1:0)-(held.has('ArrowDown')?1:0);
+ if((!turn&&!tilt)||!(dt>0))return false;
+ const up=controls.object.up.clone().normalize(),offset=controls.object.position.clone().sub(controls.target),distance=offset.length();
+ if(!(distance>0))return false;
+ offset.applyAxisAngle(up,turn*ARROW_ORBIT.azimuthRate*dt);
+ const polar=Math.acos(Math.min(1,Math.max(-1,offset.dot(up)/distance))),margin=1e-3;
+ const min=Math.max(controls.minPolarAngle??0,margin),max=Math.min(controls.maxPolarAngle??Math.PI,Math.PI-margin);
+ const next=Math.min(max,Math.max(min,polar-tilt*ARROW_ORBIT.polarRate*dt)),axis=new Vector3().crossVectors(up,offset);
+ if(axis.lengthSq()>1e-12&&next!==polar)offset.applyAxisAngle(axis.normalize(),next-polar);
+ controls.object.position.copy(controls.target).add(offset);
+ return true;
+}
