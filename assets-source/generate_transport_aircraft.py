@@ -12,7 +12,7 @@ bpy.ops.object.delete(use_global=False)
 for ident,item in spec.items():
  bpy.ops.object.select_all(action='DESELECT')
  before=set(bpy.data.objects)
- bpy.ops.import_scene.gltf(filepath=str(ROOT/'dist/assets/parts'/f"{item['source']}.glb"))
+ bpy.ops.import_scene.gltf(filepath=str(ROOT/'src/assets/parts'/f"{item['source']}.glb"))
  imported=set(bpy.data.objects)-before
  meshes=[o for o in imported if o.type=='MESH']
  if ident in ['transportWingRoot','enginePylon']:
@@ -67,7 +67,7 @@ for ident,item in spec.items():
  bpy.ops.object.join()
  obj=bpy.context.object
  obj.name='GimbalNozzle' if ident=='propellerLarge' else ident
- bpy.ops.export_scene.gltf(filepath=str(ROOT/'dist/assets/parts'/f'{ident}.glb'),export_format='GLB',use_selection=True,export_yup=True)
+ bpy.ops.export_scene.gltf(filepath=str(ROOT/'src/assets/parts'/f'{ident}.glb'),export_format='GLB',use_selection=True,export_yup=True)
  # Keep exported node name unique before processing another asset.
  obj.name=ident
 bpy.context.scene.unit_settings.system='METRIC'

@@ -36,4 +36,4 @@ for axis in range(3):
    bpy.ops.mesh.primitive_cylinder_add(vertices=12,radius=.012,depth=.008,location=location);o=bpy.context.object;o.rotation_mode='QUATERNION';o.rotation_quaternion=q;o.data.materials.append(steel)
 stripe=cube('Service band',(.326,.045,.326),orange)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(root,'assets-source','rcs-block.blend'))
-bpy.ops.export_scene.gltf(filepath=os.path.join(root,'dist/assets/parts','rcs.glb'),export_format='GLB',export_yup=True)
+bpy.ops.export_scene.gltf(filepath=os.path.join(root,'src/assets/parts','rcs.glb'),export_format='GLB',export_yup=True)

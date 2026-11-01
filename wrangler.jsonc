@@ -1,6 +1,5 @@
 // Public release of Omnivehicle: static assets on Cloudflare Workers, no Worker script.
-// Deploy only with tools/deploy-cloudflare.sh: it exports a committed revision, so untracked
-// files in the working tree (e.g. dist/_diagnostics) are never published.
+// Deploy only with tools/deploy-cloudflare.sh: it builds dist (gitignored) from committed src.
 {
   "name": "omnivehicle",
   "compatibility_date": "2026-10-23",

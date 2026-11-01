@@ -37,4 +37,4 @@ for r,z in [(.975,.060),(.64,.114)]:
 for i in range(16):
  a=math.tau*i/16;o=cyl('Recessed flange fastener',.015,.009,.124,metal);o.location.x=.57*math.cos(a);o.location.y=.57*math.sin(a)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(root,'assets-source','heat-shield.blend'))
-bpy.ops.export_scene.gltf(filepath=os.path.join(root,'dist/assets/parts','heatShield.glb'),export_format='GLB',export_yup=True)
+bpy.ops.export_scene.gltf(filepath=os.path.join(root,'src/assets/parts','heatShield.glb'),export_format='GLB',export_yup=True)

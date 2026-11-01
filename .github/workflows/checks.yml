@@ -1,9 +1,9 @@
-name: Type check and bundles
+name: Build and type check
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'dist/**'
+      - 'src/**'
       - 'tools/**'
       - 'package.json'
       - 'package-lock.json'
@@ -19,8 +19,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Install
         run: npm ci --ignore-scripts
-      - name: Type check (tsc over dist, JSDoc and inference)
+      - name: Build dist (copy src, generate the bundles)
+        run: npm run build
+      - name: Type check (tsc over src, JSDoc and inference)
         run: npm run typecheck
-      - name: Generated bundles match their sources
-        # A source change that a bundle imports must be followed by its rebuild (missed once after 1b, found in 2d).
-        run: npm run check:bundles

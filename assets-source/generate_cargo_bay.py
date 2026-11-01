@@ -66,7 +66,7 @@ for name,side,a,b in [('CargoDoorLeft',-1,-math.pi/2,0),('CargoDoorRight',1,0,ma
  box('Central gasket',[side*.012,0,2.985],[.018,9.5,.025],dark,door,.003)
 bpy.context.scene.unit_settings.system='METRIC'
 bpy.ops.object.select_all(action='SELECT')
-bpy.ops.export_scene.gltf(filepath=str(ROOT/'dist/assets/parts/cargoBay.glb'),export_format='GLB',use_selection=True,export_yup=True)
+bpy.ops.export_scene.gltf(filepath=str(ROOT/'src/assets/parts/cargoBay.glb'),export_format='GLB',use_selection=True,export_yup=True)
 bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/'assets-source/cargo-bay.blend'))
 # Render the open shell for visual inspection, without changing the saved/exported default.
 for door,side in doors:door.location.x=side*3

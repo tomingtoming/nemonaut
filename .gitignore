@@ -1,7 +1,9 @@
 node_modules/
 .sites-runtime/
 artifacts/
-dist/_diagnostics/
+dist/
 *.blend1
 assets-source/*.log
 engine/target/
+.wrangler/
+.playwright-cli/

@@ -5,20 +5,11 @@
   "type": "module",
   "scripts": {
     "vendor": "node tools/vendor.mjs",
+    "build": "node tools/build.mjs",
+    "pretest": "node tools/build.mjs --quiet",
     "test": "node --import ./tools/golden/rust-preload.mjs --test tests/*.test.mjs",
-    "dev": "node tools/serve.mjs",
-    "build:takeoff-worker": "node tools/build-takeoff-worker.mjs",
-    "check:takeoff-worker": "node tools/build-takeoff-worker.mjs --check",
-    "build:takeoff-controller": "node tools/build-takeoff-controller.mjs",
-    "check:takeoff-controller": "node tools/build-takeoff-controller.mjs --check",
-    "build:maneuver": "node tools/build-maneuver.mjs",
-    "check:maneuver": "node tools/build-maneuver.mjs --check",
-    "build:orbital-ascent": "node tools/build-orbital-ascent.mjs",
-    "check:orbital-ascent": "node tools/build-orbital-ascent.mjs --check",
-    "build:landing-worker": "node tools/build-landing-worker.mjs",
-    "check:landing-worker": "node tools/build-landing-worker.mjs --check",
-    "check:bundles": "npm run -s check:takeoff-worker && npm run -s check:takeoff-controller && npm run -s check:maneuver && npm run -s check:orbital-ascent && npm run -s check:landing-worker",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "dev": "node tools/serve.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.21.0",

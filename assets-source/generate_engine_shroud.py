@@ -26,4 +26,4 @@ for m in [white,metal,dark]:
  if len(obs)>1:bpy.ops.object.join()
  bpy.context.object.name=m.name
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(root,'assets-source','engine-shroud.blend'))
-bpy.ops.export_scene.gltf(filepath=os.path.join(root,'dist','assets','parts','engine-shroud.glb'),export_format='GLB',export_yup=True)
+bpy.ops.export_scene.gltf(filepath=os.path.join(root,'src','assets','parts','engine-shroud.glb'),export_format='GLB',export_yup=True)

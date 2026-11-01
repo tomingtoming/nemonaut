@@ -37,7 +37,7 @@ box('Electrical nameplate',(.29,.14,.003),(0,-.045,.127),yellow,.005)
 bpy.ops.object.text_add(location=(0,-.065,.130));label=bpy.context.object;label.name='Capacity marking';label.data.body='1000 EC';label.data.align_x='CENTER';label.data.size=.044;label.data.extrude=.0003;label.data.materials.append(dark)
 bpy.ops.object.convert(target='MESH')
 bpy.context.view_layer.update()
-bpy.ops.export_scene.gltf(filepath=os.path.join(root,'dist/assets/parts','battery.glb'),export_format='GLB',export_yup=True)
+bpy.ops.export_scene.gltf(filepath=os.path.join(root,'src/assets/parts','battery.glb'),export_format='GLB',export_yup=True)
 # Preview rig is saved in the editable source, excluded from the exported part.
 bpy.ops.object.camera_add(location=(1.25,-1.25,1.05));camera=bpy.context.object;camera.rotation_euler=(Vector((0,0,0))-camera.location).to_track_quat('-Z','Y').to_euler();camera.data.type='ORTHO';camera.data.ortho_scale=1.25;bpy.context.scene.camera=camera
 for pos,energy,size in [((1,-2,3),240,3),((-2,-1,1),140,2),((0,2,2),200,2)]:

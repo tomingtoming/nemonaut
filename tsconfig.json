@@ -1,5 +1,5 @@
 {
- // Type-checks the plain JS in dist with JSDoc and inference; nothing is emitted, delivery is unchanged.
+ // Type-checks the plain JS (and .ts) in src with JSDoc and inference; nothing is emitted, delivery is unchanged.
  // Files still carrying `// @ts-nocheck` are typing debt (BACKLOG 4a/4d): remove the line once the file passes.
  // three.js and Rapier are typed through the .d.ts files next to the vendor copies.
  "compilerOptions": {
@@ -13,5 +13,5 @@
   "types": [],
   "skipLibCheck": true
  },
- "include": ["dist/*.js"]
+ "include": ["src/*.js", "src/*.ts"]
 }

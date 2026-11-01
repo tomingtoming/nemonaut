@@ -113,7 +113,7 @@ for material in list(bpy.data.materials):
  for o in objs:o.select_set(True)
  bpy.context.view_layer.objects.active=objs[0];bpy.ops.object.join();bpy.context.object.name='Pad01 '+material.name
 bpy.ops.object.select_all(action='SELECT')
-bpy.ops.export_scene.gltf(filepath=os.path.join(root,'dist','assets','scenery','launchpad.glb'),export_format='GLB',use_selection=True,export_yup=True)
+bpy.ops.export_scene.gltf(filepath=os.path.join(root,'src','assets','scenery','launchpad.glb'),export_format='GLB',use_selection=True,export_yup=True)
 scene=bpy.context.scene;scene.world=bpy.data.worlds.new('Coastal daylight');scene.world.use_nodes=True;scene.world.node_tree.nodes['Background'].inputs[0].default_value=(.35,.45,.6,1)
 bpy.ops.object.light_add(type='AREA',location=(20,-30,60));o=bpy.context.object;o.data.energy=45000;o.data.size=45;o.rotation_euler=(-o.location).to_track_quat('-Z','Y').to_euler()
 bpy.ops.object.camera_add(location=(70,-90,65));cam=bpy.context.object;cam.rotation_euler=(Vector((0,0,8))-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.type='ORTHO';cam.data.ortho_scale=130;scene.camera=cam

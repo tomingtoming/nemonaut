@@ -106,6 +106,6 @@ for group in [None]+[o for o in bpy.data.objects if o.get('facility')]:
   bpy.ops.object.select_all(action='DESELECT')
   for o in objects:o.select_set(True)
   bpy.context.view_layer.objects.active=objects[0];bpy.ops.object.join();objects[0].name=(group.name if group else 'Campus')+' '+material.name
-os.makedirs(os.path.join(root,'dist/assets/scenery'),exist_ok=True)
+os.makedirs(os.path.join(root,'src/assets/scenery'),exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(root,'assets-source','space-center.blend'))
-bpy.ops.export_scene.gltf(filepath=os.path.join(root,'dist/assets/scenery','space-center.glb'),export_format='GLB',export_yup=True,export_extras=True)
+bpy.ops.export_scene.gltf(filepath=os.path.join(root,'src/assets/scenery','space-center.glb'),export_format='GLB',export_yup=True,export_extras=True)

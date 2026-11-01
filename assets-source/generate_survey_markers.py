@@ -2,7 +2,7 @@
 import bpy, math, os
 from mathutils import Vector
 root=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.makedirs(os.path.join(root,'dist/assets/scenery'),exist_ok=True)
+os.makedirs(os.path.join(root,'src/assets/scenery'),exist_ok=True)
 def material(name,color,metal=0,emission=0):
  m=bpy.data.materials.new(name);m.diffuse_color=(*color,1);m.use_nodes=True;p=m.node_tree.nodes.get('Principled BSDF');p.inputs['Base Color'].default_value=(*color,1);p.inputs['Metallic'].default_value=metal;p.inputs['Roughness'].default_value=.5;p.inputs['Emission Color'].default_value=(*color,1);p.inputs['Emission Strength'].default_value=emission;return m
 def cylinder(name,radius,depth,z,mat,vertices=64):
@@ -37,7 +37,7 @@ for key,code in [('north','N 01'),('east','E 02')]:
  for i in range(4):
   a=i*math.pi/2;o=box('Cardinal approach stripe',(.22,3,.001),(0,0,.031),white);o.location.x=27.5*math.cos(a);o.location.y=27.5*math.sin(a);o.rotation_euler.z=a-math.pi/2
  bpy.context.view_layer.update()
- bpy.ops.export_scene.gltf(filepath=os.path.join(root,'dist/assets/scenery',f'survey-{key}.glb'),export_format='GLB',export_yup=True)
+ bpy.ops.export_scene.gltf(filepath=os.path.join(root,'src/assets/scenery',f'survey-{key}.glb'),export_format='GLB',export_yup=True)
  bpy.ops.object.camera_add(location=(4,-5,7));cam=bpy.context.object;cam.rotation_euler=(Vector((0,0,.04))-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.type='ORTHO';cam.data.ortho_scale=4.8;bpy.context.scene.camera=cam
  bpy.ops.object.light_add(type='AREA',location=(0,-3,6));bpy.context.object.data.energy=650;bpy.context.object.data.size=5
  scene=bpy.context.scene;scene.render.engine='CYCLES';scene.cycles.samples=24;scene.render.resolution_x=800;scene.render.resolution_y=600;scene.render.resolution_percentage=100;scene.world=bpy.data.worlds.new('Studio');scene.world.use_nodes=True;scene.world.node_tree.nodes['Background'].inputs[0].default_value=(.15,.18,.2,1)

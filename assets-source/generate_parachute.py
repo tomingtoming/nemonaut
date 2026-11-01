@@ -14,7 +14,7 @@ def cylinder(name,xyz,r,depth,material):
 def export(objects,name):
  bpy.ops.object.select_all(action='DESELECT')
  for o in objects:o.select_set(True)
- bpy.ops.export_scene.gltf(filepath=os.path.join(root,'dist/assets/parts',name+'.glb'),export_format='GLB',use_selection=True,export_yup=True)
+ bpy.ops.export_scene.gltf(filepath=os.path.join(root,'src/assets/parts',name+'.glb'),export_format='GLB',use_selection=True,export_yup=True)
 pack=[cylinder('Pressure sealed recovery pack',(0,0,0),.4,.32,dark),cylinder('Top release cap',(0,.18,0),.37,.04,white),cylinder('Attachment rim',(0,-.18,0),.4,.04,metal),cylinder('Safety band',(0,.09,0),.402,.045,orange)]
 # Exact mounting envelope 0.8 x 0.4 x 0.8.
 for o in pack:o.scale.x*=.4/.402;o.scale.y*=.4/.402

@@ -4,11 +4,10 @@ on:
   push:
     paths:
       - 'engine/**'
-      - 'dist/**'
+      - 'src/**'
       - 'tests/**'
       - 'tools/**'
       - 'package.json'
-      - 'dist/engine/**'
       - 'tools/golden/**'
       - 'tests/golden/**'
       - 'tests/golden-replay.test.mjs'
@@ -28,6 +27,7 @@ jobs:
       - name: Compare Rust Wasm with existing JS Rapier
         run: |
           npm ci --ignore-scripts
+          npm run build
           node tools/golden/compare-kernel.mjs
           node tools/golden/checkpoint-kernel.mjs
           node tools/golden/craft-kernel.mjs
@@ -36,12 +36,12 @@ jobs:
           node tools/golden/rust-driven.mjs
       - name: Check game baseline remains unchanged
         run: |
-          # Golden v3 needs vessel-vessel collision, which exists only on Rust physics (dist/engine).
+          # Golden v3 needs vessel-vessel collision, which exists only on Rust physics (src/engine).
           node --import ./tools/golden/rust-preload.mjs --test tests/golden-replay.test.mjs
       - name: Check product Wasm matches this source build
         run: |
-          sha256sum engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm dist/engine/orbital_engine.wasm
-          cmp engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm dist/engine/orbital_engine.wasm
+          sha256sum engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm src/engine/orbital_engine.wasm
+          cmp engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm src/engine/orbital_engine.wasm
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

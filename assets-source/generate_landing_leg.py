@@ -50,4 +50,4 @@ for angle in [math.pi/4,3*math.pi/4,5*math.pi/4,7*math.pi/4]:
 
 bpy.context.view_layer.update()
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(root,'assets-source','landing-leg.blend'))
-bpy.ops.export_scene.gltf(filepath=os.path.join(root,'dist/assets/parts','landingLeg.glb'),export_format='GLB',export_yup=True)
+bpy.ops.export_scene.gltf(filepath=os.path.join(root,'src/assets/parts','landingLeg.glb'),export_format='GLB',export_yup=True)

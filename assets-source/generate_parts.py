@@ -4,7 +4,7 @@ Design coordinates are meters, +Y nose/up, +X starboard. GLB uses those coordina
 import bpy, math, json, os
 from mathutils import Vector
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT=os.path.join(ROOT,'dist','assets','parts'); os.makedirs(OUT,exist_ok=True)
+OUT=os.path.join(ROOT,'src','assets','parts'); os.makedirs(OUT,exist_ok=True)
 bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
 def mat(name,color,metal=0,rough=.4):
  m=bpy.data.materials.new(name); m.diffuse_color=(*color,1); m.use_nodes=True

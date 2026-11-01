@@ -32,4 +32,4 @@ for i in range(3):
 # Exact total height .242 m, front +.121, rear -.121 after centering.
 for o in bpy.context.scene.objects:o.location.z-=.001
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(root,'assets-source','docking-port.blend'))
-bpy.ops.export_scene.gltf(filepath=os.path.join(root,'dist/assets/parts','dockingPort.glb'),export_format='GLB',export_yup=True)
+bpy.ops.export_scene.gltf(filepath=os.path.join(root,'src/assets/parts','dockingPort.glb'),export_format='GLB',export_yup=True)
