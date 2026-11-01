@@ -9,15 +9,35 @@ type Quat = {x: number; y: number; z: number; w: number};
 type Exports = Record<string, (...args: number[]) => number>;
 
 let wasmModule: WebAssembly.Module | null = null;
+let loadError: unknown = null;
+// The engine next to this module: dist/engine/ for the page, the bundled Workers and Node.
+const ENGINE_URL = new URL('./engine/orbital_engine.wasm', import.meta.url);
 const fail = (message: string): never => {throw Error('Rust物理: ' + message);};
 const ok = (result: number, message: string) => {if (result !== 1) fail(message);};
 
 /** Use an already compiled engine module (Node tests, Workers that compiled it themselves). */
 export function installPhysics(module: WebAssembly.Module) {wasmModule = module;}
-/** Fetch and compile the engine once per page or Worker. */
-export async function loadPhysics(url: URL | string) {
- if (!wasmModule) wasmModule = await WebAssembly.compile(await (await fetch(url)).arrayBuffer());
+async function engineBytes(url: URL) {
+ if (url.protocol !== 'file:') return (await fetch(url)).arrayBuffer();
+ const fs = 'node:fs/promises';// a variable keeps bundlers from resolving it for the browser
+ return (await import(fs)).readFile(url);
+}
+/** Fetch and compile the engine once per page, Worker or Node process. Throws if it cannot load. */
+export async function loadPhysics(url: URL = ENGINE_URL) {
+ if (!wasmModule) {
+  try {wasmModule = await WebAssembly.compile(await engineBytes(url)); loadError = null;}
+  catch (e) {loadError = e; throw e;}
+ }
  return wasmModule;
+}
+/** Module initialisation (`await RAPIER.init()` in the game): never throws, so the page can show
+ * the failure; creating a World without the engine reports it. */
+async function init() {try {await loadPhysics();} catch {}}
+let pair: Exports | null = null;
+/** The vessel-vessel contact query instance (pair_*), shared by all worlds. */
+export function pairQuery() {
+ if (!wasmModule) return null;
+ return pair ??= new WebAssembly.Instance(wasmModule, {}).exports as unknown as Exports;
 }
 export const physicsReady = () => wasmModule !== null;
 
@@ -65,6 +85,23 @@ export class Collider {
  rotationWrtParent(): Quat {return {x: this.get(7), y: this.get(8), z: this.get(9), w: this.get(10)};}
  mass() {return this.get(11);}
  friction() {return this.get(12);}
+ /** Whether a world point lies inside this part collider (f64 geometry; diagnostics and tests). */
+ containsPoint(point: Vec3) {
+  const body = this.world.body;
+  if (!body || this.index < 0) fail('containsPoint is for part colliders');
+  const rotate = (q: Quat, v: Vec3): Vec3 => {
+   const tx = 2 * (q.y * v.z - q.z * v.y), ty = 2 * (q.z * v.x - q.x * v.z), tz = 2 * (q.x * v.y - q.y * v.x);
+   return {x: v.x + q.w * tx + q.y * tz - q.z * ty, y: v.y + q.w * ty + q.z * tx - q.x * tz, z: v.z + q.w * tz + q.x * ty - q.y * tx};
+  };
+  const conjugate = (q: Quat): Quat => ({x: -q.x, y: -q.y, z: -q.z, w: q.w});
+  const bp = (body as RigidBody).translation(), bq = (body as RigidBody).rotation(), t = this.translationWrtParent(), cq = this.rotationWrtParent();
+  // World point -> body frame -> collider frame.
+  const inBody = rotate(conjugate(bq), {x: point.x - bp.x, y: point.y - bp.y, z: point.z - bp.z});
+  const local = rotate(conjugate(cq), {x: inBody.x - t.x, y: inBody.y - t.y, z: inBody.z - t.z});
+  if (this.shapeType() === ShapeType.Ball) return Math.hypot(local.x, local.y, local.z) <= this.radius();
+  const h = this.halfExtents();
+  return Math.abs(local.x) <= h.x && Math.abs(local.y) <= h.y && Math.abs(local.z) <= h.z;
+ }
  setMass(mass: number) {
   // An unchanged mass leaves the mass properties unchanged; skipping avoids a recompute per step.
   if (Math.fround(mass) === this.storedMass) return;
@@ -124,7 +161,7 @@ export class World {
  private nextHandle = 1;
  private freed = false;
  constructor(gravity: Vec3) {
-  if (!wasmModule) fail('engine not loaded');
+  if (!wasmModule) fail('engine not loaded' + (loadError ? ': ' + String(loadError) : ''));
   this.exports = new WebAssembly.Instance(wasmModule as WebAssembly.Module, {}).exports as unknown as Exports;
   this.exports.craft_reset();
   this.gravity = {x: gravity.x, y: gravity.y, z: gravity.z};
@@ -184,4 +221,4 @@ export class World {
 }
 
 /** Drop-in for the default export of the Rapier module, as the game imports it. */
-export default {init: async () => {}, World, RigidBodyDesc, ColliderDesc, ShapeType, Quaternion};
+export default {init, World, RigidBodyDesc, ColliderDesc, ShapeType, Quaternion};

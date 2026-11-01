@@ -1,7 +1,8 @@
 import {readFile,writeFile} from 'node:fs/promises';import {execFileSync} from 'node:child_process';import {createHash} from 'node:crypto';
 import {scenarios as v1} from './scenarios.mjs';import {scenarios as v2} from './scenarios-v2.mjs';import {scenarios as v3} from './scenarios-v3.mjs';import {replay} from './replay-js.mjs';import {assertGolden,tolerances} from './compare.mjs';
 const version=process.argv.includes('--v3')?3:process.argv.includes('--v2')?2:1,scenarios=[v1,v2,v3][version-1];
-if(version===3&&!(await import('../../dist/rust-engine.js')).rustPairQuery((await import('../../dist/vendor/rapier/rapier.mjs')).default))throw Error('Golden v3 needs Rust physics: node --import ./tools/golden/rust-preload.mjs');
+// v1/v2 were recorded on the retired JS solver: they can be replayed (checked) but not re-recorded.
+if(version<3&&process.argv.includes('--record'))throw Error('Golden v1/v2 are frozen: their recording solver (JS Rapier) is retired');
 const file=new URL(`../../tests/golden/js-v${version}.json`,import.meta.url),record=process.argv.includes('--record');
 if(record){
  const revision=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
@@ -9,7 +10,7 @@ if(record){
  const paths=execFileSync('git',['ls-files','dist'],{encoding:'utf8'}).trim().split(/\r?\n/).filter(p=>p.endsWith('.js'));
  const hash=createHash('sha256');for(const path of paths){hash.update(path+'\0');hash.update(await readFile(path));}
  const definitions=scenarios(),cases=definitions.map(definition=>({definition,expected:replay(definition)}));
- const baseline={version,provenance:{revision,node:process.version,platform:process.platform,arch:process.arch,rapier:'0.21.0',physics:version===3?'rust-wasm':'rapier-js',runtimeJavaScriptSHA256:hash.digest('hex'),recordedAt:new Date().toISOString()},tolerances,cases};
+ const baseline={version,provenance:{revision,node:process.version,platform:process.platform,arch:process.arch,rapier:'0.21.0',physics:'rust-wasm',runtimeJavaScriptSHA256:hash.digest('hex'),recordedAt:new Date().toISOString()},tolerances,cases};
  await writeFile(file,JSON.stringify(baseline,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({recorded:cases.length,revision}));
 }else{
  const baseline=JSON.parse((await readFile(file,'utf8')).replace(/^\uFEFF/,''));

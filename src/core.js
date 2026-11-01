@@ -29,7 +29,7 @@ import {maneuverDirection,advanceManeuver} from './maneuver-node.js';
 import {validateSymmetry} from './symmetry.js';
 import * as T from 'three';
 import {PARTS} from './catalog.js';
-import RAPIER from './vendor/rapier/rapier.mjs';
+import RAPIER from './physics.js';
 import {partRotation,partMass,partCenter,aeroPoint,aeroAnalysis,surfaceForce,controlDeflection} from './aero.js';
 import {PLANET,atmosphere} from './planet.js';
 import {MOON,referenceBody,bodyState,bodyAltitude,bodyUp,bodyGravity,bodyOrbitState,advanceCelestialOrbit,lunarTrial} from './celestial.js';
@@ -144,7 +144,7 @@ export class Flight {
  advanceManeuver(this.maneuver,engineForce.clone().multiplyScalar(dt/mass));
  if(!maneuverWasComplete&&this.maneuver?.complete&&this.maneuver.stopAtTarget===true)this.throttle=0;
  const thermal=thermalStep(this.parts,this.thermal,this.q,relativeVelocity,air,dt);
- this.telemetry={thermal,force,torque,engineForce,power,stallCount,contacts,wheelContacts,wheelImpactSpeed,commands,engine:'Rapier 0.21'};const impactSpeed=relativeVelocity.dot(normal);
+ this.telemetry={thermal,force,torque,engineForce,power,stallCount,contacts,wheelContacts,wheelImpactSpeed,commands,engine:'Rust Rapier 0.21'};const impactSpeed=relativeVelocity.dot(normal);
  this.world.timestep=dt;this.world.step();this.q.copy(this.body.rotation()).normalize();this.omega.copy(this.body.angvel());
  if(freeFlight){const next=advanceCelestialOrbit(com,this.vel,force.clone().divideScalar(mass),dt,startTime);this.pos.copy(next.pos).sub(st.com.clone().applyQuaternion(this.q));this.vel.copy(next.vel);}else{const turn=surfaceOrientation(dt,reference);this.q.premultiply(turn).normalize();this.omega.applyQuaternion(turn).add(spin);this.pos.copy(origin).add(this.body.translation()).sub(startBody.position).applyQuaternion(turn).add(endBody.position);const endCOM=this.pos.clone().add(st.com.clone().applyQuaternion(this.q));this.vel.copy(this.body.linvel()).applyQuaternion(turn).add(surfaceVelocity(endCOM,this.universalTime,reference));if(this.holdQ)this.holdQ.premultiply(turn).normalize();}
  // A settled unpowered body stays at rest instead of acquiring solver jitter.

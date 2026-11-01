@@ -1,5 +1,4 @@
-import RAPIER from '../dist/vendor/rapier/rapier.mjs';
-import {loadRustEngine} from '../dist/rust-engine.js';
+import {loadPhysics} from '../dist/physics.js';
 import {loadFlight} from '../dist/flight-save.js';
 import {bodyAltitude,bodyGravity} from '../dist/celestial.js';
 import {atmosphere} from '../dist/planet.js';
@@ -16,6 +15,6 @@ export function handleLandingPlan({id,vesselId,epoch,flight}){
  finally{clone?.dispose();}
 }
 // Forecasts use the same Rust physics as the game; ready is posted only after it loads.
-if(typeof WorkerGlobalScope!=='undefined')await loadRustEngine(RAPIER,new URL('./engine/orbital_engine.wasm',import.meta.url));
+await loadPhysics(new URL('./engine/orbital_engine.wasm',import.meta.url));
 globalThis.onmessage=({data})=>globalThis.postMessage(handleLandingPlan(data));
 if(typeof globalThis.postMessage==='function')globalThis.postMessage({type:'ready'});

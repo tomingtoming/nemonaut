@@ -1,7 +1,6 @@
 // @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import * as T from 'three';
-import RAPIER from './vendor/rapier/rapier.mjs';
-import {rustPairQuery} from './rust-engine.js';
+import RAPIER,{pairQuery} from './physics.js';
 import {PARTS} from './catalog.js';
 import {partMass,partRotation} from './aero.js';
 import {inertiaAbout,DOCK_LIMITS} from './docking.js';
@@ -56,7 +55,7 @@ function effectiveMass(A,B,rA,rB,n){
 export function resolveVesselCollisions(vessels,dt){
  if(!(dt>0))throw Error('vessel collision needs the step dt');
  if(!VESSEL_COLLISION.enabled)return [];
- const pair=rustPairQuery(RAPIER);if(!pair)return [];// JS reference tools without Rust physics
+ const pair=pairQuery();if(!pair)return [];// the engine failed to load (worlds then fail too)
  const events=[],live=vessels.filter(v=>v.body&&v.parts.length),seen=new Set();
  for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){
   const a=live[i],b=live[j],k=key(a,b);

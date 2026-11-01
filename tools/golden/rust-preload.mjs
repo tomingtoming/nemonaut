@@ -1,13 +1,14 @@
 // node --import ./tools/golden/rust-preload.mjs --test tests/*.test.mjs
-// Runs any existing test with the product's opt-in Rust physics installed (dist/engine Wasm).
-// With RUST_PRELOAD_LOG=<dir>, each process records how many Rapier steps Rust computed.
-import {readFile,writeFile,mkdir} from 'node:fs/promises';
+// The game runs on the Rust engine through dist/physics.js, which loads it by itself; this preload
+// only adds diagnostics. With RUST_PRELOAD_LOG=<dir>, each process records how many steps ran.
+// RUST_PRELOAD_NEGATIVE=zero-impulses reads every ground contact impulse as 0 (negative control).
+import {mkdir} from 'node:fs/promises';
 import {writeFileSync} from 'node:fs';
-import R from '../../dist/vendor/rapier/rapier.mjs';
-import {installRustEngine} from '../../dist/rust-engine.js';
-await R.init();
-const module=await WebAssembly.compile(await readFile(new URL('../../dist/engine/orbital_engine.wasm',import.meta.url)));
-// RUST_PRELOAD_NEGATIVE=zero-impulses reads every contact impulse as 0 (negative control).
-const {stats}=installRustEngine(R,module,{zeroImpulses:()=>process.env.RUST_PRELOAD_NEGATIVE==='zero-impulses'});
+import P,{loadPhysics} from '../../dist/physics.js';
+await loadPhysics();
+const stats={worlds:0,frames:0};
+const {step,contactPair}=P.World.prototype;
+P.World.prototype.step=function(){stats.frames++;return step.call(this);};
+if(process.env.RUST_PRELOAD_NEGATIVE==='zero-impulses')P.World.prototype.contactPair=function(a,b,callback){return contactPair.call(this,a,b,m=>callback({numContacts:()=>m.numContacts(),contactImpulse:()=>0},false));};
 const dir=process.env.RUST_PRELOAD_LOG;
 if(dir){await mkdir(dir,{recursive:true});process.on('exit',()=>writeFileSync(`${dir}/${process.pid}.json`,JSON.stringify({argv:process.argv.slice(1),...stats})));}

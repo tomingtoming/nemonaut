@@ -5,7 +5,10 @@ import {PARTS,part} from '../dist/catalog.js';
 import {Flight,statistics} from '../dist/core.js';
 import {saveFlight,loadFlight} from '../dist/flight-save.js';
 import {partCenter,partRotation} from '../dist/aero.js';
-import RAPIER from '../dist/vendor/rapier/rapier.mjs';
+import RAPIER from '@dimforge/rapier3d-compat';
+import P from '../dist/physics.js';
+
+await RAPIER.init();
 import {createPartColliders} from '../dist/part-colliders.js';
 
 test('hollow part preserves cavity, rotated wall positions, mass and COM across rebuild and save',()=>{
@@ -36,18 +39,20 @@ test('hollow part preserves cavity, rotated wall positions, mass and COM across 
    });
   };
   check();f.fuel.set(p.id,123);f.updateColliderMasses();check();
-  f.buildColliders();check();assert.equal(f.world.colliders.len(),5,'no orphaned walls after rebuild');
+  f.buildColliders();check();assert.equal(f.body.numColliders(),4,'no orphaned walls after rebuild');
   const loaded=loadFlight(saveFlight(f));f.dispose();f=loaded;check();
+  // Geometry oracle: the same walls (read back from the game's colliders) on a fixed JS Rapier
+  // body, with free balls dropped through the opening and onto a wall by JS Rapier's own solver.
+  const upright=new Flight([part('tank',[0,0,0],[0,0,0],null,0)],'orbit');
+  const walls=upright.colliderGroups.values().next().value.map(({collider})=>({t:collider.translationWrtParent(),q:collider.rotationWrtParent(),h:collider.halfExtents()}));
+  upright.dispose();// collider poses are relative to the design origin
   const world=new RAPIER.World({x:0,y:-9.81,z:0});
   try{
    const frame=world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-   createPartColliders(world,frame,part('tank',[0,0,0],[0,0,0],null,0),100);
+   for(const w of walls)world.createCollider(RAPIER.ColliderDesc.cuboid(w.h.x,w.h.y,w.h.z).setTranslation(w.t.x,w.t.y,w.t.z).setRotation(w.q),frame);
    const drop=x=>{const body=world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x,4,0).setCcdEnabled(true));world.createCollider(RAPIER.ColliderDesc.ball(.2).setMass(1),body);return body;};
    const inside=drop(0),wall=drop(1.75);
-   // A fixed hollow part with free balls is not a game craft world: use Rapier's own solver as
-   // a geometry oracle here (the game itself always runs on Rust physics).
-   const step=world.referenceSolverStep??world.step;
-   for(let i=0;i<120;i++)step.call(world);
+   for(let i=0;i<120;i++)world.step();
    assert.ok(inside.translation().y<-5,'payload passes through the hollow opening');
    assert.ok(Math.abs(wall.translation().y-3.2)<.03,'wall supports a colliding payload');
   }finally{world.free();}
@@ -59,9 +64,8 @@ test('compound definition rejects a mass center that disagrees with flight stati
  PARTS.tank={...original,collisionBoxes:[{center:[1,0,0],size:[1,1,1]}]};
  // Validate through the helper on an owned world so failure is disposed as well.
  return import('../dist/part-colliders.js').then(async({createPartColliders})=>{
-  const {default:R}=await import('../dist/vendor/rapier/rapier.mjs');
-  const world=new R.World({x:0,y:0,z:0});
-  try{const body=world.createRigidBody(R.RigidBodyDesc.dynamic());assert.throws(()=>createPartColliders(world,body,part('tank'),100),/mass center/);assert.equal(body.numColliders(),0);}
+  const world=new P.World({x:0,y:0,z:0});
+  try{const body=world.createRigidBody(P.RigidBodyDesc.dynamic());assert.throws(()=>createPartColliders(world,body,part('tank'),100),/mass center/);assert.equal(body.numColliders(),0);}
   finally{world.free();PARTS.tank=original;}
  });
 });

@@ -2,9 +2,8 @@ Omnivehicle — third-party notices
 
 The game bundles the following third-party software. Each is used under its license; full texts follow.
 
-== JavaScript (dist/vendor) ==
+== JavaScript (vendor) ==
 three.js — MIT License — Copyright © 2010-2025 three.js authors — full text: vendor/THREE-LICENSE.txt
-Rapier (npm @dimforge/rapier3d-compat 0.21.0) — Apache License 2.0 — Dimforge EURL — full text: vendor/rapier/LICENSE.txt
 
 == Rust crates compiled into engine/orbital_engine.wasm ==
 Rapier is built from https://github.com/dimforge/rapier at b716d375efc0201003f0cd9ef7168eee0b62c177 (crate 0.36.0).
@@ -70,7 +69,7 @@ unicode-ident 1.0.27 — (MIT OR Apache-2.0) AND Unicode-3.0 — David Tolnay <d
 wide 1.7.1 — Zlib OR Apache-2.0 OR MIT — Lokathor <zefria@gmail.com> — https://github.com/Lokathor/wide
 
 == License texts ==
-Apache License 2.0: see vendor/rapier/LICENSE.txt (identical text applies to every Apache-2.0 crate above).
+Apache License 2.0: see engine/RAPIER-LICENSE.txt (identical text applies to every Apache-2.0 crate above).
 MIT License: see vendor/THREE-LICENSE.txt for the text; for each MIT crate above the copyright holders are the listed authors.
 
 Zlib License

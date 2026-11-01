@@ -4,7 +4,6 @@ await mkdir('dist/_diagnostics',{recursive:true});
 await build({entryPoints:['tools/landing-ui-check.mjs'],outfile:'dist/_diagnostics/landing-ui-check.js',bundle:true,format:'esm',platform:'browser',target:'es2022',plugins:[{name:'live-panel',setup(b){
  b.onResolve({filter:/^\.\.\/dist\/cruise-panel\.js$/},()=>({path:'../cruise-panel.js',external:true}));
  b.onResolve({filter:/^three$/},()=>({path:'three',external:true}));
- b.onResolve({filter:/vendor\/rapier\/rapier\.mjs$/},()=>({path:'../vendor/rapier/rapier.mjs',external:true}));
 }}]});
 await writeFile('dist/_diagnostics/landing-ui-check.html',`<!doctype html><meta charset="utf-8"><title>着陸UI・Worker検証</title>
 <script type="importmap">{"imports":{"three":"../vendor/three/three.module.js"}}</script>

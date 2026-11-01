@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import RAPIER from '../../dist/vendor/rapier/rapier.mjs';
+import RAPIER from '@dimforge/rapier3d-compat';
 await RAPIER.init();
 const bytes=await readFile(new URL('../../engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm',import.meta.url));
 const {instance}=await WebAssembly.instantiate(bytes,{});
