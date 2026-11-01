@@ -9,7 +9,7 @@ export function nodePose(part,index){
 }
 function aligned(parent,parentNode,child,ownNode){const a=nodePose(parent,parentNode),b=nodePose(child,ownNode);return a.position.distanceToSquared(b.position)<1e-10&&a.normal.dot(b.normal)<-1+1e-6;}
 export function validateAttachments(parts){
- const byId=new Map(parts.map(p=>[p.id,p]));
+ const byId=new Map<any,any>(parts.map(p=>[p.id,p]));
  for(const p of parts){const a=p.attachment;if(a===undefined)continue;
   if(!a||!['node','surface','free'].includes(a.mode))throw Error('取付方法が不正です');
   if(a.mode==='node'){
@@ -28,7 +28,7 @@ export function nodeConnection(parts,child){
  return matches.length===1?matches[0]:null;
 }
 export function occupiedNodes(parts,{ignoreEdges=new Set()}={}){
- const used=new Map();
+ const used=new Map<any,any>();
  for(const p of parts){if(ignoreEdges.has(p.id))continue;const c=nodeConnection(parts,p);if(!c)continue;
   for(const endpoint of [key(c.parent,c.parentNode),key(p.id,c.ownNode)]){if(!used.has(endpoint))used.set(endpoint,[]);used.get(endpoint).push(p.id);}
  }return used;

@@ -50,7 +50,7 @@ function evaluateFiniteDeparture(vessel,plan){
  if(!plan.burn.enough)plan.warnings.push('現在の点火段では推進剤が不足しています');
  if(plan.startTime-vessel.universalTime<60)plan.warnings.push('姿勢調整の60秒を確保できません');
  if(plan.warnings.length){plan.ready=false;return plan;}
- const at=coastDrift(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,plan.startTime-vessel.universalTime),fuel=new Map(vessel.fuel),direction=plan.impulse.clone().normalize();
+ const at=coastDrift(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,plan.startTime-vessel.universalTime),fuel=new Map<any,any>(vessel.fuel),direction=plan.impulse.clone().normalize();
  let pos=at.position,vel=at.velocity,time=plan.startTime,mass=vessel.stats.mass,left=plan.deltaV;
  for(let i=0;i<144000&&left>=.5;i++){
   const dt=1/120,before=[...fuel.values()].reduce((a,b)=>a+b,0),throttle=terminalBurnThrottle(left);

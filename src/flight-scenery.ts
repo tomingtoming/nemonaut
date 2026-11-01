@@ -64,6 +64,7 @@ export function surfaceMaterial(water=false){
 }
 
 export class FlightScenery{
+ declare shell:any;declare sky:any;declare stars:any;declare uniforms:any;declare waterFog:any;
  constructor(group){
   const planetarySun=new T.DirectionalLight(0xfff0d8,2.4);planetarySun.layers.set(1);planetarySun.position.copy(center).addScaledVector(SUN_DIRECTION,1000000);planetarySun.target.position.copy(center);group.add(planetarySun,planetarySun.target);
   const starlight=new T.AmbientLight(0x8ca5cc,.08);starlight.layers.set(1);group.add(starlight);

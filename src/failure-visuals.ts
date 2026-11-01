@@ -26,6 +26,7 @@ function plumeTexture(){
 }
 // Bounded cosmetic particles only. Actual parts remain owned by physics.
 export class FailureVisuals{
+ declare items:any;declare scene:any;declare texture:any;
  constructor(scene){this.scene=scene;this.items=new Map();this.texture=plumeTexture();}
  clear(){for(const id of [...this.items.keys()])this.remove(id);}
  remove(id){const item=this.items.get(id);if(!item)return;this.scene.remove(item.root);for(const m of item.materials)m.dispose();this.items.delete(id);}

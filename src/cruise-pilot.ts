@@ -40,6 +40,7 @@ export function cruisePropulsion(f){
  return null;
 }
 export class CruisePilot{
+ declare duration:any;declare elapsed:any;declare faultMessage:any;declare owner:any;declare pitchBias:any;declare powerBias:any;declare previous:any;declare reason:any;declare running:any;declare settled:any;declare status:any;declare target:any;declare telemetry:any;
  constructor(f,settings={speed:90,altitude:1000,heading:90}){
   const {speed,altitude,heading,mode,vertical}=cruiseSettings(settings);
   if(!f.parts.length||!(f.stats.mass>0))throw Error('Empty aircraft');

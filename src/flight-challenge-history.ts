@@ -1,8 +1,8 @@
 import {deliverySite} from './delivery-sites.js';
 export const PRECISION_ALTITUDE=100;
 export const flightChallengeTypes=['flight-ascent','flight-touchdown','precision-landing'];
-export function flightPhases(history){const phases=new Map();for(const e of history)if(e.type==='flight-ascent'||e.type==='flight-touchdown')for(const id of e.partIds)phases.set(id,e);return phases;}
-export function phaseSources(partIds,phases,type){const events=partIds.map(id=>phases.get(id));return events.length&&events.every(e=>e?.type===type)?[...new Set(events)]:null;}
+export function flightPhases(history){const phases=new Map<any,any>();for(const e of history)if(e.type==='flight-ascent'||e.type==='flight-touchdown')for(const id of e.partIds)phases.set(id,e);return phases;}
+export function phaseSources(partIds,phases,type){const events=partIds.map(id=>phases.get(id));return events.length&&events.every(e=>e?.type===type)?[...new Set<any>(events)]:null;}
 export function validateFlightChallenge(event,phases,completed,sources){
  const same=(a,b)=>Array.isArray(a)&&JSON.stringify([...a].sort())===JSON.stringify([...b].sort());
  const ids=event.partIds;

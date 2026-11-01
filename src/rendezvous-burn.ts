@@ -9,6 +9,7 @@ export function validateRendezvousBurn(value){
 // Editing invalidates the timed contract; it cannot silently become an impulse
 // epoch with a second half-burn correction. The UI binds only the exact preview.
 export class RendezvousPlanBinding{
+ declare pending:any;
  clear(){this.pending=null;}
  observe(f){if(this.pending&&(this.pending.flight!==f||this.pending.contract.targetPartId!==f?.targetPartId))this.pending.invalid=true;}
  remember(f,preview,burn){

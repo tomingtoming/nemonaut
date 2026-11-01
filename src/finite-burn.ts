@@ -24,7 +24,7 @@ export function finiteBurnPreview(vessel,impulse,startTime,{throttle=.1,toleranc
  const center=vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q));
  const coast=coastDrift(center,vessel.vel,vessel.universalTime,startTime-vessel.universalTime);
  let pos=coast.position,vel=coast.velocity,time=startTime,delivered=0,mass=vessel.stats.mass;
- const fuel=new Map(vessel.fuel),networks=fuelNetworks(vessel.parts),active=new Set(vessel.parts.filter(p=>vessel.active.has(p.id)&&PARTS[p.type].thrust&&!PARTS[p.type].air&&!PARTS[p.type].water).map(p=>p.id)),direction=impulse.clone().normalize();
+ const fuel=new Map<any,any>(vessel.fuel),networks=fuelNetworks(vessel.parts),active=new Set(vessel.parts.filter(p=>vessel.active.has(p.id)&&PARTS[p.type].thrust&&!PARTS[p.type].air&&!PARTS[p.type].water).map(p=>p.id)),direction=impulse.clone().normalize();
  const orientation=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0).applyQuaternion(vessel.q),direction).multiply(vessel.q),aerodynamics=createBodyAerodynamics(vessel.parts);
  let atmospheric=false;
  const sum=f=>[...f.values()].reduce((a,b)=>a+b,0),initialFuel=sum(fuel),points=[pos.clone()];let count=0;
@@ -33,7 +33,7 @@ export function finiteBurnPreview(vessel,impulse,startTime,{throttle=.1,toleranc
   if(orbit.altitude<50000&&orbit.bodyId==='planet'||orbit.altitude<1000)throw Error('噴射中に低高度へ入るため熱・接地を含む予測が必要です');
   atmospheric ||= orbit.altitude<orbit.body.atmosphereTop;
   const air=orbit.bodyId==='planet'?atmosphere(orbit.altitude):{density:0,pressure:0},relative=surfaceRelativeVelocity(pos,vel,time,orbit.body);
-  const before=new Map(fuel),beforeMass=sum(fuel),forces=engineBurn(networks,fuel,active,throttle,air.density,step,air.pressure),force=[...forces.values()].reduce((a,b)=>a+b,0);
+  const before=new Map<any,any>(fuel),beforeMass=sum(fuel),forces=engineBurn(networks,fuel,active,throttle,air.density,step,air.pressure),force=[...forces.values()].reduce((a,b)=>a+b,0);
   if(!(force>0))throw Error('噴射途中で燃料が不足しました');
   const fraction=Math.min(1,(deltaV-tolerance-delivered)/(force/mass*step)),dt=step*fraction;
   if(fraction<1)for(const [id,value]of before)fuel.set(id,value-(value-fuel.get(id))*fraction);

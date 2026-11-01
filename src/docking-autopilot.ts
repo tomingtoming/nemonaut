@@ -23,6 +23,7 @@ function reach(v,point){
  return v.parts.reduce((r,p)=>Math.max(r,partCenter(p).applyQuaternion(v.q).add(v.pos).distanceTo(point)+Math.hypot(...PARTS[p.type].size)/2),0);
 }
 export class DockingAutopilot{
+ declare elapsed:any;declare state:any;declare held:any;declare message:any;declare ownParts:any;declare ownShape:any;declare owner:any;declare peak:any;declare ports:any;declare previous:any;declare stable:any;declare target:any;declare targetShape:any;
  constructor(){this.owner=null;this.state='idle';this.message='待機';}
  get active(){return !!this.owner;}
  start(f){

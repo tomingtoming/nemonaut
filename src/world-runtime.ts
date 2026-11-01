@@ -6,6 +6,7 @@ import {advanceWorldCoast} from './coast-flight.js';
 // Flight trees remain an adapter for staging/docking and existing saves. Only
 // this registry and clock are used to schedule live normal/coast simulation.
 export class WorldRuntime{
+ declare activeVesselId:any;declare universalTime:any;declare vessels:any;
  constructor(root){this.universalTime=root.universalTime;this.replace(root);}
  replace(root){
   const vessels=fleet(root),next=new Map();

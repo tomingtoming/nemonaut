@@ -17,6 +17,7 @@ export function physicalWarpStop(flight,input=false){
  return '';
 }
 export class PhysicsClock {
+ declare maxSteps:any;declare remainder:any;declare step:any;
  constructor({step=1/120,maxSteps=64}={}){
   if(!Number.isFinite(step)||step<=0||!Number.isInteger(maxSteps)||maxSteps<1)throw Error('Invalid physics clock limits');
   this.step=step;this.maxSteps=maxSteps;this.remainder=0;

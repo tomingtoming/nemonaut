@@ -4,7 +4,7 @@ import {PARTS} from './catalog.js';
 // Covers are derived from actual axial connections, never saved as extra parts.
 // Looking at both ends of an edge also supports a craft built from the bottom up.
 export function engineShrouds(parts){
- const byId=new Map(parts.map(p=>[p.id,p])),adjacent=new Map(parts.map(p=>[p.id,[]]));
+ const byId=new Map<any,any>(parts.map(p=>[p.id,p])),adjacent=new Map<any,any>(parts.map(p=>[p.id,[]]));
  for(const p of parts)if(byId.has(p.parent)){adjacent.get(p.id).push(byId.get(p.parent));adjacent.get(p.parent).push(p);}
  const result=[];
  for(const p of parts){
@@ -27,7 +27,7 @@ export function engineShrouds(parts){
 
 export function syncEngineShrouds(parts,objects,source){
  if(!source)return;
- const specs=new Map(engineShrouds(parts).map(s=>[s.engineId,s]));
+ const specs=new Map<any,any>(engineShrouds(parts).map(s=>[s.engineId,s]));
  for(const [id,object]of objects){
   const spec=specs.get(id);let cover=object.userData.engineShroud;
   if(spec&&!cover){
