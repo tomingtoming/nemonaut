@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {finiteReturnPlan} from './finite-return-plan.js';
 import * as T from 'three';
 import {finiteBurnPreview} from './finite-burn.js';

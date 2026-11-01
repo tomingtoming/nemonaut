@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {predictTrajectoryAsync,trajectoryAt} from './trajectory.js';
 import {PLANET,center} from './planet.js';
 import {MOON} from './celestial.js';

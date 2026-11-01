@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {installCargoParts} from './cargo-parts.js';
 import {installLargeParts} from './large-parts.js';
 export const PARTS = {

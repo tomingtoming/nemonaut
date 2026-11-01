@@ -14,13 +14,19 @@
     "build:maneuver": "node tools/build-maneuver.mjs",
     "check:maneuver": "node tools/build-maneuver.mjs --check",
     "build:orbital-ascent": "node tools/build-orbital-ascent.mjs",
-    "check:orbital-ascent": "node tools/build-orbital-ascent.mjs --check"
+    "check:orbital-ascent": "node tools/build-orbital-ascent.mjs --check",
+    "build:landing-worker": "node tools/build-landing-worker.mjs",
+    "check:landing-worker": "node tools/build-landing-worker.mjs --check",
+    "check:bundles": "npm run -s check:takeoff-worker && npm run -s check:takeoff-controller && npm run -s check:maneuver && npm run -s check:orbital-ascent && npm run -s check:landing-worker",
+    "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.21.0",
     "three": "0.180.0"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "@types/three": "0.180.0",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3"
   }
 }

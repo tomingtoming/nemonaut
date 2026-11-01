@@ -1,0 +1,17 @@
+{
+ // Type-checks the plain JS in dist with JSDoc and inference; nothing is emitted, delivery is unchanged.
+ // Files still carrying `// @ts-nocheck` are typing debt (BACKLOG 4a/4d): remove the line once the file passes.
+ // three.js and Rapier are typed through the .d.ts files next to the vendor copies.
+ "compilerOptions": {
+  "allowJs": true,
+  "checkJs": true,
+  "noEmit": true,
+  "target": "es2022",
+  "module": "esnext",
+  "moduleResolution": "bundler",
+  "lib": ["es2023", "dom", "dom.iterable"],
+  "types": [],
+  "skipLibCheck": true
+ },
+ "include": ["dist/*.js"]
+}

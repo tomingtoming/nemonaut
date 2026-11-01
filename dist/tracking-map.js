@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {PLANET,center} from './planet.js';
 import {MOON,bodyState} from './celestial.js';
 import {projectTrackingPoint} from './tracking-orbits.js';

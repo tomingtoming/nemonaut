@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {updateNavigationFrame} from './navigation-frame.js';
 import {observationDemand,advanceObservations} from './observation.js';
 import {frozenSurfaceState,surfaceRelativeVelocity,surfaceAngularVelocity,surfaceOrientation,surfaceVelocity} from './surface-frame.js';

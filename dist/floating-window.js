@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 let top=30;
 export function floatingWindow(host,{title,x,y,onClose}){
  const element=document.createElement('section');element.className='floatingWindow';element.setAttribute('role','dialog');element.setAttribute('aria-label',title);

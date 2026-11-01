@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {observationData} from './observation.js';
 import {DELIVERY_SITE,DELIVERY_SITES,SURVEY_TARGET_SECONDS} from './delivery-sites.js';
 import {deliveryStation} from './delivery-station.js';

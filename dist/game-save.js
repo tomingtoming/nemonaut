@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {saveKind,isSaveKind} from './app-id.js';
 import {validateCraft} from './core.js';
 import {validateWorkspace} from './workspace-save.js';

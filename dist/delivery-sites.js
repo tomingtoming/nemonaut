@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {storageKey} from './app-id.js';
 export const SURVEY_TARGET_SECONDS=9000;
 import * as T from 'three';

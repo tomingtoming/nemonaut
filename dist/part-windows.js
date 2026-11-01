@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {cargoReleaseAllowed} from './cargo-access.js';
 import {observationStatus,observationData,observationSite} from './observation.js';
 import {portWindowState,operatePort,guideFromPort,setPortTranslation} from './port-window.js';

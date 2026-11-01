@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {cargoCollisionBoxes} from './cargo-geometry.js';
 import * as T from 'three';
 import RAPIER from './vendor/rapier/rapier.mjs';

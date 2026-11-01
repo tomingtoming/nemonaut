@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import * as T from 'three';
 import {PARTS} from './catalog.js';
 import {partCenter,partMass,partRotation} from './aero.js';

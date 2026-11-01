@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {PARTS} from './catalog.js';
 import {floatingWindow} from './floating-window.js';
 import {descentTelemetry,descentGuidance} from './descent.js';

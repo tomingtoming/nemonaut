@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {lambertArc} from './lambert.js';
 import {keplerDrift} from './coast-orbit.js';
 import {bodyOrbitState,bodyState,MOON} from './celestial.js';

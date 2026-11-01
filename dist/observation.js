@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import * as T from 'three';
 import {DELIVERY_SITE,DELIVERY_SITES,deliveryDistance} from './delivery-sites.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';

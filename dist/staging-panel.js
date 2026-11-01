@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {renderStageStack} from './ksp-layout.js';
 import {PARTS} from './catalog.js';
 import {stagePlan} from './staging.js';

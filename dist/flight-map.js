@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {RendezvousPlanBinding} from './rendezvous-burn.js';
 import {centerOfVessel} from './relative-navigation.js';
 import {launchPlaneGuide} from './launch-plane.js';

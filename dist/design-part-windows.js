@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {PARTS} from './catalog.js';
 import {partSettings} from './part-settings.js';
 import {symmetryTargets} from './symmetry.js';

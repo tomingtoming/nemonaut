@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {saveKind,isSaveKind} from './app-id.js';
 import {validateFailureEvents} from './failure-events.js';
 import {orbitalAscentSettings} from './orbital-ascent-settings.js';

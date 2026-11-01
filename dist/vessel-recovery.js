@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {surfaceRelativeVelocity,surfaceAngularVelocity} from './surface-frame.js';
 import * as T from 'three';
 import {loadFlight,saveFlight} from './flight-save.js';

@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {mountManeuverStop} from './maneuver-stop.js';
 import {maneuverBurnAvailable,recoveryGuidance} from './maneuver-controls.js';
 import * as T from 'three';

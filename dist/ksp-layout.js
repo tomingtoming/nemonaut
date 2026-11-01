@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {stageFuelLevels} from './stage-fuel.js';
 import {stagePerformance} from './resources.js';
 import {stagePlan} from './staging.js';

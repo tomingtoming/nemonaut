@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {isParked} from './ground-rest.js';
 import {fractureVessel} from './fracture.js';
 import {recordFailure} from './failure-events.js';

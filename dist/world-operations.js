@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {appendHistory} from './world-history.js';
 import {validateWorld,worldFromFlight,flightFromWorld} from './world-save.js';
 import {launchIntoFleet} from './launch-fleet.js';

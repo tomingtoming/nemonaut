@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 // Local Y is the fuselage axis; local +Z is the cargo opening.
 export function cargoShellBoxes(d,open=false){
  const [w,l,h]=d.size,t=d.cargoBay.wall,r=w/2-t/2,N=24,boxes=[];

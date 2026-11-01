@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import * as T from 'three';
 import {terminalBurnThrottle} from './maneuver-thrust-profile.js';
 import {MOON,bodyState,bodyOrbitState,advanceCelestialOrbit} from './celestial.js';

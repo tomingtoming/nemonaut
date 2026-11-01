@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {flightChallengeTypes,validateFlightChallenge} from './flight-challenge-history.js';
 import {copyObservationQuality} from './observation-quality.js';
 import {deliverySite,SURVEY_TARGET_SECONDS} from './delivery-sites.js';

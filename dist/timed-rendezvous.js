@@ -1,3 +1,4 @@
+// @ts-nocheck: typing debt (BACKLOG 4d). Remove this line once tsc passes the file.
 import {rendezvousTransfer} from './rendezvous-transfer.js';
 import {captureBurnEstimate} from './lunar-capture.js';
 import {engineBurn} from './resources.js';
