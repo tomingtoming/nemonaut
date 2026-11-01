@@ -8,5 +8,5 @@ if [ -n "$(git status --porcelain -- dist wrangler.jsonc)" ]; then echo "commit 
 out=$(mktemp -d)
 trap 'rm -rf "$out"' EXIT
 git archive "$rev" dist wrangler.jsonc | tar -x -C "$out"
-(cd "$out" && npx -y wrangler@4.156.0 deploy --message "orbital-foundry $rev")
+(cd "$out" && npx -y wrangler@4.156.0 deploy --message "omnivehicle $rev")
 echo "deployed $rev"
