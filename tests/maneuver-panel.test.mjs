@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {preserveManualControlEdit} from '../dist/manual-control-edit.js';
+// A built module as a script: drop its imports and exports (dist is esbuild output from src/*.ts).
+const script=url=>readFileSync(url,'utf8').replace(/^import\b[\s\S]*?from\s*['"][^'"]*['"];?[ \t]*\r?\n/gm,'').replace(/^export\s*\{[\s\S]*?\};?\s*$/gm,'').replace(/^export (?=function|class|const|let|async)/gm,'');
 
 test('timed rendezvous precision remains fixed through the real stop panel',()=>{
  const elements=[];const document={createElement(tag){const e={tag,append(){},setAttribute(){}};elements.push(e);return e;},createTextNode:t=>t};
  const context=vm.createContext({document,canControl:()=>true});
- const source=readFileSync(new URL('../dist/maneuver-stop.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replaceAll('export function ','function ');
+ const source=script(new URL('../dist/maneuver-stop.js',import.meta.url));
  vm.runInContext(source,context);
  const f={maneuver:{rendezvous:{burnThrottle:.1},tolerance:.05,complete:false},throttle:0};
  const panel=context.mountManeuverStop({append(){}},()=>f);panel.update();const precision=elements.find(e=>e.tag==='select');
@@ -23,7 +25,7 @@ function harness(kind='maneuver'){
  const root={createElement:()=>({}),querySelector:()=>({append(){}}),addEventListener:(type,fn)=>listeners.set(type,fn)};
  const context=vm.createContext({ManeuverSession:Session,AscentSession:Session,preserveManualControlEdit,window:{addEventListener(){}},floatingWindow(){throw Error('unused');},acceptsFlightKey:()=>true});
  const name=kind==='maneuver'?'mountManeuverPanel':'mountOrbitalAscent';
- const source=readFileSync(new URL(kind==='maneuver'?'../dist/maneuver-panel.js':'../dist/orbital-ascent-panel.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace('export function '+name,'function '+name);
+ const source=script(new URL(kind==='maneuver'?'../dist/maneuver-panel.js':'../dist/orbital-ascent-panel.js',import.meta.url));
  vm.runInContext(source,context);
  context[name](root,()=>({}),{claim(){},sync(){control.value='0';control.checked=true;}});
  return {edit(id,value,checked){control={value,checked,closest:selectors=>selectors.split(',').includes('#'+id)};listeners.get('click')({target:control});return {control,session};}};
@@ -49,7 +51,7 @@ test('aircraft return release preserves the throttle edit through stop and updat
  class Returning{constructor(){returning=this;this.owner={};this.landing={pilot:null};}stop(){this.owner=null;}}
  const root={createElement:()=>({}),querySelector:()=>({append(){}}),addEventListener:(type,fn)=>listeners.set(type,fn)};
  const context=vm.createContext({preserveManualControlEdit,TakeoffSession:IdleSession,LandingSession:IdleSession,ReturnSession:Returning,TakeoffPreviewClient:class{},LandingPlanClient:class{},runwaySelection:{subscribe(){},bind(){}},window:{addEventListener(){}}});
- const source=readFileSync(new URL('../dist/cruise-panel.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replaceAll('import.meta.url',"'file:///unused/'").replace('export function mountCruisePanel','function mountCruisePanel');
+ const source=script(new URL('../dist/cruise-panel.js',import.meta.url)).replaceAll('import.meta.url',"'file:///unused/'");
  vm.runInContext(source,context);
  context.mountCruisePanel(root,()=>({flight:null}),{claim(){},sync(){syncs++;control.value='0';}});
  listeners.get('input')({target:control});

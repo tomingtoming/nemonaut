@@ -29,3 +29,13 @@ test('the English dictionary has no Japanese in values and no keys missing from 
  assert.deepEqual(Object.entries(en).filter(([,v])=>JA.test(v)).map(([k])=>k),[],'Japanese left in values');
  assert.deepEqual(Object.keys(en).filter(k=>!found.has(k)),[],'stale keys: the source text changed');
 });
+test('extraction reads nested template pieces and open tags, and skips comments',async()=>{
+ const {mkdtempSync,writeFileSync,rmSync}=await import('node:fs'),{tmpdir}=await import('node:os'),path=await import('node:path'),{pathToFileURL}=await import('node:url');
+ const dir=mkdtempSync(path.join(tmpdir(),'i18n-'));
+ try{
+  writeFileSync(path.join(dir,'a.js'),"// \"コメント\"\nconst x=`外 ${ok?`内側 ${n}`:''} 後<input aria-label=\"位置 ${i}\">`;");
+  writeFileSync(path.join(dir,'index.html'),'<p>本文</p>');
+  const found=await extract(pathToFileURL(dir+path.sep));
+  assert.deepEqual([...found.keys()].sort(),['位置 ','内側 ','外 ',' 後','本文'].sort());
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});

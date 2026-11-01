@@ -1,10 +1,7 @@
 {
- // Type-checks the plain JS (and .ts) in src with JSDoc and inference; nothing is emitted, delivery is unchanged.
- // Files still carrying `// @ts-nocheck` are typing debt (BACKLOG 4a/4d): remove the line once the file passes.
- // three.js is typed through the .d.ts next to its vendor copy; physics.ts types the Rust engine facade.
+ // Type-checks the TypeScript in src (types are stripped by tools/build.mjs); nothing is emitted, delivery is unchanged.
+  // three.js is typed through the .d.ts next to its vendor copy; physics.ts types the Rust engine facade.
  "compilerOptions": {
-  "allowJs": true,
-  "checkJs": true,
   "noEmit": true,
   "target": "es2022",
   "module": "esnext",
@@ -14,5 +11,5 @@
   "skipLibCheck": true,
   "verbatimModuleSyntax": true
  },
- "include": ["src/*.js", "src/*.ts"]
+ "include": ["src/*.ts"]
 }
