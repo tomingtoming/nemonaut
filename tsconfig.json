@@ -11,7 +11,8 @@
   "moduleResolution": "bundler",
   "lib": ["es2023", "dom", "dom.iterable"],
   "types": [],
-  "skipLibCheck": true
+  "skipLibCheck": true,
+  "verbatimModuleSyntax": true
  },
  "include": ["src/*.js", "src/*.ts"]
 }

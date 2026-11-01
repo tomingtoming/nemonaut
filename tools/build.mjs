@@ -1,6 +1,7 @@
 // Builds the delivered site: src/ → dist/ (dist is output only, never edited or committed).
 // JS and static files are copied byte for byte; .ts files are transformed one by one (no bundling,
-// import paths stay as written, e.g. './celestial.js'). Then the five bundles are generated.
+// import paths stay as written, e.g. './celestial.js'; every import is kept, as
+// verbatimModuleSyntax asks, so an import kept only for its side effects still runs). Then the five bundles are generated.
 // Usage: node tools/build.mjs [--quiet]
 import {transform} from 'esbuild';
 import {readdir,readFile,writeFile,mkdir,rm,copyFile} from 'node:fs/promises';
@@ -22,7 +23,7 @@ export async function buildSite({quiet=false}={}){
   const rel=path.relative(SRC,file);if(isDeclaration(rel))continue;
   if(rel.endsWith('.ts')){
    const target=path.join(OUT,rel.slice(0,-3)+'.js');await mkdir(path.dirname(target),{recursive:true});
-   const {code}=await transform(await readFile(file,'utf8'),{loader:'ts',format:'esm',target:'es2022',charset:'utf8',sourcefile:rel});
+   const {code}=await transform(await readFile(file,'utf8'),{loader:'ts',format:'esm',target:'es2022',charset:'utf8',sourcefile:rel,tsconfigRaw:{compilerOptions:{verbatimModuleSyntax:true}}});
    await writeFile(target,code);transformed++;
   }else{const target=path.join(OUT,rel);await mkdir(path.dirname(target),{recursive:true});await copyFile(file,target);copied++;}
  }

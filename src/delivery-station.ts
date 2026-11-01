@@ -9,6 +9,6 @@ export function deliveryStation(history,vessels,site=DELIVERY_SITE){
  const vessel=vessels.find(v=>v.parts.some(p=>p.id===record.probePartId&&p.type==='probe'));
  if(!vessel)return {record,vessel:null};
  const probe=vessel.parts.find(p=>p.id===record.probePartId),pos=Array.isArray(vessel.pos)?new T.Vector3(...vessel.pos):vessel.pos,q=Array.isArray(vessel.q)?new T.Quaternion(...vessel.q):vessel.q;
- const point=new T.Vector3(...probe.p).applyQuaternion(q).add(pos),state=vessel.state??vessel,charge=new Map(vessel.charge),thermal=new Map(vessel.thermal);
+ const point=new T.Vector3(...probe.p).applyQuaternion(q).add(pos),state=vessel.state??vessel,charge=new Map(vessel.charge),thermal=new Map<string,{failed?:boolean}>(vessel.thermal);
  return {record,vessel,power:powerTotals(vessel.parts,charge),distance:deliveryDistance(point,vessel.universalTime,site),charge:charge.get(probe.id)??0,damaged:state.crashed||[...thermal.values()].some(s=>s.failed),landed:state.landed};
 }

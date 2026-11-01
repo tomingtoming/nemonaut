@@ -4,7 +4,7 @@ export function runwayEnd(value='09'){
  return value;
 }
 export function createRunwaySelection(){
- let end='09',flight=null;const listeners=new Set();
+ let end='09',flight=null;const listeners=new Set<(end:string)=>void>();
  const publish=value=>{if(value===end)return;end=value;for(const listener of listeners)listener(end);};
  return {get end(){return end;},bind(next){
   if(next===flight)return;
