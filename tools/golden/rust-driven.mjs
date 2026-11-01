@@ -13,7 +13,7 @@ const baselines=[await load(1),await load(2)];
 let zero=false;const jsStep=R.World.prototype.step;
 R.World.prototype.step=()=>{throw Error('JS solver must not run');};// proves delegation replaces every step
 const engine=installRustEngine(R,module,{zeroImpulses:()=>zero});
-const reset=()=>Object.assign(engine.stats,{worlds:0,frames:0,rebuilds:0,contactFrames:0,contactQueries:0,contactPoints:0});
+const reset=()=>Object.assign(engine.stats,{worlds:0,frames:0,rebuilds:0,contactQueries:0,contactPoints:0});
 const results=[];
 try{
  for(const baseline of baselines)for(const {definition:d,expected} of baseline.cases){

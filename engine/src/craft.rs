@@ -7,6 +7,20 @@ struct Craft {
     shapes: Vec<ColliderHandle>,
     ground: Option<ColliderHandle>,
     ticks: u32,
+    /// Collider masses or shapes changed since the body's mass properties were last computed.
+    dirty: bool,
+}
+impl Craft {
+    /// Recompute the body's mass properties only when colliders changed. The result depends only
+    /// on the colliders, so skipping an unchanged recompute is exact; doing it on every call
+    /// dominated the step time (several symmetric eigen decompositions per tick).
+    fn refresh_mass(&mut self) {
+        if self.dirty {
+            self.world.bodies[self.body]
+                .recompute_mass_properties_from_colliders(&self.world.colliders);
+            self.dirty = false;
+        }
+    }
 }
 
 /// Shadow replay only: import the exact solver pre-state owned by the JS game.
@@ -38,8 +52,8 @@ pub extern "C" fn craft_state(
         let Some(c) = state.as_mut() else {
             return 0;
         };
+        c.refresh_mass();
         let b = &mut c.world.bodies[c.body];
-        b.recompute_mass_properties_from_colliders(&c.world.colliders);
         b.set_translation(Vector::new(px as f32, py as f32, pz as f32), true);
         b.set_rotation(
             Rotation::from_xyzw(qx as f32, qy as f32, qz as f32, qw as f32),
@@ -89,8 +103,8 @@ pub extern "C" fn craft_solver_step(
         if c.shapes.is_empty() {
             return 0;
         }
+        c.refresh_mass();
         let b = &mut c.world.bodies[c.body];
-        b.recompute_mass_properties_from_colliders(&c.world.colliders);
         if b.mass() <= 0.0 {
             return 0;
         }
@@ -132,6 +146,7 @@ pub extern "C" fn craft_reset() {
             shapes: Vec::new(),
             ground: None,
             ticks: 0,
+            dirty: true,
         })
     });
 }
@@ -247,6 +262,7 @@ pub extern "C" fn craft_shape(
             .colliders
             .insert_with_parent(col, c.body, &mut c.world.bodies);
         c.shapes.push(handle);
+        c.dirty = true;
         1
     })
 }
@@ -285,6 +301,7 @@ pub extern "C" fn craft_mass(index: u32, mass: f64) -> u32 {
             return 0;
         };
         c.world.colliders[*h].set_mass(mass as f32);
+        c.dirty = true;
         1
     })
 }
@@ -304,8 +321,8 @@ pub extern "C" fn craft_step(fx: f64, fy: f64, fz: f64, px: f64, py: f64, pz: f6
         if c.shapes.is_empty() || c.ticks >= 7200 {
             return 0;
         }
+        c.refresh_mass();
         let b = &mut c.world.bodies[c.body];
-        b.recompute_mass_properties_from_colliders(&c.world.colliders);
         if b.mass() <= 0.0 {
             return 0;
         }
@@ -329,8 +346,8 @@ pub extern "C" fn craft_read(index: u32) -> f64 {
         let Some(c) = state.as_mut() else {
             return f64::NAN;
         };
+        c.refresh_mass();
         let b = &mut c.world.bodies[c.body];
-        b.recompute_mass_properties_from_colliders(&c.world.colliders);
         let p = b.translation();
         let v = b.linvel();
         let q = b.rotation();
