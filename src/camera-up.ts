@@ -1,22 +1,25 @@
 import {Vector3,Quaternion} from 'three';
 const worldUp=new Vector3(0,1,0);
+type OrbitControls=import('three/addons/controls/OrbitControls.js').OrbitControls;
+// three r180 OrbitControls keeps these private frame caches; @types/three does not declare them.
+export type OrbitControlsFrame=OrbitControls&{_quat:Quaternion;_quatInverse:Quaternion};
 
 // A low marine view follows shallow dives below the opaque sea surface.
 // This only chooses the initial/F-key offset; orbit input remains unrestricted.
-export function flightFrameOffset(distance,up,water=false){
+export function flightFrameOffset(distance:number,up:Vector3,water=false):Vector3{
  return new Vector3(1,water?.06:.65,1.3).normalize().multiplyScalar(distance)
   .applyQuaternion(new Quaternion().setFromUnitVectors(worldUp,up));
 }
 
 // Three r180 caches this frame at construction. Keep it synchronized with the
 // local vertical so orbit/pan input and camera.lookAt use the same up direction.
-export function setOrbitUp(controls,up){
+export function setOrbitUp(controls:OrbitControls,up:Vector3):void{
  controls.object.up.copy(up);
- controls._quat.setFromUnitVectors(controls.object.up,worldUp);
- controls._quatInverse.copy(controls._quat).invert();
+ (controls as OrbitControlsFrame)._quat.setFromUnitVectors(controls.object.up,worldUp);
+ (controls as OrbitControlsFrame)._quatInverse.copy((controls as OrbitControlsFrame)._quat).invert();
 }
 
-export function frameTrackedVessel(controls,focus,up){
+export function frameTrackedVessel(controls:OrbitControls,focus:Vector3,up:Vector3):void{
  setOrbitUp(controls,up);
  controls.target.copy(focus);
  const offset=new Vector3(14,10,18).applyQuaternion(new Quaternion().setFromUnitVectors(worldUp,up));
@@ -26,8 +29,8 @@ export function frameTrackedVessel(controls,focus,up){
 
 // Apply after OrbitControls, including its damping. Do not move the focus or
 // the vessel. Water mode deliberately permits the camera below sea level.
-export function constrainSurfaceCamera(controls,center,radius){
- const camera=controls.object,radial=camera.position.clone().sub(center);
+export function constrainSurfaceCamera(controls:OrbitControls,center:Vector3,radius:number):boolean{
+ const camera=controls.object as import('three').PerspectiveCamera,radial=camera.position.clone().sub(center);
  const minimum=radius+Math.max(.5,camera.near*2);
  if(radial.lengthSq()>=minimum*minimum)return false;
  if(radial.lengthSq()<1e-12)radial.copy(camera.up);
@@ -40,7 +43,7 @@ export function constrainSurfaceCamera(controls,center,radius){
 // to look down more, Down lowers it.
 // Keeps the distance and stays inside the controls' polar range, short of the poles.
 export const ARROW_ORBIT={azimuthRate:Math.PI/2,polarRate:Math.PI/3};
-export function orbitByArrows(controls,held,dt){
+export function orbitByArrows(controls:OrbitControls,held:{has(code:string):boolean},dt:number):boolean{
  const turn=(held.has('ArrowLeft')?1:0)-(held.has('ArrowRight')?1:0),tilt=(held.has('ArrowUp')?1:0)-(held.has('ArrowDown')?1:0);
  if((!turn&&!tilt)||!(dt>0))return false;
  const up=controls.object.up.clone().normalize(),offset=controls.object.position.clone().sub(controls.target),distance=offset.length();

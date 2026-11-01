@@ -25,19 +25,20 @@ export const LARGE_VARIANTS={
  ballastLarge:{base:'ballast',scale:4,factor:64,name:'大型バラスト区画',code:'BT-67'},
  propellerLarge:{base:'propeller',scale:4,factor:64,name:'大型可動スクリュー',code:'MP-384'}
 };
-export function installLargeParts(parts){
+export interface ScalablePart{name:string;code:string;size:number[];desc?:string;model?:string;mass?:number;fuel?:number;thrust?:number;battery?:number;volume?:number;ballast?:number;ac?:number[];massCenter?:number[];chord?:number;hingeY?:number;wing?:number;water?:boolean;wheel?:boolean;gimbal?:number;gimbalPivot?:number[]}
+export function installLargeParts(parts:Record<string,ScalablePart>):void{
  for(const [id,spec]of Object.entries(LARGE_VARIANTS)){
   const {base,scale:s,factor:k,name,code}=spec,d=structuredClone(parts[base]);
   delete d.model;d.name=name;d.code=code;d.size=d.size.map(v=>v*s);
-  for(const key of ['mass','fuel','thrust','battery'])if(d[key])d[key]*=k;
-  for(const key of ['volume','ballast'])if(d[key])d[key]*=s**3;
-  for(const key of ['ac','massCenter'])if(d[key])d[key]=d[key].map(v=>v*s);
-  for(const key of ['chord','hingeY'])if(d[key])d[key]*=s;
+  for(const key of ['mass','fuel','thrust','battery'] as const)if(d[key])d[key]*=k;
+  for(const key of ['volume','ballast'] as const)if(d[key])d[key]*=s**3;
+  for(const key of ['ac','massCenter'] as const)if(d[key])d[key]=d[key].map(v=>v*s);
+  for(const key of ['chord','hingeY'] as const)if(d[key])d[key]*=s;
   if(d.wing)d.wing*=s*s;
   if(id==='transportWingRoot'){d.wing=156.8;d.chord=11.2;d.ac=[7,0,0];d.massCenter=[7,0,0];}
   d.desc=d.wing?`面積 ${d.wing.toFixed(2)} m²。大型胴体用。重心からの配置と気流で効きが変わります。`:
    d.fuel?`直径 ${d.size[0]} m・燃料 ${d.fuel} kg。複数基の航空エンジンへ供給。`:
-   d.ballast?`排水容積 ${d.volume.toFixed(1)} m³。注排水 ${d.ballast} kgで浮沈を調整。`:
+   d.ballast?`排水容積 ${d.volume!.toFixed(1)} m³。注排水 ${d.ballast} kgで浮沈を調整。`:
    d.volume?`長さ ${d.size[1]} m・排水容積 ${d.volume.toFixed(1)} m³。組み合わせて船体を構成。`:
    d.thrust?`推力 ${(d.thrust/1000).toFixed(0)} kN。${d.water?'水中専用・可動推進器で操向。':'大気中専用。接続した燃料胴体から供給。'}`:
    d.wheel?'大型航空機用。接地・自由転動・制動。前脚のみA/D操向。':'大型機の独立した組立部品。接続・保存・質量計算に対応。';

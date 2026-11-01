@@ -7,8 +7,8 @@ export const FIRST_STEPS=[
 ];
 export function isFirstVisit({historyCount=0,vesselCount=0,designCount=0}={}){return !historyCount&&!vesselCount&&!designCount;}
 // The first ignition with the throttle at 0 lights the engines without thrust, so nothing seems to happen.
-export function ignitionHint({firstStage,throttle}){return firstStage&&throttle===0?'スロットル0%です。Zで全開、Xで停止':'';}
-export function renderFirstSteps(host,{visible,onStart}){
+export function ignitionHint({firstStage,throttle}:{firstStage:boolean;throttle:number}):string{return firstStage&&throttle===0?'スロットル0%です。Zで全開、Xで停止':'';}
+export function renderFirstSteps(host:HTMLElement,{visible,onStart}:{visible:boolean;onStart:()=>void}):void{
  host.hidden=!visible;if(!visible)return;
  const title=document.createElement('h2'),list=document.createElement('ol'),start=document.createElement('button');
  title.textContent='はじめての方へ';list.className='centerGuide';

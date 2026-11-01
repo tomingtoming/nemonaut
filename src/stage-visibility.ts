@@ -1,14 +1,19 @@
 // Own only temporary material clones. Blender assets can share their source
 // materials across many parts and across workshop/flight scenes.
-export function mountStageVisibility(getObjects){
- let entries=[],signature=null,previousObjects=[];
+export interface StageMaterial{clone():StageMaterial;dispose():void;color?:{lerp(color:{r:number;g:number;b:number},alpha:number):unknown};emissive?:{setRGB(r:number,g:number,b:number):unknown};emissiveIntensity?:number;transparent:boolean;opacity:number;depthWrite:boolean}
+export interface StageMesh{isMesh?:boolean;material?:StageMaterial|StageMaterial[];castShadow:boolean;userData:{stageDiagnosticIgnore?:unknown}}
+interface StageEntry{mesh:StageMesh;original:StageMaterial|StageMaterial[];temporary:StageMaterial[];shadow:boolean}
+type StageObject=import('three').Object3D;
+export interface StageVisibility{update(ids:Iterable<string>|null|undefined):void;dispose():void}
+export function mountStageVisibility(getObjects:()=>ReadonlyMap<string,StageObject>):StageVisibility{
+ let entries:StageEntry[]=[],signature:string|null=null,previousObjects:[string,StageObject][]=[];
  function restore(){for(const {mesh,original,temporary,shadow} of entries){mesh.material=original;mesh.castShadow=shadow;for(const m of temporary)m.dispose();}entries=[];}
- function update(ids){
+ function update(ids:Iterable<string>|null|undefined){
   const objects=[...getObjects().entries()],next=ids?JSON.stringify([...ids].sort()):null;
   if(next===signature&&objects.length===previousObjects.length&&objects.every(([id,o],i)=>id===previousObjects[i][0]&&o===previousObjects[i][1]))return;
   restore();signature=next;previousObjects=objects;if(!ids)return;
   const retained=new Set(ids);
-  for(const [id,object]of objects)object.traverse(mesh=>{
+  for(const [id,object]of objects)object.traverse((mesh:StageMesh)=>{
    if(!mesh.isMesh||!mesh.material||mesh.userData.stageDiagnosticIgnore)return;
    const original=mesh.material,shadow=mesh.castShadow,temporary=[original].flat().map(source=>{
     const m=source.clone();

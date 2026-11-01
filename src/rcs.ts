@@ -1,12 +1,16 @@
 import * as T from 'three';
 // Each nozzle's exhaust points opposite its force. Positions are in part-local meters.
-export const RCS_NOZZLES=[...Array(3)].flatMap((_,axis)=>[-1,1].map(sign=>{const direction=[0,0,0];direction[axis]=sign;return {direction,position:direction.map(v=>-.24*v)};}));
+export const RCS_NOZZLES=[...Array(3)].flatMap((_,axis)=>[-1,1].map(sign=>{const direction:T.Vector3Tuple=[0,0,0];direction[axis]=sign;return {direction,position:direction.map(v=>-.24*v) as T.Vector3Tuple};}));
+export interface RcsThruster{id:string;index:number;position:T.Vector3;direction:T.Vector3;thrust:number;isp:number}
+export interface RcsJet extends RcsThruster{level:number;force:T.Vector3}
+export interface RcsPart{id:string;type:string;p:T.Vector3Tuple;r:T.Vector3Tuple;fuelEnabled?:boolean}
+export interface RcsDefinition{rcsThrust?:number;rcsIsp?:number;readonly [key:string]:unknown}
 
 // Bounded least-squares mixer. Unachievable commands remain unachievable: the
 // returned forces always act at the actual nozzle positions, never as free torque.
-export function mixRCS(thrusters,com,rotation,translation){
+export function mixRCS(thrusters:readonly RcsThruster[],com:T.Vector3,rotation:T.Vector3,translation:T.Vector3):number[]{
  const columns=thrusters.map(t=>{const f=t.direction.clone().multiplyScalar(t.thrust),torque=t.position.clone().sub(com).cross(f);return [...f.toArray(),...torque.toArray()];});
- const positive=Array(6).fill(0),negative=Array(6).fill(0);
+ const positive=Array<number>(6).fill(0),negative=Array<number>(6).fill(0);
  for(const col of columns)col.forEach((v,i)=>{positive[i]+=Math.max(0,v);negative[i]+=Math.max(0,-v);});
  const command=[...translation.toArray(),...rotation.toArray()].map(v=>T.MathUtils.clamp(v,-1,1));
  const scale=positive.map((v,i)=>Math.max(v,negative[i],1));
@@ -27,12 +31,12 @@ export function mixRCS(thrusters,com,rotation,translation){
  return levels;
 }
 
-export function rcsThrusters(parts,definitions){return parts.flatMap(p=>{const d=definitions[p.type];if(!d.rcsThrust||p.fuelEnabled===false)return [];const q=new T.Quaternion().setFromEuler(new T.Euler(...p.r));return RCS_NOZZLES.map((n,index)=>({id:p.id,index,position:new T.Vector3(...n.position).applyQuaternion(q).add(new T.Vector3(...p.p)),direction:new T.Vector3(...n.direction).applyQuaternion(q),thrust:d.rcsThrust,isp:d.rcsIsp}));});}
+export function rcsThrusters(parts:readonly RcsPart[],definitions:Readonly<Record<string,RcsDefinition>>):RcsThruster[]{return parts.flatMap(p=>{const d=definitions[p.type];if(!d.rcsThrust||p.fuelEnabled===false)return [];const q=new T.Quaternion().setFromEuler(new T.Euler(...p.r));return RCS_NOZZLES.map((n,index)=>({id:p.id,index,position:new T.Vector3(...n.position).applyQuaternion(q).add(new T.Vector3(...p.p)),direction:new T.Vector3(...n.direction).applyQuaternion(q),thrust:d.rcsThrust as number,isp:d.rcsIsp as number}));});}
 
 // Internal monopropellant reservoirs supply only their own block. No main-fuel
 // crossfeed, and no resource transfer across separated craft.
-export function burnRCS(thrusters,levels,propellant,dt){
- const needs=new Map();thrusters.forEach((t,i)=>needs.set(t.id,(needs.get(t.id)||0)+t.thrust*levels[i]*dt/(t.isp*9.81)));
- const fractions=new Map();for(const [id,need]of needs){const available=propellant.get(id)||0;fractions.set(id,need>0?Math.min(1,available/need):0);propellant.set(id,Math.max(0,available-need));}
- return thrusters.map((t,i)=>({...t,level:levels[i]*fractions.get(t.id),force:t.direction.clone().multiplyScalar(t.thrust*levels[i]*fractions.get(t.id))}));
+export function burnRCS(thrusters:readonly RcsThruster[],levels:readonly number[],propellant:Map<string,number>,dt:number):RcsJet[]{
+ const needs=new Map<string,number>();thrusters.forEach((t,i)=>needs.set(t.id,(needs.get(t.id)||0)+t.thrust*levels[i]*dt/(t.isp*9.81)));
+ const fractions=new Map<string,number>();for(const [id,need]of needs){const available=propellant.get(id)||0;fractions.set(id,need>0?Math.min(1,available/need):0);propellant.set(id,Math.max(0,available-need));}
+ return thrusters.map((t,i)=>({...t,level:levels[i]*fractions.get(t.id)!,force:t.direction.clone().multiplyScalar(t.thrust*levels[i]*fractions.get(t.id)!)}));
 }

@@ -1,9 +1,11 @@
 let top=30;
-export function floatingWindow(host,{title,x,y,onClose}){
+export interface FloatingWindowOptions{title:string;x:number;y:number;onClose:()=>void}
+export interface FloatingWindow{readonly element:HTMLElement;readonly content:HTMLDivElement;readonly pinned:boolean;front():number;clamp():void;remove():void}
+export function floatingWindow(host:ParentNode,{title,x,y,onClose}:FloatingWindowOptions):FloatingWindow{
  const element=document.createElement('section');element.className='floatingWindow';element.setAttribute('role','dialog');element.setAttribute('aria-label',title);
  const header=document.createElement('header'),name=document.createElement('b'),pin=document.createElement('button'),close=document.createElement('button'),content=document.createElement('div');name.textContent=title;content.className='floatingContent';pin.textContent='⌖';pin.setAttribute('aria-label','窓を固定');pin.setAttribute('aria-pressed','false');close.textContent='×';close.setAttribute('aria-label','閉じる');header.append(name,pin,close);element.append(header,content);host.append(element);
- let pinned=false,drag=null;const front=()=>element.style.zIndex=++top as any;
- const position=(left,up)=>{element.style.left=Math.max(4,Math.min(left,innerWidth-element.offsetWidth-4))+'px';element.style.top=Math.max(4,Math.min(up,innerHeight-element.offsetHeight-4))+'px';};
+ let pinned=false,drag:{x:number;y:number;left:number;top:number}|null=null;const front=()=>(element.style as {zIndex:string|number}).zIndex=++top;
+ const position=(left:number,up:number)=>{element.style.left=Math.max(4,Math.min(left,innerWidth-element.offsetWidth-4))+'px';element.style.top=Math.max(4,Math.min(up,innerHeight-element.offsetHeight-4))+'px';};
  position(x,y);front();element.addEventListener('pointerdown',front);
  pin.onclick=()=>{pinned=!pinned;pin.setAttribute('aria-pressed',String(pinned));};close.onclick=onClose;
  header.addEventListener('pointerdown',e=>{if(e.button!==0||(e.target as Element).closest('button'))return;drag={x:e.clientX,y:e.clientY,left:element.offsetLeft,top:element.offsetTop};header.setPointerCapture(e.pointerId);e.preventDefault();});
