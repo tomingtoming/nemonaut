@@ -415,3 +415,272 @@ fn with_ground_contact(index: u32, f: impl FnOnce(&[f32]) -> f64) -> f64 {
 pub extern "C" fn craft_dispose() {
     CRAFT.with(|s| *s.borrow_mut() = None);
 }
+
+// Body and collider access for the game's physics facade (src/physics.ts). Each call is the same
+// Rapier method that the rapier.js 0.21 binding calls for the JS method of the same name, so the
+// facade reproduces JS Rapier's f32 storage, normalization and mass properties exactly.
+fn with_body(f: impl FnOnce(&mut Craft) -> u32) -> u32 {
+    CRAFT.with(|s| s.borrow_mut().as_mut().map_or(0, f))
+}
+fn finite(values: &[f64]) -> bool {
+    values.iter().all(|v| v.is_finite() && v.abs() <= 1e9)
+}
+/// rbSetTranslation.
+#[unsafe(no_mangle)]
+pub extern "C" fn body_set_translation(x: f64, y: f64, z: f64) -> u32 {
+    if !finite(&[x, y, z]) {
+        return 0;
+    }
+    with_body(|c| {
+        c.world.bodies[c.body].set_translation(Vector::new(x as f32, y as f32, z as f32), true);
+        1
+    })
+}
+/// rbSetRotation: ignored for a zero quaternion, otherwise normalized in f32.
+#[unsafe(no_mangle)]
+pub extern "C" fn body_set_rotation(x: f64, y: f64, z: f64, w: f64) -> u32 {
+    if !finite(&[x, y, z, w]) {
+        return 0;
+    }
+    with_body(|c| {
+        let q = Rotation::from_xyzw(x as f32, y as f32, z as f32, w as f32);
+        if q.length_squared() > 0.0 {
+            c.world.bodies[c.body].set_rotation(q.normalize(), true);
+        }
+        1
+    })
+}
+/// rbSetLinvel (kind 0) / rbSetAngvel (kind 1).
+#[unsafe(no_mangle)]
+pub extern "C" fn body_set_velocity(kind: u32, x: f64, y: f64, z: f64) -> u32 {
+    if !finite(&[x, y, z]) || kind > 1 {
+        return 0;
+    }
+    with_body(|c| {
+        let v = Vector::new(x as f32, y as f32, z as f32);
+        let b = &mut c.world.bodies[c.body];
+        if kind == 0 {
+            b.set_linvel(v, true);
+        } else {
+            b.set_angvel(v, true);
+        }
+        1
+    })
+}
+/// rbResetForces + rbResetTorques.
+#[unsafe(no_mangle)]
+pub extern "C" fn body_reset_forces() -> u32 {
+    with_body(|c| {
+        let b = &mut c.world.bodies[c.body];
+        b.reset_forces(true);
+        b.reset_torques(true);
+        1
+    })
+}
+/// rbAddForceAtPoint (world-space force and point).
+#[unsafe(no_mangle)]
+pub extern "C" fn body_add_force_at_point(
+    fx: f64,
+    fy: f64,
+    fz: f64,
+    px: f64,
+    py: f64,
+    pz: f64,
+) -> u32 {
+    if !finite(&[fx, fy, fz, px, py, pz]) {
+        return 0;
+    }
+    with_body(|c| {
+        c.world.bodies[c.body].add_force_at_point(
+            Vector::new(fx as f32, fy as f32, fz as f32),
+            Vector::new(px as f32, py as f32, pz as f32),
+            true,
+        );
+        1
+    })
+}
+/// rbAddTorque.
+#[unsafe(no_mangle)]
+pub extern "C" fn body_add_torque(x: f64, y: f64, z: f64) -> u32 {
+    if !finite(&[x, y, z]) {
+        return 0;
+    }
+    with_body(|c| {
+        c.world.bodies[c.body].add_torque(Vector::new(x as f32, y as f32, z as f32), true);
+        1
+    })
+}
+/// rbRecomputeMassPropertiesFromColliders. Skipping when no collider changed is exact: the local
+/// properties depend only on the colliders, and the pose setters already update the world ones.
+#[unsafe(no_mangle)]
+pub extern "C" fn body_recompute_mass() -> u32 {
+    with_body(|c| {
+        c.refresh_mass();
+        1
+    })
+}
+/// Reads without side effects: translation xyz 0-2, linvel 3-5, rotation xyzw 6-9, angvel 10-12,
+/// mass 13, local COM 14-16, world COM 17-19, principal inertia 20-22, principal inertia local
+/// frame xyzw 23-26, user force 27-29, user torque 30-32.
+#[unsafe(no_mangle)]
+pub extern "C" fn body_get(field: u32) -> f64 {
+    CRAFT.with(|s| {
+        let state = s.borrow();
+        let Some(c) = state.as_ref() else {
+            return f64::NAN;
+        };
+        let b = &c.world.bodies[c.body];
+        let m = &b.mass_properties().local_mprops;
+        let (p, v, q, w) = (b.translation(), b.linvel(), b.rotation(), b.angvel());
+        let (lc, wc, pi, pf) = (
+            m.local_com,
+            b.center_of_mass(),
+            m.principal_inertia(),
+            m.principal_inertia_local_frame,
+        );
+        let (f, t) = (b.user_force(), b.user_torque());
+        let values = [
+            p.x,
+            p.y,
+            p.z,
+            v.x,
+            v.y,
+            v.z,
+            q.x,
+            q.y,
+            q.z,
+            q.w,
+            w.x,
+            w.y,
+            w.z,
+            b.mass(),
+            lc.x,
+            lc.y,
+            lc.z,
+            wc.x,
+            wc.y,
+            wc.z,
+            pi.x,
+            pi.y,
+            pi.z,
+            pf.x,
+            pf.y,
+            pf.z,
+            pf.w,
+            f.x,
+            f.y,
+            f.z,
+            t.x,
+            t.y,
+            t.z,
+        ];
+        values.get(field as usize).map_or(f64::NAN, |v| *v as f64)
+    })
+}
+/// Pose of the static ground (coSetEnabled, coSetTranslation, coSetRotation normalized like the
+/// binding, coSetFriction). Created on first use, before any craft shape.
+#[unsafe(no_mangle)]
+pub extern "C" fn ground_set(
+    enabled: f64,
+    px: f64,
+    py: f64,
+    pz: f64,
+    qx: f64,
+    qy: f64,
+    qz: f64,
+    qw: f64,
+    friction: f64,
+) -> u32 {
+    let q = Rotation::from_xyzw(qx as f32, qy as f32, qz as f32, qw as f32);
+    if !finite(&[qx, qy, qz, qw]) || q.length_squared() == 0.0 {
+        return 0;
+    }
+    let q = q.normalize();
+    craft_ground(
+        enabled, px, py, pz, q.x as f64, q.y as f64, q.z as f64, q.w as f64, friction,
+    )
+}
+/// Stored collider values: kind 0 cuboid / 1 ball 0, half extents (or radius) 1-3, translation
+/// wrt parent 4-6, rotation wrt parent xyzw 7-10, mass 11, friction 12. Index -1 is the ground.
+#[unsafe(no_mangle)]
+pub extern "C" fn shape_get(index: i32, field: u32) -> f64 {
+    CRAFT.with(|s| {
+        let state = s.borrow();
+        let Some(c) = state.as_ref() else {
+            return f64::NAN;
+        };
+        let handle = if index < 0 {
+            c.ground
+        } else {
+            c.shapes.get(index as usize).copied()
+        };
+        let Some(h) = handle else {
+            return f64::NAN;
+        };
+        let co = &c.world.colliders[h];
+        let (kind, e) = if let Some(b) = co.shape().as_ball() {
+            (1.0, Vector::new(b.radius, b.radius, b.radius))
+        } else if let Some(b) = co.shape().as_cuboid() {
+            (0.0, b.half_extents)
+        } else {
+            return f64::NAN;
+        };
+        let pose = co.position_wrt_parent().copied().unwrap_or(*co.position());
+        let (t, q) = (pose.translation, pose.rotation);
+        let values = [
+            kind,
+            e.x,
+            e.y,
+            e.z,
+            t.x,
+            t.y,
+            t.z,
+            q.x,
+            q.y,
+            q.z,
+            q.w,
+            co.mass(),
+            co.friction(),
+        ];
+        values.get(field as usize).map_or(f64::NAN, |v| *v as f64)
+    })
+}
+/// Steps with the forces already accumulated on the body (no reset, unlike craft_solver_step).
+#[unsafe(no_mangle)]
+pub extern "C" fn world_step(
+    gx: f64,
+    gy: f64,
+    gz: f64,
+    dt: f64,
+    scale: f64,
+    error: f64,
+    prediction: f64,
+) -> u32 {
+    if !finite(&[gx, gy, gz, dt, scale, error, prediction])
+        || dt <= 0.0
+        || dt > 10000.0
+        || !(1.0..=100.0).contains(&scale)
+        || error < 0.0
+        || prediction < 0.0
+    {
+        return 0;
+    }
+    with_body(|c| {
+        if c.shapes.is_empty() {
+            return 0;
+        }
+        c.refresh_mass();
+        if c.world.bodies[c.body].mass() <= 0.0 {
+            return 0;
+        }
+        c.world.gravity = Vector::new(gx as f32, gy as f32, gz as f32);
+        let p = &mut c.world.integration_parameters;
+        p.dt = dt as f32;
+        p.length_unit = scale as f32;
+        p.normalized_allowed_linear_error = error as f32;
+        p.normalized_prediction_distance = prediction as f32;
+        c.world.step();
+        c.ticks = c.ticks.saturating_add(1);
+        1
+    })
+}
