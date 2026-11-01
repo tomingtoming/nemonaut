@@ -8,7 +8,7 @@
     "build": "node tools/build.mjs",
     "pretest": "node tools/build.mjs --quiet",
     "test": "node --import ./tools/golden/rust-preload.mjs --test tests/*.test.mjs",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && node tools/type-hardness.mjs --check",
     "dev": "node tools/serve.mjs"
   },
   "dependencies": {

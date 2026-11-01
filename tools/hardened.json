@@ -1,0 +1,9 @@
+{
+ "note": "src modules (without .ts) that pass strict with no explicit any and no ts-ignore comments. Checked by tools/type-hardness.mjs --check; only grows.",
+ "files": [
+  "examples",
+  "flight-input",
+  "orbital-ascent-settings",
+  "physics"
+ ]
+}
