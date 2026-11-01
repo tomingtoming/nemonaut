@@ -20,7 +20,8 @@ export function measure(){
  const files=new Map();
  for(const sf of program.getSourceFiles()){
   const rel=path.relative(root,sf.fileName).replaceAll('\\','/');
-  if(!/^src\/[^/]+\.ts$/.test(rel)||rel.endsWith('.d.ts'))continue;
+  // Declarations of the generated bundles (src/NAME.d.ts) count too, as NAME.d.
+  if(!/^src\/[^/]+\.ts$/.test(rel))continue;
   const name=rel.slice(4,-3);
   let any=0;const visit=n=>{if(n.kind===ts.SyntaxKind.AnyKeyword)any++;ts.forEachChild(n,visit);};visit(sf);
   const ignores=(sf.text.match(/@ts-(?:ignore|expect-error|nocheck)\b/g)||[]).length;

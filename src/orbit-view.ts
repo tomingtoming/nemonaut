@@ -1,16 +1,22 @@
 import {PLANET} from './planet.js';
-export function drawOrbit(canvas,o,{detail=false,preview=null}={}){
- const body=o.body||PLANET,c=canvas.getContext('2d'),w=canvas.width,m=w/2;
- const extent=state=>Math.max(state.radius,Number.isFinite(state.apoapsis)?body.radius+state.apoapsis:body.radius*4);
+type Vector3=import('three').Vector3;
+type CelestialBody=import('./celestial.js').CelestialBody;
+export type OrbitViewBody=import('./celestial.js').BodyPhysics&Partial<Pick<CelestialBody,'id'|'name'>>;
+// The orbit fields drawOrbit reads; a bodyOrbitState result fits. Without a body, the planet is drawn.
+export type OrbitViewInput=Pick<import('./celestial.js').OrbitState,'eccentricity'|'evec'|'r'|'normal'|'p'|'radius'|'periapsis'|'apoapsis'>&{body?:OrbitViewBody|null};
+export interface OrbitViewOptions{detail?:boolean;preview?:{orbit:OrbitViewInput}|null}
+export function drawOrbit(canvas:HTMLCanvasElement,o:OrbitViewInput,{detail=false,preview=null}:OrbitViewOptions={}):void{
+ const body:OrbitViewBody=o.body||PLANET,c=canvas.getContext('2d')!,w=canvas.width,m=w/2;
+ const extent=(state:OrbitViewInput)=>Math.max(state.radius,Number.isFinite(state.apoapsis)?body.radius+state.apoapsis:body.radius*4);
  const limit=Math.min(body.sphereOfInfluence??Infinity,Math.max(body.radius*1.2,extent(o),preview?extent(preview.orbit):0)),scale=(m-(detail?52:12))/limit;
  c.clearRect(0,0,w,w);
- const circle=(r,color)=>{c.beginPath();c.arc(m,m,r*scale,0,2*Math.PI);c.fillStyle=color;c.fill();};
+ const circle=(r:number,color:string)=>{c.beginPath();c.arc(m,m,r*scale,0,2*Math.PI);c.fillStyle=color;c.fill();};
  circle(body.radius+body.atmosphereTop,'#3b748a');circle(body.radius,body.id==='moon'?'#777981':'#516e63');
  const eccentric=o.eccentricity>1e-4,x=eccentric?o.evec.clone().normalize():o.r.clone().normalize(),y=o.normal.clone().cross(x).normalize();
- const project=r=>[m+r.dot(x)*scale,m-r.dot(y)*scale];
- const path=(state,color,dashed=false)=>{
+ const project=(r:Vector3):[number,number]=>[m+r.dot(x)*scale,m-r.dot(y)*scale];
+ const path=(state:OrbitViewInput,color:string,dashed=false)=>{
   if(state.normal.lengthSq()<.5)return;
-  const ex=state.eccentricity>1e-4?state.evec.clone().normalize():state.r.clone().normalize(),ey=state.normal.clone().cross(ex).normalize();let prior=null,lastColor=null;c.beginPath();c.lineWidth=detail?2:1.5;c.setLineDash(dashed?[7,5]:[]);
+  const ex=state.eccentricity>1e-4?state.evec.clone().normalize():state.r.clone().normalize(),ey=state.normal.clone().cross(ex).normalize();let prior:[number,number]|null=null,lastColor:string|null=null;c.beginPath();c.lineWidth=detail?2:1.5;c.setLineDash(dashed?[7,5]:[]);
   for(let i=0;i<=720;i++){
    const a=i*Math.PI/360,den=1+state.eccentricity*Math.cos(a),r=state.p/den;
    if(den<=0||r>limit*1.2||r>(body.sphereOfInfluence??Infinity)){c.stroke();c.beginPath();prior=null;continue;}
@@ -19,10 +25,10 @@ export function drawOrbit(canvas,o,{detail=false,preview=null}={}){
   }c.stroke();c.setLineDash([]);
  };
  path(o,'#efb067');if(preview)path(preview.orbit,'#7de6ef',true);
- const marker=(r,color,label,size=4)=>{const [px,py]=project(r);c.beginPath();c.arc(px,py,size,0,Math.PI*2);c.fillStyle=color;c.fill();if(detail&&label)c.fillText(label,px,label==='予定噴射'?py+32:py-13);};
+ const marker=(r:Vector3,color:string,label:string,size=4)=>{const [px,py]=project(r);c.beginPath();c.arc(px,py,size,0,Math.PI*2);c.fillStyle=color;c.fill();if(detail&&label)c.fillText(label,px,label==='予定噴射'?py+32:py-13);};
  c.font='13px sans-serif';c.textAlign='center';marker(o.r,'#fff','機体',detail?5:3);
  if(detail){c.fillStyle='#d2e4e8';c.fillText((body.name||'母星')+' / 半径'+body.radius/1000+' km / 大気'+body.atmosphereTop/1000+' km',m,m+5);
-  if(eccentric&&o.normal.lengthSq()>.5){for(const [label,r,sign]of [['Pe',body.radius+o.periapsis,1],['Ap',body.radius+o.apoapsis,-1]]){if(!Number.isFinite(r)||r>limit*1.2||r>(body.sphereOfInfluence??Infinity))continue;const ax=m+sign*r*scale;c.fillStyle=r<body.radius?'#fa7370':'#efb067';c.beginPath();c.arc(ax,m,4,0,2*Math.PI);c.fill();c.fillText(label,ax,m+20);}}
+  if(eccentric&&o.normal.lengthSq()>.5){for(const [label,r,sign]of [['Pe',body.radius+o.periapsis,1],['Ap',body.radius+o.apoapsis,-1]] as [string,number,number][]){if(!Number.isFinite(r)||r>limit*1.2||r>(body.sphereOfInfluence??Infinity))continue;const ax=m+sign*r*scale;c.fillStyle=r<body.radius?'#fa7370':'#efb067';c.beginPath();c.arc(ax,m,4,0,2*Math.PI);c.fill();c.fillText(label,ax,m+20);}}
   if(preview)marker(preview.orbit.r,'#7de6ef','予定噴射',5);
  }
 }
