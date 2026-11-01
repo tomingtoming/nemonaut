@@ -1,0 +1,9 @@
+// Public release of Omnivehicle on Cloudflare (static assets on Workers).
+// Deploy only with tools/deploy-cloudflare.sh: it exports a committed revision, so untracked
+// files in the working tree (e.g. dist/_diagnostics) are never published.
+{
+  "name": "omnivehicle",
+  "compatibility_date": "2026-10-23",
+  "assets": { "directory": "dist" },
+  "routes": [{ "pattern": "omnivehicle.toming.app", "custom_domain": true }]
+}
