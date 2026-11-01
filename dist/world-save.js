@@ -1,3 +1,4 @@
+import {saveKind,isSaveKind} from './app-id.js';
 import {validateHistory} from './world-history.js';
 import {loadFlight,saveFlight} from './flight-save.js';
 import {validUniversalTime} from './universal-time.js';
@@ -20,16 +21,16 @@ function rawFlight(world,activeId=world.activeVesselId){
  return structuredClone({...active,meta,detached:world.vessels.filter(v=>v!==active).map(v=>({...v,detached:[]}))});
 }
 export function worldFromFlight(record,{universalTime,history=record?.meta?.worldHistory??[]}={}){
- if(!record)return {kind:'orbital-foundry-world',version:1,universalTime:validUniversalTime(universalTime??0),activeVesselId:null,vessels:[],history:validateHistory(history,universalTime??0),flightMeta:{}};
+ if(!record)return {kind:saveKind('world'),version:1,universalTime:validUniversalTime(universalTime??0),activeVesselId:null,vessels:[],history:validateHistory(history,universalTime??0),flightMeta:{}};
  const root=loadFlight(record);
  try{
   if(universalTime!==undefined&&root.universalTime!==universalTime)throw Error('世界と機体の共通時刻が一致しません');
   const normalized=saveFlight(root,record.meta);const {worldHistory,...flightMeta}=normalized.meta;
-  return {kind:'orbital-foundry-world',version:1,universalTime:root.universalTime,activeVesselId:root.vesselId,vessels:flatten(normalized),history:validateHistory(history,root.universalTime),flightMeta};
+  return {kind:saveKind('world'),version:1,universalTime:root.universalTime,activeVesselId:root.vesselId,vessels:flatten(normalized),history:validateHistory(history,root.universalTime),flightMeta};
  }finally{root.dispose();}
 }
 export function validateWorld(value){
- if(value?.kind!=='orbital-foundry-world'||value.version!==1||!Array.isArray(value.vessels)||value.vessels.length>400)throw Error('世界保存の形式が不正です');
+ if(!isSaveKind(value?.kind,'world')||value.version!==1||!Array.isArray(value.vessels)||value.vessels.length>400)throw Error('世界保存の形式が不正です');
  const time=validUniversalTime(value.universalTime),history=validateHistory(value.history,time),ids=new Set();
  for(const v of value.vessels){
   if(!v||typeof v.vesselId!=='string'||!v.vesselId.length||v.vesselId.length>256||ids.has(v.vesselId)||Object.hasOwn(v,'detached')||v.universalTime!==time)throw Error('世界の機体ID・時刻・所属が不正です');

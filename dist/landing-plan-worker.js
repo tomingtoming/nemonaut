@@ -1,5 +1,5 @@
 // tools/landing-plan-worker.mjs
-import RAPIER3 from "./vendor/rapier/rapier.mjs";
+import RAPIER4 from "./vendor/rapier/rapier.mjs";
 
 // dist/rust-engine.js
 var vec = (v) => [v.x, v.y, v.z];
@@ -10,6 +10,9 @@ var check = (ok, message) => {
   if (!ok) fail(message);
 };
 var installed = /* @__PURE__ */ new WeakMap();
+function rustPairQuery(R) {
+  return installed.get(R)?.pair ?? null;
+}
 async function loadRustEngine(R, url) {
   if (installed.has(R)) return installed.get(R);
   const module = await WebAssembly.compile(await (await fetch(url)).arrayBuffer());
@@ -18,14 +21,14 @@ async function loadRustEngine(R, url) {
 function installRustEngine(R, module, { zeroImpulses = () => false } = {}) {
   if (installed.has(R)) return installed.get(R);
   const worlds = /* @__PURE__ */ new Map(), stats = { worlds: 0, frames: 0, rebuilds: 0, contactFrames: 0, contactQueries: 0, contactPoints: 0 };
-  const original = { step: R.World.prototype.step, contactPair: R.World.prototype.contactPair, free: R.World.prototype.free }, body = { rotation: R.RigidBody.prototype.rotation, setRotation: R.RigidBody.prototype.setRotation };
+  const original = { step: R.World.prototype.step, contactPair: R.World.prototype.contactPair, free: R.World.prototype.free }, body2 = { rotation: R.RigidBody.prototype.rotation, setRotation: R.RigidBody.prototype.setRotation };
   const exactRotation = /* @__PURE__ */ new WeakMap();
   R.RigidBody.prototype.rotation = function() {
-    return exactRotation.get(this) ?? body.rotation.call(this);
+    return exactRotation.get(this) ?? body2.rotation.call(this);
   };
   R.RigidBody.prototype.setRotation = function(...args) {
     exactRotation.delete(this);
-    return body.setRotation.apply(this, args);
+    return body2.setRotation.apply(this, args);
   };
   function single(world) {
     const bodies = [];
@@ -55,41 +58,41 @@ function installRustEngine(R, module, { zeroImpulses = () => false } = {}) {
     check(a.craft_ground(g.isEnabled() ? 1 : 0, ...vec(g.translation()), q.x, q.y, q.z, q.w, g.friction()) === 1, "ground rejected");
   }
   R.World.prototype.step = function() {
-    const { body: body2, ground } = single(this), s = rust(this), a = s.a;
+    const { body: body3, ground } = single(this), s = rust(this), a = s.a;
     syncGround(a, ground);
-    const shapes = [];
-    for (let i = 0; i < body2.numColliders(); i++) {
-      const c = body2.collider(i), p2 = c.translationWrtParent(), q = c.rotationWrtParent(), ball = c.shapeType() === R.ShapeType.Ball;
+    const shapes2 = [];
+    for (let i = 0; i < body3.numColliders(); i++) {
+      const c = body3.collider(i), p2 = c.translationWrtParent(), q = c.rotationWrtParent(), ball = c.shapeType() === R.ShapeType.Ball;
       check(ball || c.shapeType() === R.ShapeType.Cuboid, "only box/ball colliders are supported");
       const h = ball ? { x: c.radius(), y: 0, z: 0 } : c.halfExtents();
-      shapes.push({ handle: c.handle, geometry: [ball ? 1 : 0, h.x, h.y, h.z, p2.x, p2.y, p2.z, q.x, q.y, q.z, q.w], mass: c.mass(), friction: c.friction() });
+      shapes2.push({ handle: c.handle, geometry: [ball ? 1 : 0, h.x, h.y, h.z, p2.x, p2.y, p2.z, q.x, q.y, q.z, q.w], mass: c.mass(), friction: c.friction() });
     }
-    const signature = JSON.stringify(shapes.map((x) => [x.handle, x.geometry, x.friction]));
+    const signature = JSON.stringify(shapes2.map((x) => [x.handle, x.geometry, x.friction]));
     if (signature !== s.signature) {
       if (s.signature !== null) {
         check(a.craft_clear_shapes() === 1, "shape clear rejected");
         stats.rebuilds++;
       }
-      for (const x of shapes) check(a.craft_shape(...x.geometry, x.mass, x.friction) === 1, "shape rejected");
+      for (const x of shapes2) check(a.craft_shape(...x.geometry, x.mass, x.friction) === 1, "shape rejected");
       s.signature = signature;
-      s.index = new Map(shapes.map((x, i) => [x.handle, i]));
+      s.index = new Map(shapes2.map((x, i) => [x.handle, i]));
     }
-    shapes.forEach((x, i) => check(a.craft_mass(i, x.mass) === 1, "mass rejected"));
-    const p = this.integrationParameters, t = body2.translation(), v = body2.linvel(), r = body2.rotation(), w = body2.angvel();
+    shapes2.forEach((x, i) => check(a.craft_mass(i, x.mass) === 1, "mass rejected"));
+    const p = this.integrationParameters, t = body3.translation(), v = body3.linvel(), r = body3.rotation(), w = body3.angvel();
     check(a.craft_state(t.x, t.y, t.z, v.x, v.y, v.z, r.x, r.y, r.z, r.w, w.x, w.y, w.z) === 1, "state rejected");
-    check(a.craft_solver_step(...vec(body2.userForce()), ...vec(body2.userTorque()), ...vec(this.gravity), this.timestep, p.lengthUnit, p.normalizedAllowedLinearError, p.normalizedPredictionDistance) === 1, "step rejected");
+    check(a.craft_solver_step(...vec(body3.userForce()), ...vec(body3.userTorque()), ...vec(this.gravity), this.timestep, p.lengthUnit, p.normalizedAllowedLinearError, p.normalizedPredictionDistance) === 1, "step rejected");
     const out = Array.from({ length: 13 }, (_, i) => a.craft_read(i));
     check(out.every(Number.isFinite), "nonfinite state");
-    check(Math.abs(a.craft_read(13) - body2.mass()) < 0.02, "mass differs from JS");
-    body2.setTranslation({ x: out[0], y: out[1], z: out[2] }, true);
-    body2.setLinvel({ x: out[3], y: out[4], z: out[5] }, true);
-    body2.setRotation({ x: out[6], y: out[7], z: out[8], w: out[9] }, true);
-    body2.setAngvel({ x: out[10], y: out[11], z: out[12] }, true);
-    exactRotation.set(body2, new R.Quaternion(out[6], out[7], out[8], out[9]));
+    check(Math.abs(a.craft_read(13) - body3.mass()) < 0.02, "mass differs from JS");
+    body3.setTranslation({ x: out[0], y: out[1], z: out[2] }, true);
+    body3.setLinvel({ x: out[3], y: out[4], z: out[5] }, true);
+    body3.setRotation({ x: out[6], y: out[7], z: out[8], w: out[9] }, true);
+    body3.setAngvel({ x: out[10], y: out[11], z: out[12] }, true);
+    exactRotation.set(body3, new R.Quaternion(out[6], out[7], out[8], out[9]));
     s.frames++;
     stats.frames++;
     if (ground) {
-      for (let i = 0; i < shapes.length; i++) if (a.craft_contact_count(i) > 0) {
+      for (let i = 0; i < shapes2.length; i++) if (a.craft_contact_count(i) > 0) {
         stats.contactFrames++;
         break;
       }
@@ -118,17 +121,24 @@ function installRustEngine(R, module, { zeroImpulses = () => false } = {}) {
     return original.free.call(this);
   };
   R.World.prototype.referenceSolverStep = original.step;
-  const controller = { stats, worlds, uninstall() {
+  const pair = new WebAssembly.Instance(module, {}).exports;
+  const controller = { stats, worlds, pair, uninstall() {
     for (const { a } of worlds.values()) a.craft_dispose();
     worlds.clear();
     Object.assign(R.World.prototype, original);
-    Object.assign(R.RigidBody.prototype, body);
+    Object.assign(R.RigidBody.prototype, body2);
     delete R.World.prototype.referenceSolverStep;
     installed.delete(R);
   } };
   installed.set(R, controller);
   return controller;
 }
+
+// dist/app-id.js
+var APP = "omnivehicle";
+var LEGACY_APP = "orbital-foundry";
+var storageKey = (name) => APP + "-" + name;
+var isSaveKind = (value, name) => value === APP + "-" + name || value === LEGACY_APP + "-" + name;
 
 // dist/cargo-geometry.js
 function cargoShellBoxes(d, open = false) {
@@ -204,10 +214,10 @@ function installLargeParts(parts) {
     d.name = name;
     d.code = code;
     d.size = d.size.map((v) => v * s);
-    for (const key of ["mass", "fuel", "thrust", "battery"]) if (d[key]) d[key] *= k;
-    for (const key of ["volume", "ballast"]) if (d[key]) d[key] *= s ** 3;
-    for (const key of ["ac", "massCenter"]) if (d[key]) d[key] = d[key].map((v) => v * s);
-    for (const key of ["chord", "hingeY"]) if (d[key]) d[key] *= s;
+    for (const key2 of ["mass", "fuel", "thrust", "battery"]) if (d[key2]) d[key2] *= k;
+    for (const key2 of ["volume", "ballast"]) if (d[key2]) d[key2] *= s ** 3;
+    for (const key2 of ["ac", "massCenter"]) if (d[key2]) d[key2] = d[key2].map((v) => v * s);
+    for (const key2 of ["chord", "hingeY"]) if (d[key2]) d[key2] *= s;
     if (d.wing) d.wing *= s * s;
     if (id === "transportWingRoot") {
       d.wing = 156.8;
@@ -390,33 +400,33 @@ var MOON = Object.freeze({ id: "moon", name: "\u6708", radius: 2e5, mu: 65138397
 var PRIMARY = Object.freeze({ ...PLANET, id: "planet", name: "\u6BCD\u661F" });
 var MOON_RATE = Math.sqrt(PRIMARY.mu / MOON.orbitRadius ** 3);
 var MOON_PERIOD = 2 * Math.PI / MOON_RATE;
-function bodyState(body, time = 0) {
-  if (body.id === "planet") return { position: center.clone(), velocity: new T2.Vector3() };
-  if (body.id !== "moon") throw Error("\u672A\u77E5\u306E\u5929\u4F53\u3067\u3059");
+function bodyState(body2, time = 0) {
+  if (body2.id === "planet") return { position: center.clone(), velocity: new T2.Vector3() };
+  if (body2.id !== "moon") throw Error("\u672A\u77E5\u306E\u5929\u4F53\u3067\u3059");
   const angle = MOON.phase + time % MOON_PERIOD * MOON_RATE, c = Math.cos(angle), s = Math.sin(angle), r = MOON.orbitRadius;
   return { position: center.clone().add(new T2.Vector3(0, r * c, r * s)), velocity: new T2.Vector3(0, -r * MOON_RATE * s, r * MOON_RATE * c) };
 }
 function referenceBody(position, time = 0) {
   return position.distanceToSquared(bodyState(MOON, time).position) < MOON.sphereOfInfluence ** 2 ? MOON : PRIMARY;
 }
-function relativeMotion(position, velocity, time = 0, body = referenceBody(position, time)) {
-  const state = bodyState(body, time);
-  return { body, center: state.position, bodyVelocity: state.velocity, r: position.clone().sub(state.position), velocity: velocity.clone().sub(state.velocity) };
+function relativeMotion(position, velocity, time = 0, body2 = referenceBody(position, time)) {
+  const state = bodyState(body2, time);
+  return { body: body2, center: state.position, bodyVelocity: state.velocity, r: position.clone().sub(state.position), velocity: velocity.clone().sub(state.velocity) };
 }
-function bodyAltitude(position, time = 0, body = referenceBody(position, time)) {
-  return position.distanceTo(bodyState(body, time).position) - body.radius;
+function bodyAltitude(position, time = 0, body2 = referenceBody(position, time)) {
+  return position.distanceTo(bodyState(body2, time).position) - body2.radius;
 }
-function bodyUp(position, time = 0, body = referenceBody(position, time)) {
-  return position.clone().sub(bodyState(body, time).position).normalize();
+function bodyUp(position, time = 0, body2 = referenceBody(position, time)) {
+  return position.clone().sub(bodyState(body2, time).position).normalize();
 }
-function bodyGravity(position, time = 0, body = referenceBody(position, time)) {
-  const r = position.clone().sub(bodyState(body, time).position);
-  return r.multiplyScalar(-body.mu / Math.max(1, r.length()) ** 3);
+function bodyGravity(position, time = 0, body2 = referenceBody(position, time)) {
+  const r = position.clone().sub(bodyState(body2, time).position);
+  return r.multiplyScalar(-body2.mu / Math.max(1, r.length()) ** 3);
 }
-function bodyOrbitState(position, velocity, time = 0, body = referenceBody(position, time)) {
-  const relative = relativeMotion(position, velocity, time, body), r = relative.r, v = relative.velocity, radius = r.length(), h = r.clone().cross(v), evec = v.clone().cross(h).divideScalar(body.mu).sub(r.clone().divideScalar(radius)), e = evec.length(), energy = v.lengthSq() / 2 - body.mu / radius, p = h.lengthSq() / body.mu, a = energy < 0 ? -body.mu / (2 * energy) : Infinity;
-  const periapsis = p / (1 + e) - body.radius, apoapsis = energy < 0 ? a * (1 + e) - body.radius : Infinity;
-  return { body, bodyId: body.id, center: relative.center, bodyVelocity: relative.bodyVelocity, relativeVelocity: v, universalTime: time, altitude: radius - body.radius, speed: v.length(), vertical: v.dot(r) / radius, circularSpeed: Math.sqrt(body.mu / radius), gravity: body.mu / radius ** 2, eccentricity: e, energy, periapsis, apoapsis, period: energy < 0 ? 2 * Math.PI * Math.sqrt(a ** 3 / body.mu) : Infinity, p, evec, normal: h.normalize(), radius, r, stable: energy < 0 && periapsis > body.atmosphereTop };
+function bodyOrbitState(position, velocity, time = 0, body2 = referenceBody(position, time)) {
+  const relative = relativeMotion(position, velocity, time, body2), r = relative.r, v = relative.velocity, radius2 = r.length(), h = r.clone().cross(v), evec = v.clone().cross(h).divideScalar(body2.mu).sub(r.clone().divideScalar(radius2)), e = evec.length(), energy = v.lengthSq() / 2 - body2.mu / radius2, p = h.lengthSq() / body2.mu, a = energy < 0 ? -body2.mu / (2 * energy) : Infinity;
+  const periapsis = p / (1 + e) - body2.radius, apoapsis = energy < 0 ? a * (1 + e) - body2.radius : Infinity;
+  return { body: body2, bodyId: body2.id, center: relative.center, bodyVelocity: relative.bodyVelocity, relativeVelocity: v, universalTime: time, altitude: radius2 - body2.radius, speed: v.length(), vertical: v.dot(r) / radius2, circularSpeed: Math.sqrt(body2.mu / radius2), gravity: body2.mu / radius2 ** 2, eccentricity: e, energy, periapsis, apoapsis, period: energy < 0 ? 2 * Math.PI * Math.sqrt(a ** 3 / body2.mu) : Infinity, p, evec, normal: h.normalize(), radius: radius2, r, stable: energy < 0 && periapsis > body2.atmosphereTop };
 }
 function localStep(r, v, acceleration, mu, dt) {
   const gravity = (r2) => r2.clone().multiplyScalar(-mu / Math.max(1, r2.length()) ** 3);
@@ -424,8 +434,8 @@ function localStep(r, v, acceleration, mu, dt) {
   return { position: next, velocity: half.addScaledVector(gravity(next).add(acceleration), dt / 2) };
 }
 function advanceCelestialOrbit(position, velocity, acceleration, dt, time = 0) {
-  const relative = relativeMotion(position, velocity, time), body = relative.body;
-  const next = localStep(relative.r, relative.velocity, acceleration, body.mu, dt), end = bodyState(body, time + dt);
+  const relative = relativeMotion(position, velocity, time), body2 = relative.body;
+  const next = localStep(relative.r, relative.velocity, acceleration, body2.mu, dt), end = bodyState(body2, time + dt);
   const pos = next.position.add(end.position), vel = next.velocity.add(end.velocity);
   return { pos, vel, bodyId: referenceBody(pos, time + dt).id };
 }
@@ -438,38 +448,38 @@ function lunarTrial(time = 0, altitude = 2e4) {
 import * as T3 from "./vendor/three/three.module.js";
 var PRIMARY_ROTATION_PERIOD = 21549.4251830898;
 var PRIMARY_ROTATION_RATE = 2 * Math.PI / PRIMARY_ROTATION_PERIOD;
-function surfaceAngularVelocity(body = PRIMARY) {
-  return new T3.Vector3(body.id === "planet" ? PRIMARY_ROTATION_RATE : 0, 0, 0);
+function surfaceAngularVelocity(body2 = PRIMARY) {
+  return new T3.Vector3(body2.id === "planet" ? PRIMARY_ROTATION_RATE : 0, 0, 0);
 }
-function surfaceOrientation(time = 0, body = PRIMARY) {
-  return new T3.Quaternion().setFromAxisAngle(new T3.Vector3(1, 0, 0), body.id === "planet" ? time % PRIMARY_ROTATION_PERIOD * PRIMARY_ROTATION_RATE : 0);
+function surfaceOrientation(time = 0, body2 = PRIMARY) {
+  return new T3.Quaternion().setFromAxisAngle(new T3.Vector3(1, 0, 0), body2.id === "planet" ? time % PRIMARY_ROTATION_PERIOD * PRIMARY_ROTATION_RATE : 0);
 }
 function launchSiteOrientation(environment) {
   return new T3.Quaternion().setFromAxisAngle(new T3.Vector3(0, 0, 1), (environment === "runway" ? -2e3 : environment === "water" ? 4e3 : 0) / PRIMARY.radius);
 }
-function fixedToInertial(point, time = 0, body = PRIMARY) {
-  return point.clone().applyQuaternion(surfaceOrientation(time, body)).add(bodyState(body, time).position);
+function fixedToInertial(point, time = 0, body2 = PRIMARY) {
+  return point.clone().applyQuaternion(surfaceOrientation(time, body2)).add(bodyState(body2, time).position);
 }
-function inertialToFixed(point, time = 0, body = referenceBody(point, time)) {
-  return point.clone().sub(bodyState(body, time).position).applyQuaternion(surfaceOrientation(time, body).invert());
+function inertialToFixed(point, time = 0, body2 = referenceBody(point, time)) {
+  return point.clone().sub(bodyState(body2, time).position).applyQuaternion(surfaceOrientation(time, body2).invert());
 }
-function surfaceVelocity(point, time = 0, body = referenceBody(point, time)) {
-  const state = bodyState(body, time);
-  return surfaceAngularVelocity(body).cross(point.clone().sub(state.position)).add(state.velocity);
+function surfaceVelocity(point, time = 0, body2 = referenceBody(point, time)) {
+  const state = bodyState(body2, time);
+  return surfaceAngularVelocity(body2).cross(point.clone().sub(state.position)).add(state.velocity);
 }
-function surfaceRelativeVelocity(point, velocity, time = 0, body = referenceBody(point, time)) {
-  return velocity.clone().sub(surfaceVelocity(point, time, body));
+function surfaceRelativeVelocity(point, velocity, time = 0, body2 = referenceBody(point, time)) {
+  return velocity.clone().sub(surfaceVelocity(point, time, body2));
 }
-function rotatingFrameCorrection(point, relativeVelocity, time = 0, body = referenceBody(point, time)) {
-  const omega = surfaceAngularVelocity(body), r = point.clone().sub(bodyState(body, time).position);
+function rotatingFrameCorrection(point, relativeVelocity, time = 0, body2 = referenceBody(point, time)) {
+  const omega = surfaceAngularVelocity(body2), r = point.clone().sub(bodyState(body2, time).position);
   return omega.clone().cross(relativeVelocity).multiplyScalar(-2).sub(omega.clone().cross(omega.clone().cross(r)));
 }
 function frozenSurfaceState(v, time, dt) {
-  const body = referenceBody(v.pos, time), turn = surfaceOrientation(dt, body);
-  const pos = fixedToInertial(inertialToFixed(v.pos, time, body), time + dt, body);
+  const body2 = referenceBody(v.pos, time), turn = surfaceOrientation(dt, body2);
+  const pos = fixedToInertial(inertialToFixed(v.pos, time, body2), time + dt, body2);
   const q = v.q.clone().premultiply(turn).normalize();
   const com = pos.clone().add(v.stats.com.clone().applyQuaternion(q));
-  return { pos, q, vel: surfaceVelocity(com, time + dt, body), omega: surfaceAngularVelocity(body), turn };
+  return { pos, q, vel: surfaceVelocity(com, time + dt, body2), omega: surfaceAngularVelocity(body2), turn };
 }
 
 // dist/navigation.js
@@ -596,8 +606,8 @@ function cruiseSettings(value) {
 }
 
 // dist/navigation-frame.js
-function automaticNavigationFrame(altitude, body, previous = null) {
-  const upper = Math.max(1e4, (body.atmosphereTop || 0) * 0.5), lower = upper * 0.8;
+function automaticNavigationFrame(altitude, body2, previous = null) {
+  const upper = Math.max(1e4, (body2.atmosphereTop || 0) * 0.5), lower = upper * 0.8;
   if (previous === "orbit") return altitude <= lower ? "surface" : "orbit";
   return altitude >= upper ? "orbit" : "surface";
 }
@@ -609,8 +619,8 @@ function setNavigationFrame(f, frame) {
 }
 function updateNavigationFrame(f, { reset = false, time = f.universalTime } = {}) {
   if (f.navigationAuto === false) return f.navigationFrame;
-  const point = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)), body = referenceBody(point, time);
-  setNavigationFrame(f, automaticNavigationFrame(bodyAltitude(point, time, body), body, reset ? null : f.navigationFrame));
+  const point = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)), body2 = referenceBody(point, time);
+  setNavigationFrame(f, automaticNavigationFrame(bodyAltitude(point, time, body2), body2, reset ? null : f.navigationFrame));
   return f.navigationFrame;
 }
 
@@ -619,10 +629,10 @@ function copyObservationQuality(value, totals) {
   if (value === void 0) return void 0;
   if (!value || typeof value !== "object" || Array.isArray(value)) throw Error("\u89B3\u6E2C\u54C1\u8CEA\u306E\u5F62\u5F0F\u304C\u4E0D\u6B63\u3067\u3059");
   const result = {};
-  for (const key of ["day", "night"]) {
-    const q = value[key];
-    if (!q || !["received", "missed"].every((k) => Number.isFinite(q[k]) && q[k] >= 0 && q[k] <= 1e12) || q.received > totals[key] + 1e-5) throw Error("\u89B3\u6E2C\u54C1\u8CEA\u306E\u6E2C\u5B9A\u6642\u9593\u304C\u4E0D\u6B63\u3067\u3059");
-    result[key] = { received: q.received, missed: q.missed };
+  for (const key2 of ["day", "night"]) {
+    const q = value[key2];
+    if (!q || !["received", "missed"].every((k) => Number.isFinite(q[k]) && q[k] >= 0 && q[k] <= 1e12) || q.received > totals[key2] + 1e-5) throw Error("\u89B3\u6E2C\u54C1\u8CEA\u306E\u6E2C\u5B9A\u6642\u9593\u304C\u4E0D\u6B63\u3067\u3059");
+    result[key2] = { received: q.received, missed: q.missed };
   }
   return result;
 }
@@ -634,7 +644,7 @@ var DELIVERY_SITES = Object.freeze([DELIVERY_SITE, Object.freeze({ id: "east-sta
 var deliverySite = (id) => DELIVERY_SITES.find((s) => s.id === id);
 var selected = DELIVERY_SITE;
 try {
-  selected = deliverySite(localStorage.getItem("orbital-foundry-site")) ?? selected;
+  selected = deliverySite(localStorage.getItem(storageKey("site"))) ?? selected;
 } catch {
 }
 function fixedSite(site) {
@@ -706,11 +716,11 @@ function advanceObservations(v, states, power, dt) {
     const site = observationSite(v, id);
     if (!site) continue;
     const data = site.id === DELIVERY_SITE.id ? s : (s.sites ??= {})[site.id] ??= { day: 0, night: 0 };
-    const key = power.eclipse ? "night" : "day";
-    data[key] = Math.min(1e12, data[key] + dt * power.ratio);
+    const key2 = power.eclipse ? "night" : "day";
+    data[key2] = Math.min(1e12, data[key2] + dt * power.ratio);
     const quality = data.quality ??= { day: { received: 0, missed: 0 }, night: { received: 0, missed: 0 } };
-    quality[key].received = Math.min(1e12, quality[key].received + dt * power.ratio);
-    quality[key].missed = Math.min(1e12, quality[key].missed + dt * (1 - power.ratio));
+    quality[key2].received = Math.min(1e12, quality[key2].received + dt * power.ratio);
+    quality[key2].missed = Math.min(1e12, quality[key2].missed + dt * (1 - power.ratio));
   }
 }
 
@@ -769,8 +779,8 @@ function canControl(vessel) {
 // dist/thermal.js
 import * as T11 from "./vendor/three/three.module.js";
 var THERMAL = { coefficient: 174e-6, sigma: 5670374419e-17, heatCapacity: 900, emissivity: 0.8, maxTemperature: 1100, ablatorEnergy: 2e7, ablationTemperature: 650, wakeTransmission: 0.025 };
-function stagnationFlux(density, speed, radius) {
-  return THERMAL.coefficient * Math.sqrt(Math.max(0, density) / Math.max(0.05, radius)) * Math.max(0, speed) ** 3;
+function stagnationFlux(density, speed, radius2) {
+  return THERMAL.coefficient * Math.sqrt(Math.max(0, density) / Math.max(0.05, radius2)) * Math.max(0, speed) ** 3;
 }
 function createThermal(parts, definitions = PARTS) {
   return new Map(parts.map((p) => [p.id, { temperature: 288.15, ablator: definitions[p.type].ablator || 0, failed: false }]));
@@ -893,9 +903,9 @@ function powerTotals(parts, charge) {
   return { stored: parts.reduce((s, p) => s + (charge.get(p.id) || 0), 0), capacity: parts.reduce((s, p) => s + (PARTS[p.type].battery || 0), 0) };
 }
 function inEclipse(pos, time = 0) {
-  return [PRIMARY, MOON].some((body) => {
-    const r = pos.clone().sub(bodyState(body, time).position), along = r.dot(SUN_DIRECTION);
-    return along < 0 && r.lengthSq() - along * along < body.radius ** 2;
+  return [PRIMARY, MOON].some((body2) => {
+    const r = pos.clone().sub(bodyState(body2, time).position), along = r.dot(SUN_DIRECTION);
+    return along < 0 && r.lengthSq() - along * along < body2.radius ** 2;
   });
 }
 function solarGeneration(parts, pos, q, time = 0) {
@@ -965,17 +975,17 @@ function validateManeuverNode(value) {
 }
 
 // dist/flight-save.js
-import * as T30 from "./vendor/three/three.module.js";
+import * as T32 from "./vendor/three/three.module.js";
 
 // dist/lunar-transfer.js
 import * as T15 from "./vendor/three/three.module.js";
-function lunarTransferSeed(time, { mass, thrust, isp, radius = 68e4, phaseOffset = 0.26, preparation = 0 } = {}) {
-  if (![time, mass, thrust, isp, radius, phaseOffset, preparation].every(Number.isFinite) || time < 0 || preparation < 0 || preparation > 3600 || mass <= 0 || thrust <= 0 || isp <= 0 || radius <= PLANET.radius + PLANET.atmosphereTop || radius >= MOON.orbitRadius) throw Error("\u6708\u9077\u79FB\u306E\u521D\u671F\u6761\u4EF6\u304C\u4E0D\u6B63\u3067\u3059");
-  const a = (radius + MOON.orbitRadius) / 2, circularSpeed = Math.sqrt(PLANET.mu / radius), deltaV = Math.sqrt(PLANET.mu * (2 / radius - 1 / a)) - circularSpeed, coastTime = Math.PI * Math.sqrt(a ** 3 / PLANET.mu), exhaustVelocity = isp * 9.81;
-  const fuelRequired = mass * (1 - Math.exp(-deltaV / exhaustVelocity)), burnTime = fuelRequired * exhaustVelocity / thrust, orbitalRate = circularSpeed / radius;
+function lunarTransferSeed(time, { mass, thrust, isp, radius: radius2 = 68e4, phaseOffset = 0.26, preparation = 0 } = {}) {
+  if (![time, mass, thrust, isp, radius2, phaseOffset, preparation].every(Number.isFinite) || time < 0 || preparation < 0 || preparation > 3600 || mass <= 0 || thrust <= 0 || isp <= 0 || radius2 <= PLANET.radius + PLANET.atmosphereTop || radius2 >= MOON.orbitRadius) throw Error("\u6708\u9077\u79FB\u306E\u521D\u671F\u6761\u4EF6\u304C\u4E0D\u6B63\u3067\u3059");
+  const a = (radius2 + MOON.orbitRadius) / 2, circularSpeed = Math.sqrt(PLANET.mu / radius2), deltaV = Math.sqrt(PLANET.mu * (2 / radius2 - 1 / a)) - circularSpeed, coastTime = Math.PI * Math.sqrt(a ** 3 / PLANET.mu), exhaustVelocity = isp * 9.81;
+  const fuelRequired = mass * (1 - Math.exp(-deltaV / exhaustVelocity)), burnTime = fuelRequired * exhaustVelocity / thrust, orbitalRate = circularSpeed / radius2;
   const moon = bodyState(MOON, time + preparation + coastTime + burnTime / 2).position.sub(center), phase = Math.atan2(moon.z, moon.y) - Math.PI - orbitalRate * (preparation + burnTime / 2) + phaseOffset;
   const radial = new T15.Vector3(0, Math.cos(phase), Math.sin(phase)), direction = new T15.Vector3(0, -Math.sin(phase), Math.cos(phase));
-  return { position: center.clone().addScaledVector(radial, radius), velocity: direction.clone().multiplyScalar(circularSpeed), direction, deltaV, burnTime, fuelRequired, coastTime, phaseOffset, time, burnStart: time + preparation };
+  return { position: center.clone().addScaledVector(radial, radius2), velocity: direction.clone().multiplyScalar(circularSpeed), direction, deltaV, burnTime, fuelRequired, coastTime, phaseOffset, time, burnStart: time + preparation };
 }
 function createTransferGuide(seed) {
   return { startTime: seed.burnStart, target: seed.deltaV, burnTime: seed.burnTime, delivered: 0, firstBurnTime: null };
@@ -994,11 +1004,11 @@ function validateTransferGuide(value) {
 // dist/ground-rest.js
 var center2 = (v) => v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q));
 function isParked(v) {
-  const body = referenceBody(v.pos, v.universalTime);
+  const body2 = referenceBody(v.pos, v.universalTime);
   const contact = v.landed && v.landedTime > 0.5 || v.brake && v.time > 0.5 && v.telemetry.contacts > 0;
-  const speed = surfaceRelativeVelocity(center2(v), v.vel, v.universalTime, body).length(), spin = v.omega.clone().sub(surfaceAngularVelocity(body)).length();
-  const radius = v.parts.reduce((r, p) => Math.max(r, partCenter(p).distanceTo(v.stats.com) + Math.hypot(...PARTS[p.type].size) / 2), 0);
-  return contact && v.environment !== "water" && speed < 0.1 && spin < 0.02 && speed + spin * radius < 0.2;
+  const speed = surfaceRelativeVelocity(center2(v), v.vel, v.universalTime, body2).length(), spin = v.omega.clone().sub(surfaceAngularVelocity(body2)).length();
+  const radius2 = v.parts.reduce((r, p) => Math.max(r, partCenter(p).distanceTo(v.stats.com) + Math.hypot(...PARTS[p.type].size) / 2), 0);
+  return contact && v.environment !== "water" && speed < 0.1 && spin < 0.02 && speed + spin * radius2 < 0.2;
 }
 
 // dist/fracture.js
@@ -1051,9 +1061,9 @@ function fractureComponents(parts, failedIds) {
   for (const p of parts) {
     let root = p;
     if (!failed.has(p.id)) while (root.parent && byId.has(root.parent) && !failed.has(root.parent)) root = byId.get(root.parent);
-    const key = failed.has(p.id) ? p.id : root.id;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(structuredClone(p));
+    const key2 = failed.has(p.id) ? p.id : root.id;
+    if (!groups.has(key2)) groups.set(key2, []);
+    groups.get(key2).push(structuredClone(p));
   }
   return [...groups.values()].map((group) => {
     const ids = new Set(group.map((p) => p.id));
@@ -1077,8 +1087,8 @@ function fractureVessel(f, failedIds, createFlight, statistics2) {
   const initialize = (v, component) => {
     const ids = new Set(component.parts.map((p) => p.id));
     v.parts = component.parts;
-    for (const key of ["fuel", "charge", "thermal", "chutes", "observations", "deflections", "gimbals", "wheelMotion"]) v[key] = new Map([...before[key]].filter(([id]) => ids.has(id)).map(([id, s]) => [id, s?.isVector3 ? s.clone() : structuredClone(s)]));
-    for (const key of ["time", "universalTime", "environment", "stage", "started", "ballast", "trim", "brake", "navigationFrame", "navigationAuto", "reactionEnabled", "steeringEnabled", "driveEnabled", "rcsEnabled"]) v[key] = before[key];
+    for (const key2 of ["fuel", "charge", "thermal", "chutes", "observations", "deflections", "gimbals", "wheelMotion"]) v[key2] = new Map([...before[key2]].filter(([id]) => ids.has(id)).map(([id, s]) => [id, s?.isVector3 ? s.clone() : structuredClone(s)]));
+    for (const key2 of ["time", "universalTime", "environment", "stage", "started", "ballast", "trim", "brake", "navigationFrame", "navigationAuto", "reactionEnabled", "steeringEnabled", "driveEnabled", "rcsEnabled"]) v[key2] = before[key2];
     v.failureEvents = structuredClone(before.failureEvents);
     v.failureDynamics = component.wreck;
     v.crashed = component.wreck;
@@ -1151,7 +1161,7 @@ function cargoReleaseDirection(parts, p) {
 // dist/part-colliders.js
 import * as T19 from "./vendor/three/three.module.js";
 import RAPIER from "./vendor/rapier/rapier.mjs";
-function createPartColliders(world, body, part, mass) {
+function createPartColliders(world, body2, part, mass) {
   const d = PARTS[part.type], rotation = partRotation(part), center3 = partCenter(part);
   const boxes = d.cargoBay ? cargoCollisionBoxes(d, part.cargoOpen) : d.collisionBoxes;
   let pieces;
@@ -1168,7 +1178,7 @@ function createPartColliders(world, body, part, mass) {
     if (centroid.divideScalar(volume).length() > 1e-7) throw Error("Compound collider must preserve part mass center");
     pieces = boxes.map((box) => ({ shape: RAPIER.ColliderDesc.cuboid(...box.size.map((n) => n / 2)), offset: new T19.Vector3(...box.center), localRotation: new T19.Quaternion().setFromEuler(new T19.Euler(...box.rotation || [0, 0, 0])), weight: box.size.reduce((a, b) => a * b, 1) / volume }));
   } else pieces = [{ shape: d.wheel ? RAPIER.ColliderDesc.ball(d.size[1] / 2) : RAPIER.ColliderDesc.cuboid(...d.size.map((n) => Math.max(0.02, n / 2))), offset: new T19.Vector3(), weight: 1 }];
-  return pieces.map(({ shape, offset, weight, localRotation }) => ({ weight, collider: world.createCollider(shape.setTranslation(...offset.applyQuaternion(rotation).add(center3).toArray()).setRotation(rotation.clone().multiply(localRotation || new T19.Quaternion())).setMass(mass * weight).setFriction(d.wheel ? 0.015 : 0.35).setRestitution(0), body) }));
+  return pieces.map(({ shape, offset, weight, localRotation }) => ({ weight, collider: world.createCollider(shape.setTranslation(...offset.applyQuaternion(rotation).add(center3).toArray()).setRotation(rotation.clone().multiply(localRotation || new T19.Quaternion())).setMass(mass * weight).setFriction(d.wheel ? 0.015 : 0.35).setRestitution(0), body2) }));
 }
 
 // dist/flight-input.js
@@ -1264,13 +1274,13 @@ function createBodyAerodynamics(parts) {
     for (const box of boxes) {
       const local = wind.clone().applyQuaternion(box.inverse);
       for (let axis = 0; axis < 3; axis++) {
-        const key = axes[axis], cos = Math.abs(local[key]);
+        const key2 = axes[axis], cos = Math.abs(local[key2]);
         if (cos < 1e-6) continue;
-        const u = axes[(axis + 1) % 3], v = axes[(axis + 2) % 3], sign = Math.sign(local[key]);
+        const u = axes[(axis + 1) % 3], v = axes[(axis + 2) % 3], sign = Math.sign(local[key2]);
         let exposed = 0;
         for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
           const p = new T22.Vector3();
-          p[key] = sign * box.half[key];
+          p[key2] = sign * box.half[key2];
           p[u] = box.half[u] * ((i + 0.5) / 2 - 1);
           p[v] = box.half[v] * ((j + 0.5) / 2 - 1);
           p.applyQuaternion(box.rotation).add(box.center);
@@ -1304,26 +1314,26 @@ function displacedVolume(p) {
 
 // dist/engine-medium.js
 function engineMedium(f, p, time = f.universalTime) {
-  const body = referenceBody(f.pos, time), height = bodyAltitude(f.pos, time, body);
+  const body2 = referenceBody(f.pos, time), height = bodyAltitude(f.pos, time, body2);
   const point = partCenter(p).applyQuaternion(f.q).add(f.pos);
   return {
-    density: body.id === "planet" ? atmosphere(height).density : 0,
-    submersion: f.environment === "water" && body.id === "planet" ? Math.max(0, Math.min(1, (0.1 - bodyAltitude(point, time, body)) / 0.25)) : 0
+    density: body2.id === "planet" ? atmosphere(height).density : 0,
+    submersion: f.environment === "water" && body2.id === "planet" ? Math.max(0, Math.min(1, (0.1 - bodyAltitude(point, time, body2)) / 0.25)) : 0
   };
 }
 
 // dist/angular-momentum.js
 import * as T24 from "./vendor/three/three.module.js";
-function principalFrame(body, orientation) {
-  const r = body.principalInertiaLocalFrame();
+function principalFrame(body2, orientation) {
+  const r = body2.principalInertiaLocalFrame();
   return orientation.clone().multiply(new T24.Quaternion(r.x, r.y, r.z, r.w)).normalize();
 }
-function angularMomentum(body, orientation, omega) {
-  const frame = principalFrame(body, orientation), i = body.principalInertia();
+function angularMomentum(body2, orientation, omega) {
+  const frame = principalFrame(body2, orientation), i = body2.principalInertia();
   return omega.clone().applyQuaternion(frame.clone().invert()).multiply(new T24.Vector3(i.x, i.y, i.z)).applyQuaternion(frame);
 }
-function angularVelocity(body, orientation, momentum) {
-  const frame = principalFrame(body, orientation), i = body.principalInertia(), local = momentum.clone().applyQuaternion(frame.clone().invert());
+function angularVelocity(body2, orientation, momentum) {
+  const frame = principalFrame(body2, orientation), i = body2.principalInertia(), local = momentum.clone().applyQuaternion(frame.clone().invert());
   return local.set(i.x > 0 ? local.x / i.x : 0, i.y > 0 ? local.y / i.y : 0, i.z > 0 ? local.z / i.z : 0).applyQuaternion(frame);
 }
 
@@ -1345,6 +1355,154 @@ function transferFuel(f, from, to, requested) {
   f.fuel.set(from, source - moved);
   f.fuel.set(to, target + moved);
   return moved;
+}
+
+// dist/vessel-collision.js
+import * as T27 from "./vendor/three/three.module.js";
+import RAPIER2 from "./vendor/rapier/rapier.mjs";
+
+// dist/port-navigation.js
+import * as T25 from "./vendor/three/three.module.js";
+function portPose(v, id) {
+  const p = v.parts.find((p2) => p2.id === id);
+  if (!p || !PARTS[p.type].docking) return null;
+  const q = v.q.clone().multiply(partRotation(p)), position = new T25.Vector3(0, PARTS[p.type].dockFace, 0).applyQuaternion(q).add(new T25.Vector3(...p.p).applyQuaternion(v.q)).add(v.pos), normal = new T25.Vector3(0, 1, 0).applyQuaternion(q), velocity = v.vel.clone().add(v.omega.clone().cross(position.clone().sub(centerOfVessel(v))));
+  return { part: p, q, position, normal, velocity };
+}
+function portGuidance(a, aId, b, bId) {
+  if (!b || a === b) return null;
+  const own = portPose(a, aId), target = portPose(b, bId);
+  if (!own || !target || own.part.dockPartner || target.part.dockPartner) return null;
+  const right = new T25.Vector3(1, 0, 0).applyQuaternion(target.q), top = new T25.Vector3(0, 0, 1).applyQuaternion(target.q), outward = target.normal, offset = own.position.clone().sub(target.position), velocity = own.velocity.clone().sub(target.velocity), rotatingVelocity = velocity.clone().sub(b.omega.clone().cross(offset));
+  return { own, target, right, top, outward, axial: offset.dot(outward), horizontal: offset.dot(right), vertical: offset.dot(top), lateral: Math.hypot(offset.dot(right), offset.dot(top)), closing: -rotatingVelocity.dot(outward), horizontalSpeed: rotatingVelocity.dot(right), verticalSpeed: rotatingVelocity.dot(top), speed: velocity.length(), angle: Math.acos(T25.MathUtils.clamp(-own.normal.dot(outward), -1, 1)), desiredNormal: outward.clone().negate() };
+}
+function portTranslation(guidance, q, { forward = 0, right = 0, up: up2 = 0 }) {
+  if (!guidance) return new T25.Vector3();
+  return guidance.outward.clone().multiplyScalar(-forward).addScaledVector(guidance.right, right).addScaledVector(guidance.top, up2).applyQuaternion(q.clone().invert());
+}
+
+// dist/docking.js
+import * as T26 from "./vendor/three/three.module.js";
+var DOCK_LIMITS = { distance: 0.15, angle: 8 * Math.PI / 180, speed: 0.3, angularSpeed: 0.15 };
+function inertiaAbout(v, point) {
+  const tensor = new T26.Matrix3().set(0, 0, 0, 0, 0, 0, 0, 0, 0);
+  for (const p of v.parts) {
+    const d = PARTS[p.type], m = partMass(p, v.fuel, v.ballast, v.thermal), [x, y, z] = d.size.map((n) => Math.max(0.04, n)), q = v.q.clone().multiply(partRotation(p)), r = new T26.Matrix3().setFromMatrix4(new T26.Matrix4().makeRotationFromQuaternion(q)), sphere = 0.4 * m * 0.35 ** 2, local = new T26.Matrix3().set(d.wheel ? sphere : m * (y * y + z * z) / 12, 0, 0, 0, d.wheel ? sphere : m * (x * x + z * z) / 12, 0, 0, 0, d.wheel ? sphere : m * (x * x + y * y) / 12), world = r.clone().multiply(local).multiply(r.clone().transpose()), offset = partCenter(p).applyQuaternion(v.q).add(v.pos).sub(point), a = offset.toArray(), s = offset.lengthSq();
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) tensor.elements[j * 3 + i] += world.elements[j * 3 + i] + m * ((i === j ? s : 0) - a[i] * a[j]);
+  }
+  return tensor;
+}
+
+// dist/vessel-collision.js
+var VESSEL_COLLISION = { enabled: true, onContact: null, prediction: 0.05, slop: 5e-3, correction: 0.8, friction: 0.5, iterations: 4, impactSpeed: 9 };
+var ignored = /* @__PURE__ */ new Map();
+var key = (a, b) => a.vesselId < b.vesselId ? a.vesselId + "|" + b.vesselId : b.vesselId + "|" + a.vesselId;
+function radius(v) {
+  let r = 0;
+  for (let i = 0; i < v.body.numColliders(); i++) {
+    const c = v.body.collider(i), p = c.translationWrtParent(), h = c.shapeType() === RAPIER2.ShapeType.Ball ? { x: c.radius(), y: c.radius(), z: c.radius() } : c.halfExtents();
+    r = Math.max(r, Math.hypot(p.x, p.y, p.z) + Math.hypot(h.x, h.y, h.z));
+  }
+  return r;
+}
+function shapes(v) {
+  const owner = /* @__PURE__ */ new Map();
+  for (const [id, group] of v.colliderGroups) for (const { collider } of group) owner.set(collider.handle, id);
+  const out = [];
+  for (let i = 0; i < v.body.numColliders(); i++) {
+    const c = v.body.collider(i), p = c.translationWrtParent(), q = c.rotationWrtParent(), ball = c.shapeType() === RAPIER2.ShapeType.Ball;
+    if (!ball && c.shapeType() !== RAPIER2.ShapeType.Cuboid) throw Error("Rust\u7269\u7406: unsupported collider for vessel contact");
+    const h = ball ? { x: c.radius(), y: 0, z: 0 } : c.halfExtents();
+    out.push({ part: v.parts.find((x) => x.id === owner.get(c.handle)), args: [ball ? 1 : 0, h.x, h.y, h.z, p.x, p.y, p.z, q.x, q.y, q.z, q.w] });
+  }
+  return out;
+}
+function dockingFaces(a, pa, b, pb) {
+  if (!PARTS[pa?.type]?.docking || !PARTS[pb?.type]?.docking) return false;
+  const up2 = (v, p) => new T27.Vector3(0, 1, 0).applyQuaternion(v.q.clone().multiply(partRotation(p)));
+  return Math.acos(T27.MathUtils.clamp(-up2(a, pa).dot(up2(b, pb)), -1, 1)) <= 2 * DOCK_LIMITS.angle;
+}
+function body(v) {
+  const mass = v.parts.reduce((s, p) => s + partMass(p, v.fuel, v.ballast, v.thermal), 0), center3 = centerOfVessel(v);
+  return { v, mass, center: center3, inverseInertia: inertiaAbout(v, center3).invert() };
+}
+var velocityAt = (b, r) => b.v.vel.clone().add(b.v.omega.clone().cross(r));
+function applyImpulse(b, r, impulse, sign) {
+  b.v.vel.addScaledVector(impulse, sign / b.mass);
+  b.v.omega.add(r.clone().cross(impulse).applyMatrix3(b.inverseInertia).multiplyScalar(sign));
+}
+function effectiveMass(A, B, rA, rB, n) {
+  const term = (b, r) => r.clone().cross(n).applyMatrix3(b.inverseInertia).cross(r).dot(n);
+  return 1 / A.mass + 1 / B.mass + term(A, rA) + term(B, rB);
+}
+function resolveVesselCollisions(vessels, dt) {
+  if (!(dt > 0)) throw Error("vessel collision needs the step dt");
+  if (!VESSEL_COLLISION.enabled) return [];
+  const pair = rustPairQuery(RAPIER2);
+  if (!pair) return [];
+  const events = [], live = vessels.filter((v) => v.body && v.parts.length), seen = /* @__PURE__ */ new Set();
+  for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
+    const a = live[i], b = live[j], k = key(a, b);
+    if (a.pos.distanceTo(b.pos) > radius(a) + radius(b) + VESSEL_COLLISION.prediction) {
+      ignored.delete(k);
+      continue;
+    }
+    seen.add(k);
+    const sa = shapes(a), sb = shapes(b), origin = a.pos.clone(), offset = b.pos.clone().sub(origin);
+    pair.pair_reset();
+    for (const s of sa) if (pair.pair_shape(0, ...s.args) !== 1) throw Error("Rust\u7269\u7406: vessel contact shape rejected");
+    for (const s of sb) if (pair.pair_shape(1, ...s.args) !== 1) throw Error("Rust\u7269\u7406: vessel contact shape rejected");
+    if (pair.pair_pose(0, 0, 0, 0, a.q.x, a.q.y, a.q.z, a.q.w) !== 1 || pair.pair_pose(1, offset.x, offset.y, offset.z, b.q.x, b.q.y, b.q.z, b.q.w) !== 1) throw Error("Rust\u7269\u7406: vessel contact pose rejected");
+    const count = pair.pair_query(VESSEL_COLLISION.prediction);
+    if (!Number.isInteger(count)) throw Error("Rust\u7269\u7406: vessel contact query failed");
+    const contacts = [];
+    for (let c = 0; c < count; c++) {
+      const read = (f) => pair.pair_read(c, f), pa = sa[read(7)].part, pb = sb[read(8)].part;
+      if (dockingFaces(a, pa, b, pb)) continue;
+      contacts.push({ point: new T27.Vector3(read(0), read(1), read(2)).add(origin), normal: new T27.Vector3(read(3), read(4), read(5)).normalize(), distance: read(6), parts: [pa, pb] });
+    }
+    if (!ignored.has(k)) ignored.set(k, contacts.length > 0);
+    if (!contacts.length) {
+      ignored.set(k, false);
+      continue;
+    }
+    if (ignored.get(k)) continue;
+    const A = body(a), B = body(b);
+    let impact = { speed: 0 };
+    for (let pass = 0; pass < VESSEL_COLLISION.iterations; pass++) for (const c of contacts) {
+      const rA = c.point.clone().sub(A.center), rB = c.point.clone().sub(B.center), n = c.normal;
+      const relative = velocityAt(B, rB).sub(velocityAt(A, rA)), vn = relative.dot(n), closing = vn + Math.max(c.distance, 0) / dt;
+      if (closing >= 0) continue;
+      if (pass === 0 && -vn > impact.speed) impact = { speed: -vn, contact: c };
+      const jn = -closing / effectiveMass(A, B, rA, rB, n), normalImpulse = n.clone().multiplyScalar(jn);
+      applyImpulse(A, rA, normalImpulse, -1);
+      applyImpulse(B, rB, normalImpulse, 1);
+      const after = velocityAt(B, rB).sub(velocityAt(A, rA)), tangent = after.addScaledVector(n, -after.dot(n)), speed = tangent.length();
+      if (speed > 1e-9) {
+        const t = tangent.divideScalar(speed), jt = Math.min(speed / effectiveMass(A, B, rA, rB, t), VESSEL_COLLISION.friction * jn), frictionImpulse = t.multiplyScalar(-jt);
+        applyImpulse(A, rA, frictionImpulse, -1);
+        applyImpulse(B, rB, frictionImpulse, 1);
+      }
+    }
+    const depth = Math.max(0, ...contacts.map((c) => -c.distance - VESSEL_COLLISION.slop));
+    if (depth > 0) {
+      const n = contacts.reduce((m, c) => c.distance < m.distance ? c : m).normal, total = A.mass + B.mass, shift = depth * VESSEL_COLLISION.correction;
+      a.pos.addScaledVector(n, -shift * B.mass / total);
+      b.pos.addScaledVector(n, shift * A.mass / total);
+    }
+    if (!impact.contact && depth <= 0) continue;
+    const event = { a: a.vesselId, b: b.vesselId, contacts: contacts.length, speed: impact.speed };
+    events.push(event);
+    VESSEL_COLLISION.onContact?.(event);
+    if (impact.speed > VESSEL_COLLISION.impactSpeed) for (const [v, p] of [[a, impact.contact.parts[0]], [b, impact.contact.parts[1]]]) {
+      if (!p || v.failureDynamics) continue;
+      recordFailure(v, p, "impact", { speed: impact.speed, position: impact.contact.point.clone() });
+      v.crashed = true;
+      fractureVessel(v, [p.id], (parts, environment, time) => new Flight(parts, environment, time), statistics);
+    }
+  }
+  for (const k of ignored.keys()) if (!seen.has(k)) ignored.delete(k);
+  return events;
 }
 
 // dist/world-physics.js
@@ -1369,11 +1527,12 @@ function advanceWorldPhysics(vessels, universalTime, dt, activeVesselId, input =
   const endTime = universalTime + dt;
   for (const v of vessels) v.universalTime = endTime;
   for (const v of vessels) v.stepBody(dt, v.vesselId === activeVesselId ? input : {}, snapshots.get(v.navigationTarget) ?? null);
+  resolveVesselCollisions(vessels, dt);
   return endTime;
 }
 
 // dist/attachment-nodes.js
-import * as T25 from "./vendor/three/three.module.js";
+import * as T28 from "./vendor/three/three.module.js";
 function validateAttachments(parts) {
   const byId = new Map(parts.map((p) => [p.id, p]));
   for (const p of parts) {
@@ -1387,28 +1546,8 @@ function validateAttachments(parts) {
   }
 }
 
-// dist/port-navigation.js
-import * as T26 from "./vendor/three/three.module.js";
-function portPose(v, id) {
-  const p = v.parts.find((p2) => p2.id === id);
-  if (!p || !PARTS[p.type].docking) return null;
-  const q = v.q.clone().multiply(partRotation(p)), position = new T26.Vector3(0, PARTS[p.type].dockFace, 0).applyQuaternion(q).add(new T26.Vector3(...p.p).applyQuaternion(v.q)).add(v.pos), normal = new T26.Vector3(0, 1, 0).applyQuaternion(q), velocity = v.vel.clone().add(v.omega.clone().cross(position.clone().sub(centerOfVessel(v))));
-  return { part: p, q, position, normal, velocity };
-}
-function portGuidance(a, aId, b, bId) {
-  if (!b || a === b) return null;
-  const own = portPose(a, aId), target = portPose(b, bId);
-  if (!own || !target || own.part.dockPartner || target.part.dockPartner) return null;
-  const right = new T26.Vector3(1, 0, 0).applyQuaternion(target.q), top = new T26.Vector3(0, 0, 1).applyQuaternion(target.q), outward = target.normal, offset = own.position.clone().sub(target.position), velocity = own.velocity.clone().sub(target.velocity), rotatingVelocity = velocity.clone().sub(b.omega.clone().cross(offset));
-  return { own, target, right, top, outward, axial: offset.dot(outward), horizontal: offset.dot(right), vertical: offset.dot(top), lateral: Math.hypot(offset.dot(right), offset.dot(top)), closing: -rotatingVelocity.dot(outward), horizontalSpeed: rotatingVelocity.dot(right), verticalSpeed: rotatingVelocity.dot(top), speed: velocity.length(), angle: Math.acos(T26.MathUtils.clamp(-own.normal.dot(outward), -1, 1)), desiredNormal: outward.clone().negate() };
-}
-function portTranslation(guidance, q, { forward = 0, right = 0, up: up2 = 0 }) {
-  if (!guidance) return new T26.Vector3();
-  return guidance.outward.clone().multiplyScalar(-forward).addScaledVector(guidance.right, right).addScaledVector(guidance.top, up2).applyQuaternion(q.clone().invert());
-}
-
 // dist/rcs.js
-import * as T27 from "./vendor/three/three.module.js";
+import * as T29 from "./vendor/three/three.module.js";
 var RCS_NOZZLES = [...Array(3)].flatMap((_, axis) => [-1, 1].map((sign) => {
   const direction = [0, 0, 0];
   direction[axis] = sign;
@@ -1424,14 +1563,14 @@ function mixRCS(thrusters, com, rotation, translation) {
     positive[i] += Math.max(0, v);
     negative[i] += Math.max(0, -v);
   });
-  const command = [...translation.toArray(), ...rotation.toArray()].map((v) => T27.MathUtils.clamp(v, -1, 1));
+  const command = [...translation.toArray(), ...rotation.toArray()].map((v) => T29.MathUtils.clamp(v, -1, 1));
   const scale = positive.map((v, i) => Math.max(v, negative[i], 1));
   const residual = command.map((v, i) => v * (v >= 0 ? positive[i] : negative[i]) / scale[i]);
   const matrix = columns.map((col) => col.map((v, i) => v / scale[i])), levels = thrusters.map(() => 0);
   for (let iteration = 0; iteration < 120; iteration++) for (let j = 0; j < matrix.length; j++) {
     const col = matrix[j], norm = col.reduce((s, v) => s + v * v, 0);
     if (norm < 1e-12) continue;
-    const next = T27.MathUtils.clamp(levels[j] + col.reduce((s, v, i) => s + v * residual[i], 0) / norm, 0, 1), delta = next - levels[j];
+    const next = T29.MathUtils.clamp(levels[j] + col.reduce((s, v, i) => s + v * residual[i], 0) / norm, 0, 1), delta = next - levels[j];
     levels[j] = next;
     col.forEach((v, i) => residual[i] -= v * delta);
   }
@@ -1447,8 +1586,8 @@ function rcsThrusters(parts, definitions) {
   return parts.flatMap((p) => {
     const d = definitions[p.type];
     if (!d.rcsThrust || p.fuelEnabled === false) return [];
-    const q = new T27.Quaternion().setFromEuler(new T27.Euler(...p.r));
-    return RCS_NOZZLES.map((n, index) => ({ id: p.id, index, position: new T27.Vector3(...n.position).applyQuaternion(q).add(new T27.Vector3(...p.p)), direction: new T27.Vector3(...n.direction).applyQuaternion(q), thrust: d.rcsThrust, isp: d.rcsIsp }));
+    const q = new T29.Quaternion().setFromEuler(new T29.Euler(...p.r));
+    return RCS_NOZZLES.map((n, index) => ({ id: p.id, index, position: new T29.Vector3(...n.position).applyQuaternion(q).add(new T29.Vector3(...p.p)), direction: new T29.Vector3(...n.direction).applyQuaternion(q), thrust: d.rcsThrust, isp: d.rcsIsp }));
   });
 }
 function burnRCS(thrusters, levels, propellant, dt) {
@@ -1464,11 +1603,11 @@ function burnRCS(thrusters, levels, propellant, dt) {
 }
 
 // dist/core.js
-import * as T29 from "./vendor/three/three.module.js";
-import RAPIER2 from "./vendor/rapier/rapier.mjs";
+import * as T31 from "./vendor/three/three.module.js";
+import RAPIER3 from "./vendor/rapier/rapier.mjs";
 
 // dist/recovery.js
-import * as T28 from "./vendor/three/three.module.js";
+import * as T30 from "./vendor/three/three.module.js";
 var waitReasons = /* @__PURE__ */ new WeakMap();
 function parachuteBlocker({ altitude, speed, vertical, density }) {
   if (!(density > 0.03)) return "\u5927\u6C17\u4E0D\u8DB3";
@@ -1493,23 +1632,23 @@ function parachuteStep(state, { altitude, speed, vertical, density, landed }, dt
   if (state.status === "armed" && !reason) state.status = "reefed";
   if (state.status === "reefed" && altitude < 1500 && speed < 80) state.status = "open";
   const target = state.status === "open" ? 1 : state.status === "reefed" ? 0.08 : 0;
-  state.fraction += T28.MathUtils.clamp(target - state.fraction, -dt / 3, dt / 3);
+  state.fraction += T30.MathUtils.clamp(target - state.fraction, -dt / 3, dt / 3);
 }
 function parachuteDrag(velocity, density, area, fraction, mass, dt) {
   const speed = velocity.length();
-  if (!speed || !fraction) return new T28.Vector3();
+  if (!speed || !fraction) return new T30.Vector3();
   const force = Math.min(0.5 * density * speed * speed * area * 1.5 * fraction, mass * speed / (Math.max(dt, 1e-6) * 2));
   return velocity.clone().multiplyScalar(-force / speed);
 }
 
 // dist/core.js
-await RAPIER2.init();
+await RAPIER3.init();
 function validateCraft(value) {
   if (!value || value.version !== 1 || !Array.isArray(value.parts) || !value.parts.length || value.parts.length > 400) throw Error("\u6A5F\u4F53\u5F62\u5F0F\u307E\u305F\u306F\u90E8\u54C1\u6570\u304C\u4E0D\u6B63\u3067\u3059\uFF081\u301C400\u90E8\u54C1\uFF09\u3002");
   const ids = /* @__PURE__ */ new Set();
   for (const p of value.parts) {
     if (!PARTS[p.type] || typeof p.id !== "string" || ids.has(p.id) || !["p", "r"].every((k) => Array.isArray(p[k]) && p[k].length === 3 && p[k].every((n) => Number.isFinite(n) && Math.abs(n) < 1e4)) || !Number.isInteger(p.stage) || p.stage < 0 || p.stage > 9) throw Error("\u90E8\u54C1\u30C7\u30FC\u30BF\u304C\u4E0D\u6B63\u3067\u3059\u3002");
-    for (const key of ["cargoOpen", "reactionEnabled", "steeringEnabled", "driveEnabled", "controlEnabled", "gimbalEnabled", "controlPitch", "controlYaw", "controlRoll", "fuelCrossfeed", "fuelEnabled"]) if (p[key] !== void 0 && typeof p[key] !== "boolean") throw Error("\u90E8\u54C1\u306E\u64CD\u4F5C\u8A2D\u5B9A\u304C\u4E0D\u6B63\u3067\u3059\u3002");
+    for (const key2 of ["cargoOpen", "reactionEnabled", "steeringEnabled", "driveEnabled", "controlEnabled", "gimbalEnabled", "controlPitch", "controlYaw", "controlRoll", "fuelCrossfeed", "fuelEnabled"]) if (p[key2] !== void 0 && typeof p[key2] !== "boolean") throw Error("\u90E8\u54C1\u306E\u64CD\u4F5C\u8A2D\u5B9A\u304C\u4E0D\u6B63\u3067\u3059\u3002");
     if (p.cargoOpen !== void 0 && !PARTS[p.type].cargoBay) throw Error("\u8CA8\u7269\u6249\u306F\u8CA8\u7269\u80F4\u4F53\u306E\u8A2D\u5B9A\u3067\u3059\u3002");
     if (p.fuelEnabled !== void 0 && !PARTS[p.type].fuel && !PARTS[p.type].monoprop) throw Error("\u71C3\u6599\u4F7F\u7528\u306F\u63A8\u9032\u5264\u3092\u6301\u3064\u90E8\u54C1\u306E\u8A2D\u5B9A\u3067\u3059\u3002");
     if (p.fuelCrossfeed !== void 0 && !PARTS[p.type].docking) throw Error("\u71C3\u6599\u901A\u904E\u306F\u30DD\u30FC\u30C8\u306E\u8A2D\u5B9A\u3067\u3059\u3002");
@@ -1554,7 +1693,7 @@ function descendants(parts, id) {
 }
 function statistics(parts, fuelRatio = 1, ballast = 0, thermal = null) {
   let mass = 0, dry = 0, fuel = 0, thrust = 0, weightedIsp = 0;
-  const com = new T29.Vector3();
+  const com = new T31.Vector3();
   for (const p of parts) {
     const d = PARTS[p.type], m = partMass(p, fuelRatio, ballast, thermal);
     mass += m;
@@ -1568,9 +1707,9 @@ function statistics(parts, fuelRatio = 1, ballast = 0, thermal = null) {
   const isp = weightedIsp / (thrust || 1);
   return { mass, dry, fuel, thrust, com, twr: thrust / (mass * 9.81), dv: fuel ? isp * 9.81 * Math.log(mass / (dry + ballast * parts.reduce((s, p) => s + (PARTS[p.type].ballast || 0), 0))) : 0, aero: aeroAnalysis(parts, com) };
 }
-var up = new T29.Vector3(0, 1, 0);
-function extentY(p, q = new T29.Quaternion()) {
-  const d = PARTS[p.type], e = new T29.Matrix4().makeRotationFromQuaternion(q.clone().multiply(partRotation(p))).elements;
+var up = new T31.Vector3(0, 1, 0);
+function extentY(p, q = new T31.Quaternion()) {
+  const d = PARTS[p.type], e = new T31.Matrix4().makeRotationFromQuaternion(q.clone().multiply(partRotation(p))).elements;
   return (Math.abs(e[1]) * d.size[0] + Math.abs(e[5]) * d.size[1] + Math.abs(e[9]) * d.size[2]) / 2;
 }
 var Flight = class _Flight {
@@ -1583,10 +1722,10 @@ var Flight = class _Flight {
     this.failureDynamics = false;
     this.environment = environment;
     this.physicsOrigin = null;
-    this.q = new T29.Quaternion();
-    this.pos = new T29.Vector3();
-    this.vel = new T29.Vector3();
-    this.omega = new T29.Vector3();
+    this.q = new T31.Quaternion();
+    this.pos = new T31.Vector3();
+    this.vel = new T31.Vector3();
+    this.omega = new T31.Vector3();
     this.fuel = createFuel(this.parts);
     this.charge = createCharge(this.parts);
     this.observations = createObservations(this.parts);
@@ -1632,13 +1771,13 @@ var Flight = class _Flight {
     this.reactionEnabled = true;
     this.steeringEnabled = true;
     this.driveEnabled = true;
-    this.world = new RAPIER2.World({ x: 0, y: -9.81, z: 0 });
+    this.world = new RAPIER3.World({ x: 0, y: -9.81, z: 0 });
     this.world.numSolverIterations = 8;
     this.world.integrationParameters.lengthUnit = 100;
     this.world.integrationParameters.normalizedAllowedLinearError = 5e-3 / 100;
     this.world.integrationParameters.normalizedPredictionDistance = 0.02 / 100;
-    if (environment !== "water") this.ground = this.world.createCollider(RAPIER2.ColliderDesc.cuboid(2e3, 1, 2e3).setTranslation(0, -1, 0).setFriction(0.3));
-    this.body = this.world.createRigidBody(RAPIER2.RigidBodyDesc.dynamic().setTranslation(...this.pos.toArray()).setCanSleep(false).setCcdEnabled(true));
+    if (environment !== "water") this.ground = this.world.createCollider(RAPIER3.ColliderDesc.cuboid(2e3, 1, 2e3).setTranslation(0, -1, 0).setFriction(0.3));
+    this.body = this.world.createRigidBody(RAPIER3.RigidBodyDesc.dynamic().setTranslation(...this.pos.toArray()).setCanSleep(false).setCcdEnabled(true));
     this.colliders = /* @__PURE__ */ new Map();
     this.buildColliders();
     if (environment === "entry") {
@@ -1652,7 +1791,7 @@ var Flight = class _Flight {
       this.vel.set(0, -50, 0);
     }
     if (environment === "orbit") {
-      this.q.setFromAxisAngle(new T29.Vector3(1, 0, 0), Math.PI / 2);
+      this.q.setFromAxisAngle(new T31.Vector3(1, 0, 0), Math.PI / 2);
       this.pos.set(0, 8e4, 0).sub(this.stats.com.clone().applyQuaternion(this.q));
       this.vel.set(0, 0, Math.sqrt(PLANET.mu / 68e4));
     }
@@ -1667,13 +1806,13 @@ var Flight = class _Flight {
     }
     if (environment === "moon-surface") {
       const moon = bodyState(MOON, universalTime);
-      this.pos.copy(moon.position).add(new T29.Vector3(0, MOON.radius + this.floor + 0.1, 0));
+      this.pos.copy(moon.position).add(new T31.Vector3(0, MOON.radius + this.floor + 0.1, 0));
       this.vel.copy(moon.velocity);
       this.sasMode = "radial";
     }
     if (environment === "moon-orbit") {
       const trial = lunarTrial(universalTime);
-      this.q.setFromAxisAngle(new T29.Vector3(1, 0, 0), Math.PI / 2);
+      this.q.setFromAxisAngle(new T31.Vector3(1, 0, 0), Math.PI / 2);
       this.pos.copy(trial.pos).sub(this.stats.com.clone().applyQuaternion(this.q));
       this.vel.copy(trial.vel);
     }
@@ -1778,9 +1917,9 @@ var Flight = class _Flight {
         child.brake = this.brake;
         child.sas = branch.some((p) => PARTS[p.type].control) && this.sas;
         child.holdQ = this.q.clone();
-        for (const key of ["reactionEnabled", "driveEnabled", "steeringEnabled", "rcsEnabled"]) child[key] = this[key];
+        for (const key2 of ["reactionEnabled", "driveEnabled", "steeringEnabled", "rcsEnabled"]) child[key2] = this[key2];
         child.active = new Set([...this.active].filter((id) => ids.has(id)));
-        for (const key of ["thermal", "chutes", "deflections", "gimbals", "wheelMotion", "observations"]) child[key] = new Map([...this[key]].filter(([id]) => ids.has(id)).map(([id, v]) => [id, v?.isVector3 ? v.clone() : structuredClone(v)]));
+        for (const key2 of ["thermal", "chutes", "deflections", "gimbals", "wheelMotion", "observations"]) child[key2] = new Map([...this[key2]].filter(([id]) => ids.has(id)).map(([id, v]) => [id, v?.isVector3 ? v.clone() : structuredClone(v)]));
         child.stats = statistics(branch, child.fuel, child.ballast, child.thermal);
         child.vel.copy(originalVelocity).add(this.omega.clone().cross(child.stats.com.clone().applyQuaternion(this.q).sub(oldCOM)));
         child.buildColliders();
@@ -1839,7 +1978,7 @@ var Flight = class _Flight {
     this.time += dt;
     const failedParts = /* @__PURE__ */ new Set(), resting = isParked(this) ? frozenSurfaceState(this, startTime, dt) : null;
     const altitude = (p) => bodyAltitude(p, startTime, reference), localUp = (p) => bodyUp(p, startTime, reference), gravity = (p) => bodyGravity(p, startTime, reference), startCOM = this.pos.clone().add(statistics(this.parts, this.fuel, this.ballast, this.thermal).com.applyQuaternion(this.q)), spin = surfaceAngularVelocity(reference), relativeOmega = this.omega.clone().sub(spin), relativeVelocity = surfaceRelativeVelocity(startCOM, this.vel, startTime, reference), water = this.environment === "water" && reference.id === "planet";
-    const normal = localUp(this.pos), height = altitude(this.pos), freeFlight = height > this.parts.reduce((m, p) => Math.max(m, new T29.Vector3(...p.p).length() + Math.max(...PARTS[p.type].size)), 0) + 25;
+    const normal = localUp(this.pos), height = altitude(this.pos), freeFlight = height > this.parts.reduce((m, p) => Math.max(m, new T31.Vector3(...p.p).length() + Math.max(...PARTS[p.type].size)), 0) + 25;
     const solverScale = freeFlight ? 100 : Math.max(1, relativeVelocity.length() / 100);
     this.world.integrationParameters.lengthUnit = solverScale;
     this.world.integrationParameters.normalizedAllowedLinearError = 1e-3 / solverScale;
@@ -1850,7 +1989,7 @@ var Flight = class _Flight {
     if (this.ground) {
       this.ground.setEnabled(!freeFlight);
       this.ground.setTranslation(this.pos.clone().sub(origin).addScaledVector(normal, -height - 1));
-      this.ground.setRotation(new T29.Quaternion().setFromUnitVectors(up, normal));
+      this.ground.setRotation(new T31.Quaternion().setFromUnitVectors(up, normal));
     }
     this.body.setTranslation(this.pos.clone().sub(origin), true);
     this.body.setRotation(this.q, true);
@@ -1862,24 +2001,24 @@ var Flight = class _Flight {
     const mass = st.mass, com = st.com.clone().applyQuaternion(this.q).add(this.pos), air = reference.id === "planet" ? atmosphere(height) : { density: 0, pressure: 0, temperature: 3 }, density = air.density;
     this.body.resetForces(true);
     this.body.resetTorques(true);
-    const force = new T29.Vector3(), torque = new T29.Vector3(), engineForce = new T29.Vector3();
+    const force = new T31.Vector3(), torque = new T31.Vector3(), engineForce = new T31.Vector3();
     const apply = (f, point) => {
       force.add(f);
       torque.add(point.clone().sub(com).cross(f));
       this.body.addForceAtPoint(f, point.clone().sub(origin), true);
     };
     const commands = attitudeCommands(input, this.rocketAxes);
-    const steering = new T29.Vector3(commands.pitch, commands.yaw, commands.roll);
+    const steering = new T31.Vector3(commands.pitch, commands.yaw, commands.roll);
     const manual = steering.lengthSq() > 1e-4;
     if (!this.holdQ || !this.sas || manual && (this.rocketAxes || this.sasMode !== "hold")) this.holdQ = this.q.clone();
     else if (manual) this.holdQ = manualAttitudeTarget(this.q, this.holdQ, steering);
     if (manual) this.sasMode = "hold";
     if (this.sas && this.sasMode !== "hold") {
       const guide = this.dockingPorts ? portGuidance(this, this.dockingPorts.own, navigationTarget, this.dockingPorts.target) : null;
-      const target = this.sasMode === "dock" ? guide?.desiredNormal : this.sasMode === "target" ? relativeState(this, navigationTarget)?.direction : this.sasMode === "relativeRetrograde" ? relativeState(this, navigationTarget)?.braking : this.sasMode === "maneuver" ? maneuverDirection(this.maneuver) : navDirections(com, this.vel, startTime, this.navigationFrame)[this.sasMode], forward = this.sasMode === "dock" && guide ? new T29.Vector3(0, 1, 0).applyQuaternion(partRotation(guide.own.part)) : new T29.Vector3(0, this.rocketAxes ? 1 : 0, this.rocketAxes ? 0 : 1);
+      const target = this.sasMode === "dock" ? guide?.desiredNormal : this.sasMode === "target" ? relativeState(this, navigationTarget)?.direction : this.sasMode === "relativeRetrograde" ? relativeState(this, navigationTarget)?.braking : this.sasMode === "maneuver" ? maneuverDirection(this.maneuver) : navDirections(com, this.vel, startTime, this.navigationFrame)[this.sasMode], forward = this.sasMode === "dock" && guide ? new T31.Vector3(0, 1, 0).applyQuaternion(partRotation(guide.own.part)) : new T31.Vector3(0, this.rocketAxes ? 1 : 0, this.rocketAxes ? 0 : 1);
       if (target) this.holdQ = attitudeTarget(this.q, forward, target);
     }
-    const banking = this.sas && this.sasMode === "hold" && !this.rocketAxes && st.aero.area > 0 && !this.telemetry.groundContact && density * relativeVelocity.lengthSq() / 2 > 50 && Math.abs(new T29.Vector3(1, 0, 0).applyQuaternion(this.q).dot(normal)) > Math.sin(5 * Math.PI / 180);
+    const banking = this.sas && this.sasMode === "hold" && !this.rocketAxes && st.aero.area > 0 && !this.telemetry.groundContact && density * relativeVelocity.lengthSq() / 2 > 50 && Math.abs(new T31.Vector3(1, 0, 0).applyQuaternion(this.q).dot(normal)) > Math.sin(5 * Math.PI / 180);
     if (banking) this.holdQ = followBankHeading(this.q, this.holdQ, normal);
     if (this.sas) {
       const error = this.holdQ.clone().multiply(this.q.clone().invert());
@@ -1888,15 +2027,15 @@ var Flight = class _Flight {
         error.y *= -1;
         error.z *= -1;
       }
-      const inverse = this.q.clone().invert(), localError = new T29.Vector3(error.x, error.y, error.z).applyQuaternion(inverse), correction = new T29.Vector3(error.x, error.y, error.z).multiplyScalar(4).addScaledVector(freeFlight ? this.omega : relativeOmega, -1.5).applyQuaternion(inverse);
+      const inverse = this.q.clone().invert(), localError = new T31.Vector3(error.x, error.y, error.z).applyQuaternion(inverse), correction = new T31.Vector3(error.x, error.y, error.z).multiplyScalar(4).addScaledVector(freeFlight ? this.omega : relativeOmega, -1.5).applyQuaternion(inverse);
       const axes2 = {};
       for (const [name, axis] of [["pitch", "x"], ["yaw", "y"], ["roll", "z"]]) axes2[axis] = !this.rocketAxes && Math.abs(steering[axis]) < 0.01 && this.parts.some((p) => PARTS[p.type].controlAxis && Math.abs(controlDeflection(p, st.com, { [name]: 1 })) > 1e-6);
       if (banking) axes2.y = false;
-      const bias = sasTrim(this, localError, correction.clone().add(new T29.Vector3(this.trim, 0, 0)), axes2, dt, !this.rocketAxes && !this.telemetry.groundContact && density * relativeVelocity.lengthSq() / 2 > 50);
+      const bias = sasTrim(this, localError, correction.clone().add(new T31.Vector3(this.trim, 0, 0)), axes2, dt, !this.rocketAxes && !this.telemetry.groundContact && density * relativeVelocity.lengthSq() / 2 > 50);
       correction.add(bias);
-      for (const [name, axis] of [["pitch", "x"], ["yaw", "y"], ["roll", "z"]]) commands[name] = T29.MathUtils.clamp(commands[name] + correction[axis], -1, 1);
+      for (const [name, axis] of [["pitch", "x"], ["yaw", "y"], ["roll", "z"]]) commands[name] = T31.MathUtils.clamp(commands[name] + correction[axis], -1, 1);
     } else sasTrim(this, null, null, null, dt, false);
-    commands.pitch = T29.MathUtils.clamp(commands.pitch + this.trim, -1, 1);
+    commands.pitch = T31.MathUtils.clamp(commands.pitch + this.trim, -1, 1);
     this.engineThrust = engineBurn(this.networks, this.fuel, this.started ? this.active : /* @__PURE__ */ new Set(), this.throttle, density, dt, air.pressure);
     const wheelContacts = [];
     let stallCount = 0, contacts = 0, wheelImpactSpeed = 0;
@@ -1905,10 +2044,10 @@ var Flight = class _Flight {
     for (const p of this.parts) {
       const d = PARTS[p.type], orientation = this.q.clone().multiply(partRotation(p)), wp = partCenter(p).applyQuaternion(this.q).add(this.pos), r = wp.clone().sub(com), pv = relativeVelocity.clone().add(relativeOmega.clone().cross(r));
       if (d.gimbal) {
-        const localIntent = new T29.Vector3(commands.pitch, commands.yaw, commands.roll).applyQuaternion(partRotation(p).invert()), lever = partCenter(p).sub(st.com).dot(up.clone().applyQuaternion(partRotation(p))), max = d.gimbal * Math.PI / 180;
-        const target = new T29.Vector3(localIntent.x, 0, localIntent.z).multiplyScalar(Math.sign(lever) * max * (p.gimbalEnabled === false ? 0 : 1));
+        const localIntent = new T31.Vector3(commands.pitch, commands.yaw, commands.roll).applyQuaternion(partRotation(p).invert()), lever = partCenter(p).sub(st.com).dot(up.clone().applyQuaternion(partRotation(p))), max = d.gimbal * Math.PI / 180;
+        const target = new T31.Vector3(localIntent.x, 0, localIntent.z).multiplyScalar(Math.sign(lever) * max * (p.gimbalEnabled === false ? 0 : 1));
         if (target.length() > max) target.setLength(max);
-        const current = this.gimbals.get(p.id) || new T29.Vector3();
+        const current = this.gimbals.get(p.id) || new T31.Vector3();
         const delta = target.sub(current);
         if (delta.length() > dt * 1.2) delta.setLength(dt * 1.2);
         current.add(delta);
@@ -1920,8 +2059,8 @@ var Flight = class _Flight {
           f *= engineMedium(this, p, startTime).submersion;
           this.engineThrust.set(p.id, f);
         }
-        const g = this.gimbals.get(p.id), gq = g ? new T29.Quaternion().setFromEuler(new T29.Euler(g.x, 0, g.z)) : new T29.Quaternion();
-        const point = d.gimbal ? new T29.Vector3(...d.gimbalPivot).applyQuaternion(orientation).add(wp) : wp;
+        const g = this.gimbals.get(p.id), gq = g ? new T31.Quaternion().setFromEuler(new T31.Euler(g.x, 0, g.z)) : new T31.Quaternion();
+        const point = d.gimbal ? new T31.Vector3(...d.gimbalPivot).applyQuaternion(orientation).add(wp) : wp;
         const thrustVector = up.clone().applyQuaternion(gq).applyQuaternion(orientation).multiplyScalar(f);
         engineForce.add(thrustVector);
         apply(thrustVector, point);
@@ -1934,7 +2073,7 @@ var Flight = class _Flight {
       }
       if (d.wing) {
         let angle = this.deflections.get(p.id) || 0, target = controlDeflection(p, st.com, commands);
-        angle += T29.MathUtils.clamp(target - angle, -dt * 1.6, dt * 1.6);
+        angle += T31.MathUtils.clamp(target - angle, -dt * 1.6, dt * 1.6);
         this.deflections.set(p.id, angle);
         const point = aeroPoint(p).applyQuaternion(this.q).add(this.pos), velocity = relativeVelocity.clone().add(relativeOmega.clone().cross(point.clone().sub(com))), aero = surfaceForce(p, orientation, velocity, density, angle);
         apply(aero.force, point);
@@ -1947,19 +2086,19 @@ var Flight = class _Flight {
       if (water) {
         const volume = displacedVolume(p);
         for (const u of [-0.32, 0.32]) {
-          const point = new T29.Vector3(0, d.size[1] * u, 0).applyQuaternion(orientation).add(wp), velocity = relativeVelocity.clone().add(relativeOmega.clone().cross(point.clone().sub(com))), depth = Math.max(0.12, extentY(p, this.q) * 1.2), sub = T29.MathUtils.clamp((depth / 2 - altitude(point)) / depth, 0, 1);
+          const point = new T31.Vector3(0, d.size[1] * u, 0).applyQuaternion(orientation).add(wp), velocity = relativeVelocity.clone().add(relativeOmega.clone().cross(point.clone().sub(com))), depth = Math.max(0.12, extentY(p, this.q) * 1.2), sub = T31.MathUtils.clamp((depth / 2 - altitude(point)) / depth, 0, 1);
           apply(localUp(point).multiplyScalar(gravity(point).length() * 1e3 * volume * 0.5 * sub), point);
           apply(velocity.multiplyScalar(-sub * volume * 500), point);
         }
       }
       if (d.wheel && !water) {
-        const radius = d.size[1] / 2, steer = d.steer && this.steeringEnabled && p.steeringEnabled !== false ? (input.yaw || 0) * 0.4 / (1 + relativeVelocity.lengthSq() / 9) : 0;
-        const rollingDirection = new T29.Vector3(Math.sin(steer), 0, Math.cos(steer)).applyQuaternion(this.q);
+        const radius2 = d.size[1] / 2, steer = d.steer && this.steeringEnabled && p.steeringEnabled !== false ? (input.yaw || 0) * 0.4 / (1 + relativeVelocity.lengthSq() / 9) : 0;
+        const rollingDirection = new T31.Vector3(Math.sin(steer), 0, Math.cos(steer)).applyQuaternion(this.q);
         const motion = this.wheelMotion.get(p.id) || { angle: 0, speed: 0, steer: 0 };
-        const bottom = altitude(wp) - radius;
-        motion.extension = T29.MathUtils.clamp(bottom, 0, 0.18);
+        const bottom = altitude(wp) - radius2;
+        motion.extension = T31.MathUtils.clamp(bottom, 0, 0.18);
         motion.steer = steer;
-        motion.speed = bottom < 0.18 ? pv.dot(rollingDirection) / radius : motion.speed * Math.exp(-dt * (this.brake ? 12 : 0.3));
+        motion.speed = bottom < 0.18 ? pv.dot(rollingDirection) / radius2 : motion.speed * Math.exp(-dt * (this.brake ? 12 : 0.3));
         motion.angle = (motion.angle + motion.speed * dt) % (2 * Math.PI);
         this.wheelMotion.set(p.id, motion);
         if (bottom < 0.18) {
@@ -1967,22 +2106,22 @@ var Flight = class _Flight {
           wheelImpactSpeed = Math.min(wheelImpactSpeed, pv.dot(normal));
           const share = mass / Math.max(1, wheelCount), spring = Math.max(0, (0.18 - bottom) * share * 150 - pv.dot(normal) * share * 12);
           apply(normal.clone().multiplyScalar(spring), wp);
-          const forward = new T29.Vector3(Math.sin(steer), 0, Math.cos(steer)).applyQuaternion(this.q);
+          const forward = new T31.Vector3(Math.sin(steer), 0, Math.cos(steer)).applyQuaternion(this.q);
           forward.addScaledVector(normal, -forward.dot(normal));
           forward.normalize();
-          const side = normal.clone().cross(forward), load = Math.max(spring, share * gravity(wp).length() * 0.25), point = wp.clone().addScaledVector(normal, -radius);
-          wheelContacts.push({ id: p.id, point: point.toArray(), halfAxle: new T29.Vector3(d.size[0] / 2, 0, 0).applyQuaternion(orientation).toArray(), time: startTime });
-          apply(side.multiplyScalar(T29.MathUtils.clamp(-pv.dot(side) * share * 6, -load * 0.8, load * 0.8)), point);
-          apply(forward.clone().multiplyScalar(T29.MathUtils.clamp(-pv.dot(forward) * share * (this.brake ? 8 : 0.012), -load * 0.8, load * 0.8)), point);
+          const side = normal.clone().cross(forward), load = Math.max(spring, share * gravity(wp).length() * 0.25), point = wp.clone().addScaledVector(normal, -radius2);
+          wheelContacts.push({ id: p.id, point: point.toArray(), halfAxle: new T31.Vector3(d.size[0] / 2, 0, 0).applyQuaternion(orientation).toArray(), time: startTime });
+          apply(side.multiplyScalar(T31.MathUtils.clamp(-pv.dot(side) * share * 6, -load * 0.8, load * 0.8)), point);
+          apply(forward.clone().multiplyScalar(T31.MathUtils.clamp(-pv.dot(forward) * share * (this.brake ? 8 : 0.012), -load * 0.8, load * 0.8)), point);
           if (p.type === "wheel" && this.driveEnabled && p.driveEnabled !== false && this.started && !this.brake) {
-            const drive = T29.MathUtils.clamp(input.drive ?? this.throttle, -1, 1);
+            const drive = T31.MathUtils.clamp(input.drive ?? this.throttle, -1, 1);
             apply(forward.multiplyScalar(drive * share * 3 * Math.max(0, 1 - Math.abs(pv.dot(forward)) / 18)), wp);
           }
         }
       }
     }
     const thrusters = this.rcsEnabled ? rcsThrusters(this.parts, PARTS).filter((t) => (this.fuel.get(t.id) || 0) > 0) : [];
-    const rotation = new T29.Vector3(commands.pitch, commands.yaw, commands.roll), translation = new T29.Vector3(input.translateX || 0, input.translateY || 0, input.translateZ || 0);
+    const rotation = new T31.Vector3(commands.pitch, commands.yaw, commands.roll), translation = new T31.Vector3(input.translateX || 0, input.translateY || 0, input.translateZ || 0);
     if (this.portTranslationEnabled && this.dockingPorts) {
       const guide = portGuidance(this, this.dockingPorts.own, navigationTarget, this.dockingPorts.target);
       translation.copy(portTranslation(guide, this.q, { forward: input.portForward || 0, right: input.portRight || 0, up: input.portUp || 0 }));
@@ -1995,7 +2134,7 @@ var Flight = class _Flight {
     const reaction = this.parts.reduce((s, p) => s + (p.reactionEnabled === false ? 0 : PARTS[p.type].reactionTorque || 0), 0);
     const power = powerStep(this.parts, this.charge, com, this.q, commands, this.reactionEnabled, dt, startTime, observationDemand(this));
     advanceObservations({ ...this, universalTime: startTime }, this.observations, power, dt);
-    if (this.reactionEnabled && reaction) this.body.addTorque(new T29.Vector3(commands.pitch, commands.yaw, commands.roll).multiplyScalar(reaction * power.ratio).applyQuaternion(this.q), true);
+    if (this.reactionEnabled && reaction) this.body.addTorque(new T31.Vector3(commands.pitch, commands.yaw, commands.roll).multiplyScalar(reaction * power.ratio).applyQuaternion(this.q), true);
     advanceTransferGuide(this.transferGuide, engineForce, this.vel.clone().sub(startBody.velocity), mass, dt, startTime);
     const maneuverWasComplete = this.maneuver?.complete;
     advanceManeuver(this.maneuver, engineForce.clone().multiplyScalar(dt / mass));
@@ -2048,7 +2187,7 @@ var Flight = class _Flight {
       recordFailure(this, hit.p, "impact", { speed: Math.max(-wheelImpactSpeed, -impactSpeed, 0), position: hit.point });
     }
     const touching = !freeFlight && this.parts.some((p) => {
-      const point = partCenter(p).applyQuaternion(this.q).add(this.pos), axes2 = new T29.Matrix4().makeRotationFromQuaternion(this.q.clone().multiply(partRotation(p))).elements, d = PARTS[p.type], extent = (Math.abs(normal.x * axes2[0] + normal.y * axes2[1] + normal.z * axes2[2]) * d.size[0] + Math.abs(normal.x * axes2[4] + normal.y * axes2[5] + normal.z * axes2[6]) * d.size[1] + Math.abs(normal.x * axes2[8] + normal.y * axes2[9] + normal.z * axes2[10]) * d.size[2]) / 2;
+      const point = partCenter(p).applyQuaternion(this.q).add(this.pos), axes2 = new T31.Matrix4().makeRotationFromQuaternion(this.q.clone().multiply(partRotation(p))).elements, d = PARTS[p.type], extent = (Math.abs(normal.x * axes2[0] + normal.y * axes2[1] + normal.z * axes2[2]) * d.size[0] + Math.abs(normal.x * axes2[4] + normal.y * axes2[5] + normal.z * axes2[6]) * d.size[1] + Math.abs(normal.x * axes2[8] + normal.y * axes2[9] + normal.z * axes2[10]) * d.size[2]) / 2;
       return bodyAltitude(point, this.universalTime, reference) - extent < 0.1;
     });
     const supported = !freeFlight && this.ground && [...this.colliderGroups.values()].flat().some(({ collider: c }) => {
@@ -2101,7 +2240,7 @@ function entries(values, allowed, read) {
 }
 function loadFlight(value, { debris = false, depth = 0, budget = { count: 0, ids: /* @__PURE__ */ new Set(), vesselIds: /* @__PURE__ */ new Set() } } = {}) {
   check2(depth <= 32);
-  check2(value?.kind === "orbital-foundry-flight" && value.version === 1);
+  check2(isSaveKind(value?.kind, "flight") && value.version === 1);
   check2(value.physicsModel === void 0 || value.physicsModel === PHYSICS_MODEL);
   if (value.physicsMigration != null) check2(["surface", "inertial"].every((k) => Number.isInteger(value.physicsMigration[k]) && value.physicsMigration[k] >= 0 && value.physicsMigration[k] <= 400));
   const parts = validateCraft({ version: 1, parts: value.parts }), byId = new Map(parts.map((p) => [p.id, p]));
@@ -2140,7 +2279,7 @@ function loadFlight(value, { debris = false, depth = 0, budget = { count: 0, ids
   const deflections = entries(value.deflections, ids, (v) => {
     check2(Number.isFinite(v) && Math.abs(v) <= Math.PI);
     return v;
-  }), gimbals = entries(value.gimbals, ids, (v) => new T30.Vector3(...vector(v, 3, Math.PI))), wheelMotion = entries(value.wheelMotion, ids, (v) => {
+  }), gimbals = entries(value.gimbals, ids, (v) => new T32.Vector3(...vector(v, 3, Math.PI))), wheelMotion = entries(value.wheelMotion, ids, (v) => {
     check2(v && ["angle", "speed", "steer"].every((k) => Number.isFinite(v[k]) && Math.abs(v[k]) < 1e6));
     check2(v.extension === void 0 || Number.isFinite(v.extension) && v.extension >= 0 && v.extension <= 0.18);
     return { angle: v.angle, speed: v.speed, steer: v.steer, ...v.extension === void 0 ? {} : { extension: v.extension } };
@@ -2213,7 +2352,7 @@ function loadFlight(value, { debris = false, depth = 0, budget = { count: 0, ids
   f.vel.fromArray(value.vel);
   f.q.fromArray(value.q).normalize();
   f.omega.fromArray(value.omega);
-  f.holdQ = value.holdQ ? new T30.Quaternion().fromArray(value.holdQ).normalize() : f.q.clone();
+  f.holdQ = value.holdQ ? new T32.Quaternion().fromArray(value.holdQ).normalize() : f.q.clone();
   f.sasMode = value.sasMode;
   f.navigationFrame = value.navigationFrame ?? "orbit";
   f.navigationAuto = value.navigationAuto ?? true;
@@ -2257,7 +2396,7 @@ function loadFlight(value, { debris = false, depth = 0, budget = { count: 0, ids
 }
 
 // tools/landing-trim.mjs
-import * as T31 from "./vendor/three/three.module.js";
+import * as T33 from "./vendor/three/three.module.js";
 var rad2 = Math.PI / 180;
 function planLandingTrim(f, { density = 1.225, gravity = 9.81 } = {}) {
   for (let speed = 40; speed <= 160; speed += 2) {
@@ -2268,9 +2407,9 @@ function planLandingTrim(f, { density = 1.225, gravity = 9.81 } = {}) {
   return null;
 }
 function trimForces(f, { speed, alpha, pitchCommand, density = 1.225, gravity = 9.81, slope = -3 }) {
-  const flow = new T31.Vector3(0, -Math.sin(alpha * rad2), Math.cos(alpha * rad2)), velocity = flow.clone().multiplyScalar(speed);
-  const pitch = (alpha + slope) * rad2, up2 = new T31.Vector3(0, Math.cos(pitch), Math.sin(pitch));
-  const force = bodyDrag(f.bodyAerodynamics, new T31.Quaternion(), velocity, density).force, torque = new T31.Vector3();
+  const flow = new T33.Vector3(0, -Math.sin(alpha * rad2), Math.cos(alpha * rad2)), velocity = flow.clone().multiplyScalar(speed);
+  const pitch = (alpha + slope) * rad2, up2 = new T33.Vector3(0, Math.cos(pitch), Math.sin(pitch));
+  const force = bodyDrag(f.bodyAerodynamics, new T33.Quaternion(), velocity, density).force, torque = new T33.Vector3();
   let stalled = false;
   for (const p of f.parts) {
     if (!PARTS[p.type].wing) continue;
@@ -2279,12 +2418,12 @@ function trimForces(f, { speed, alpha, pitchCommand, density = 1.225, gravity = 
     torque.add(aeroPoint(p).sub(f.stats.com).cross(a.force));
     stalled ||= a.stalled;
   }
-  const thrust = new T31.Vector3(), thrustTorque = new T31.Vector3();
+  const thrust = new T33.Vector3(), thrustTorque = new T33.Vector3();
   for (const group of fuelNetworks(f.parts).groups) {
     if (!group.tanks.some((p) => (f.fuel.get(p.id) || 0) > 0)) continue;
     for (const p of group.engines) {
       if (!PARTS[p.type].air || !f.active.has(p.id)) continue;
-      const engine = new T31.Vector3(0, 1, 0).applyQuaternion(partRotation(p)).multiplyScalar(engineMaxThrust(p) * density / 1.225);
+      const engine = new T33.Vector3(0, 1, 0).applyQuaternion(partRotation(p)).multiplyScalar(engineMaxThrust(p) * density / 1.225);
       thrust.add(engine);
       thrustTorque.add(partCenter(p).sub(f.stats.com).cross(engine));
     }
@@ -2341,7 +2480,7 @@ function handleLandingPlan({ id, vesselId, epoch, flight }) {
     clone?.dispose();
   }
 }
-if (typeof WorkerGlobalScope !== "undefined") await loadRustEngine(RAPIER3, new URL("./engine/orbital_engine.wasm", import.meta.url));
+if (typeof WorkerGlobalScope !== "undefined") await loadRustEngine(RAPIER4, new URL("./engine/orbital_engine.wasm", import.meta.url));
 globalThis.onmessage = ({ data }) => globalThis.postMessage(handleLandingPlan(data));
 if (typeof globalThis.postMessage === "function") globalThis.postMessage({ type: "ready" });
 export {

@@ -1,5 +1,6 @@
+import {storageKey} from './app-id.js';
 import {validateCraft} from './core.js';
-export const DESIGN_LIBRARY_KEY='orbital-foundry-design-library-v1';
+export const DESIGN_LIBRARY_KEY=storageKey('design-library-v1');
 const environments=['land','runway','water','drop','orbit','entry','moon-orbit','moon-surface','transfer'];
 export function readDesignLibrary(value){
  if(!value||value.version!==1||!Array.isArray(value.designs)||value.designs.length>100)throw Error('設計一覧の形式が不正です');

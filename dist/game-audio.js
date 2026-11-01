@@ -1,8 +1,9 @@
+import {storageKey} from './app-id.js';
 import {FailureAudioCursor} from './failure-feedback.js';
 import {PARTS} from './catalog.js';
 import {floatingWindow} from './floating-window.js';
 
-const KEY='orbital-foundry-audio-v1';
+const KEY=storageKey('audio-v1');
 export function audioSettings(value={}){
  const level=(v,fallback)=>Number.isFinite(v)?Math.max(0,Math.min(1,v)):fallback;
  return {music:level(value?.music,.28),effects:level(value?.effects,.55),muted:value?.muted===true};

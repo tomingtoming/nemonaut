@@ -17,7 +17,7 @@ function storage(){const data=new Map();return {data,getItem:k=>data.get(k)??nul
 
 test('practice burn and separation cannot advance or replace the normal world, autosave or quicksave',()=>{
  const {game,draft}=fixture(),before=structuredClone(game),s=storage();
- writeStoredGame(s,game);const normal=s.getItem(GAME_KEY);s.setItem('orbital-foundry-flight-v1','normal-quick');
+ writeStoredGame(s,game);const normal=s.getItem(GAME_KEY);s.setItem('omnivehicle-flight-v1','normal-quick');
  const session=new PracticeSession(game,draft),world=session.initialWorld;
  assert.equal(world.vessels.length,1);assert.equal(world.universalTime,5000);
  assert.notEqual(world.activeVesselId,game.world.activeVesselId);
@@ -32,7 +32,7 @@ test('practice burn and separation cannot advance or replace the normal world, a
   try{assert.equal(replay.universalTime,f.universalTime);assert.equal(replay.detached.length,f.detached.length);assert.deepEqual(replay.fuel,f.fuel);}finally{replay.dispose();}
   const altered=session.loadFlight();altered.parts[0].id='another';assert.notEqual(session.loadFlight().parts[0].id,'another');
   session.saveHome(s);
-  assert.equal(s.getItem(GAME_KEY),normal);assert.equal(s.getItem('orbital-foundry-flight-v1'),'normal-quick');
+  assert.equal(s.getItem(GAME_KEY),normal);assert.equal(s.getItem('omnivehicle-flight-v1'),'normal-quick');
   assert.deepEqual(readStoredGame(s).game,JSON.parse(JSON.stringify(game)));assert.deepEqual(session.home,game);assert.deepEqual(game,before);
   const exit=session.home;exit.world.vessels.length=0;assert.equal(session.home.world.vessels.length,1);
   assert.throws(()=>session.saveFlight(flightFromWorld(game.world)),/通常世界/);

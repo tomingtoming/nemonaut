@@ -1,7 +1,8 @@
+import {storageKey} from './app-id.js';
 import {WORKSPACE_KEY} from './workspace-save.js';
 import {validateGame,migrateWorkspace} from './game-save.js';
 
-export const GAME_KEY='orbital-foundry-game-v1';
+export const GAME_KEY=storageKey('game-v1');
 const MAX_SAVE_LENGTH=4000000;
 function parse(raw){
  if(raw.length>MAX_SAVE_LENGTH)throw Error('保存データが大きすぎます');
