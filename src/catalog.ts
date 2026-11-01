@@ -1,5 +1,18 @@
 import {installCargoParts} from './cargo-parts.js';
 import {installLargeParts} from './large-parts.js';
+/** Catalog entry: base parts below, large variants (large-parts.ts) and the cargo bay (cargo-parts.ts) are installed at load. */
+export type PartDefinition={name:string;code:string;cat:string;mass:number;size:number[];desc:string;fuel?:number;decoupler?:boolean;thrust?:number;isp?:number;ispSeaLevel?:number;gimbal?:number;gimbalPivot?:number[];battery?:number;landingLeg?:boolean;heatShield?:boolean;shieldRadius?:number;shieldNormal?:number[];ablator?:number;noseRadius?:number;maxTemperature?:number;docking?:boolean;dockFace?:number;monoprop?:number;rcsThrust?:number;rcsIsp?:number;control?:boolean;reactionTorque?:number;aircraftControl?:boolean;air?:boolean;water?:boolean;streamlinedNose?:boolean;rootWing?:boolean;wing?:number;ac?:number[];massCenter?:number[];chord?:number;model?:string;controlAxis?:PartControlAxis;maxDeflection?:number;hingeY?:number;wheel?:boolean;steer?:boolean;parachute?:number;solarPower?:number;volume?:number;ballast?:number;attachmentNodes?:number[][];cargoBay?:{wall:number};heatCapacity?:number;emissivity?:number;breakPressure?:number;collisionBoxes?:import('./cargo-geometry.js').CargoBox[]};
+/** String-keyed view of PARTS, including the large and cargo parts installed at load. */
+export type PartCatalog=Record<string,PartDefinition>;
+export type PartControlAxis='auto'|'pitch'|'roll'|'yaw';
+/** Part type id: a base key of PARTS, a large variant installed by large-parts.ts, or the cargo bay. */
+export type PartType=keyof typeof PARTS|keyof typeof import('./large-parts.js').LARGE_VARIANTS|'cargoBay';
+export type PartVector=[number,number,number];
+/** Attachment node [x,y,z,nx,ny,nz]; slice(0,3)/slice(3) give the position/normal triples. */
+export interface AttachmentNode extends Array<number>{slice(start:0,end:3):PartVector;slice(start:3,end?:6):PartVector;slice(start?:number,end?:number):number[]}
+export interface PartAttachment{mode:'node'|'surface'|'free';parentNode?:number;ownNode?:number}
+/** A placed part as created by part() and passed around the workshop, saves and flight. */
+export interface Part{id:string;type:PartType;p:PartVector;r:PartVector;parent:string|null;stage:number;reactionEnabled?:boolean;steeringEnabled?:boolean;fuelEnabled?:boolean;gimbalEnabled?:boolean;driveEnabled?:boolean;controlEnabled?:boolean;dockPartner?:string;attachment?:PartAttachment;symmetryGroup?:string;symmetryFrame?:number[];cargoOpen?:boolean}
 export const PARTS = {
  tankSmall:{name:'小型タンク',code:'FT-225',cat:'燃料',mass:25,fuel:225,size:[0.625,1,0.625],desc:'直径0.625 m・推進剤225 kg。接続したエンジンへ供給。'},
  tankLarge:{name:'大型タンク',code:'FT-14400',cat:'燃料',mass:1200,fuel:14400,size:[2.5,4,2.5],desc:'直径2.5 m・推進剤14400 kg。接続したエンジンへ供給。'},
@@ -41,13 +54,13 @@ export const PARTS = {
  solar:{name:'ソーラーパネル',code:'SP-2',cat:'装備',mass:22,size:[2,1,.08],solarPower:.8,desc:'最大0.8 EC/s。表面の向きと天体の影で発電量が変化。'},
  pontoon:{name:'フロート',code:'FL-3',cat:'船舶',mass:85,size:[1,3,.8],volume:1.9,desc:'水密の浮体。水没体積に応じた浮力を生む。'},
  ballast:{name:'バラストタンク',code:'BT-1',cat:'船舶',mass:110,size:[1.25,1,1.25],volume:1.05,ballast:1050,desc:'注排水で質量を変え、浮上・潜航を調整する。'}
-};
+} satisfies PartCatalog;
 installLargeParts(PARTS);
 installCargoParts(PARTS);
 export const CATEGORIES=['すべて','指令','燃料','推進','構造','空力','走行','装備','船舶'];
-export function nodes(type){const d=PARTS[type], [x,y,z]=d.size;if(d.attachmentNodes)return d.attachmentNodes.map(n=>[...n]);if(d.rootWing)return [[0,0,0,-1,0,0],[x,0,0,1,0,0]];return [[0,y/2,0,0,1,0],[0,-y/2,0,0,-1,0],[x/2,0,0,1,0,0],[-x/2,0,0,-1,0,0],[0,0,z/2,0,0,1],[0,0,-z/2,0,0,-1]];}
-export function part(type,p=[0,0,0],r=[0,0,0],parent=null,stage=0){return {id:crypto.randomUUID(),type,p,r,parent,stage};}
-export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{const o=part(t,p,r,a[par]?.id??null,stage);a.push(o);return a.length-1;};
+export function nodes(type:PartType):AttachmentNode[]{const d=(PARTS as PartCatalog)[type], [x,y,z]=d.size;if(d.attachmentNodes)return d.attachmentNodes.map(n=>[...n]) as AttachmentNode[];if(d.rootWing)return [[0,0,0,-1,0,0],[x,0,0,1,0,0]] as AttachmentNode[];return [[0,y/2,0,0,1,0],[0,-y/2,0,0,-1,0],[x/2,0,0,1,0,0],[-x/2,0,0,-1,0,0],[0,0,z/2,0,0,1],[0,0,-z/2,0,0,-1]] as AttachmentNode[];}
+export function part(type:PartType,p:PartVector=[0,0,0],r:PartVector=[0,0,0],parent:string|null=null,stage=0):Part{return {id:crypto.randomUUID(),type,p,r,parent,stage};}
+export function preset(kind:string):Part[]{let a:Part[]=[];const add=(t:PartType,p:PartVector,r:PartVector=[0,0,0],par=0,stage=0)=>{const o=part(t,p,r,a[par]?.id??null,stage);a.push(o);return a.length-1;};
  if(kind==='atlas'){
   add('probe',[0,0,0]);const upper=add('tank',[0,-1.2,0]);
   const upper2=add('tank',[0,-3.2,0],[0,0,0],upper);
@@ -76,21 +89,21 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
  }
  if(kind==='lunar-surface-expedition'){
   a=preset('lunar-expedition');
-  const tank=a.find(p=>p.type==='tank');
+  const tank=a.find(p=>p.type==='tank')!;
   for(const x of [-1.3,1.3])a.push(part('tank',[x,-2.15,0],[0,0,0],tank.id));
   for(const [x,z]of [[1,0],[-1,0],[0,1],[0,-1]]){
    const frame=part('truss',[x*1.8,-3.2,z*1.8],[0,0,0],tank.id);
    a.push(frame,part('landingLeg',[x*1.8,-4.25,z*1.8],[0,0,0],frame.id));
   }
   for(const p of a.filter(p=>p.type==='solar'))p.p[0]*=1.8;
-  const middle=a.find(p=>p.type==='tank'&&p.p[1]===-5.57),lower=a.find(p=>p.type==='tank'&&p.p[1]<-18);
+  const middle=a.find(p=>p.type==='tank'&&p.p[1]===-5.57)!,lower=a.find(p=>p.type==='tank'&&p.p[1]<-18)!;
   for(const x of [-1.3,1.3])a.push(part('tank',[x,-5.57,0],[0,0,0],middle.id));
   for(const z of [-1.4,1.4])a.push(part('engine',[0,-9.17,z],[0,0,0],middle.id,1));
   for(const x of [-1.3,1.3])for(const y of [-14.99,-16.99])a.push(part('tank',[x,y,0],[0,0,0],lower.id));
   for(const [x,z]of [[2.5,0],[-2.5,0],[0,2.5],[0,-2.5]])a.push(part('engine',[x,-20.59,z],[0,0,0],lower.id));
   for(let i=0;i<4;i++){const angle=i*Math.PI/2+Math.PI/4;a.push(part('engine',[2.5*Math.cos(angle),-20.59,2.5*Math.sin(angle)],[0,0,0],lower.id));}
   // Vacuum upper stage: keep the tank socket fixed and extend the lower stack.
-  const upperEngine=a.find(p=>p.type==='engine'&&p.stage===2);
+  const upperEngine=a.find(p=>p.type==='engine'&&p.stage===2)!;
   upperEngine.type='engineVacMedium';upperEngine.p[1]-=.3;
   for(const p of a)if(p!==upperEngine&&p.p[1]<-4.35)p.p[1]-=.6;
   for(const p of a)if(p.type==='landingLeg'||p.type==='truss')p.p[1]-=.6;
@@ -103,7 +116,7 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
  if(kind==='rendezvous'){a=preset('twin');for(const core of a.filter(p=>p.type==='probe')){core.reactionEnabled=false;for(const x of [-.9,.9])for(const y of [-1.2,1.2])a.push(part('rcs',[x,core.p[1]-1.3+y,0],[0,0,0],core.id));}}
  if(kind==='orbital-tug'){a=preset('orbiter');add('dockingPort',[0,2.821,0]);for(const z of [-.9,.9])for(const y of [.2,2.4])add('rcs',[0,y,z],[0,0,0],1);}
  if(kind==='tug-launcher'){
-  a=preset('orbital-tug');const engine=a.find(p=>p.type==='engine');engine.stage=1;
+  a=preset('orbital-tug');const engine=a.find(p=>p.type==='engine')!;engine.stage=1;
   const upper=add('tank',[0,-.7,0],[0,0,0],1);engine.parent=a[upper].id;engine.p[1]-=2;
   const separator=add('decoupler',[0,-3.01,0],[0,0,0],a.indexOf(engine),1);let tank=separator;
   for(let i=0;i<3;i++)tank=add('tank',[0,-4.12-i*2,0],[0,0,0],tank);
@@ -112,7 +125,7 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
  }
  if(kind==='docking'){add('probe',[0,-1.4,0]);add('truss',[0,-.7,0]);add('dockingPort',[0,-.079,0],[0,0,0],1);add('dockingPort',[0,.163,0],[Math.PI,0,0],2);add('truss',[0,.784,0],[Math.PI,0,0],3);add('probe',[0,1.484,0],[Math.PI,0,0],4);a[2].dockPartner=a[3].id;a[3].dockPartner=a[2].id;for(const [core,ys]of [[0,[-1.2,-.2]],[5,[.284,1.284]]] as [number,number[]][])for(const x of [-.74,.74])for(const y of ys)add('rcs',[x,y,0],[0,0,0],core);}
  if(kind==='plane'){
- const r=[Math.PI/2,0,0],left=[Math.PI/2,Math.PI,0],vertical=[Math.PI/2,Math.PI/2,0];
+ const r:PartVector=[Math.PI/2,0,0],left:PartVector=[Math.PI/2,Math.PI,0],vertical:PartVector=[Math.PI/2,Math.PI/2,0];
  add('cockpit',[0,1.3,2.2],r);add('tank',[0,1.3,.2],r);add('jet',[0,1.3,-1.4],r,1);
  add('wing',[.625,1.3,.45],[Math.PI/2-.045,0,0],1);add('wing',[-.625,1.3,.45],[Math.PI/2-.045,Math.PI,0],1);
  add('aileron',[1.7,1.3,-.51],r,3);add('aileron',[-1.7,1.3,-.51],left,4);
@@ -122,12 +135,12 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
  add('nosegear',[0,.4,2.0],[0,0,0],0);add('maingear',[1.05,.4,-.25],[0,0,0],1);add('maingear',[-1.05,.4,-.25],[0,0,0],1);
  }
  if(kind==='transport'){
-  const r=[Math.PI/2,0,0],left=[Math.PI/2,Math.PI,0],vertical=[Math.PI/2,Math.PI/2,0];
+  const r:PartVector=[Math.PI/2,0,0],left:PartVector=[Math.PI/2,Math.PI,0],vertical:PartVector=[Math.PI/2,Math.PI/2,0];
   add('transportCockpit',[0,5,19.2],[Math.PI/2,Math.PI,0]);
   const front=add('transportFuselage',[0,5,9.6],r),mid=add('transportFuselage',[0,5,0],r,front),rear=add('transportFuselage',[0,5,-9.6],r,mid);
   add('transportTail',[0,5,-16.8],[-Math.PI/2,0,0],rear);
   for(const sign of [-1,1]){
-   const wr=sign>0?[Math.PI/2-.045,0,0]:[Math.PI/2-.045,Math.PI,0],sr=sign>0?r:left;
+   const wr:PartVector=sign>0?[Math.PI/2-.045,0,0]:[Math.PI/2-.045,Math.PI,0],sr=sign>0?r:left;
    const wing=add('transportWingRoot',[sign*2.8,7.5,1],wr,mid);
    const outer=add('transportWing',[sign*16.8,7.5,1],wr,wing);
    for(const x of [8,16,24]){const pylon=add('enginePylon',[sign*x,6.75,1],[0,0,0],x<17?wing:outer);add('transportJet',[sign*x,4.5,1],r,pylon);}
@@ -150,23 +163,23 @@ export function preset(kind){let a=[];const add=(t,p,r=[0,0,0],par=0,stage=0)=>{
   for(const p of a)if(p.type==='probe')p.reactionEnabled=false;
  }
  if(kind==='rover'){add('truss',[0,.9,0]);add('truss',[0,.9,1],[0,0,0]);add('probe',[0,1.6,.5],[0,0,0]);for(const x of [-.7,.7])for(const z of [-.4,1.4]){const i=add('wheel',[x,.4,z],[0,0,0]);if(z<.5)a[i].steeringEnabled=false;}add('solar',[0,2,.3],[-Math.PI/2,0,0],2);}
- if(kind==='boat'||kind==='sub'){const r=[Math.PI/2,0,0];add('cockpit',[0,1,1],r);add('truss',[0,.8,-.5]);if(kind==='boat')for(const x of [-1,1])add('pontoon',[x,.3,0],r,1);add('propeller',[0,-.15,-1.7],r,1);if(kind==='sub'){add('ballast',[-.65,.3,-.3],r,1);add('ballast',[.65,.3,-.3],r,1);}}
+ if(kind==='boat'||kind==='sub'){const r:PartVector=[Math.PI/2,0,0];add('cockpit',[0,1,1],r);add('truss',[0,.8,-.5]);if(kind==='boat')for(const x of [-1,1])add('pontoon',[x,.3,0],r,1);add('propeller',[0,-.15,-1.7],r,1);if(kind==='sub'){add('ballast',[-.65,.3,-.3],r,1);add('ballast',[.65,.3,-.3],r,1);}}
  if(kind==='sub')for(const p of a){if(p.type==='cockpit')p.p=[0,0,.3];if(p.type==='truss')p.p=[0,1.2,0];if(p.type==='propeller')p.p=[0,.1,-2.1];if(p.type==='ballast')p.p=[Math.sign(p.p[0])*1.3,.2,0];}
  if(['plane','boat','sub'].includes(kind)){a[0].r=[Math.PI/2,Math.PI,0];}
  if(['plane-large','boat-large','sub-large'].includes(kind)){
   const base=kind.replace('-large',''),s=base==='plane'?3:4;
-  const mapping=base==='plane'?{cockpit:'cockpitLarge',tank:'fuselageLarge',jet:'jetLarge',wing:'wingLarge',stabilizer:'stabilizerLarge',elevator:'elevatorLarge',aileron:'aileronLarge',rudder:'rudderLarge',nosegear:'nosegearLarge',maingear:'maingearLarge'}:{cockpit:'marineCabin',truss:'marineFrame',pontoon:'hullLarge',ballast:'ballastLarge',propeller:'propellerLarge'};
-  a=preset(base);for(const p of a){p.type=mapping[p.type];p.p=p.p.map(v=>v*s);}
+  const mapping:Record<string,PartType>=base==='plane'?{cockpit:'cockpitLarge',tank:'fuselageLarge',jet:'jetLarge',wing:'wingLarge',stabilizer:'stabilizerLarge',elevator:'elevatorLarge',aileron:'aileronLarge',rudder:'rudderLarge',nosegear:'nosegearLarge',maingear:'maingearLarge'}:{cockpit:'marineCabin',truss:'marineFrame',pontoon:'hullLarge',ballast:'ballastLarge',propeller:'propellerLarge'};
+  a=preset(base);for(const p of a){p.type=mapping[p.type];p.p=p.p.map(v=>v*s) as PartVector;}
   // Raise the submarine thrust line to counter the bow-up moment under power.
-  if(base==='sub')a.find(p=>p.type==='propellerLarge').p[1]=1;
+  if(base==='sub')a.find(p=>p.type==='propellerLarge')!.p[1]=1;
   if(base==='plane'){
-   const engine=a.find(p=>p.type==='jetLarge');engine.p=[3,2.7,-1.2];
+   const engine=a.find(p=>p.type==='jetLarge')!;engine.p=[3,2.7,-1.2];
    a.push(part('jetLarge',[-3,2.7,-1.2],[...engine.r],engine.parent,engine.stage));
   }
  }
  if(kind==='transport-cargo'){
   a=preset('transport');
-  const bay=a.find(p=>p.type==='transportFuselage'&&p.p[2]===0);
+  const bay=a.find(p=>p.type==='transportFuselage'&&p.p[2]===0)!;
   bay.type='cargoBay';bay.r=[Math.PI/2,0,0];
   // Belly doors clear the high wing; the payload hangs from the internal mount.
   const lab=preset('cargo-lab'),source=lab[0];

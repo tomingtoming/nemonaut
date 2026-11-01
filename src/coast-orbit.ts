@@ -1,7 +1,12 @@
 import * as T from 'three';
 import {MOON,MOON_RATE,bodyState,relativeMotion} from './celestial.js';
 
-export function stumpff(z){
+export interface StumpffValues{c:number;s:number}
+export type CoastLimitReason='surface'|'maneuver'|'soi';
+export interface CoastStepLimit{dt:number;reason:CoastLimitReason|null}
+export interface CoastStepLimitOptions{requested?:number;deadline?:number;margin?:number;surfaceMargin?:number}
+
+export function stumpff(z:number):StumpffValues{
  if(Math.abs(z)<.01){
   let c=.5,s=1/6,ct=c,st=s;
   for(let k=1;k<12;k++){ct*=-z/((2*k+1)*(2*k+2));st*=-z/((2*k+2)*(2*k+3));c+=ct;s+=st;}
@@ -14,11 +19,11 @@ export function stumpff(z){
 // Universal-variable two-body propagation. The caller must split at force,
 // atmosphere and reference-body changes; this function never crosses those
 // boundaries on behalf of the caller. Inputs and the epoch are not mutated.
-export function keplerDrift(position,velocity,mu,dt){
+export function keplerDrift(position:T.Vector3,velocity:T.Vector3,mu:number,dt:number):import('./celestial.js').BodyState{
  if(![...position.toArray(),...velocity.toArray(),mu,dt].every(Number.isFinite)||mu<=0||position.length()<=0)throw Error('惰性飛行の条件が不正です');
  if(dt===0)return {position:position.clone(),velocity:velocity.clone()};
  const r0=position.length(),root=Math.sqrt(mu),rv=position.dot(velocity)/root,alpha=2/r0-velocity.lengthSq()/mu;
- const equation=x=>{const z=alpha*x*x,{c,s}=stumpff(z);return {value:rv*x*x*c+(1-alpha*r0)*x*x*x*s+r0*x-root*dt,derivative:rv*x*(1-z*s)+(1-alpha*r0)*x*x*c+r0,c,s};};
+ const equation=(x:number)=>{const z=alpha*x*x,{c,s}=stumpff(z);return {value:rv*x*x*c+(1-alpha*r0)*x*x*x*s+r0*x-root*dt,derivative:rv*x*(1-z*s)+(1-alpha*r0)*x*x*c+r0,c,s};};
  let lo=0,hi=Math.max(1,root*Math.abs(dt)/r0);
  if(dt<0){lo=-hi;hi=0;}
  let bracketed=false;
@@ -44,7 +49,7 @@ export function keplerDrift(position,velocity,mu,dt){
  return {position:p,velocity:v};
 }
 
-export function coastDrift(position,velocity,time,dt){
+export function coastDrift(position:T.Vector3,velocity:T.Vector3,time:number,dt:number):import('./celestial.js').BodyState{
  const local=relativeMotion(position,velocity,time),next=keplerDrift(local.r,local.velocity,local.body.mu,dt),end=bodyState(local.body,time+dt);
  return {position:next.position.add(end.position),velocity:next.velocity.add(end.velocity)};
 }
@@ -52,10 +57,10 @@ export function coastDrift(position,velocity,time,dt){
 // A conservative travel-distance bound: speed*t + accelerationBound*t²/2.
 // Stop outside the boundary margin and hand back to normal physics. Taking
 // half the safe interval keeps curvature/approach sampling away from a crossing.
-function travelTime(clearance,speed,acceleration){
+function travelTime(clearance:number,speed:number,acceleration:number):number{
  return 2*clearance/(speed+Math.sqrt(speed*speed+2*acceleration*clearance));
 }
-export function coastStepLimit(position,velocity,time,{requested=30,deadline=Infinity,margin=1000,surfaceMargin=margin}={}){
+export function coastStepLimit(position:T.Vector3,velocity:T.Vector3,time:number,{requested=30,deadline=Infinity,margin=1000,surfaceMargin=margin}:CoastStepLimitOptions={}):CoastStepLimit{
  if(![...position.toArray(),...velocity.toArray(),time,requested,margin,surfaceMargin].every(Number.isFinite)||time<0||requested<=0||margin<=0||surfaceMargin<margin||!(Number.isFinite(deadline)||deadline===Infinity))throw Error('時間加速の条件が不正です');
  const local=relativeMotion(position,velocity,time),surface=local.body.radius+Math.max(1000,local.body.atmosphereTop),clearance=local.r.length()-surface-surfaceMargin;
  if(clearance<=0)return {dt:0,reason:'surface'};
@@ -65,6 +70,6 @@ export function coastStepLimit(position,velocity,time,{requested=30,deadline=Inf
  const gravityBound=local.body.mu/(surface*surface),moonAcceleration=MOON.orbitRadius*MOON_RATE**2;
  const surfaceTime=travelTime(clearance,local.velocity.length(),gravityBound)*.5;
  const soiTime=travelTime(soiClearance,velocity.clone().sub(moon.velocity).length(),gravityBound+moonAcceleration)*.5;
- const bounds=[{dt:requested,reason:null},{dt:30,reason:null},{dt:deadline-time-15,reason:'maneuver'},{dt:surfaceTime,reason:'surface'},{dt:soiTime,reason:'soi'}];
+ const bounds:CoastStepLimit[]=[{dt:requested,reason:null},{dt:30,reason:null},{dt:deadline-time-15,reason:'maneuver'},{dt:surfaceTime,reason:'surface'},{dt:soiTime,reason:'soi'}];
  return bounds.reduce((a,b)=>b.dt<a.dt?b:a);
 }
