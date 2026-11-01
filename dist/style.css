@@ -352,3 +352,4 @@ body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
 .runwayWindow{width:280px}.runwayWindow output{display:block;white-space:pre-line;line-height:1.8;font-variant-numeric:tabular-nums}.runwayWindow select{width:100%}
 
 #failureLog{flex-basis:100%;font:11px monospace}#failureLog summary{cursor:pointer;padding:5px 0}#failureLog ol{margin:0;padding:0 0 0 18px;max-height:160px;overflow:auto}#failureLog li{padding:4px 0;overflow-wrap:anywhere}
+.centerFirstSteps{margin:14px 0 18px;padding:14px 16px;border:1px solid #ffc18a;border-radius:8px;background:#22343a}.centerFirstSteps h2{font-size:15px;font-weight:600;margin:0;color:#ffc18a}.centerFirstSteps .centerGuide{margin:12px 0}.centerFirstSteps button{width:100%}
