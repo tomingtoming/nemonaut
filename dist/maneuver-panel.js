@@ -1,4 +1,5 @@
 import {ManeuverSession} from './maneuver-controller.js';
+import {maneuverWarpBudget} from './maneuver-warp.js';
 import {floatingWindow} from './floating-window.js';
 import {acceptsFlightKey} from './flight-keyboard.js';
 import {preserveManualControlEdit} from './manual-control-edit.js';
@@ -46,5 +47,5 @@ export function mountManeuverPanel(root,getState,{claim,sync}){
   if(!session.owner||!acceptsFlightKey(e.target,e.code)||!/^(Key[WASDQEZXTBHRIJKLUO]|Space|ShiftLeft|ShiftRight|ControlLeft|ControlRight)$/.test(e.code))return;
   const f=session.owner;stop();if(['KeyX','KeyZ'].includes(e.code)&&!e.ctrlKey&&!e.metaKey&&!e.altKey){f.throttle=e.code==='KeyZ'?1:0;sync();}update();
  },true);
- return {update,step,stop,close,get active(){return !!session.owner;}};
+ return {update,step,stop,close,get active(){return !!session.owner;},warpBudget:f=>maneuverWarpBudget(session,f)};
 }
