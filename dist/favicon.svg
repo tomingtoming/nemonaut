@@ -3,5 +3,8 @@
   <rect width="64" height="64" rx="14" fill="#1b2a33"/>
   <circle cx="32" cy="32" r="9" fill="#3d8fb8"/>
   <ellipse cx="32" cy="32" rx="24" ry="11" fill="none" stroke="#e8edf0" stroke-width="3" transform="rotate(-28 32 32)"/>
-  <path d="M49 15 l7 -3 -3 7 -3 1 -2 -2z" fill="#f08a24"/>
+  <!-- Craft on the orbit at parameter -30°, nose along the orbit tangent (10.44°). -->
+  <g transform="translate(47.77 17.39) rotate(10.44)">
+    <path d="M7 0 L2 -2.6 L-5 -2.6 L-7 -4.6 L-7 4.6 L-5 2.6 L2 2.6 Z" fill="#f08a24" stroke="#1b2a33" stroke-width="1"/>
+  </g>
 </svg>
