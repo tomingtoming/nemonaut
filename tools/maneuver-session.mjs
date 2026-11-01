@@ -56,6 +56,7 @@ export class ManeuverSession{
   const angle=new T.Vector3(0,1,0).applyQuaternion(f.q).angleTo(maneuverDirection(this.node));
   const aligned=angle<2*Math.PI/180&&f.omega.length()<.03;this.stable=aligned?this.stable+dt:0;
   f.throttle=0;
+  if(this.plan.onAlignment&&!this.lit&&this.stable>=.5&&f.universalTime<this.plan.startTime)this.plan.startTime=f.universalTime;
   if(f.universalTime<this.plan.startTime){this.state=aligned?'waiting':'aligning';this.message=aligned?'噴射待機':'姿勢合わせ';return;}
   if(!this.lit){
    if(this.stable<.5){if(f.universalTime>this.plan.startTime+2)this.stop('failed','開始時刻に姿勢が整いませんでした');return;}

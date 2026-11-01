@@ -1,5 +1,8 @@
 import {transferThrottle} from '../dist/rendezvous-burn.js';
 import {terminalBurnThrottle} from '../dist/maneuver-thrust-profile.js';
+// A node fixed for "now" (onAlignment) starts as soon as the attitude settles; its startTime is
+// only the alignment deadline, ALIGNMENT_WINDOW seconds ahead.
+export const ALIGNMENT_WINDOW=120;
 // Ordinary nodes name an impulse epoch. Finite-return and lunar nodes already
 // name a burn start; never apply the half-duration correction to those twice.
 export function maneuverExecutionPlan(node,now,fullDuration,{throttle,timing='center'}={}){
@@ -9,7 +12,9 @@ export function maneuverExecutionPlan(node,now,fullDuration,{throttle,timing='ce
  const planned=node.rendezvous?(node.rendezvous.burnThrottle??1):node.plannedThrottle??1,power=throttle??(fixed?planned:.1);
  if(!Number.isFinite(power)||power<=0||power>1||!['start','center'].includes(timing))throw Error('噴射設定が不正です');
  if(fixed&&power!==planned)throw Error('固定済みの計画推力を変更できません');
- const duration=fullDuration/power,startTime=node.universalTime-(!fixed&&timing==='center'?duration/2:0);
+ const duration=fullDuration/power;
+ if(node.onAlignment)return {startTime:Math.max(node.universalTime,now)+ALIGNMENT_WINDOW,duration,throttle:power,timing:'start',onAlignment:true};
+ const startTime=node.universalTime-(!fixed&&timing==='center'?duration/2:0);
  if(duration>1200)throw Error('20分を超える噴射は未対応です');
  if(startTime<=now)throw Error('噴射開始が過去になります。計画を先へ移してください');
  return {startTime,duration,throttle:power,timing:fixed?'start':timing};

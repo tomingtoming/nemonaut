@@ -20,9 +20,24 @@ async function loadRustEngine(R, url) {
 }
 function installRustEngine(R, module, { zeroImpulses = () => false } = {}) {
   if (installed.has(R)) return installed.get(R);
-  const worlds = /* @__PURE__ */ new Map(), stats = { worlds: 0, frames: 0, rebuilds: 0, contactFrames: 0, contactQueries: 0, contactPoints: 0 };
+  const worlds = /* @__PURE__ */ new Map(), stats = { worlds: 0, frames: 0, rebuilds: 0, contactQueries: 0, contactPoints: 0 };
   const original = { step: R.World.prototype.step, contactPair: R.World.prototype.contactPair, free: R.World.prototype.free }, body2 = { rotation: R.RigidBody.prototype.rotation, setRotation: R.RigidBody.prototype.setRotation };
   const exactRotation = /* @__PURE__ */ new WeakMap();
+  const geometryVersion = /* @__PURE__ */ new WeakMap();
+  let massVersion = 0;
+  const colliderApi = { create: R.World.prototype.createCollider, remove: R.World.prototype.removeCollider, setMass: R.Collider.prototype.setMass };
+  R.World.prototype.createCollider = function(...args) {
+    geometryVersion.set(this, (geometryVersion.get(this) ?? 0) + 1);
+    return colliderApi.create.apply(this, args);
+  };
+  R.World.prototype.removeCollider = function(...args) {
+    geometryVersion.set(this, (geometryVersion.get(this) ?? 0) + 1);
+    return colliderApi.remove.apply(this, args);
+  };
+  R.Collider.prototype.setMass = function(...args) {
+    massVersion++;
+    return colliderApi.setMass.apply(this, args);
+  };
   R.RigidBody.prototype.rotation = function() {
     return exactRotation.get(this) ?? body2.rotation.call(this);
   };
@@ -30,7 +45,9 @@ function installRustEngine(R, module, { zeroImpulses = () => false } = {}) {
     exactRotation.delete(this);
     return body2.setRotation.apply(this, args);
   };
-  function single(world) {
+  function single(world, s = worlds.get(world)) {
+    const counts = world.bodies.len() + ":" + world.colliders.len();
+    if (s?.counts === counts) return s.found;
     const bodies = [];
     world.bodies.forEach((b) => bodies.push(b));
     check(bodies.length === 1, "world must own one craft body");
@@ -39,14 +56,19 @@ function installRustEngine(R, module, { zeroImpulses = () => false } = {}) {
       if (!c.parent()) grounds.push(c);
     });
     check(grounds.length <= 1, "at most one static ground");
-    return { body: bodies[0], ground: grounds[0] };
+    const found = { body: bodies[0], ground: grounds[0] };
+    if (s) {
+      s.counts = counts;
+      s.found = found;
+    }
+    return found;
   }
   function rust(world) {
     let s = worlds.get(world);
     if (s) return s;
     const a = new WebAssembly.Instance(module, {}).exports;
     a.craft_reset();
-    s = { a, signature: null, index: /* @__PURE__ */ new Map(), frames: 0 };
+    s = { a, signature: null, index: /* @__PURE__ */ new Map(), masses: [], colliders: [], geometry: -1, massVersion: -1, frames: 0, counts: null, found: null };
     worlds.set(world, s);
     stats.worlds++;
     return s;
@@ -58,26 +80,41 @@ function installRustEngine(R, module, { zeroImpulses = () => false } = {}) {
     check(a.craft_ground(g.isEnabled() ? 1 : 0, ...vec(g.translation()), q.x, q.y, q.z, q.w, g.friction()) === 1, "ground rejected");
   }
   R.World.prototype.step = function() {
-    const { body: body3, ground } = single(this), s = rust(this), a = s.a;
+    const s = rust(this), a = s.a, { body: body3, ground } = single(this, s);
     syncGround(a, ground);
-    const shapes2 = [];
-    for (let i = 0; i < body3.numColliders(); i++) {
-      const c = body3.collider(i), p2 = c.translationWrtParent(), q = c.rotationWrtParent(), ball = c.shapeType() === R.ShapeType.Ball;
-      check(ball || c.shapeType() === R.ShapeType.Cuboid, "only box/ball colliders are supported");
-      const h = ball ? { x: c.radius(), y: 0, z: 0 } : c.halfExtents();
-      shapes2.push({ handle: c.handle, geometry: [ball ? 1 : 0, h.x, h.y, h.z, p2.x, p2.y, p2.z, q.x, q.y, q.z, q.w], mass: c.mass(), friction: c.friction() });
+    const geometry2 = geometryVersion.get(this) ?? 0;
+    if (s.geometry !== geometry2) {
+      s.geometry = geometry2;
+      s.colliders = [];
+      for (let i = 0; i < body3.numColliders(); i++) s.colliders.push(body3.collider(i));
+      s.massVersion = -1;
     }
-    const signature = JSON.stringify(shapes2.map((x) => [x.handle, x.geometry, x.friction]));
+    const colliders = s.colliders, signature = colliders.map((c) => c.handle).join(",");
     if (signature !== s.signature) {
       if (s.signature !== null) {
         check(a.craft_clear_shapes() === 1, "shape clear rejected");
         stats.rebuilds++;
       }
-      for (const x of shapes2) check(a.craft_shape(...x.geometry, x.mass, x.friction) === 1, "shape rejected");
+      for (const c of colliders) {
+        const p2 = c.translationWrtParent(), q = c.rotationWrtParent(), ball = c.shapeType() === R.ShapeType.Ball;
+        check(ball || c.shapeType() === R.ShapeType.Cuboid, "only box/ball colliders are supported");
+        const h = ball ? { x: c.radius(), y: 0, z: 0 } : c.halfExtents();
+        check(a.craft_shape(ball ? 1 : 0, h.x, h.y, h.z, p2.x, p2.y, p2.z, q.x, q.y, q.z, q.w, c.mass(), c.friction()) === 1, "shape rejected");
+      }
       s.signature = signature;
-      s.index = new Map(shapes2.map((x, i) => [x.handle, i]));
+      s.index = new Map(colliders.map((c, i) => [c.handle, i]));
+      s.masses = colliders.map((c) => c.mass());
     }
-    shapes2.forEach((x, i) => check(a.craft_mass(i, x.mass) === 1, "mass rejected"));
+    if (s.massVersion !== massVersion) {
+      s.massVersion = massVersion;
+      colliders.forEach((c, i) => {
+        const m = c.mass();
+        if (m !== s.masses[i]) {
+          check(a.craft_mass(i, m) === 1, "mass rejected");
+          s.masses[i] = m;
+        }
+      });
+    }
     const p = this.integrationParameters, t = body3.translation(), v = body3.linvel(), r = body3.rotation(), w = body3.angvel();
     check(a.craft_state(t.x, t.y, t.z, v.x, v.y, v.z, r.x, r.y, r.z, r.w, w.x, w.y, w.z) === 1, "state rejected");
     check(a.craft_solver_step(...vec(body3.userForce()), ...vec(body3.userTorque()), ...vec(this.gravity), this.timestep, p.lengthUnit, p.normalizedAllowedLinearError, p.normalizedPredictionDistance) === 1, "step rejected");
@@ -91,15 +128,9 @@ function installRustEngine(R, module, { zeroImpulses = () => false } = {}) {
     exactRotation.set(body3, new R.Quaternion(out[6], out[7], out[8], out[9]));
     s.frames++;
     stats.frames++;
-    if (ground) {
-      for (let i = 0; i < shapes2.length; i++) if (a.craft_contact_count(i) > 0) {
-        stats.contactFrames++;
-        break;
-      }
-    }
   };
   R.World.prototype.contactPair = function(collider, other, callback) {
-    const s = worlds.get(this), { ground } = single(this);
+    const s = worlds.get(this), { ground } = single(this, s);
     if (!s) return;
     check(ground && other.handle === ground.handle, "only craft-ground contact queries are supported");
     const i = s.index.get(collider.handle);
@@ -127,6 +158,9 @@ function installRustEngine(R, module, { zeroImpulses = () => false } = {}) {
     worlds.clear();
     Object.assign(R.World.prototype, original);
     Object.assign(R.RigidBody.prototype, body2);
+    R.World.prototype.createCollider = colliderApi.create;
+    R.World.prototype.removeCollider = colliderApi.remove;
+    R.Collider.prototype.setMass = colliderApi.setMass;
     delete R.World.prototype.referenceSolverStep;
     installed.delete(R);
   } };
@@ -1097,6 +1131,7 @@ function validateManeuverNode(value) {
   if (value.plannedThrottle !== void 0 && ![0.01, 0.1, 1].includes(value.plannedThrottle)) throw Error("\u8A08\u753B\u63A8\u529B\u306E\u4FDD\u5B58\u5024\u304C\u4E0D\u6B63\u3067\u3059");
   if (value.tolerance !== void 0 && ![0.5, 0.05].includes(value.tolerance)) throw Error("\u5674\u5C04\u7CBE\u5EA6\u306E\u4FDD\u5B58\u5024\u304C\u4E0D\u6B63\u3067\u3059");
   if (value.stopAtTarget !== void 0 && typeof value.stopAtTarget !== "boolean") throw Error("\u5674\u5C04\u505C\u6B62\u652F\u63F4\u306E\u4FDD\u5B58\u5024\u304C\u4E0D\u6B63\u3067\u3059");
+  if (value.onAlignment !== void 0 && (value.onAlignment !== true || value.rendezvous !== void 0 || value.plannedThrottle !== void 0 || value.capture !== void 0 || value.returnPlan !== void 0 || value.departure !== void 0)) throw Error("\u4ECA\u3059\u3050\u306E\u5674\u5C04\u8A08\u753B\u306E\u4FDD\u5B58\u5024\u304C\u4E0D\u6B63\u3067\u3059");
   if (value.universalTime !== void 0 && (!Number.isFinite(value.universalTime) || value.universalTime < 0 || value.universalTime > 1e12)) throw Error("\u30DE\u30CB\u30E5\u30FC\u30D0\u6642\u523B\u304C\u4E0D\u6B63\u3067\u3059");
   const validArray = (a, limit) => Array.isArray(a) && a.length === 3 && a.every((v) => Number.isFinite(v) && Math.abs(v) <= limit);
   if (!Number.isFinite(value.time) || value.time < 0 || value.time > 1e12 || typeof value.complete !== "boolean" || !validArray(value.position, 1e10) || !validArray(value.velocity, 1e6) || !validArray(value.impulse, 1e4) || !validArray(value.remaining, 1e6) || (new T14.Vector3(...value.impulse).length() < 0.5 || new T14.Vector3(...value.impulse).length() > 10000.001) || !value.complete && new T14.Vector3(...value.remaining).length() < (value.tolerance ?? 0.5)) throw Error("\u30DE\u30CB\u30E5\u30FC\u30D0\u8A08\u753B\u306E\u4FDD\u5B58\u5024\u304C\u4E0D\u6B63\u3067\u3059");

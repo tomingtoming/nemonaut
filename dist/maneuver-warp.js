@@ -4,6 +4,6 @@
 export const WARP_LEAD=90;
 export function maneuverWarpBudget(session,f,lead=WARP_LEAD){
  if(!session?.owner)return Infinity;
- if(session.owner!==f||session.state==='burning'||!Number.isFinite(session.plan?.startTime))return 0;
+ if(session.owner!==f||session.state==='burning'||session.plan?.onAlignment||!Number.isFinite(session.plan?.startTime))return 0;
  return Math.max(0,session.plan.startTime-lead-f.universalTime);
 }

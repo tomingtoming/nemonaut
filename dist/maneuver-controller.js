@@ -11,6 +11,7 @@ import { maneuverDirection, validateManeuverNode } from "./maneuver-node.js";
 // tools/maneuver-execution-plan.mjs
 import { transferThrottle } from "./rendezvous-burn.js";
 import { terminalBurnThrottle } from "./maneuver-thrust-profile.js";
+var ALIGNMENT_WINDOW = 120;
 function maneuverExecutionPlan(node, now, fullDuration, { throttle, timing = "center" } = {}) {
   if (!node || node.complete) throw Error("\u672A\u5B9F\u884C\u306E\u30DE\u30CB\u30E5\u30FC\u30D0\u3092\u56FA\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044");
   if (!Number.isFinite(now) || !Number.isFinite(node.universalTime) || !Number.isFinite(fullDuration) || fullDuration <= 0) throw Error("\u5674\u5C04\u6642\u523B\u307E\u305F\u306F\u6240\u8981\u6642\u9593\u304C\u4E0D\u6B63\u3067\u3059");
@@ -18,7 +19,9 @@ function maneuverExecutionPlan(node, now, fullDuration, { throttle, timing = "ce
   const planned = node.rendezvous ? node.rendezvous.burnThrottle ?? 1 : node.plannedThrottle ?? 1, power = throttle ?? (fixed ? planned : 0.1);
   if (!Number.isFinite(power) || power <= 0 || power > 1 || !["start", "center"].includes(timing)) throw Error("\u5674\u5C04\u8A2D\u5B9A\u304C\u4E0D\u6B63\u3067\u3059");
   if (fixed && power !== planned) throw Error("\u56FA\u5B9A\u6E08\u307F\u306E\u8A08\u753B\u63A8\u529B\u3092\u5909\u66F4\u3067\u304D\u307E\u305B\u3093");
-  const duration = fullDuration / power, startTime = node.universalTime - (!fixed && timing === "center" ? duration / 2 : 0);
+  const duration = fullDuration / power;
+  if (node.onAlignment) return { startTime: Math.max(node.universalTime, now) + ALIGNMENT_WINDOW, duration, throttle: power, timing: "start", onAlignment: true };
+  const startTime = node.universalTime - (!fixed && timing === "center" ? duration / 2 : 0);
   if (duration > 1200) throw Error("20\u5206\u3092\u8D85\u3048\u308B\u5674\u5C04\u306F\u672A\u5BFE\u5FDC\u3067\u3059");
   if (startTime <= now) throw Error("\u5674\u5C04\u958B\u59CB\u304C\u904E\u53BB\u306B\u306A\u308A\u307E\u3059\u3002\u8A08\u753B\u3092\u5148\u3078\u79FB\u3057\u3066\u304F\u3060\u3055\u3044");
   return { startTime, duration, throttle: power, timing: fixed ? "start" : timing };
@@ -125,6 +128,7 @@ var ManeuverSession = class {
     const aligned = angle < 2 * Math.PI / 180 && f.omega.length() < 0.03;
     this.stable = aligned ? this.stable + dt : 0;
     f.throttle = 0;
+    if (this.plan.onAlignment && !this.lit && this.stable >= 0.5 && f.universalTime < this.plan.startTime) this.plan.startTime = f.universalTime;
     if (f.universalTime < this.plan.startTime) {
       this.state = aligned ? "waiting" : "aligning";
       this.message = aligned ? "\u5674\u5C04\u5F85\u6A5F" : "\u59FF\u52E2\u5408\u308F\u305B";

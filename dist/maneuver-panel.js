@@ -20,7 +20,7 @@ export function mountManeuverPanel(root,getState,{claim,sync}){
   start.disabled=!!session.owner||!node||node.complete;
   power.disabled=timing.disabled=fixed(node)||!!session.owner;
   status.textContent=session.owner?session.message:!node?'マップで計画を固定してください':message;
-  readout.textContent=node?`残り ${Math.hypot(...node.remaining).toFixed(2)} m/s`+(session.owner?` · 開始まで ${Math.max(0,session.plan.startTime-f.universalTime).toFixed(1)}秒`:''):'';
+  readout.textContent=node?`残り ${Math.hypot(...node.remaining).toFixed(2)} m/s`+(session.owner?(session.plan.onAlignment&&!session.lit?' · 姿勢がそろい次第開始':` · 開始まで ${Math.max(0,session.plan.startTime-f.universalTime).toFixed(1)}秒`):''):'';
  }
  function configure(){power.querySelector('[value="1"]').textContent=node?.returnPlan||node?.departure||node?.rendezvous?.burnThrottle===null?'100→10→1%':'100%';power.value=String(fixed(node)?(node.rendezvous?(node.rendezvous.burnThrottle??1):node.plannedThrottle??1):.1);timing.value=fixed(node)?'start':'center';}
  function open(){
