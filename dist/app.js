@@ -109,6 +109,10 @@ import {PLANET,center} from './planet.js';
 import {MOON,bodyState,bodyUp,bodyOrbitState,referenceBody} from './celestial.js';
 import RAPIER from './vendor/rapier/rapier.mjs';
 import {loadRustEngine} from './rust-engine.js';
+import {installTranslation,currentLanguage,setLanguage} from './i18n.js';
+// English display rewrites text through dist/i18n/en.json; Japanese changes nothing.
+await installTranslation();
+for(const id of ['language','centerLanguage']){const b=document.getElementById(id);if(!b)continue;const english=currentLanguage()==='en';b.textContent=english?'JA':'EN';b.title=english?'日本語で表示':'Show in English';b.onclick=()=>setLanguage(english?'ja':'en');}
 // Physics runs on the Rust Wasm engine only. If it cannot load, stop with a visible error
 // instead of falling back to the retired JS solver.
 try{globalThis.orbitalRustPhysics=(await loadRustEngine(RAPIER,new URL('./engine/orbital_engine.wasm',import.meta.url))).stats;document.documentElement.dataset.physics='rust';}
