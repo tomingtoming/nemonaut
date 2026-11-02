@@ -1,15 +1,136 @@
 import {surfaceAngularVelocity} from '../dist/surface-frame.js';
-import test from 'node:test';import assert from 'node:assert/strict';import * as T from 'three';
-import {PARTS,preset,part} from '../dist/catalog.js';import {Flight,statistics} from '../dist/core.js';import {surfaceForce,partRotation,aeroPoint,controlDeflection} from '../dist/aero.js';
-const run=(f,s,input={})=>{for(let i=0;i<s*120;i++)f.step(1/120,input);};
-test('Aircraft uses one steerable nose wheel, two main wheels, and separate controls',()=>{const p=preset('plane');assert.equal(p.filter(x=>x.type==='nosegear').length,1);assert.equal(p.filter(x=>x.type==='maingear').length,2);for(const t of ['elevator','aileron','rudder'])assert.ok(p.some(x=>x.type===t));assert.ok(p.filter(x=>x.type==='wing').every(x=>!PARTS[x.type].controlAxis));});
-test('Aerodynamic authority vanishes at rest and in vacuum and scales with speed squared',()=>{const p=part('elevator'),q=new T.Quaternion(),v=new T.Vector3(0,50,0);assert.equal(surfaceForce(p,q,new T.Vector3(),1.225,.2).force.length(),0);assert.equal(surfaceForce(p,q,v,0,.2).force.length(),0);const a=surfaceForce(p,q,v,1.225,.1).force.length(),b=surfaceForce(p,q,v.clone().multiplyScalar(2),1.225,.1).force.length();assert.ok(Math.abs(b/a-4)<1e-8);});
-test('Post-stall lift drops instead of remaining at the clamped maximum',()=>{const p=part('wing'),q=new T.Quaternion(),v=new T.Vector3(0,80,0);const peak=surfaceForce(p,q,v,1.225,.25),stall=surfaceForce(p,q,v,1.225,.8);assert.equal(stall.stalled,true);assert.ok(Math.abs(stall.cl)<Math.abs(peak.cl));});
-test('Aileron commands generate opposite vertical forces at left/right wings',()=>{const ps=preset('plane'),com=statistics(ps).com;const fs=ps.filter(p=>p.type==='aileron').map(p=>surfaceForce(p,partRotation(p),new T.Vector3(0,0,80),1.225,controlDeflection(p,com,{roll:1})).force.y);assert.ok(fs[0]*fs[1]<0);});
-test('Elevator and rudder produce commanded moments about the actual COM',()=>{const ps=preset('plane'),com=statistics(ps).com;for(const [type,axis,component]of [['elevator','pitch','x'],['rudder','yaw','y']]){let moment=0;for(const p of ps.filter(p=>p.type===type)){const a=controlDeflection(p,com,{[axis]:1}),f=surfaceForce(p,partRotation(p),new T.Vector3(0,0,80),1.225,a).force;moment+=aeroPoint(p).sub(com).cross(f)[component];}assert.ok(moment>100,`${type}: ${moment}`);}});
-test('Aircraft cockpit alone cannot rotate through fictitious control torque',()=>{const p=part('cockpit');const f=new Flight([p],'runway');f.pos.y=100;f.sas=false;f.stageNext();run(f,1,{pitch:1,yaw:1,roll:1});assert.ok(f.omega.clone().sub(surfaceAngularVelocity()).length()<1e-6);f.dispose();});
-test('Fuel use moves COM and Rapier mass follows the assembled mass',()=>{const p=preset('plane'),f=new Flight(p,'runway');const full=statistics(p,1),empty=statistics(p,0);assert.ok(full.com.distanceTo(empty.com)>.1);f.fuelRatio=.3;f.step(1/120);assert.ok(Math.abs(f.body.mass()-statistics(p,.3).mass)<.02);const c=f.body.localCom();assert.ok(new T.Vector3(c.x,c.y,c.z).distanceTo(statistics(p,.3).com)<.002);f.dispose();});
-function pitchDerivative(ps){const com=statistics(ps).com;const torque=a=>{const q=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-a);let sum=0;for(const p of ps){if(!PARTS[p.type].wing)continue;const f=surfaceForce(p,q.clone().multiply(partRotation(p)),new T.Vector3(0,0,80),1.225).force;sum+=aeroPoint(p).sub(com).applyQuaternion(q).cross(f).x;}return sum;};return (torque(.01)-torque(-.01))/.02;}
-test('Moving CG behind aerodynamic center reverses pitch restoring tendency',()=>{const stable=preset('plane'),aft=structuredClone(stable);aft.find(p=>p.type==='tank').p[2]=-3;assert.ok(pitchDerivative(stable)>0);assert.ok(pitchDerivative(aft)<0);assert.ok(statistics(stable).aero.staticMargin>0);assert.ok(statistics(aft).aero.staticMargin<0);});
-test('Moving tail closer to CG reduces elevator moment arm',()=>{const ps=preset('plane'),com=statistics(ps).com,p=ps.find(p=>p.type==='elevator'),near=structuredClone(p);near.p[2]=com.z-.3;const moment=x=>Math.abs(aeroPoint(x).sub(com).cross(surfaceForce(x,partRotation(x),new T.Vector3(0,0,80),1.225,.15).force).x);assert.ok(moment(p)>moment(near)*3);});
-test('Airframe layout changes Rapier rotational inertia',()=>{const a=preset('plane'),b=structuredClone(a);for(const p of b)if(p.type==='maingear')p.p[0]*=3;const f=new Flight(a,'runway'),g=new Flight(b,'runway');const i=f.body.principalInertia(),j=g.body.principalInertia();assert.ok(Math.abs(i.x+i.y+i.z-j.x-j.y-j.z)>100);f.dispose();g.dispose();});
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as T from 'three';
+import {PARTS, preset, part} from '../dist/catalog.js';
+import {Flight, statistics} from '../dist/core.js';
+import {surfaceForce, partRotation, aeroPoint, controlDeflection} from '../dist/aero.js';
+const run = (f, s, input = {}) => {
+  for (let i = 0; i < s * 120; i++) f.step(1 / 120, input);
+};
+test('Aircraft uses one steerable nose wheel, two main wheels, and separate controls', () => {
+  const p = preset('plane');
+  assert.equal(p.filter(x => x.type === 'nosegear').length, 1);
+  assert.equal(p.filter(x => x.type === 'maingear').length, 2);
+  for (const t of ['elevator', 'aileron', 'rudder']) assert.ok(p.some(x => x.type === t));
+  assert.ok(p.filter(x => x.type === 'wing').every(x => !PARTS[x.type].controlAxis));
+});
+test('Aerodynamic authority vanishes at rest and in vacuum and scales with speed squared', () => {
+  const p = part('elevator'),
+    q = new T.Quaternion(),
+    v = new T.Vector3(0, 50, 0);
+  assert.equal(surfaceForce(p, q, new T.Vector3(), 1.225, 0.2).force.length(), 0);
+  assert.equal(surfaceForce(p, q, v, 0, 0.2).force.length(), 0);
+  const a = surfaceForce(p, q, v, 1.225, 0.1).force.length(),
+    b = surfaceForce(p, q, v.clone().multiplyScalar(2), 1.225, 0.1).force.length();
+  assert.ok(Math.abs(b / a - 4) < 1e-8);
+});
+test('Post-stall lift drops instead of remaining at the clamped maximum', () => {
+  const p = part('wing'),
+    q = new T.Quaternion(),
+    v = new T.Vector3(0, 80, 0);
+  const peak = surfaceForce(p, q, v, 1.225, 0.25),
+    stall = surfaceForce(p, q, v, 1.225, 0.8);
+  assert.equal(stall.stalled, true);
+  assert.ok(Math.abs(stall.cl) < Math.abs(peak.cl));
+});
+test('Aileron commands generate opposite vertical forces at left/right wings', () => {
+  const ps = preset('plane'),
+    com = statistics(ps).com;
+  const fs = ps
+    .filter(p => p.type === 'aileron')
+    .map(
+      p =>
+        surfaceForce(p, partRotation(p), new T.Vector3(0, 0, 80), 1.225, controlDeflection(p, com, {roll: 1}))
+          .force.y
+    );
+  assert.ok(fs[0] * fs[1] < 0);
+});
+test('Elevator and rudder produce commanded moments about the actual COM', () => {
+  const ps = preset('plane'),
+    com = statistics(ps).com;
+  for (const [type, axis, component] of [
+    ['elevator', 'pitch', 'x'],
+    ['rudder', 'yaw', 'y']
+  ]) {
+    let moment = 0;
+    for (const p of ps.filter(p => p.type === type)) {
+      const a = controlDeflection(p, com, {[axis]: 1}),
+        f = surfaceForce(p, partRotation(p), new T.Vector3(0, 0, 80), 1.225, a).force;
+      moment += aeroPoint(p).sub(com).cross(f)[component];
+    }
+    assert.ok(moment > 100, `${type}: ${moment}`);
+  }
+});
+test('Aircraft cockpit alone cannot rotate through fictitious control torque', () => {
+  const p = part('cockpit');
+  const f = new Flight([p], 'runway');
+  f.pos.y = 100;
+  f.sas = false;
+  f.stageNext();
+  run(f, 1, {pitch: 1, yaw: 1, roll: 1});
+  assert.ok(f.omega.clone().sub(surfaceAngularVelocity()).length() < 1e-6);
+  f.dispose();
+});
+test('Fuel use moves COM and Rapier mass follows the assembled mass', () => {
+  const p = preset('plane'),
+    f = new Flight(p, 'runway');
+  const full = statistics(p, 1),
+    empty = statistics(p, 0);
+  assert.ok(full.com.distanceTo(empty.com) > 0.1);
+  f.fuelRatio = 0.3;
+  f.step(1 / 120);
+  assert.ok(Math.abs(f.body.mass() - statistics(p, 0.3).mass) < 0.02);
+  const c = f.body.localCom();
+  assert.ok(new T.Vector3(c.x, c.y, c.z).distanceTo(statistics(p, 0.3).com) < 0.002);
+  f.dispose();
+});
+function pitchDerivative(ps) {
+  const com = statistics(ps).com;
+  const torque = a => {
+    const q = new T.Quaternion().setFromAxisAngle(new T.Vector3(1, 0, 0), -a);
+    let sum = 0;
+    for (const p of ps) {
+      if (!PARTS[p.type].wing) continue;
+      const f = surfaceForce(p, q.clone().multiply(partRotation(p)), new T.Vector3(0, 0, 80), 1.225).force;
+      sum += aeroPoint(p).sub(com).applyQuaternion(q).cross(f).x;
+    }
+    return sum;
+  };
+  return (torque(0.01) - torque(-0.01)) / 0.02;
+}
+test('Moving CG behind aerodynamic center reverses pitch restoring tendency', () => {
+  const stable = preset('plane'),
+    aft = structuredClone(stable);
+  aft.find(p => p.type === 'tank').p[2] = -3;
+  assert.ok(pitchDerivative(stable) > 0);
+  assert.ok(pitchDerivative(aft) < 0);
+  assert.ok(statistics(stable).aero.staticMargin > 0);
+  assert.ok(statistics(aft).aero.staticMargin < 0);
+});
+test('Moving tail closer to CG reduces elevator moment arm', () => {
+  const ps = preset('plane'),
+    com = statistics(ps).com,
+    p = ps.find(p => p.type === 'elevator'),
+    near = structuredClone(p);
+  near.p[2] = com.z - 0.3;
+  const moment = x =>
+    Math.abs(
+      aeroPoint(x)
+        .sub(com)
+        .cross(surfaceForce(x, partRotation(x), new T.Vector3(0, 0, 80), 1.225, 0.15).force).x
+    );
+  assert.ok(moment(p) > moment(near) * 3);
+});
+test('Airframe layout changes Rapier rotational inertia', () => {
+  const a = preset('plane'),
+    b = structuredClone(a);
+  for (const p of b) if (p.type === 'maingear') p.p[0] *= 3;
+  const f = new Flight(a, 'runway'),
+    g = new Flight(b, 'runway');
+  const i = f.body.principalInertia(),
+    j = g.body.principalInertia();
+  assert.ok(Math.abs(i.x + i.y + i.z - j.x - j.y - j.z) > 100);
+  f.dispose();
+  g.dispose();
+});

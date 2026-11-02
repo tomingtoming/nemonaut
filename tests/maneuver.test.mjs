@@ -1,27 +1,116 @@
-import test from 'node:test';import assert from 'node:assert/strict';import * as T from 'three';
-import {PLANET,center,orbitState,advanceOrbit} from '../dist/planet.js';
-import {apsisPlan} from '../dist/orbit-plan.js';import {maneuverPreview} from '../dist/maneuver.js';
-const initial=()=>{const r=680000,a=840000;return {pos:center.clone().add(new T.Vector3(0,r,0)),vel:new T.Vector3(0,0,Math.sqrt(PLANET.mu*(2/r-1/a)))};};
-test('Preview is non-mutating and its prograde impulse raises the far apsis',()=>{const {pos,vel}=initial(),p=pos.clone(),v=vel.clone(),result=maneuverPreview(pos,vel,'now',100);assert.deepEqual(pos,p);assert.deepEqual(vel,v);assert.ok(result.orbit.apoapsis>result.original.apoapsis);assert.ok(Math.abs(result.orbit.periapsis-80000)<1e-7);assert.ok(Math.abs(result.afterVel.length()-vel.length()-100)<1e-9);});
-test('A planned apoapsis circularization agrees with an integrated coast and impulse',()=>{let {pos,vel}=initial();const o=orbitState(pos,vel),dv=apsisPlan(o).apoapsis.deltaV,result=maneuverPreview(pos,vel,'apoapsis',dv);assert.ok(result.orbit.eccentricity<1e-10);let elapsed=0;while(elapsed<result.time){const dt=Math.min(.2,result.time-elapsed),next=advanceOrbit(pos,vel,new T.Vector3(),dt);pos=next.pos;vel=next.vel;elapsed+=dt;}vel.addScaledVector(vel.clone().normalize(),dv);const actual=orbitState(pos,vel);assert.ok(pos.distanceTo(result.burnPos)<1);assert.ok(Math.abs(actual.apoapsis-result.orbit.apoapsis)<1);assert.ok(Math.abs(actual.periapsis-result.orbit.periapsis)<1);});
-test('Retrograde plans can deorbit, escape, and reverse without changing the input orbit',()=>{const {pos,vel}=initial();assert.ok(maneuverPreview(pos,vel,'now',-800).orbit.periapsis<0);assert.ok(maneuverPreview(pos,vel,'now',2000).orbit.energy>0);assert.ok(maneuverPreview(pos,vel,'now',-5000).orbit.normal.dot(orbitState(pos,vel).normal)<-.99);});
-test('Impossible future nodes and invalid input are rejected',()=>{const {pos,vel}=initial();for(const n of [NaN,Infinity,10001])assert.throws(()=>maneuverPreview(pos,vel,'now',n));assert.throws(()=>maneuverPreview(pos,vel,'invalid',1));assert.throws(()=>maneuverPreview(pos,new T.Vector3(),'now',10));assert.throws(()=>maneuverPreview(pos,vel.clone().multiplyScalar(2),'apoapsis',10));assert.throws(()=>maneuverPreview(pos,vel.clone().multiplyScalar(.3),'apoapsis',10));const circular=vel.clone().setLength(Math.sqrt(PLANET.mu/680000));assert.throws(()=>maneuverPreview(pos,circular,'periapsis',10));});
-
-import {mapPointEpoch} from '../dist/maneuver.js';import {bodyOrbitState,lunarTrial,bodyState} from '../dist/celestial.js';import {coastDrift} from '../dist/coast-orbit.js';
-test('Clicked conic points reproduce their next passage and immutable burn epoch',()=>{
- for(const state of [initial(),{pos:center.clone().add(new T.Vector3(0,680000,0)),vel:new T.Vector3(0,0,Math.sqrt(PLANET.mu/680000))},lunarTrial(500)]){
-  const epoch=500,o=bodyOrbitState(state.pos,state.vel,epoch),delay=o.period*.37,next=coastDrift(state.pos,state.vel,epoch,delay),point=next.position.clone().sub(bodyState(o.body,epoch+delay).position).add(o.center),picked=mapPointEpoch(o,point);assert.ok(Math.abs(picked-epoch-delay)<1e-5);
-  const p=maneuverPreview(state.pos,state.vel,{universalTime:picked},100,epoch);assert.ok(p.burnPos.distanceTo(next.position)<.01);
-  const later=coastDrift(state.pos,state.vel,epoch,10),q=maneuverPreview(later.position,later.velocity,{universalTime:picked},100,epoch+10);assert.ok(p.burnPos.distanceTo(q.burnPos)<.01);assert.equal(p.universalTime,q.universalTime);
-  assert.throws(()=>maneuverPreview(state.pos,state.vel,{universalTime:epoch-1},100,epoch));
- }
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as T from 'three';
+import {PLANET, center, orbitState, advanceOrbit} from '../dist/planet.js';
+import {apsisPlan} from '../dist/orbit-plan.js';
+import {maneuverPreview} from '../dist/maneuver.js';
+const initial = () => {
+  const r = 680000,
+    a = 840000;
+  return {
+    pos: center.clone().add(new T.Vector3(0, r, 0)),
+    vel: new T.Vector3(0, 0, Math.sqrt(PLANET.mu * (2 / r - 1 / a)))
+  };
+};
+test('Preview is non-mutating and its prograde impulse raises the far apsis', () => {
+  const {pos, vel} = initial(),
+    p = pos.clone(),
+    v = vel.clone(),
+    result = maneuverPreview(pos, vel, 'now', 100);
+  assert.deepEqual(pos, p);
+  assert.deepEqual(vel, v);
+  assert.ok(result.orbit.apoapsis > result.original.apoapsis);
+  assert.ok(Math.abs(result.orbit.periapsis - 80000) < 1e-7);
+  assert.ok(Math.abs(result.afterVel.length() - vel.length() - 100) < 1e-9);
+});
+test('A planned apoapsis circularization agrees with an integrated coast and impulse', () => {
+  let {pos, vel} = initial();
+  const o = orbitState(pos, vel),
+    dv = apsisPlan(o).apoapsis.deltaV,
+    result = maneuverPreview(pos, vel, 'apoapsis', dv);
+  assert.ok(result.orbit.eccentricity < 1e-10);
+  let elapsed = 0;
+  while (elapsed < result.time) {
+    const dt = Math.min(0.2, result.time - elapsed),
+      next = advanceOrbit(pos, vel, new T.Vector3(), dt);
+    pos = next.pos;
+    vel = next.vel;
+    elapsed += dt;
+  }
+  vel.addScaledVector(vel.clone().normalize(), dv);
+  const actual = orbitState(pos, vel);
+  assert.ok(pos.distanceTo(result.burnPos) < 1);
+  assert.ok(Math.abs(actual.apoapsis - result.orbit.apoapsis) < 1);
+  assert.ok(Math.abs(actual.periapsis - result.orbit.periapsis) < 1);
+});
+test('Retrograde plans can deorbit, escape, and reverse without changing the input orbit', () => {
+  const {pos, vel} = initial();
+  assert.ok(maneuverPreview(pos, vel, 'now', -800).orbit.periapsis < 0);
+  assert.ok(maneuverPreview(pos, vel, 'now', 2000).orbit.energy > 0);
+  assert.ok(maneuverPreview(pos, vel, 'now', -5000).orbit.normal.dot(orbitState(pos, vel).normal) < -0.99);
+});
+test('Impossible future nodes and invalid input are rejected', () => {
+  const {pos, vel} = initial();
+  for (const n of [NaN, Infinity, 10001]) assert.throws(() => maneuverPreview(pos, vel, 'now', n));
+  assert.throws(() => maneuverPreview(pos, vel, 'invalid', 1));
+  assert.throws(() => maneuverPreview(pos, new T.Vector3(), 'now', 10));
+  assert.throws(() => maneuverPreview(pos, vel.clone().multiplyScalar(2), 'apoapsis', 10));
+  assert.throws(() => maneuverPreview(pos, vel.clone().multiplyScalar(0.3), 'apoapsis', 10));
+  const circular = vel.clone().setLength(Math.sqrt(PLANET.mu / 680000));
+  assert.throws(() => maneuverPreview(pos, circular, 'periapsis', 10));
 });
 
-test('Three-axis impulses change inclination and radial motion with the correct magnitude',()=>{
- const {pos,vel}=initial(),o=bodyOrbitState(pos,vel),before=pos.clone();
- const n=maneuverPreview(pos,vel,'now',{prograde:0,normal:100,radial:0});assert.ok(n.impulse.clone().normalize().dot(o.normal)>.999999);assert.ok(Math.abs(n.orbit.normal.angleTo(o.normal)-Math.atan2(100,vel.length()))<1e-10);
- const r=maneuverPreview(pos,vel,'now',{prograde:0,normal:0,radial:80});assert.ok(Math.abs(r.orbit.vertical-80)<1e-8);
- const mixed=maneuverPreview(pos,vel,'now',{prograde:-30,normal:40,radial:50});assert.ok(Math.abs(mixed.deltaV-Math.sqrt(5000))<1e-9);assert.deepEqual(pos,before);
- for(const c of [{prograde:10000,normal:1,radial:0},{prograde:0,normal:NaN,radial:0},{prograde:0}])assert.throws(()=>maneuverPreview(pos,vel,'now',c));
- assert.throws(()=>maneuverPreview(pos,new T.Vector3(0,100,0),'now',{prograde:0,normal:1,radial:0}));
+import {mapPointEpoch} from '../dist/maneuver.js';
+import {bodyOrbitState, lunarTrial, bodyState} from '../dist/celestial.js';
+import {coastDrift} from '../dist/coast-orbit.js';
+test('Clicked conic points reproduce their next passage and immutable burn epoch', () => {
+  for (const state of [
+    initial(),
+    {
+      pos: center.clone().add(new T.Vector3(0, 680000, 0)),
+      vel: new T.Vector3(0, 0, Math.sqrt(PLANET.mu / 680000))
+    },
+    lunarTrial(500)
+  ]) {
+    const epoch = 500,
+      o = bodyOrbitState(state.pos, state.vel, epoch),
+      delay = o.period * 0.37,
+      next = coastDrift(state.pos, state.vel, epoch, delay),
+      point = next.position
+        .clone()
+        .sub(bodyState(o.body, epoch + delay).position)
+        .add(o.center),
+      picked = mapPointEpoch(o, point);
+    assert.ok(Math.abs(picked - epoch - delay) < 1e-5);
+    const p = maneuverPreview(state.pos, state.vel, {universalTime: picked}, 100, epoch);
+    assert.ok(p.burnPos.distanceTo(next.position) < 0.01);
+    const later = coastDrift(state.pos, state.vel, epoch, 10),
+      q = maneuverPreview(later.position, later.velocity, {universalTime: picked}, 100, epoch + 10);
+    assert.ok(p.burnPos.distanceTo(q.burnPos) < 0.01);
+    assert.equal(p.universalTime, q.universalTime);
+    assert.throws(() => maneuverPreview(state.pos, state.vel, {universalTime: epoch - 1}, 100, epoch));
+  }
+});
+
+test('Three-axis impulses change inclination and radial motion with the correct magnitude', () => {
+  const {pos, vel} = initial(),
+    o = bodyOrbitState(pos, vel),
+    before = pos.clone();
+  const n = maneuverPreview(pos, vel, 'now', {prograde: 0, normal: 100, radial: 0});
+  assert.ok(n.impulse.clone().normalize().dot(o.normal) > 0.999999);
+  assert.ok(Math.abs(n.orbit.normal.angleTo(o.normal) - Math.atan2(100, vel.length())) < 1e-10);
+  const r = maneuverPreview(pos, vel, 'now', {prograde: 0, normal: 0, radial: 80});
+  assert.ok(Math.abs(r.orbit.vertical - 80) < 1e-8);
+  const mixed = maneuverPreview(pos, vel, 'now', {prograde: -30, normal: 40, radial: 50});
+  assert.ok(Math.abs(mixed.deltaV - Math.sqrt(5000)) < 1e-9);
+  assert.deepEqual(pos, before);
+  for (const c of [
+    {prograde: 10000, normal: 1, radial: 0},
+    {prograde: 0, normal: NaN, radial: 0},
+    {prograde: 0}
+  ])
+    assert.throws(() => maneuverPreview(pos, vel, 'now', c));
+  assert.throws(() =>
+    maneuverPreview(pos, new T.Vector3(0, 100, 0), 'now', {prograde: 0, normal: 1, radial: 0})
+  );
 });

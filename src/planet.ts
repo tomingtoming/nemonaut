@@ -1,16 +1,107 @@
 import * as T from 'three';
 // Kerbin stock physical values and baseline atmospheric curves, extracted by KittopiaTech:
 // https://github.com/Kopernicus/kittopia-dumps/blob/master/Configs/Kerbin.cfg
-export const PLANET={radius:600000,mu:3.5316e12,atmosphereTop:70000};
-export const center=new T.Vector3(0,-PLANET.radius,0);
-export const radial=(p:T.Vector3):T.Vector3=>p.clone().sub(center);
-export const altitude=(p:T.Vector3):number=>radial(p).length()-PLANET.radius;
-export const localUp=(p:T.Vector3):T.Vector3=>radial(p).normalize();
-export function gravity(p:T.Vector3):T.Vector3{const r=radial(p);return r.multiplyScalar(-PLANET.mu/Math.max(r.length(),1)**3);}
-const pressure=[[0,101.325,0,-.01501631],[1241.025,84.02916,-.01289846,-.01289826],[2439.593,69.68138,-.01107876,-.01107859],[3597.11,57.78001,-.009515483,-.009515338],[4714.942,47.90862,-.00817254,-.008172415],[5794.409,39.72148,-.00701892,-.007018813],[6836.791,32.93169,-.006027969,-.006027877],[7843.328,27.30109,-.005176778,-.0051767],[8815.22,22.63206,-.004445662,-.004445578],[10786.42,15.3684,-.003016528,-.00301646],[12101.4,11.87313,-.002329273,-.00232922],[13417.05,9.172798,-.001798594,-.001798554],[16678.47,4.842261,-.0009448537,-.0009448319],[21143.1,2.050097,-.0003894095,-.0003894005],[26977.92,.6905929,-.0001252565,-.0001252534],[33593.82,.2201734,-3.626878e-5,-3.626788e-5],[42081.87,.05768469,-9.063159e-6,-9.062975e-6],[49312.13,.01753794,-3.029397e-6,-3.029335e-6],[56669.95,.004591824,-8.827175e-7,-8.826996e-7],[62300.84,.001497072,-3.077091e-7,-3.077031e-7],[70000,0,0,0]];
-const temperature=[[0,288.15,0,-.008125],[8815.22,216.65,-.008096968,0],[16050.39,216.65,0,.001242164],[25729.23,228.65,.001237475,.003464929],[37879.44,270.65,.00344855,0],[41129.24,270.65,0,-.003444189],[57440.13,214.65,-.003422425,-.002444589],[68797.88,186.946,-.002433851,0],[70000,186.946,0,0]];
-function curve(points:readonly (readonly number[])[],h:number):number{h=Math.max(0,h);for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i];if(h<=b[0]){const width=b[0]-a[0],t=(h-a[0])/width,t2=t*t,t3=t2*t;return (2*t3-3*t2+1)*a[1]+(t3-2*t2+t)*width*a[3]+(-2*t3+3*t2)*b[1]+(t3-t2)*width*b[2];}}return points[points.length-1][1];}
-export function atmosphere(h:number){const temp=curve(temperature,h),p=h>=PLANET.atmosphereTop?0:Math.max(0,curve(pressure,h))*1000;return {pressure:p,temperature:temp,density:p*.0289644/(8.314462618*temp)};}
-export function orbitState(pos:T.Vector3,vel:T.Vector3){const r=radial(pos),radius=r.length(),h=r.clone().cross(vel),evec=vel.clone().cross(h).divideScalar(PLANET.mu).sub(r.clone().divideScalar(radius)),e=evec.length(),energy=vel.lengthSq()/2-PLANET.mu/radius,p=h.lengthSq()/PLANET.mu,a=energy<0?-PLANET.mu/(2*energy):Infinity;const pe=p/(1+e)-PLANET.radius,ap=energy<0?a*(1+e)-PLANET.radius:Infinity;return {altitude:radius-PLANET.radius,speed:vel.length(),vertical:vel.dot(r)/radius,circularSpeed:Math.sqrt(PLANET.mu/radius),gravity:PLANET.mu/radius**2,eccentricity:e,energy,periapsis:pe,apoapsis:ap,period:energy<0?2*Math.PI*Math.sqrt(a**3/PLANET.mu):Infinity,p,evec,normal:h.normalize(),radius,r,stable:energy<0&&pe>PLANET.atmosphereTop};}
+export const PLANET = {radius: 600000, mu: 3.5316e12, atmosphereTop: 70000};
+export const center = new T.Vector3(0, -PLANET.radius, 0);
+export const radial = (p: T.Vector3): T.Vector3 => p.clone().sub(center);
+export const altitude = (p: T.Vector3): number => radial(p).length() - PLANET.radius;
+export const localUp = (p: T.Vector3): T.Vector3 => radial(p).normalize();
+export function gravity(p: T.Vector3): T.Vector3 {
+  const r = radial(p);
+  return r.multiplyScalar(-PLANET.mu / Math.max(r.length(), 1) ** 3);
+}
+const pressure = [
+  [0, 101.325, 0, -0.01501631],
+  [1241.025, 84.02916, -0.01289846, -0.01289826],
+  [2439.593, 69.68138, -0.01107876, -0.01107859],
+  [3597.11, 57.78001, -0.009515483, -0.009515338],
+  [4714.942, 47.90862, -0.00817254, -0.008172415],
+  [5794.409, 39.72148, -0.00701892, -0.007018813],
+  [6836.791, 32.93169, -0.006027969, -0.006027877],
+  [7843.328, 27.30109, -0.005176778, -0.0051767],
+  [8815.22, 22.63206, -0.004445662, -0.004445578],
+  [10786.42, 15.3684, -0.003016528, -0.00301646],
+  [12101.4, 11.87313, -0.002329273, -0.00232922],
+  [13417.05, 9.172798, -0.001798594, -0.001798554],
+  [16678.47, 4.842261, -0.0009448537, -0.0009448319],
+  [21143.1, 2.050097, -0.0003894095, -0.0003894005],
+  [26977.92, 0.6905929, -0.0001252565, -0.0001252534],
+  [33593.82, 0.2201734, -3.626878e-5, -3.626788e-5],
+  [42081.87, 0.05768469, -9.063159e-6, -9.062975e-6],
+  [49312.13, 0.01753794, -3.029397e-6, -3.029335e-6],
+  [56669.95, 0.004591824, -8.827175e-7, -8.826996e-7],
+  [62300.84, 0.001497072, -3.077091e-7, -3.077031e-7],
+  [70000, 0, 0, 0]
+];
+const temperature = [
+  [0, 288.15, 0, -0.008125],
+  [8815.22, 216.65, -0.008096968, 0],
+  [16050.39, 216.65, 0, 0.001242164],
+  [25729.23, 228.65, 0.001237475, 0.003464929],
+  [37879.44, 270.65, 0.00344855, 0],
+  [41129.24, 270.65, 0, -0.003444189],
+  [57440.13, 214.65, -0.003422425, -0.002444589],
+  [68797.88, 186.946, -0.002433851, 0],
+  [70000, 186.946, 0, 0]
+];
+function curve(points: readonly (readonly number[])[], h: number): number {
+  h = Math.max(0, h);
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1],
+      b = points[i];
+    if (h <= b[0]) {
+      const width = b[0] - a[0],
+        t = (h - a[0]) / width,
+        t2 = t * t,
+        t3 = t2 * t;
+      return (
+        (2 * t3 - 3 * t2 + 1) * a[1] +
+        (t3 - 2 * t2 + t) * width * a[3] +
+        (-2 * t3 + 3 * t2) * b[1] +
+        (t3 - t2) * width * b[2]
+      );
+    }
+  }
+  return points[points.length - 1][1];
+}
+export function atmosphere(h: number) {
+  const temp = curve(temperature, h),
+    p = h >= PLANET.atmosphereTop ? 0 : Math.max(0, curve(pressure, h)) * 1000;
+  return {pressure: p, temperature: temp, density: (p * 0.0289644) / (8.314462618 * temp)};
+}
+export function orbitState(pos: T.Vector3, vel: T.Vector3) {
+  const r = radial(pos),
+    radius = r.length(),
+    h = r.clone().cross(vel),
+    evec = vel.clone().cross(h).divideScalar(PLANET.mu).sub(r.clone().divideScalar(radius)),
+    e = evec.length(),
+    energy = vel.lengthSq() / 2 - PLANET.mu / radius,
+    p = h.lengthSq() / PLANET.mu,
+    a = energy < 0 ? -PLANET.mu / (2 * energy) : Infinity;
+  const pe = p / (1 + e) - PLANET.radius,
+    ap = energy < 0 ? a * (1 + e) - PLANET.radius : Infinity;
+  return {
+    altitude: radius - PLANET.radius,
+    speed: vel.length(),
+    vertical: vel.dot(r) / radius,
+    circularSpeed: Math.sqrt(PLANET.mu / radius),
+    gravity: PLANET.mu / radius ** 2,
+    eccentricity: e,
+    energy,
+    periapsis: pe,
+    apoapsis: ap,
+    period: energy < 0 ? 2 * Math.PI * Math.sqrt(a ** 3 / PLANET.mu) : Infinity,
+    p,
+    evec,
+    normal: h.normalize(),
+    radius,
+    r,
+    stable: energy < 0 && pe > PLANET.atmosphereTop
+  };
+}
 // Double precision kick-drift-kick; no float32 planetary positions or velocity cap.
-export function advanceOrbit(pos:T.Vector3,vel:T.Vector3,acceleration:T.Vector3,dt:number){const half=vel.clone().addScaledVector(gravity(pos).add(acceleration),dt/2);const next=pos.clone().addScaledVector(half,dt);return {pos:next,vel:half.addScaledVector(gravity(next).add(acceleration),dt/2)};}
+export function advanceOrbit(pos: T.Vector3, vel: T.Vector3, acceleration: T.Vector3, dt: number) {
+  const half = vel.clone().addScaledVector(gravity(pos).add(acceleration), dt / 2);
+  const next = pos.clone().addScaledVector(half, dt);
+  return {pos: next, vel: half.addScaledVector(gravity(next).add(acceleration), dt / 2)};
+}

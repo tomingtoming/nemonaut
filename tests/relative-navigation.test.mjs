@@ -1,10 +1,125 @@
-import test from 'node:test';import assert from 'node:assert/strict';import * as T from 'three';
-import {Flight} from '../dist/core.js';import {preset} from '../dist/catalog.js';import {saveFlight,loadFlight} from '../dist/flight-save.js';import {selectVessel} from '../dist/fleet.js';
-import {centerOfVessel,relativeState,setTarget,resolveTargets} from '../dist/relative-navigation.js';
-function pair(){const f=new Flight(preset('rcs'),'orbit'),g=new Flight(preset('rcs'),'orbit');g.pos.x+=100;f.detached=[g];return [f,g];}
-test('Relative navigation uses actual centers and signed closing rate with no singular directions',()=>{const [f,g]=pair();g.vel.x=-2;let r=relativeState(f,g);assert.equal(r.distance,100);assert.equal(r.speed,2);assert.equal(r.closing,2);assert.equal(r.direction.x,1);assert.equal(r.braking.x,-1);g.vel.x=2;assert.equal(relativeState(f,g).closing,-2);g.pos.copy(f.pos);g.vel.copy(f.vel);r=relativeState(f,g);assert.equal(r.direction,null);assert.equal(r.braking,null);assert.equal(r.closing,0);assert.equal(relativeState(f,f),null);assert.ok(centerOfVessel(f).distanceTo(f.pos)>0);f.dispose();});
-test('Target part identity follows separation and survives control switching and saves',()=>{const f=new Flight(preset('rcs'),'orbit'),g=new Flight(preset('twin'),'orbit');f.detached=[g];const anchor=g.parts.filter(p=>p.type==='probe')[1].id;f.targetPartId=anchor;resolveTargets(f);assert.equal(f.navigationTarget,g);g.stageNext();g.stageNext();const branch=g.detached[0];resolveTargets(f);assert.equal(f.navigationTarget,branch);const selected=selectVessel(f,branch);resolveTargets(selected);assert.equal(f.navigationTarget,branch);const restored=loadFlight(saveFlight(selected)),observer=restored.detached.find(v=>v.targetPartId===anchor);assert.equal(observer.navigationTarget,restored);selected.dispose();restored.dispose();});
-test('Foreign and self targets are rejected, removal resets target SAS, malformed references reject restore',()=>{const [f,g]=pair(),outside=new Flight(preset('rcs'),'orbit');assert.throws(()=>setTarget(f,f,f));assert.throws(()=>setTarget(f,f,outside));setTarget(f,f,g);f.sasMode='target';let saved=saveFlight(f);saved.targetPartId='missing';assert.throws(()=>loadFlight(saved));saved=saveFlight(f);saved.targetPartId=f.parts[0].id;assert.throws(()=>loadFlight(saved));f.detached=[];resolveTargets(f);assert.equal(f.targetPartId,null);assert.equal(f.sasMode,'hold');setTarget(f,f,null);f.dispose();g.dispose();outside.dispose();});
-test('Relative braking direction and real RCS translation reduce relative speed',()=>{const [f,g]=pair();g.vel.x=2;f.q.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3(1,0,0));f.holdQ=f.q.clone();f.rcsEnabled=true;f.reactionEnabled=false;setTarget(f,f,g);f.sasMode='relativeRetrograde';const before=relativeState(f,g).speed;for(let i=0;i<90;i++)f.step(1/120,{translateZ:1});assert.ok(relativeState(f,g).speed<before*.5);assert.ok(f.fuel.size>0);f.dispose();});
-test('Target SAS rotates using installed RCS and cannot rotate a powerless unequipped craft',()=>{for(const enabled of [true,false]){const [f,g]=pair();f.rcsEnabled=enabled;f.reactionEnabled=false;setTarget(f,f,g);f.sasMode='target';const initial=f.q.clone();for(let i=0;i<1200;i++)f.step(1/120);const forward=new T.Vector3(0,0,1).applyQuaternion(f.q),direction=relativeState(f,g).direction;if(enabled)assert.ok(forward.dot(direction)>.95);else assert.ok(f.q.angleTo(initial)<1e-6);f.dispose();}});
-test('Rendezvous example places RCS around COM so alignment does not consume the intended relative velocity',()=>{const f=new Flight(preset('rendezvous'),'orbit');f.stageNext();f.stageNext();setTarget(f,f,f.detached[0]);f.rcsEnabled=true;f.sasMode='relativeRetrograde';const before=relativeState(f,f.detached[0]).speed;for(let i=0;i<4800;i++)f.step(1/120);const state=relativeState(f,f.detached[0]);assert.ok(Math.abs(state.speed-before)<.08);assert.ok(new T.Vector3(0,1,0).applyQuaternion(f.q).dot(state.braking)>.98);f.dispose();});
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as T from 'three';
+import {Flight} from '../dist/core.js';
+import {preset} from '../dist/catalog.js';
+import {saveFlight, loadFlight} from '../dist/flight-save.js';
+import {selectVessel} from '../dist/fleet.js';
+import {centerOfVessel, relativeState, setTarget, resolveTargets} from '../dist/relative-navigation.js';
+function pair() {
+  const f = new Flight(preset('rcs'), 'orbit'),
+    g = new Flight(preset('rcs'), 'orbit');
+  g.pos.x += 100;
+  f.detached = [g];
+  return [f, g];
+}
+test('Relative navigation uses actual centers and signed closing rate with no singular directions', () => {
+  const [f, g] = pair();
+  g.vel.x = -2;
+  let r = relativeState(f, g);
+  assert.equal(r.distance, 100);
+  assert.equal(r.speed, 2);
+  assert.equal(r.closing, 2);
+  assert.equal(r.direction.x, 1);
+  assert.equal(r.braking.x, -1);
+  g.vel.x = 2;
+  assert.equal(relativeState(f, g).closing, -2);
+  g.pos.copy(f.pos);
+  g.vel.copy(f.vel);
+  r = relativeState(f, g);
+  assert.equal(r.direction, null);
+  assert.equal(r.braking, null);
+  assert.equal(r.closing, 0);
+  assert.equal(relativeState(f, f), null);
+  assert.ok(centerOfVessel(f).distanceTo(f.pos) > 0);
+  f.dispose();
+});
+test('Target part identity follows separation and survives control switching and saves', () => {
+  const f = new Flight(preset('rcs'), 'orbit'),
+    g = new Flight(preset('twin'), 'orbit');
+  f.detached = [g];
+  const anchor = g.parts.filter(p => p.type === 'probe')[1].id;
+  f.targetPartId = anchor;
+  resolveTargets(f);
+  assert.equal(f.navigationTarget, g);
+  g.stageNext();
+  g.stageNext();
+  const branch = g.detached[0];
+  resolveTargets(f);
+  assert.equal(f.navigationTarget, branch);
+  const selected = selectVessel(f, branch);
+  resolveTargets(selected);
+  assert.equal(f.navigationTarget, branch);
+  const restored = loadFlight(saveFlight(selected)),
+    observer = restored.detached.find(v => v.targetPartId === anchor);
+  assert.equal(observer.navigationTarget, restored);
+  selected.dispose();
+  restored.dispose();
+});
+test('Foreign and self targets are rejected, removal resets target SAS, malformed references reject restore', () => {
+  const [f, g] = pair(),
+    outside = new Flight(preset('rcs'), 'orbit');
+  assert.throws(() => setTarget(f, f, f));
+  assert.throws(() => setTarget(f, f, outside));
+  setTarget(f, f, g);
+  f.sasMode = 'target';
+  let saved = saveFlight(f);
+  saved.targetPartId = 'missing';
+  assert.throws(() => loadFlight(saved));
+  saved = saveFlight(f);
+  saved.targetPartId = f.parts[0].id;
+  assert.throws(() => loadFlight(saved));
+  f.detached = [];
+  resolveTargets(f);
+  assert.equal(f.targetPartId, null);
+  assert.equal(f.sasMode, 'hold');
+  setTarget(f, f, null);
+  f.dispose();
+  g.dispose();
+  outside.dispose();
+});
+test('Relative braking direction and real RCS translation reduce relative speed', () => {
+  const [f, g] = pair();
+  g.vel.x = 2;
+  f.q.setFromUnitVectors(new T.Vector3(0, 0, 1), new T.Vector3(1, 0, 0));
+  f.holdQ = f.q.clone();
+  f.rcsEnabled = true;
+  f.reactionEnabled = false;
+  setTarget(f, f, g);
+  f.sasMode = 'relativeRetrograde';
+  const before = relativeState(f, g).speed;
+  for (let i = 0; i < 90; i++) f.step(1 / 120, {translateZ: 1});
+  assert.ok(relativeState(f, g).speed < before * 0.5);
+  assert.ok(f.fuel.size > 0);
+  f.dispose();
+});
+test('Target SAS rotates using installed RCS and cannot rotate a powerless unequipped craft', () => {
+  for (const enabled of [true, false]) {
+    const [f, g] = pair();
+    f.rcsEnabled = enabled;
+    f.reactionEnabled = false;
+    setTarget(f, f, g);
+    f.sasMode = 'target';
+    const initial = f.q.clone();
+    for (let i = 0; i < 1200; i++) f.step(1 / 120);
+    const forward = new T.Vector3(0, 0, 1).applyQuaternion(f.q),
+      direction = relativeState(f, g).direction;
+    if (enabled) assert.ok(forward.dot(direction) > 0.95);
+    else assert.ok(f.q.angleTo(initial) < 1e-6);
+    f.dispose();
+  }
+});
+test('Rendezvous example places RCS around COM so alignment does not consume the intended relative velocity', () => {
+  const f = new Flight(preset('rendezvous'), 'orbit');
+  f.stageNext();
+  f.stageNext();
+  setTarget(f, f, f.detached[0]);
+  f.rcsEnabled = true;
+  f.sasMode = 'relativeRetrograde';
+  const before = relativeState(f, f.detached[0]).speed;
+  for (let i = 0; i < 4800; i++) f.step(1 / 120);
+  const state = relativeState(f, f.detached[0]);
+  assert.ok(Math.abs(state.speed - before) < 0.08);
+  assert.ok(new T.Vector3(0, 1, 0).applyQuaternion(f.q).dot(state.braking) > 0.98);
+  f.dispose();
+});

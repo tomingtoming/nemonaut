@@ -1,8 +1,70 @@
-import test from 'node:test';import assert from 'node:assert/strict';
-import {Flight} from '../dist/core.js';import {preset} from '../dist/catalog.js';import {finiteReturnPlan} from '../dist/finite-return-plan.js';import {createManeuverNode} from '../dist/maneuver-node.js';
-for(const throttle of [1,.1])test(`finite return solver targets 25 km in actual flight at ${throttle*100}%`,t=>{
- const f=new Flight(preset('returner'),'orbit');try{f.stageNext();f.stageNext();const before={fuel:[...f.fuel],position:f.pos.toArray(),velocity:f.vel.toArray(),time:f.universalTime,node:f.maneuver};const plan=finiteReturnPlan(f,{throttle});assert.deepEqual({fuel:[...f.fuel],position:f.pos.toArray(),velocity:f.vel.toArray(),time:f.universalTime,node:f.maneuver},before);assert.ok(Math.abs(plan.prediction.orbit.periapsis-25000)<1);
- f.maneuver=createManeuverNode(plan.preview,0);f.maneuver.tolerance=plan.tolerance;f.maneuver.stopAtTarget=true;f.sas=true;f.sasMode='maneuver';while(f.universalTime<plan.location.universalTime)f.step(1/120);for(let i=0;i<120*100&&!f.maneuver.complete&&!f.crashed;i++){f.throttle=throttle;f.step(1/120);}assert.equal(f.maneuver.complete,true);assert.equal(f.crashed,false);assert.ok(Math.abs(f.orbit.periapsis-25000)<100);t.diagnostic(JSON.stringify({throttle,deltaV:plan.preview.impulse.length(),predicted:plan.prediction.orbit.periapsis,actual:f.orbit.periapsis}));
- }finally{f.dispose();}
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {Flight} from '../dist/core.js';
+import {preset} from '../dist/catalog.js';
+import {finiteReturnPlan} from '../dist/finite-return-plan.js';
+import {createManeuverNode} from '../dist/maneuver-node.js';
+for (const throttle of [1, 0.1])
+  test(`finite return solver targets 25 km in actual flight at ${throttle * 100}%`, t => {
+    const f = new Flight(preset('returner'), 'orbit');
+    try {
+      f.stageNext();
+      f.stageNext();
+      const before = {
+        fuel: [...f.fuel],
+        position: f.pos.toArray(),
+        velocity: f.vel.toArray(),
+        time: f.universalTime,
+        node: f.maneuver
+      };
+      const plan = finiteReturnPlan(f, {throttle});
+      assert.deepEqual(
+        {
+          fuel: [...f.fuel],
+          position: f.pos.toArray(),
+          velocity: f.vel.toArray(),
+          time: f.universalTime,
+          node: f.maneuver
+        },
+        before
+      );
+      assert.ok(Math.abs(plan.prediction.orbit.periapsis - 25000) < 1);
+      f.maneuver = createManeuverNode(plan.preview, 0);
+      f.maneuver.tolerance = plan.tolerance;
+      f.maneuver.stopAtTarget = true;
+      f.sas = true;
+      f.sasMode = 'maneuver';
+      while (f.universalTime < plan.location.universalTime) f.step(1 / 120);
+      for (let i = 0; i < 120 * 100 && !f.maneuver.complete && !f.crashed; i++) {
+        f.throttle = throttle;
+        f.step(1 / 120);
+      }
+      assert.equal(f.maneuver.complete, true);
+      assert.equal(f.crashed, false);
+      assert.ok(Math.abs(f.orbit.periapsis - 25000) < 100);
+      t.diagnostic(
+        JSON.stringify({
+          throttle,
+          deltaV: plan.preview.impulse.length(),
+          predicted: plan.prediction.orbit.periapsis,
+          actual: f.orbit.periapsis
+        })
+      );
+    } finally {
+      f.dispose();
+    }
+  });
+test('unsupported low-thrust return is rejected without changing the craft', () => {
+  const f = new Flight(preset('returner'), 'orbit');
+  try {
+    f.stageNext();
+    f.stageNext();
+    const fuel = [...f.fuel];
+    assert.throws(() => finiteReturnPlan(f, {throttle: 0.01}), /対応範囲/);
+    assert.deepEqual([...f.fuel], fuel);
+    assert.equal(f.maneuver, null);
+    assert.throws(() => finiteReturnPlan(f, {throttle: 0}));
+  } finally {
+    f.dispose();
+  }
 });
-test('unsupported low-thrust return is rejected without changing the craft',()=>{const f=new Flight(preset('returner'),'orbit');try{f.stageNext();f.stageNext();const fuel=[...f.fuel];assert.throws(()=>finiteReturnPlan(f,{throttle:.01}),/対応範囲/);assert.deepEqual([...f.fuel],fuel);assert.equal(f.maneuver,null);assert.throws(()=>finiteReturnPlan(f,{throttle:0}));}finally{f.dispose();}});

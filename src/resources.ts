@@ -1,25 +1,184 @@
-import {PARTS,type Part} from './catalog.js';
+import {PARTS, type Part} from './catalog.js';
 /** The part fields resource bookkeeping reads (a catalog Part satisfies it). */
-export interface ResourcePart{id:string;type:string;parent?:string|null;stage:number;fuelLoad?:number;thrustLimit?:number;fuelCrossfeed?:boolean;fuelEnabled?:boolean}
+export interface ResourcePart {
+  id: string;
+  type: string;
+  parent?: string | null;
+  stage: number;
+  fuelLoad?: number;
+  thrustLimit?: number;
+  fuelCrossfeed?: boolean;
+  fuelEnabled?: boolean;
+}
 /** Remaining propellant (kg) by part id. */
-export type FuelMap=Map<string,number>;
+export type FuelMap = Map<string, number>;
 /** Parts sharing one propellant supply: every member, its enabled tanks and its non-water engines. */
-export interface FuelGroup<P extends ResourcePart=ResourcePart>{parts:P[];tanks:P[];engines:P[]}
+export interface FuelGroup<P extends ResourcePart = ResourcePart> {
+  parts: P[];
+  tanks: P[];
+  engines: P[];
+}
 /** fuelNetworks result: all groups plus each part's group by id. */
-export interface FuelNetworks<P extends ResourcePart=ResourcePart>{groups:FuelGroup<P>[];network:Map<string,FuelGroup<P>>}
+export interface FuelNetworks<P extends ResourcePart = ResourcePart> {
+  groups: FuelGroup<P>[];
+  network: Map<string, FuelGroup<P>>;
+}
 /** Ids of the engines that are lit (a Set, or any collection with has). */
-export type EngineSet={has(id:string):boolean};
+export type EngineSet = {has(id: string): boolean};
 /** One stagePerformance row (SI units; dv in m/s). */
-export interface StagePerformance{stage:number;thrust:number;mass:number;seaTwr:number;twr:number;fuel:number;dv:number}
-export const engineMaxThrust=(p:Pick<ResourcePart,'type'|'thrustLimit'>):number=>(PARTS[p.type].thrust||0)*(p.thrustLimit??1);
+export interface StagePerformance {
+  stage: number;
+  thrust: number;
+  mass: number;
+  seaTwr: number;
+  twr: number;
+  fuel: number;
+  dv: number;
+}
+export const engineMaxThrust = (p: Pick<ResourcePart, 'type' | 'thrustLimit'>): number =>
+  (PARTS[p.type].thrust || 0) * (p.thrustLimit ?? 1);
 /** The catalog (vacuum) specific impulse of an engine part; every part with thrust defines one. */
-export function vacuumIsp(p:Pick<ResourcePart,'type'>):number{const isp=PARTS[p.type].isp;if(isp===undefined)throw Error('エンジンの比推力が定義されていません: '+p.type);return isp;}
-export function engineIsp(p:Pick<ResourcePart,'type'>,pressure=0):number{const d=PARTS[p.type],isp=vacuumIsp(p);return d.ispSeaLevel===undefined?isp:isp+(d.ispSeaLevel-isp)*Math.max(0,Math.min(1,pressure/101325));}
-export const createFuel=(parts:readonly ResourcePart[]):FuelMap=>new Map<string,number>(parts.flatMap(p=>{const capacity=PARTS[p.type].fuel||PARTS[p.type].monoprop;return capacity?[[p.id,capacity*(p.fuelLoad??1)] as const]:[];}));
-export const fuelMass=(p:Pick<ResourcePart,'id'|'type'|'fuelLoad'>,fuel:FuelMap|number):number=>fuel instanceof Map?(fuel.get(p.id)||0):(PARTS[p.type].fuel||PARTS[p.type].monoprop||0)*fuel*(p.fuelLoad??1);
+export function vacuumIsp(p: Pick<ResourcePart, 'type'>): number {
+  const isp = PARTS[p.type].isp;
+  if (isp === undefined) throw Error('エンジンの比推力が定義されていません: ' + p.type);
+  return isp;
+}
+export function engineIsp(p: Pick<ResourcePart, 'type'>, pressure = 0): number {
+  const d = PARTS[p.type],
+    isp = vacuumIsp(p);
+  return d.ispSeaLevel === undefined
+    ? isp
+    : isp + (d.ispSeaLevel - isp) * Math.max(0, Math.min(1, pressure / 101325));
+}
+export const createFuel = (parts: readonly ResourcePart[]): FuelMap =>
+  new Map<string, number>(
+    parts.flatMap(p => {
+      const capacity = PARTS[p.type].fuel || PARTS[p.type].monoprop;
+      return capacity ? [[p.id, capacity * (p.fuelLoad ?? 1)] as const] : [];
+    })
+  );
+export const fuelMass = (
+  p: Pick<ResourcePart, 'id' | 'type' | 'fuelLoad'>,
+  fuel: FuelMap | number
+): number =>
+  fuel instanceof Map
+    ? fuel.get(p.id) || 0
+    : (PARTS[p.type].fuel || PARTS[p.type].monoprop || 0) * fuel * (p.fuelLoad ?? 1);
 // A separator blocks the parent edge. Its children share the discarded side's fuel.
 /** P defaults to the catalog Part so an untyped (`any`) argument still yields catalog parts. */
-export function fuelNetworks<P extends ResourcePart=Part>(parts:readonly P[]):FuelNetworks<P>{const byId=new Map<string,P>(parts.map(p=>[p.id,p])),groups=new Map<string,FuelGroup<P>>(),network=new Map<string,FuelGroup<P>>();for(const p of parts){let root=p;for(let parent=root.parent?byId.get(root.parent):undefined;parent&&!PARTS[root.type].decoupler&&!(PARTS[root.type].docking&&root.fuelCrossfeed===false)&&!(PARTS[parent.type].docking&&parent.fuelCrossfeed===false);parent=root.parent?byId.get(root.parent):undefined)root=parent;let group=groups.get(root.id);if(!group){group={parts:[],tanks:[],engines:[]};groups.set(root.id,group);}group.parts.push(p);if(PARTS[p.type].fuel&&p.fuelEnabled!==false)group.tanks.push(p);if(PARTS[p.type].thrust&&!PARTS[p.type].water)group.engines.push(p);network.set(p.id,group);}return {groups:[...groups.values()],network};}
-export function engineBurn(networks:Pick<FuelNetworks,'groups'>,fuel:FuelMap,active:EngineSet,throttle:number,density:number,dt:number,pressure=density/1.225*101325):Map<string,number>{const thrust=new Map<string,number>();for(const g of networks.groups){const engines=g.engines.filter(p=>active.has(p.id)),requested=engines.map(p=>engineMaxThrust(p)*throttle*(PARTS[p.type].air?density/1.225:engineIsp(p,pressure)/vacuumIsp(p))),need=engines.reduce((s,p,i)=>s+requested[i]*dt/(engineIsp(p,pressure)*9.81),0),available=g.tanks.reduce((s,p)=>s+(fuel.get(p.id)||0),0),fraction=need>0?Math.min(1,available/need):0;engines.forEach((p,i)=>thrust.set(p.id,requested[i]*fraction));if(available>0&&need>0){const remaining=need>=available?0:1-need/available;for(const p of g.tanks)fuel.set(p.id,(fuel.get(p.id)||0)*remaining);}}return thrust;}
+export function fuelNetworks<P extends ResourcePart = Part>(parts: readonly P[]): FuelNetworks<P> {
+  const byId = new Map<string, P>(parts.map(p => [p.id, p])),
+    groups = new Map<string, FuelGroup<P>>(),
+    network = new Map<string, FuelGroup<P>>();
+  for (const p of parts) {
+    let root = p;
+    for (
+      let parent = root.parent ? byId.get(root.parent) : undefined;
+      parent &&
+      !PARTS[root.type].decoupler &&
+      !(PARTS[root.type].docking && root.fuelCrossfeed === false) &&
+      !(PARTS[parent.type].docking && parent.fuelCrossfeed === false);
+      parent = root.parent ? byId.get(root.parent) : undefined
+    )
+      root = parent;
+    let group = groups.get(root.id);
+    if (!group) {
+      group = {parts: [], tanks: [], engines: []};
+      groups.set(root.id, group);
+    }
+    group.parts.push(p);
+    if (PARTS[p.type].fuel && p.fuelEnabled !== false) group.tanks.push(p);
+    if (PARTS[p.type].thrust && !PARTS[p.type].water) group.engines.push(p);
+    network.set(p.id, group);
+  }
+  return {groups: [...groups.values()], network};
+}
+export function engineBurn(
+  networks: Pick<FuelNetworks, 'groups'>,
+  fuel: FuelMap,
+  active: EngineSet,
+  throttle: number,
+  density: number,
+  dt: number,
+  pressure = (density / 1.225) * 101325
+): Map<string, number> {
+  const thrust = new Map<string, number>();
+  for (const g of networks.groups) {
+    const engines = g.engines.filter(p => active.has(p.id)),
+      requested = engines.map(
+        p =>
+          engineMaxThrust(p) *
+          throttle *
+          (PARTS[p.type].air ? density / 1.225 : engineIsp(p, pressure) / vacuumIsp(p))
+      ),
+      need = engines.reduce((s, p, i) => s + (requested[i] * dt) / (engineIsp(p, pressure) * 9.81), 0),
+      available = g.tanks.reduce((s, p) => s + (fuel.get(p.id) || 0), 0),
+      fraction = need > 0 ? Math.min(1, available / need) : 0;
+    engines.forEach((p, i) => thrust.set(p.id, requested[i] * fraction));
+    if (available > 0 && need > 0) {
+      const remaining = need >= available ? 0 : 1 - need / available;
+      for (const p of g.tanks) fuel.set(p.id, (fuel.get(p.id) || 0) * remaining);
+    }
+  }
+  return thrust;
+}
 // Sequential reference burn: vacuum Isp, no gravity/drag losses, burn connected tanks dry before next stage.
-export function stagePerformance(parts:readonly ResourcePart[],fuel:ReadonlyMap<string,number>=createFuel(parts),thermal:ReadonlyMap<string,{ablator?:number}>|null=null):StagePerformance[]{let remaining=structuredClone(parts),propellant=new Map<string,number>(fuel),active=new Set<string>();const plan:StagePerformance[]=[];for(const stage of [...new Set<number>(parts.map(p=>p.stage))].sort((a,b)=>a-b)){const removed=new Set<string|null|undefined>(remaining.filter(p=>p.parent&&PARTS[p.type].decoupler&&p.stage===stage).map(p=>p.id));let more=true;while(more){more=false;for(const p of remaining)if(removed.has(p.parent)&&!removed.has(p.id)){removed.add(p.id);more=true;}}remaining=remaining.filter(p=>!removed.has(p.id));for(const p of remaining)if(p.stage===stage&&PARTS[p.type].thrust&&!PARTS[p.type].water)active.add(p.id);const networks=fuelNetworks(remaining),burning=networks.groups.filter(g=>g.engines.some(e=>active.has(e.id)&&engineMaxThrust(e)>0)&&g.tanks.some(t=>(propellant.get(t.id)||0)>0)),engines=burning.flatMap(g=>g.engines.filter(e=>active.has(e.id)&&engineMaxThrust(e)>0)),thrust=engines.reduce((s,p)=>s+engineMaxThrust(p),0);if(!thrust)continue;const before=remaining.reduce((s,p)=>s+PARTS[p.type].mass+(propellant.get(p.id)||0)+(thermal?.get(p.id)?.ablator??PARTS[p.type].ablator??0),0),fuel=burning.reduce((s,g)=>s+g.tanks.reduce((n,p)=>n+(propellant.get(p.id)||0),0),0),isp=thrust/engines.reduce((s,p)=>s+engineMaxThrust(p)/vacuumIsp(p),0);plan.push({stage,thrust,mass:before,seaTwr:engines.reduce((s,p)=>s+engineMaxThrust(p)*engineIsp(p,101325)/vacuumIsp(p),0)/(before*9.81),twr:thrust/(before*9.81),fuel,dv:isp*9.81*Math.log(before/Math.max(1,before-fuel))});for(const g of burning)for(const p of g.tanks)propellant.set(p.id,0);}return plan;}
+export function stagePerformance(
+  parts: readonly ResourcePart[],
+  fuel: ReadonlyMap<string, number> = createFuel(parts),
+  thermal: ReadonlyMap<string, {ablator?: number}> | null = null
+): StagePerformance[] {
+  let remaining = structuredClone(parts),
+    propellant = new Map<string, number>(fuel),
+    active = new Set<string>();
+  const plan: StagePerformance[] = [];
+  for (const stage of [...new Set<number>(parts.map(p => p.stage))].sort((a, b) => a - b)) {
+    const removed = new Set<string | null | undefined>(
+      remaining.filter(p => p.parent && PARTS[p.type].decoupler && p.stage === stage).map(p => p.id)
+    );
+    let more = true;
+    while (more) {
+      more = false;
+      for (const p of remaining)
+        if (removed.has(p.parent) && !removed.has(p.id)) {
+          removed.add(p.id);
+          more = true;
+        }
+    }
+    remaining = remaining.filter(p => !removed.has(p.id));
+    for (const p of remaining)
+      if (p.stage === stage && PARTS[p.type].thrust && !PARTS[p.type].water) active.add(p.id);
+    const networks = fuelNetworks(remaining),
+      burning = networks.groups.filter(
+        g =>
+          g.engines.some(e => active.has(e.id) && engineMaxThrust(e) > 0) &&
+          g.tanks.some(t => (propellant.get(t.id) || 0) > 0)
+      ),
+      engines = burning.flatMap(g => g.engines.filter(e => active.has(e.id) && engineMaxThrust(e) > 0)),
+      thrust = engines.reduce((s, p) => s + engineMaxThrust(p), 0);
+    if (!thrust) continue;
+    const before = remaining.reduce(
+        (s, p) =>
+          s +
+          PARTS[p.type].mass +
+          (propellant.get(p.id) || 0) +
+          (thermal?.get(p.id)?.ablator ?? PARTS[p.type].ablator ?? 0),
+        0
+      ),
+      fuel = burning.reduce((s, g) => s + g.tanks.reduce((n, p) => n + (propellant.get(p.id) || 0), 0), 0),
+      isp = thrust / engines.reduce((s, p) => s + engineMaxThrust(p) / vacuumIsp(p), 0);
+    plan.push({
+      stage,
+      thrust,
+      mass: before,
+      seaTwr:
+        engines.reduce((s, p) => s + (engineMaxThrust(p) * engineIsp(p, 101325)) / vacuumIsp(p), 0) /
+        (before * 9.81),
+      twr: thrust / (before * 9.81),
+      fuel,
+      dv: isp * 9.81 * Math.log(before / Math.max(1, before - fuel))
+    });
+    for (const g of burning) for (const p of g.tanks) propellant.set(p.id, 0);
+  }
+  return plan;
+}

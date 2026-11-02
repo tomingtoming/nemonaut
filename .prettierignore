@@ -1,0 +1,13 @@
+dist/
+src/vendor/
+src/engine/
+src/i18n/
+src/assets/
+src/**/*.html
+src/**/*.css
+src/**/*.json
+tools/golden/
+tests/golden/
+node_modules/
+artifacts/
+engine/

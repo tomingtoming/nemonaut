@@ -8,8 +8,9 @@
     "build": "node tools/build.mjs",
     "pretest": "node tools/build.mjs --quiet",
     "test": "node --import ./tools/golden/rust-preload.mjs --test tests/*.test.mjs",
-    "typecheck": "tsc -p tsconfig.json && node tools/type-hardness.mjs --check && node tools/type-precision.mjs --check && node tools/module-graph.mjs --check",
-    "dev": "node tools/serve.mjs"
+    "typecheck": "tsc -p tsconfig.json && node tools/type-hardness.mjs --check && node tools/type-precision.mjs --check && node tools/module-graph.mjs --check && prettier --check --log-level warn \"src/**/*.ts\" \"tools/*.mjs\" \"tests/*.mjs\"",
+    "dev": "node tools/serve.mjs",
+    "format": "prettier --write \"src/**/*.ts\" \"tools/*.mjs\" \"tests/*.mjs\""
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.21.0",
@@ -18,6 +19,7 @@
   "devDependencies": {
     "@types/three": "0.180.0",
     "esbuild": "0.28.2",
+    "prettier": "3.9.10",
     "typescript": "5.9.3"
   }
 }

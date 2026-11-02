@@ -1,17 +1,99 @@
 import {storageKey} from './app-id.js';
-import {validateCraft,type FlightPart} from './core.js';
-export const DESIGN_LIBRARY_KEY=storageKey('design-library-v1');
-export interface DesignRecord{id:string;name:string;bay:string;environment:string;savedAt:number;parts:FlightPart[]}
-export interface DesignLibrary{version:1;designs:DesignRecord[]}
-export interface DesignRecordInput{id?:unknown;name?:unknown;bay:string;environment:string;savedAt:number;parts?:FlightPart[]}
-export interface DesignLibraryInput{version?:unknown;designs?:DesignRecordInput[]}
-export interface DesignDraft{name:string;parts:FlightPart[];bay:string;environment:string}
-const environments=['land','runway','water','drop','orbit','entry','moon-orbit','moon-surface','transfer'];
-export function readDesignLibrary(value:DesignLibraryInput|null|undefined):DesignLibrary{
- if(!value||value.version!==1||!Array.isArray(value.designs)||value.designs.length>100)throw Error('設計一覧の形式が不正です');
- const ids=new Set();const designs=value.designs.map(d=>{if(typeof d.id!=='string'||!d.id||ids.has(d.id)||typeof d.name!=='string'||d.name.length>80||!['vab','sph'].includes(d.bay)||!environments.includes(d.environment)||!Number.isFinite(d.savedAt)||d.savedAt<0)throw Error('設計一覧の項目が不正です');ids.add(d.id);return {id:d.id,name:d.name,bay:d.bay,environment:d.environment,savedAt:d.savedAt,parts:validateCraft({version:1,parts:d.parts})};});return {version:1,designs};
+import {validateCraft, type FlightPart} from './core.js';
+export const DESIGN_LIBRARY_KEY = storageKey('design-library-v1');
+export interface DesignRecord {
+  id: string;
+  name: string;
+  bay: string;
+  environment: string;
+  savedAt: number;
+  parts: FlightPart[];
 }
-export function appendDesign(library:DesignLibraryInput|null|undefined,{name,parts,bay,environment}:DesignDraft,id:string=crypto.randomUUID(),savedAt:number=Date.now()):DesignLibrary{
- const valid=readDesignLibrary(library);if(valid.designs.length>=100)throw Error('設計一覧は100件までです。JSON出力で機体を保管してください。');return readDesignLibrary({version:1,designs:[...valid.designs,{id,name:name.slice(0,80),parts,bay,environment,savedAt}]});
+export interface DesignLibrary {
+  version: 1;
+  designs: DesignRecord[];
 }
-export function designForLaunch(library:DesignLibraryInput|null|undefined,id:string,facility:string):DesignRecord{const valid=readDesignLibrary(library),design=valid.designs.find(d=>d.id===id);if(!design)throw Error('保存した設計が見つかりません');if(!['pad','runway'].includes(facility))throw Error('出発施設が不正です');if(design.parts.filter(p=>!p.parent).length!==1)throw Error('独立した部品を接続してから出発してください');return {...structuredClone(design),environment:facility==='pad'?'land':'runway'};}
+export interface DesignRecordInput {
+  id?: unknown;
+  name?: unknown;
+  bay: string;
+  environment: string;
+  savedAt: number;
+  parts?: FlightPart[];
+}
+export interface DesignLibraryInput {
+  version?: unknown;
+  designs?: DesignRecordInput[];
+}
+export interface DesignDraft {
+  name: string;
+  parts: FlightPart[];
+  bay: string;
+  environment: string;
+}
+const environments = [
+  'land',
+  'runway',
+  'water',
+  'drop',
+  'orbit',
+  'entry',
+  'moon-orbit',
+  'moon-surface',
+  'transfer'
+];
+export function readDesignLibrary(value: DesignLibraryInput | null | undefined): DesignLibrary {
+  if (!value || value.version !== 1 || !Array.isArray(value.designs) || value.designs.length > 100)
+    throw Error('設計一覧の形式が不正です');
+  const ids = new Set();
+  const designs = value.designs.map(d => {
+    if (
+      typeof d.id !== 'string' ||
+      !d.id ||
+      ids.has(d.id) ||
+      typeof d.name !== 'string' ||
+      d.name.length > 80 ||
+      !['vab', 'sph'].includes(d.bay) ||
+      !environments.includes(d.environment) ||
+      !Number.isFinite(d.savedAt) ||
+      d.savedAt < 0
+    )
+      throw Error('設計一覧の項目が不正です');
+    ids.add(d.id);
+    return {
+      id: d.id,
+      name: d.name,
+      bay: d.bay,
+      environment: d.environment,
+      savedAt: d.savedAt,
+      parts: validateCraft({version: 1, parts: d.parts})
+    };
+  });
+  return {version: 1, designs};
+}
+export function appendDesign(
+  library: DesignLibraryInput | null | undefined,
+  {name, parts, bay, environment}: DesignDraft,
+  id: string = crypto.randomUUID(),
+  savedAt: number = Date.now()
+): DesignLibrary {
+  const valid = readDesignLibrary(library);
+  if (valid.designs.length >= 100) throw Error('設計一覧は100件までです。JSON出力で機体を保管してください。');
+  return readDesignLibrary({
+    version: 1,
+    designs: [...valid.designs, {id, name: name.slice(0, 80), parts, bay, environment, savedAt}]
+  });
+}
+export function designForLaunch(
+  library: DesignLibraryInput | null | undefined,
+  id: string,
+  facility: string
+): DesignRecord {
+  const valid = readDesignLibrary(library),
+    design = valid.designs.find(d => d.id === id);
+  if (!design) throw Error('保存した設計が見つかりません');
+  if (!['pad', 'runway'].includes(facility)) throw Error('出発施設が不正です');
+  if (design.parts.filter(p => !p.parent).length !== 1)
+    throw Error('独立した部品を接続してから出発してください');
+  return {...structuredClone(design), environment: facility === 'pad' ? 'land' : 'runway'};
+}

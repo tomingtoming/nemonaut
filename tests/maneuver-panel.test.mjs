@@ -4,56 +4,166 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {preserveManualControlEdit} from '../dist/manual-control-edit.js';
 // A built module as a script: drop its imports and exports (dist is esbuild output from src/*.ts).
-const script=url=>readFileSync(url,'utf8').replace(/^import\b[\s\S]*?from\s*['"][^'"]*['"];?[ \t]*\r?\n/gm,'').replace(/^export\s*\{[\s\S]*?\};?\s*$/gm,'').replace(/^export (?=function|class|const|let|async)/gm,'');
+const script = url =>
+  readFileSync(url, 'utf8')
+    .replace(/^import\b[\s\S]*?from\s*['"][^'"]*['"];?[ \t]*\r?\n/gm, '')
+    .replace(/^export\s*\{[\s\S]*?\};?\s*$/gm, '')
+    .replace(/^export (?=function|class|const|let|async)/gm, '');
 
-test('timed rendezvous precision remains fixed through the real stop panel',()=>{
- const elements=[];const document={createElement(tag){const e={tag,append(){},setAttribute(){}};elements.push(e);return e;},createTextNode:t=>t};
- const context=vm.createContext({document,canControl:()=>true});
- const source=script(new URL('../dist/maneuver-stop.js',import.meta.url));
- vm.runInContext(source,context);
- const f={maneuver:{rendezvous:{burnThrottle:.1},tolerance:.05,complete:false},throttle:0};
- const panel=context.mountManeuverStop({append(){}},()=>f);panel.update();const precision=elements.find(e=>e.tag==='select');
- assert.equal(precision.disabled,true);precision.value='0.5';precision.onchange();assert.equal(f.maneuver.tolerance,.05);assert.equal(precision.value,'0.05');
- delete f.maneuver.rendezvous;panel.update();assert.equal(precision.disabled,false);precision.value='0.5';precision.onchange();assert.equal(f.maneuver.tolerance,.5);
+test('timed rendezvous precision remains fixed through the real stop panel', () => {
+  const elements = [];
+  const document = {
+    createElement(tag) {
+      const e = {tag, append() {}, setAttribute() {}};
+      elements.push(e);
+      return e;
+    },
+    createTextNode: t => t
+  };
+  const context = vm.createContext({document, canControl: () => true});
+  const source = script(new URL('../dist/maneuver-stop.js', import.meta.url));
+  vm.runInContext(source, context);
+  const f = {maneuver: {rendezvous: {burnThrottle: 0.1}, tolerance: 0.05, complete: false}, throttle: 0};
+  const panel = context.mountManeuverStop({append() {}}, () => f);
+  panel.update();
+  const precision = elements.find(e => e.tag === 'select');
+  assert.equal(precision.disabled, true);
+  precision.value = '0.5';
+  precision.onchange();
+  assert.equal(f.maneuver.tolerance, 0.05);
+  assert.equal(precision.value, '0.05');
+  delete f.maneuver.rendezvous;
+  panel.update();
+  assert.equal(precision.disabled, false);
+  precision.value = '0.5';
+  precision.onchange();
+  assert.equal(f.maneuver.tolerance, 0.5);
 });
 
 // Exercise the real capture listener with a minimal DOM and a controller double.
 // Physics and controller lifecycle are covered by maneuver-session.test.mjs.
-function harness(kind='maneuver'){
- const listeners=new Map();let session,control;
- class Session{constructor(){session=this;this.owner={};}stop(){this.owner=null;}}
- const root={createElement:()=>({}),querySelector:()=>({append(){}}),addEventListener:(type,fn)=>listeners.set(type,fn)};
- const context=vm.createContext({ManeuverSession:Session,AscentSession:Session,preserveManualControlEdit,window:{addEventListener(){}},floatingWindow(){throw Error('unused');},acceptsFlightKey:()=>true});
- const name=kind==='maneuver'?'mountManeuverPanel':'mountOrbitalAscent';
- const source=script(new URL(kind==='maneuver'?'../dist/maneuver-panel.js':'../dist/orbital-ascent-panel.js',import.meta.url));
- vm.runInContext(source,context);
- context[name](root,()=>({}),{claim(){},sync(){control.value='0';control.checked=true;}});
- return {edit(id,value,checked){control={value,checked,closest:selectors=>selectors.split(',').includes('#'+id)};listeners.get('click')({target:control});return {control,session};}};
+function harness(kind = 'maneuver') {
+  const listeners = new Map();
+  let session, control;
+  class Session {
+    constructor() {
+      session = this;
+      this.owner = {};
+    }
+    stop() {
+      this.owner = null;
+    }
+  }
+  const root = {
+    createElement: () => ({}),
+    querySelector: () => ({append() {}}),
+    addEventListener: (type, fn) => listeners.set(type, fn)
+  };
+  const context = vm.createContext({
+    ManeuverSession: Session,
+    AscentSession: Session,
+    preserveManualControlEdit,
+    window: {addEventListener() {}},
+    floatingWindow() {
+      throw Error('unused');
+    },
+    acceptsFlightKey: () => true
+  });
+  const name = kind === 'maneuver' ? 'mountManeuverPanel' : 'mountOrbitalAscent';
+  const source = script(
+    new URL(
+      kind === 'maneuver' ? '../dist/maneuver-panel.js' : '../dist/orbital-ascent-panel.js',
+      import.meta.url
+    )
+  );
+  vm.runInContext(source, context);
+  context[name](root, () => ({}), {
+    claim() {},
+    sync() {
+      control.value = '0';
+      control.checked = true;
+    }
+  });
+  return {
+    edit(id, value, checked) {
+      control = {value, checked, closest: selectors => selectors.split(',').includes('#' + id)};
+      listeners.get('click')({target: control});
+      return {control, session};
+    }
+  };
 }
 
-for(const kind of ['maneuver','ascent'])test(`${kind}: manual actuator and throttle edits survive release synchronization`,()=>{
- for(const [id,value,checked]of [['rcsEnabled','on',false],['reactionEnabled','on',false],['throttle','62',undefined]]){
-  const result=harness(kind).edit(id,value,checked);
-  assert.equal(result.session.owner,null,id+' releases control');
-  assert.equal(result.control.value,value,id+' preserves pending value');
-  if(checked!==undefined)assert.equal(result.control.checked,checked,id+' preserves pending toggle');
- }
-});
-test('unrelated UI does not interrupt a scheduled burn',()=>{
- const result=harness().edit('camera','orbit',undefined);
- assert.notEqual(result.session.owner,null);
- assert.equal(result.control.value,'orbit');
+for (const kind of ['maneuver', 'ascent'])
+  test(`${kind}: manual actuator and throttle edits survive release synchronization`, () => {
+    for (const [id, value, checked] of [
+      ['rcsEnabled', 'on', false],
+      ['reactionEnabled', 'on', false],
+      ['throttle', '62', undefined]
+    ]) {
+      const result = harness(kind).edit(id, value, checked);
+      assert.equal(result.session.owner, null, id + ' releases control');
+      assert.equal(result.control.value, value, id + ' preserves pending value');
+      if (checked !== undefined)
+        assert.equal(result.control.checked, checked, id + ' preserves pending toggle');
+    }
+  });
+test('unrelated UI does not interrupt a scheduled burn', () => {
+  const result = harness().edit('camera', 'orbit', undefined);
+  assert.notEqual(result.session.owner, null);
+  assert.equal(result.control.value, 'orbit');
 });
 
-test('aircraft return release preserves the throttle edit through stop and update',()=>{
- const listeners=new Map(),control={value:'62',closest:selectors=>selectors.split(',').includes('#throttle')};let returning,syncs=0;
- class IdleSession{constructor(){this.state='idle';}cancel(){}stop(){}}
- class Returning{constructor(){returning=this;this.owner={};this.landing={pilot:null};}stop(){this.owner=null;}}
- const root={createElement:()=>({}),querySelector:()=>({append(){}}),addEventListener:(type,fn)=>listeners.set(type,fn)};
- const context=vm.createContext({preserveManualControlEdit,TakeoffSession:IdleSession,LandingSession:IdleSession,ReturnSession:Returning,TakeoffPreviewClient:class{},LandingPlanClient:class{},runwaySelection:{subscribe(){},bind(){}},window:{addEventListener(){}}});
- const source=script(new URL('../dist/cruise-panel.js',import.meta.url)).replaceAll('import.meta.url',"'file:///unused/'");
- vm.runInContext(source,context);
- context.mountCruisePanel(root,()=>({flight:null}),{claim(){},sync(){syncs++;control.value='0';}});
- listeners.get('input')({target:control});
- assert.equal(returning.owner,null);assert.equal(syncs,1);assert.equal(control.value,'62');
+test('aircraft return release preserves the throttle edit through stop and update', () => {
+  const listeners = new Map(),
+    control = {value: '62', closest: selectors => selectors.split(',').includes('#throttle')};
+  let returning,
+    syncs = 0;
+  class IdleSession {
+    constructor() {
+      this.state = 'idle';
+    }
+    cancel() {}
+    stop() {}
+  }
+  class Returning {
+    constructor() {
+      returning = this;
+      this.owner = {};
+      this.landing = {pilot: null};
+    }
+    stop() {
+      this.owner = null;
+    }
+  }
+  const root = {
+    createElement: () => ({}),
+    querySelector: () => ({append() {}}),
+    addEventListener: (type, fn) => listeners.set(type, fn)
+  };
+  const context = vm.createContext({
+    preserveManualControlEdit,
+    TakeoffSession: IdleSession,
+    LandingSession: IdleSession,
+    ReturnSession: Returning,
+    TakeoffPreviewClient: class {},
+    LandingPlanClient: class {},
+    runwaySelection: {subscribe() {}, bind() {}},
+    window: {addEventListener() {}}
+  });
+  const source = script(new URL('../dist/cruise-panel.js', import.meta.url)).replaceAll(
+    'import.meta.url',
+    "'file:///unused/'"
+  );
+  vm.runInContext(source, context);
+  context.mountCruisePanel(root, () => ({flight: null}), {
+    claim() {},
+    sync() {
+      syncs++;
+      control.value = '0';
+    }
+  });
+  listeners.get('input')({target: control});
+  assert.equal(returning.owner, null);
+  assert.equal(syncs, 1);
+  assert.equal(control.value, '62');
 });
