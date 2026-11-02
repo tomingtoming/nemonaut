@@ -1,16 +1,18 @@
 import {surfaceRelativeVelocity,surfaceAngularVelocity} from './surface-frame.js';
 import * as T from 'three';
-import {loadFlight,saveFlight} from './flight-save.js';
+import {loadFlight,saveFlight,type SavedFlight} from './flight-save.js';
 import {fleet,canControl} from './fleet.js';
 import {resolveTargets} from './relative-navigation.js';
 import {partCenter,partRotation} from './aero.js';
 import {bodyAltitude,bodyUp,relativeMotion} from './celestial.js';
-import {PARTS} from './catalog.js';
+import {PARTS,type PartCatalog} from './catalog.js';
 
-export function recoveryStatus(v){
+export type RecoveryVessel=Pick<import('./core.js').Flight,'pos'|'vel'|'universalTime'|'stats'|'q'|'omega'|'throttle'|'environment'|'parts'|'crashed'|'time'|'landed'>;
+export interface RecoveryStatus{recoverable:boolean;bodyId:string;action:string;reason:string}
+export function recoveryStatus(v:RecoveryVessel):RecoveryStatus{
  const motion=relativeMotion(v.pos,v.vel,v.universalTime),quiet=surfaceRelativeVelocity(v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)),v.vel,v.universalTime,motion.body).length()<.8&&v.omega.clone().sub(surfaceAngularVelocity(motion.body)).length()<.15&&v.throttle===0;
  const afloat=v.environment==='water'&&motion.body.id==='planet'&&v.parts.some(p=>{
-  const center=partCenter(p).applyQuaternion(v.q).add(v.pos),normal=bodyUp(center,v.universalTime),q=v.q.clone().multiply(partRotation(p)),size=PARTS[p.type].size;
+  const center=partCenter(p).applyQuaternion(v.q).add(v.pos),normal=bodyUp(center,v.universalTime),q=v.q.clone().multiply(partRotation(p)),size=(PARTS as PartCatalog)[p.type].size;
   const extent=[[1,0,0],[0,1,0],[0,0,1]].reduce((sum,axis,i)=>sum+Math.abs(new T.Vector3(...axis).applyQuaternion(q).dot(normal))*size[i]/2,0);
   return Math.abs(bodyAltitude(center,v.universalTime))<=extent+.1;
  });
@@ -19,8 +21,9 @@ export function recoveryStatus(v){
 }
 
 // Work on an independent copy: rejection never mutates the caller's world.
-export function retireVessel(record,partId,mode){
- const root=loadFlight(record);let vessels=[];
+export interface RetiredVessel{record:SavedFlight|null;removed:{name:string;parts:number;bodyId:string;action:string}}
+export function retireVessel(record:SavedFlight,partId:string,mode:string):RetiredVessel{
+ const root=loadFlight(record);let vessels:import('./core.js').Flight[]=[];
  try{
   vessels=fleet(root);const target=vessels.find(v=>v.parts.some(p=>p.id===partId));
   if(!target)throw Error('対象の機体が見つかりません');
