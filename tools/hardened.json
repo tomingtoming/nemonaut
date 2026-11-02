@@ -3,6 +3,7 @@
  "files": [
   "aero",
   "angular-momentum",
+  "app",
   "app-id",
   "ascent-panel",
   "assembly-branch",
