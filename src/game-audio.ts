@@ -2,6 +2,7 @@ import {storageKey} from './app-id.js';
 import {FailureAudioCursor,type FailureFleet} from './failure-feedback.js';
 import {PARTS} from './catalog.js';
 import {floatingWindow} from './floating-window.js';
+import {element} from './dom.js';
 
 const KEY=storageKey('audio-v1');
 export interface AudioSettingsInput{music?:unknown;effects?:unknown;muted?:unknown}
@@ -38,10 +39,10 @@ export function mountGameAudio():GameAudio{
  const musicVoices=new Set<Voice>(),failureCursor=new FailureAudioCursor(),effectVoices=new Set<Voice>();
  const button=document.createElement('button');button.id='audioButton';button.textContent='♫';button.title='サウンド';document.body.append(button);
  const win=floatingWindow(document.body,{title:'サウンド',x:innerWidth-280,y:230,onClose:()=>{win.element.hidden=true;button.setAttribute('aria-expanded','false');}});
- win.element.classList.add('audioWindow');win.element.hidden=true;win.element.querySelector('[aria-label="窓を固定"]')!.remove();
+ win.element.classList.add('audioWindow');win.element.hidden=true;element(win.element,'[aria-label="窓を固定"]','button').remove();
  win.content.innerHTML='<label><input id="audioMute" type="checkbox">ミュート</label><label>BGM <input id="musicVolume" aria-label="BGM音量" type="range" min="0" max="100"></label><label>効果音 <input id="effectsVolume" aria-label="効果音音量" type="range" min="0" max="100"></label><output id="audioState"></output>';
- const mute=win.content.querySelector<HTMLInputElement>('#audioMute')!,mv=win.content.querySelector<HTMLInputElement>('#musicVolume')!,ev=win.content.querySelector<HTMLInputElement>('#effectsVolume')!,status=win.content.querySelector('output')!;
- const refresh=()=>{mute.checked=settings.muted;(mv as {value:string|number}).value=(settings.music*100);(ev as {value:string|number}).value=(settings.effects*100);button.setAttribute('aria-label',settings.muted?'サウンド：ミュート':'サウンド');button.textContent=settings.muted?'♪̸':'♫';status.textContent=!ctx?'操作すると再生':ctx.state==='running'?'再生中':ctx.state==='closed'?'音声を利用できません':'一時停止';};
+ const mute=element(win.content,'#audioMute','input'),mv=element(win.content,'#musicVolume','input'),ev=element(win.content,'#effectsVolume','input'),status=element(win.content,'output','output');
+ const refresh=()=>{mute.checked=settings.muted;mv.value=String(settings.music*100);ev.value=String(settings.effects*100);button.setAttribute('aria-label',settings.muted?'サウンド：ミュート':'サウンド');button.textContent=settings.muted?'♪̸':'♫';status.textContent=!ctx?'操作すると再生':ctx.state==='running'?'再生中':ctx.state==='closed'?'音声を利用できません':'一時停止';};
  const gains=()=>{if(!ctx)return;master.gain.setTargetAtTime(settings.muted?0:.65,ctx.currentTime,.04);music.gain.setTargetAtTime(settings.music,ctx.currentTime,.08);effects.gain.setTargetAtTime(settings.effects,ctx.currentTime,.04);};
  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(settings));}catch{}gains();refresh();};
  mute.onchange=()=>{settings.muted=mute.checked;save();mute.blur();};mv.oninput=()=>{settings.music=+mv.value/100;save();};ev.oninput=()=>{settings.effects=+ev.value/100;save();};
@@ -79,7 +80,7 @@ export function mountGameAudio():GameAudio{
   if(kind==='fuel-burst'){tone(55,t,1.8,.5*level,effects,'sawtooth',18);tone(125,t,.6,.2*level,effects,'triangle',27);}
   if(kind==='crash'){tone(65,t,1.4,.5,effects,'sawtooth',22);tone(170,t,.55,.16,effects,'triangle',31);}
  }
- document.addEventListener('click',e=>{if((e.target as Element).closest('button')&&!(e.target as Element).closest('.audioWindow'))play('click');});
+ document.addEventListener('click',e=>{if(e.target instanceof Element&&e.target.closest('button')&&!e.target.closest('.audioWindow'))play('click');});
  refresh();
  return {play,update(flight:GameAudioFlight|null,center:boolean,paused=false):void{
   const state=soundState(flight,center,paused);

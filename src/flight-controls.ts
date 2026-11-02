@@ -1,7 +1,8 @@
 import {PARTS} from './catalog.js';
 import {canControl,type ControllableVessel} from './fleet.js';
+import {element} from './dom.js';
 
-const commands=['stage','throttle','ballast','trim','sas','brake','sasMode','reactionEnabled','steeringEnabled','driveEnabled','rcsEnabled','armChutes','autoReturn','autoLaunch'];
+const commands=[['stage','button'],['throttle','input'],['ballast','input'],['trim','input'],['sas','button'],['brake','button'],['sasMode','select'],['reactionEnabled','input'],['steeringEnabled','input'],['driveEnabled','input'],['rcsEnabled','input'],['armChutes','button'],['autoReturn','button'],['autoLaunch','button']] as const;
 
 // Availability belongs to the current vessel, including after separation.
 // Keep stored switch settings even when their equipment is absent.
@@ -10,17 +11,17 @@ export interface FlightControlsVessel extends ControllableVessel{rcsEnabled:bool
 export function updateFlightControls(root:ParentNode,flight:FlightControlsVessel|null|undefined):void{
  if(!flight)return;
  const controllable=canControl(flight),parts=flight.parts;
- for(const id of commands)root.querySelector<HTMLButtonElement|HTMLInputElement|HTMLSelectElement>('#'+id)!.disabled=!controllable;
+ for(const [id,tag]of commands)element(root,'#'+id,tag).disabled=!controllable;
  for(const [key,available] of [
   ['rcsEnabled',parts.some(p=>PARTS[p.type].rcsThrust)],
   ['reactionEnabled',parts.some(p=>PARTS[p.type].reactionTorque)],
   ['steeringEnabled',parts.some(p=>PARTS[p.type].steer)],
   ['driveEnabled',parts.some(p=>p.type==='wheel')]
  ] as const){
-  const input=root.querySelector<HTMLInputElement>('#'+key)!;
+  const input=element(root,'#'+key,'input');
   input.checked=flight[key];
   input.disabled=!controllable||!available;
-  input.parentElement!.hidden=!available;
+  const label=input.parentElement;if(!label)throw Error('画面要素 #'+key+' の親要素がありません');label.hidden=!available;
  }
- root.querySelector<HTMLElement>('#ballastControl')!.hidden=!parts.some(p=>PARTS[p.type].ballast);
+ element(root,'#ballastControl','label').hidden=!parts.some(p=>PARTS[p.type].ballast);
 }

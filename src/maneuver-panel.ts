@@ -3,13 +3,14 @@ import {maneuverWarpBudget} from './maneuver-warp.js';
 import {floatingWindow,type FloatingWindow} from './floating-window.js';
 import {acceptsFlightKey} from './flight-keyboard.js';
 import {preserveManualControlEdit} from './manual-control-edit.js';
+import {element} from './dom.js';
 
 export interface ManeuverPanelFlight extends ManeuverFlight{rocketAxes?:unknown}
 export interface ManeuverPanelState{flight:ManeuverPanelFlight|null|undefined;atCenter:boolean}
 export interface ManeuverPanelHooks{claim():void;sync():void}
 export interface ManeuverPanel{update():void;step(f:ManeuverPanelFlight,dt:number):void;stop():void;close():void;readonly active:boolean;warpBudget(f:ManeuverPanelFlight):number}
 export function mountManeuverPanel(root:Document,getState:()=>ManeuverPanelState,{claim,sync}:ManeuverPanelHooks):ManeuverPanel{
- const session=new ManeuverSession(),button=root.createElement('button');button.textContent='自動噴射';root.querySelector('#flightSystems')!.append(button);
+ const session=new ManeuverSession(),button=root.createElement('button');button.textContent='自動噴射';const systems=root.querySelector('#flightSystems');if(!systems)throw Error('画面要素が見つかりません: #flightSystems');systems.append(button);
  let panel:FloatingWindow|null=null,bound:ManeuverPanelFlight|null|undefined=null,node:ManeuverNode|null|undefined=null,message='待機',power:HTMLSelectElement|null=null,timing:HTMLSelectElement|null=null,start:HTMLButtonElement|null=null,status:HTMLOutputElement|null=null,readout:HTMLParagraphElement|null=null;
  const close=()=>{panel?.remove();panel=null;};
  const stop=()=>{if(session.owner){session.stop();message='待機';sync();}};
@@ -26,12 +27,12 @@ export function mountManeuverPanel(root:Document,getState:()=>ManeuverPanelState
   status!.textContent=session.owner?session.message:!node?'マップで計画を固定してください':message;
   readout!.textContent=node?`残り ${Math.hypot(...node.remaining).toFixed(2)} m/s`+(session.owner?(session.plan!.onAlignment&&!session.lit?' · 姿勢がそろい次第開始':` · 開始まで ${Math.max(0,session.plan!.startTime-f!.universalTime).toFixed(1)}秒`):''):'';
  }
- function configure(){power!.querySelector('[value="1"]')!.textContent=node?.returnPlan||node?.departure||node?.rendezvous?.burnThrottle===null?'100→10→1%':'100%';power!.value=String(fixed(node)?(node!.rendezvous?(node!.rendezvous.burnThrottle??1):node!.plannedThrottle??1):.1);timing!.value=fixed(node)?'start':'center';}
+ function configure(){if(!power||!timing)throw Error('自動噴射の窓がありません');element(power,'[value="1"]','option').textContent=node?.returnPlan||node?.departure||node?.rendezvous?.burnThrottle===null?'100→10→1%':'100%';power.value=String(fixed(node)?(node!.rendezvous?(node!.rendezvous.burnThrottle??1):node!.plannedThrottle??1):.1);timing.value=fixed(node)?'start':'center';}
  function open(){
   if(panel){panel.front();return;}
   panel=floatingWindow(root.body,{title:'自動噴射',x:innerWidth-330,y:160,onClose:close});
   power=root.createElement('select');power.setAttribute('aria-label','自動噴射の推力');
-  for(const [value,label]of [[.01,'1%'],[.1,'10%'],[1,'100%']] as const){const option=root.createElement('option');(option as {value:string|number}).value=value;option.textContent=label;power.append(option);}
+  for(const [value,label]of [[.01,'1%'],[.1,'10%'],[1,'100%']] as const){const option=root.createElement('option');option.value=String(value);option.textContent=label;power.append(option);}
   timing=root.createElement('select');timing.setAttribute('aria-label','自動噴射の時刻基準');
   for(const [value,label]of [['center','中央基準'],['start','開始基準']]){const option=root.createElement('option');option.value=value;option.textContent=label;timing.append(option);}
   start=root.createElement('button');start.textContent='実行開始';const halt=root.createElement('button');halt.textContent='停止';

@@ -7,7 +7,7 @@ export function portScope(g:PortGuide):{scale:number;current:ScopePoint;future:S
  return {scale,current:project(g.horizontal,g.vertical),future:project(g.horizontal+g.horizontalSpeed*5,g.vertical+g.verticalSpeed*5)};
 }
 export function drawPortScope(canvas:HTMLCanvasElement,g:PortGuide):void{
- const ctx=canvas.getContext('2d')!,{scale,current,future}=portScope(g);
+ const ctx=canvas.getContext('2d');if(!ctx)throw Error('2D描画を初期化できません');const {scale,current,future}=portScope(g);
  canvas.title='橙：自機ポートのずれ。水色矢印：現在の横速度で5秒進んだ位置（重力・噴射は含まない）。J/L・U/Oで矢印を短くしてから中央へ';
  ctx.fillStyle='#14232a';ctx.fillRect(0,0,220,160);ctx.strokeStyle='#64818b';ctx.beginPath();ctx.moveTo(15,80);ctx.lineTo(205,80);ctx.moveTo(110,15);ctx.lineTo(110,145);ctx.stroke();
  ctx.strokeStyle='#79d1c2';ctx.beginPath();ctx.arc(110,80,Math.max(2,.15/scale*60),0,Math.PI*2);ctx.stroke();

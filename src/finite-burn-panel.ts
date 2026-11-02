@@ -2,6 +2,7 @@ import {finiteReturnPlan} from './finite-return-plan.js';
 import * as T from 'three';
 import {finiteBurnPreview,type FiniteBurnVessel,type FiniteBurnPreview} from './finite-burn.js';
 import {captureBurnEstimate} from './lunar-capture.js';
+import {element,byId} from './dom.js';
 export type FiniteBurnPanelPart=import('./part-settings.js').SettablePart&{fuelCrossfeed?:boolean};
 export interface FiniteBurnPanelFlight extends FiniteBurnVessel{parts:FiniteBurnPanelPart[];vesselId:string;time:number;stage:number}
 export interface FiniteBurnContext{impulse:T.Vector3;epoch:number;tolerance:number}
@@ -17,7 +18,7 @@ export function mountFiniteBurn(anchor:Element,getFlight:()=>FiniteBurnPanelFlig
  readout.setAttribute('role','status');row.append(power,timing,button,returnButton,readout);anchor.after(row);
  let context:FiniteBurnContext|null=null,result:FiniteBurnPreview|null=null,pendingReturn:FiniteBurnPendingReturn|null=null,signature='',computedSignature='';
  const clear=()=>{result=null;readout.textContent='';};power.onchange=timing.onchange=()=>{clear();pendingReturn=null;};
- document.querySelector('#orbitOverlay')!.addEventListener('input',e=>{if(['planEnabled','planLocation','planDeltaV','planNormal','planRadial'].includes((e.target as Element).id)){clear();pendingReturn=null;}});
+ element(document,'#orbitOverlay','section').addEventListener('input',e=>{if(e.target instanceof Element&&['planEnabled','planLocation','planDeltaV','planNormal','planRadial'].includes(e.target.id)){clear();pendingReturn=null;}});
  button.onclick=()=>{clear();try{
   const f=getFlight();if(!context||!f)throw Error('通常マニューバを作成してください');
   const throttle=Number(power.value),duration=captureBurnEstimate(f,context.impulse.length()).duration/throttle,startTime=context.epoch-(timing.value==='center'?duration/2:0);
@@ -27,10 +28,10 @@ export function mountFiniteBurn(anchor:Element,getFlight:()=>FiniteBurnPanelFlig
   readout.title='緑：有限噴射後。計算UT '+result.computedAt.toFixed(1)+' / 開始UT '+startTime.toFixed(1)+'。'+(result.atmospheric?'大気中の胴体抗力を含みます。':'')+'停止精度 '+context.tolerance+' m/s、姿勢固定の近似。自動点火・計画時刻の変更は行いません';
  }catch(error){readout.textContent=(error as Error).message;}};
  returnButton.onclick=()=>{clear();try{
-  const plan=finiteReturnPlan(getFlight()!,{throttle:Number(power.value)}),location=document.querySelector<HTMLInputElement>('#planLocation')!;
+  const plan=finiteReturnPlan(getFlight()!,{throttle:Number(power.value)}),location=element(document,'#planLocation','select');
   location.value='custom';location.dataset.epoch=String(plan.location.universalTime);location.dataset.tolerance='0.05';
-  for(const [id,key]of [['planDeltaV','prograde'],['planNormal','normal'],['planRadial','radial']] as [string,keyof import('./maneuver.js').ManeuverComponents][])(document.getElementById(id) as HTMLInputElement).value=String(plan.components[key]);
-  document.querySelector<HTMLInputElement>('#planEnabled')!.checked=true;timing.value='start';location.dispatchEvent(new Event('input',{bubbles:true}));pendingReturn={vesselId:getFlight()!.vesselId,epoch:plan.location.universalTime,impulse:plan.preview.impulse.clone(),throttle:plan.throttle};button.click();
+  for(const [id,key]of [['planDeltaV','prograde'],['planNormal','normal'],['planRadial','radial']] as const)byId(id,'input').value=String(plan.components[key]);
+  element(document,'#planEnabled','input').checked=true;timing.value='start';location.dispatchEvent(new Event('input',{bubbles:true}));pendingReturn={vesselId:getFlight()!.vesselId,epoch:plan.location.universalTime,impulse:plan.preview.impulse.clone(),throttle:plan.throttle};button.click();
  }catch(error){readout.textContent=(error as Error).message;}};
  return {plannedThrottle(preview){const f=getFlight(),p=pendingReturn;return p&&f?.vesselId===p.vesselId&&Math.abs(preview.universalTime-p.epoch)<1e-6&&preview.impulse.distanceTo(p.impulse)<.001?p.throttle:undefined;},update(preview,node){
   const f=getFlight();context=preview?.impulse?{impulse:preview.impulse,epoch:preview.universalTime,tolerance:.05}:node&&!node.complete&&!node.capture&&!node.returnPlan&&!node.departure?{impulse:new T.Vector3(...node.remaining),epoch:node.universalTime??f!.universalTime+node.time-f!.time,tolerance:node.tolerance??.5}:null;

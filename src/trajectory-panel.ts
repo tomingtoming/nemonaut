@@ -3,6 +3,7 @@ import {PLANET,center} from './planet.js';
 import {MOON} from './celestial.js';
 import {formatDuration} from './orbit-plan.js';
 import {projectTrackingPoint} from './tracking-orbits.js';
+import {element} from './dom.js';
 export interface TrajectorySnapshot{position:import('three').Vector3;velocity:import('three').Vector3;time:number;burn?:import('./trajectory.js').TrajectoryBurn|null;note?:string;name:string}
 type TrajectoryRecord=import('./trajectory.js').TrajectoryResult;
 
@@ -15,7 +16,7 @@ export function predictionSummary(result:TrajectoryRecord):string{
 
 export function mountTrajectoryPanel(host:Element,getSnapshot:()=>TrajectorySnapshot|null|undefined):{reset:()=>void}{
  const panel=document.createElement('details');panel.className='trajectoryPanel';panel.innerHTML='<summary>月への接近予測・計画比較</summary><div class="trajectoryControls"><label>予測期間<select aria-label="接近予測の期間"><option value="3600">1時間</option><option value="21600" selected>6時間</option><option value="86400">24時間</option></select></label><button type="button" data-action="predict">現在の状態から予測</button><button type="button" data-action="cancel" disabled>計算を中断</button><label>表示基準<select aria-label="接近予測の表示基準"><option value="planet">母星</option><option value="moon">月</option></select></label></div><p role="status" class="trajectoryStatus">予測ボタンで開始します。飛行は継続します。</p><canvas width="800" height="360" aria-label="月の未来位置と機体の予測軌跡"></canvas><label class="trajectoryCursor">予測内の時刻 <input aria-label="接近予測の表示時刻" type="range" min="0" max="1000" value="0"></label><p class="trajectoryEpoch"></p><div class="trajectoryResults"></div><small>橙＝無推力、水色＝予定噴射後、灰破線＝月。クリック時点の予測を保持します。操作・噴射・計画変更後は再計算してください。点は同じ時刻の位置です。球形天体・二体近似・瞬間噴射で、抗力・燃料不足・噴射中の姿勢変化は含みません。</small>';
- host.prepend(panel);const status=panel.querySelector('.trajectoryStatus') as HTMLParagraphElement,results=panel.querySelector('.trajectoryResults') as HTMLDivElement,canvas=panel.querySelector('canvas') as HTMLCanvasElement,ctx=canvas.getContext('2d') as CanvasRenderingContext2D,[duration,frame]=panel.querySelectorAll('select'),cursor=panel.querySelector('input') as HTMLInputElement,predict=panel.querySelector('[data-action=predict]') as HTMLButtonElement,cancel=panel.querySelector('[data-action=cancel]') as HTMLButtonElement,epoch=panel.querySelector('.trajectoryEpoch') as HTMLParagraphElement;
+ host.prepend(panel);const status=element(panel,'.trajectoryStatus','p'),results=element(panel,'.trajectoryResults','div'),canvas=element(panel,'canvas','canvas'),context=canvas.getContext('2d'),[duration,frame]=panel.querySelectorAll('select'),cursor=element(panel,'input','input'),predict=element(panel,'[data-action=predict]','button'),cancel=element(panel,'[data-action=cancel]','button'),epoch=element(panel,'.trajectoryEpoch','p');if(!context)throw Error('2D描画を初期化できません');const ctx=context;
  let controller:AbortController|null=null,serial=0,data:{base:TrajectoryRecord;planned:TrajectoryRecord|null}|null=null;
  function reset(){serial++;controller?.abort();controller=null;data=null;results.replaceChildren();ctx.clearRect(0,0,canvas.width,canvas.height);epoch.textContent='';status.textContent='機体を変更しました。現在の状態から予測してください。';cancel.disabled=true;}
  function draw(){if(!data)return;const records=[data.base,...(data.planned?[data.planned]:[])],moonFrame=frame.value==='moon';
@@ -36,7 +37,7 @@ export function mountTrajectoryPanel(host:Element,getSnapshot:()=>TrajectorySnap
   try{const snapshot=getSnapshot();if(!snapshot)throw Error('飛行中の機体がありません');const options={duration:Number(duration.value),signal};
    const base=await predictTrajectoryAsync(snapshot.position,snapshot.velocity,snapshot.time,options);let planned:TrajectoryRecord|null=null;
    if(snapshot.burn)planned=await predictTrajectoryAsync(snapshot.position,snapshot.velocity,snapshot.time,{...options,burn:snapshot.burn});
-   if(id!==serial)return;data={base,planned};results.replaceChildren();for(const [label,r]of [['無推力',base],['予定噴射後',planned]] as [string,TrajectoryRecord|null][])if(r){const p=document.createElement('p');p.textContent=label+'\n'+predictionSummary(r)+(label==='予定噴射後'&&!r.burnApplied?'\n予測範囲内では予定噴射に到達しません。':'');results.append(p);}
+   if(id!==serial)return;data={base,planned};results.replaceChildren();for(const [label,r]of [['無推力',base],['予定噴射後',planned]] as const)if(r){const p=document.createElement('p');p.textContent=label+'\n'+predictionSummary(r)+(label==='予定噴射後'&&!r.burnApplied?'\n予測範囲内では予定噴射に到達しません。':'');results.append(p);}
    status.textContent=snapshot.name+' · UT '+snapshot.time.toFixed(1)+' s時点の予測'+(snapshot.burn?' · 計画比較あり':' · 比較する将来の噴射計画なし')+(snapshot.note?' · '+snapshot.note:'');cursor.value='0';draw();
   }catch(error){if(id===serial)status.textContent=(error as Error).name==='AbortError'?'計算を中断しました。前回の結果があれば保持しています。':(error as Error).message;}
   finally{if(id===serial){cancel.disabled=true;controller=null;}}

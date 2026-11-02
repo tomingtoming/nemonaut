@@ -1,6 +1,7 @@
 {
  "note": "Recorded counts per src module (only go down) and the boundary modules allowed to keep type assertions. See tools/type-precision.mjs.",
  "boundary": [
+  "dom",
   "game-storage",
   "physics"
  ],
@@ -14,16 +15,16 @@
    "as": 0
   },
   "app": {
-   "nonNull": 248,
-   "as": 152
+   "nonNull": 223,
+   "as": 106
   },
   "app-id": {
    "nonNull": 0,
    "as": 1
   },
   "ascent-panel": {
-   "nonNull": 6,
-   "as": 1
+   "nonNull": 1,
+   "as": 0
   },
   "assembly-branch": {
    "nonNull": 6,
@@ -46,7 +47,7 @@
    "as": 0
   },
   "buoyancy-panel": {
-   "nonNull": 4,
+   "nonNull": 0,
    "as": 0
   },
   "burn-schedule": {
@@ -58,8 +59,8 @@
    "as": 4
   },
   "capture-panel": {
-   "nonNull": 17,
-   "as": 2
+   "nonNull": 0,
+   "as": 1
   },
   "cargo-access": {
    "nonNull": 1,
@@ -102,16 +103,16 @@
    "as": 13
   },
   "cruise-panel": {
-   "nonNull": 45,
-   "as": 16
+   "nonNull": 11,
+   "as": 15
   },
   "cruise-pilot": {
    "nonNull": 9,
    "as": 0
   },
   "delivery-panel": {
-   "nonNull": 17,
-   "as": 24
+   "nonNull": 3,
+   "as": 2
   },
   "delivery-sites": {
    "nonNull": 0,
@@ -126,19 +127,19 @@
    "as": 0
   },
   "departure-mode": {
-   "nonNull": 4,
+   "nonNull": 2,
    "as": 1
   },
   "departure-panel": {
-   "nonNull": 22,
-   "as": 2
+   "nonNull": 1,
+   "as": 1
   },
   "descent": {
    "nonNull": 0,
    "as": 0
   },
   "descent-panel": {
-   "nonNull": 16,
+   "nonNull": 0,
    "as": 1
   },
   "design-diagnostics": {
@@ -146,16 +147,16 @@
    "as": 0
   },
   "design-diagnostics-panel": {
-   "nonNull": 12,
-   "as": 4
+   "nonNull": 2,
+   "as": 3
   },
   "design-library": {
    "nonNull": 0,
    "as": 0
   },
   "design-part-windows": {
-   "nonNull": 3,
-   "as": 2
+   "nonNull": 0,
+   "as": 0
   },
   "docking": {
    "nonNull": 4,
@@ -166,8 +167,12 @@
    "as": 2
   },
   "docking-window": {
-   "nonNull": 6,
-   "as": 3
+   "nonNull": 1,
+   "as": 2
+  },
+  "dom": {
+   "nonNull": 0,
+   "as": 2
   },
   "engine-medium": {
    "nonNull": 0,
@@ -206,8 +211,8 @@
    "as": 1
   },
   "finite-burn-panel": {
-   "nonNull": 9,
-   "as": 5
+   "nonNull": 6,
+   "as": 2
   },
   "finite-return-plan": {
    "nonNull": 0,
@@ -226,7 +231,7 @@
    "as": 0
   },
   "flight-controls": {
-   "nonNull": 4,
+   "nonNull": 0,
    "as": 0
   },
   "flight-input": {
@@ -238,15 +243,15 @@
    "as": 4
   },
   "flight-layout": {
-   "nonNull": 18,
+   "nonNull": 0,
    "as": 0
   },
   "flight-map": {
-   "nonNull": 49,
-   "as": 25
+   "nonNull": 10,
+   "as": 16
   },
   "flight-pause": {
-   "nonNull": 6,
+   "nonNull": 0,
    "as": 0
   },
   "flight-save": {
@@ -259,7 +264,7 @@
   },
   "floating-window": {
    "nonNull": 0,
-   "as": 2
+   "as": 0
   },
   "fracture": {
    "nonNull": 2,
@@ -274,8 +279,8 @@
    "as": 2
   },
   "game-audio": {
-   "nonNull": 7,
-   "as": 7
+   "nonNull": 2,
+   "as": 3
   },
   "game-save": {
    "nonNull": 0,
@@ -294,7 +299,7 @@
    "as": 2
   },
   "ksp-layout": {
-   "nonNull": 28,
+   "nonNull": 1,
    "as": 1
   },
   "lambert": {
@@ -374,8 +379,8 @@
    "as": 0
   },
   "maneuver-panel": {
-   "nonNull": 22,
-   "as": 4
+   "nonNull": 17,
+   "as": 3
   },
   "maneuver-stop": {
    "nonNull": 17,
@@ -395,7 +400,7 @@
   },
   "map-bodies": {
    "nonNull": 0,
-   "as": 1
+   "as": 0
   },
   "map-site": {
    "nonNull": 0,
@@ -403,15 +408,15 @@
   },
   "map-throttle": {
    "nonNull": 3,
-   "as": 4
+   "as": 3
   },
   "map-vessels": {
    "nonNull": 1,
    "as": 0
   },
   "navigation": {
-   "nonNull": 1,
-   "as": 2
+   "nonNull": 0,
+   "as": 0
   },
   "navigation-frame": {
    "nonNull": 0,
@@ -430,24 +435,24 @@
    "as": 0
   },
   "orbit-view": {
-   "nonNull": 1,
-   "as": 1
+   "nonNull": 0,
+   "as": 0
   },
   "orbital-ascent-controller.d": {
    "nonNull": 0,
    "as": 0
   },
   "orbital-ascent-panel": {
-   "nonNull": 9,
-   "as": 8
+   "nonNull": 2,
+   "as": 4
   },
   "orbital-ascent-settings": {
    "nonNull": 0,
    "as": 0
   },
   "overlay-panels": {
-   "nonNull": 3,
-   "as": 2
+   "nonNull": 1,
+   "as": 0
   },
   "part-actions": {
    "nonNull": 20,
@@ -462,7 +467,7 @@
    "as": 3
   },
   "part-windows": {
-   "nonNull": 24,
+   "nonNull": 14,
    "as": 10
   },
   "physics": {
@@ -490,7 +495,7 @@
    "as": 0
   },
   "port-scope": {
-   "nonNull": 1,
+   "nonNull": 0,
    "as": 0
   },
   "port-window": {
@@ -546,7 +551,7 @@
    "as": 0
   },
   "return-panel": {
-   "nonNull": 28,
+   "nonNull": 1,
    "as": 2
   },
   "return-pilot": {
@@ -555,14 +560,14 @@
   },
   "runway-map": {
    "nonNull": 0,
-   "as": 3
+   "as": 2
   },
   "runway-navigation": {
    "nonNull": 0,
    "as": 0
   },
   "runway-panel": {
-   "nonNull": 9,
+   "nonNull": 0,
    "as": 0
   },
   "runway-selection": {
@@ -615,7 +620,7 @@
   },
   "staging-panel": {
    "nonNull": 1,
-   "as": 2
+   "as": 1
   },
   "storage-migration": {
    "nonNull": 0,
@@ -667,7 +672,7 @@
   },
   "tracking-map": {
    "nonNull": 0,
-   "as": 8
+   "as": 0
   },
   "tracking-orbits": {
    "nonNull": 0,
@@ -679,7 +684,7 @@
   },
   "trajectory-panel": {
    "nonNull": 0,
-   "as": 11
+   "as": 2
   },
   "universal-time": {
    "nonNull": 0,

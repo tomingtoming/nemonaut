@@ -1,16 +1,17 @@
 import {PLANET,center} from './planet.js';
 import {MOON,bodyState} from './celestial.js';
 import {projectTrackingPoint} from './tracking-orbits.js';
+import {element} from './dom.js';
 export interface TrackingMapRow<Id=string>{id:Id;name:string;status:string;bodyName:string;altitude:number;universalTime:number;position:readonly number[];segments:readonly import('./tracking-orbits.js').OrbitSegment[]}
 export const TRACKING_COLORS=['#ffc18a','#7de6ef','#b6ec91','#daafff','#ff9db2','#eee29e'];
 export function trackingRadius(rows:readonly TrackingMapRow<unknown>[]):number{return rows.reduce((max,r)=>r.segments.reduce((extent,s)=>Math.max(extent,...s.map(p=>Math.hypot(...p)*1.08)),Math.max(max,Math.hypot(...r.position)*1.15)),PLANET.radius*1.3);}
 export function mountTrackingMap<Id>(host:Element,rows:readonly TrackingMapRow<Id>[],onSelect:(id:Id)=>void):{select:(id:Id)=>void}{
  const wrap=document.createElement('section');wrap.className='trackingMap';
  wrap.innerHTML='<canvas width="900" height="490" aria-label="全機体の軌道と位置。下の機体一覧で選択できます。"></canvas><div class="trackingMapControls"><label>方位 <input aria-label="軌道図の方位" type="range" min="-180" max="180" value="35"></label><label>傾き <input aria-label="軌道図の傾き" type="range" min="-89" max="89" value="25"></label><button type="button" class="trackingReset">視点を戻す</button><button type="button" class="trackingFit" aria-pressed="false">選択軌道</button><button type="button" class="trackingAll" aria-pressed="true">全体</button></div><p class="trackingMapLegend"></p><small>現在の位置・速度から求めた二体軌道。月軌道は現在の月位置に描画し、重力圏外は省略。大気抵抗と噴射は含みません。惑星の裏側の機体は白い破線で表示。表示範囲外の軌道は省略します。</small>';
- host.append(wrap);const canvas=wrap.querySelector('canvas') as HTMLCanvasElement,ctx=canvas.getContext('2d') as CanvasRenderingContext2D,inputs=wrap.querySelectorAll<HTMLInputElement>('input'),legend=wrap.querySelector('p') as HTMLParagraphElement;
+ host.append(wrap);const canvas=element(wrap,'canvas','canvas'),context=canvas.getContext('2d'),inputs=wrap.querySelectorAll<HTMLInputElement>('input'),legend=element(wrap,'p','p');if(!context)throw Error('2D描画を初期化できません');const ctx=context;
  const moonPosition=bodyState(MOON,rows[0]?.universalTime??0).position.sub(center).toArray();let selected:Id|undefined=rows[0]?.id,markers:{x:number;y:number;id:Id}[]=[];
  let focused=false;
- const fit=wrap.querySelector('.trackingFit') as HTMLButtonElement,all=wrap.querySelector('.trackingAll') as HTMLButtonElement;fit.disabled=!rows.length;
+ const fit=element(wrap,'.trackingFit','button'),all=element(wrap,'.trackingAll','button');fit.disabled=!rows.length;
  function draw(){
   const radius=trackingRadius(focused?rows.filter(r=>r.id===selected):rows);
   const w=canvas.width,h=canvas.height,scale=(h/2-38)/radius,cx=w/2,cy=h/2,yaw=+inputs[0].value*Math.PI/180,pitch=+inputs[1].value*Math.PI/180,pr=PLANET.radius*scale;
@@ -34,7 +35,7 @@ export function mountTrackingMap<Id>(host:Element,rows:readonly TrackingMapRow<I
  }
  function select(id:Id):void{selected=id;draw();}
  for(const input of inputs)input.oninput=draw;
- (wrap.querySelector('.trackingReset') as HTMLElement).onclick=()=>{(inputs[0] as {value:string|number}).value=35;(inputs[1] as {value:string|number}).value=25;draw();};
+ element(wrap,'.trackingReset','button').onclick=()=>{inputs[0].value=String(35);inputs[1].value=String(25);draw();};
  fit.onclick=()=>{focused=true;fit.setAttribute('aria-pressed','true');all.setAttribute('aria-pressed','false');draw();};all.onclick=()=>{focused=false;fit.setAttribute('aria-pressed','false');all.setAttribute('aria-pressed','true');draw();};
  canvas.onclick=e=>{const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)*canvas.width/rect.width,y=(e.clientY-rect.top)*canvas.height/rect.height,hit=markers.map(m=>({...m,d:Math.hypot(m.x-x,m.y-y)})).filter(m=>m.d<18).sort((a,b)=>a.d-b.d)[0];if(hit){select(hit.id);onSelect(hit.id);}};
  draw();return {select};

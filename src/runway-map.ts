@@ -14,7 +14,7 @@ export function runwayMapLayout(v:RunwayApproach):RunwayMapLayout{
 }
 
 export function drawRunwayMap(canvas:HTMLCanvasElement,v:RunwayApproach|null,end:string):void{
- const c=canvas.getContext('2d') as CanvasRenderingContext2D;c.clearRect(0,0,240,160);c.fillStyle='#17242a';c.fillRect(0,0,240,160);
+ const c=canvas.getContext('2d');if(!c)throw Error('2D描画を初期化できません');c.clearRect(0,0,240,160);c.fillStyle='#17242a';c.fillRect(0,0,240,160);
  if(!v){canvas.setAttribute('aria-label','滑走路平面図・母星の圏外');return;}
  const m=runwayMapLayout(v),a=m.threshold,b=m.far,p=m.plane;
  c.strokeStyle='#667c86';c.setLineDash([4,4]);c.beginPath();c.moveTo(a.x,12);c.lineTo(a.x,148);c.stroke();c.setLineDash([]);

@@ -3,6 +3,7 @@ import {stagePerformance,type ResourcePart} from './resources.js';
 import {stagePlan,type StagePart} from './staging.js';
 import {PARTS} from './catalog.js';
 import {chuteNames,type ParachuteState} from './recovery.js';
+import {element,closest} from './dom.js';
 export type StackPart=ResourcePart&StagePart;
 export interface StackFlight{fuel:ReadonlyMap<string,number>;stage:number;chutes:ReadonlyMap<string,ParachuteState>;active:ReadonlySet<string>}
 export interface StageStackOptions{flight?:StackFlight|null;onSelect:(id:string)=>void;onMove:(stage:number,direction:number)=>void;onPreview?:((stage:number)=>void)|null;previewStage?:number|null}
@@ -30,18 +31,18 @@ export function renderStageStack(host:Element,parts:readonly StackPart[],{flight
  if(!flight)lastStages.delete(host);
 }
 export function mountKspLayout():void{
- const hud=document.querySelector('#flightHud')!,nav=document.querySelector('.navpanel')!,readings=document.querySelector('.hudreadings')!;
- const speed=document.querySelector('#speed')!.parentElement!;speed.classList.add('navSpeed');nav.prepend(speed);document.querySelector<HTMLCanvasElement>('#navball')!.width=180;document.querySelector<HTMLCanvasElement>('#navball')!.height=180;
- nav.append(document.querySelector('.throttle')!);const switches=document.createElement('div');switches.className='navSwitches';
- switches.append(document.querySelector('#sas')!,document.querySelector('#brake')!,document.querySelector('#precisionControl')!,document.querySelector('#rcsEnabled')!.closest('label')!);nav.append(switches);
- const modes=document.createElement('div');modes.id='sasDirections';modes.setAttribute('role','group');modes.setAttribute('aria-label','SAS向け先');const select=document.querySelector<HTMLSelectElement>('#sasMode')!;select.closest('label')!.hidden=true;
- for(const [mode,label]of [['hold','保持'],['prograde','順行'],['retrograde','逆行'],['radial','天頂'],['antiradial','天底'],['normal','軌道＋'],['antinormal','軌道−'],['maneuver','噴射'],['target','目標'],['relativeRetrograde','相対逆行'],['dock','ポート']]){const b=document.createElement('button');b.dataset.mode=mode;b.textContent=label;b.title=select.querySelector('option[value="'+mode+'"]')!.textContent;b.setAttribute('aria-label','SAS '+b.title);b.onclick=()=>{select.value=mode;select.dispatchEvent(new Event('change',{bubbles:true}));b.blur();};modes.append(b);}nav.append(modes);
- readings.classList.add('altimeter');document.querySelector('#alt')!.previousElementSibling!.textContent='高度';document.querySelector('#vspeed')!.previousElementSibling!.textContent='昇降率';
- const dock=document.createElement('div');dock.id='stageDock';const stack=document.createElement('div');stack.id='stageStack';dock.append(stack,document.querySelector('#stage')!);document.body.append(dock);
- const systems=document.createElement('details');systems.id='flightSystems';const summary=document.createElement('summary');summary.textContent='機器';systems.append(summary,document.querySelector('.flightbottom')!);hud.append(systems);
- hud.append(document.querySelector('#practiceNotice')!);
- const warpLabel=document.querySelector('#warp')!.closest('label')!;warpLabel.firstChild!.textContent='WARP ';
- const menu=document.createElement('details');menu.id='flightMenu';const menuLabel=document.createElement('summary');menuLabel.textContent='飛行';menu.append(menuLabel,document.querySelector('.hudtop')!);hud.append(menu);
+ const hud=element(document,'#flightHud','div'),nav=element(document,'.navpanel','div'),readings=element(document,'.hudreadings','div');
+ const speed=closest(element(document,'#speed','strong'),'div','div');speed.classList.add('navSpeed');nav.prepend(speed);element(document,'#navball','canvas').width=180;element(document,'#navball','canvas').height=180;
+ nav.append(element(document,'.throttle','div'));const switches=document.createElement('div');switches.className='navSwitches';
+ switches.append(element(document,'#sas','button'),element(document,'#brake','button'),element(document,'#precisionControl','button'),closest(element(document,'#rcsEnabled','input'),'label','label'));nav.append(switches);
+ const modes=document.createElement('div');modes.id='sasDirections';modes.setAttribute('role','group');modes.setAttribute('aria-label','SAS向け先');const select=element(document,'#sasMode','select');closest(select,'label','label').hidden=true;
+ for(const [mode,label]of [['hold','保持'],['prograde','順行'],['retrograde','逆行'],['radial','天頂'],['antiradial','天底'],['normal','軌道＋'],['antinormal','軌道−'],['maneuver','噴射'],['target','目標'],['relativeRetrograde','相対逆行'],['dock','ポート']]){const b=document.createElement('button');b.dataset.mode=mode;b.textContent=label;b.title=element(select,'option[value="'+mode+'"]','option').textContent;b.setAttribute('aria-label','SAS '+b.title);b.onclick=()=>{select.value=mode;select.dispatchEvent(new Event('change',{bubbles:true}));b.blur();};modes.append(b);}nav.append(modes);
+ readings.classList.add('altimeter');element(closest(element(document,'#alt','strong'),'div','div'),':scope > small','small').textContent='高度';element(closest(element(document,'#vspeed','strong'),'div','div'),':scope > small','small').textContent='昇降率';
+ const dock=document.createElement('div');dock.id='stageDock';const stack=document.createElement('div');stack.id='stageStack';dock.append(stack,element(document,'#stage','button'));document.body.append(dock);
+ const systems=document.createElement('details');systems.id='flightSystems';const summary=document.createElement('summary');summary.textContent='機器';systems.append(summary,element(document,'.flightbottom','div'));hud.append(systems);
+ hud.append(element(document,'#practiceNotice','span'));
+ const warpLabel=closest(element(document,'#warp','select'),'label','label'),warpText=warpLabel.firstChild;if(!warpText)throw Error('時間倍率の表示文字が見つかりません');warpText.textContent='WARP ';
+ const menu=document.createElement('details');menu.id='flightMenu';const menuLabel=document.createElement('summary');menuLabel.textContent='飛行';menu.append(menuLabel,element(document,'.hudtop','div'));hud.append(menu);
 }
 
 export function updateSasDirections(f:SasDirectionFlight):void{for(const b of document.querySelectorAll<HTMLButtonElement>('#sasDirections button')){const m=b.dataset.mode;b.disabled=m==='maneuver'?!f.maneuver:m==='dock'?!f.dockingPorts:(['target','relativeRetrograde'] as (string|undefined)[]).includes(m)?!f.navigationTarget:false;b.setAttribute('aria-pressed',String(f.sas&&f.sasMode===m));}}

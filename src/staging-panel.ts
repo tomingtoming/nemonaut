@@ -44,7 +44,7 @@ export function renderStagingPanel(host:Element,parts:readonly StackPart[],{flig
   }
   if(!flight&&slot.actions.length){
    const controls=document.createElement('div');controls.className='stageMoves';
-   for(const [direction,label] of [[-1,'↑ 前へ'],[1,'↓ 後へ']] as [number,string][]){const b=document.createElement('button');b.textContent=label;b.setAttribute('aria-label','段 '+slot.stage+' を'+(direction<0?'前':'後')+'へ');b.disabled=slot.stage+direction<0||slot.stage+direction>9;b.onclick=()=>onMove(slot.stage,direction);controls.append(b);}
+   for(const [direction,label] of [[-1,'↑ 前へ'],[1,'↓ 後へ']] as const){const b=document.createElement('button');b.textContent=label;b.setAttribute('aria-label','段 '+slot.stage+' を'+(direction<0?'前':'後')+'へ');b.disabled=slot.stage+direction<0||slot.stage+direction>9;b.onclick=()=>onMove(slot.stage,direction);controls.append(b);}
    row.append(controls);
   }
   host.append(row);

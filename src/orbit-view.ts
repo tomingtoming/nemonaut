@@ -6,7 +6,7 @@ export type OrbitViewBody=import('./celestial.js').BodyPhysics&Partial<Pick<Cele
 export type OrbitViewInput=Pick<import('./celestial.js').OrbitState,'eccentricity'|'evec'|'r'|'normal'|'p'|'radius'|'periapsis'|'apoapsis'>&{body?:OrbitViewBody|null};
 export interface OrbitViewOptions{detail?:boolean;preview?:{orbit:OrbitViewInput}|null}
 export function drawOrbit(canvas:HTMLCanvasElement,o:OrbitViewInput,{detail=false,preview=null}:OrbitViewOptions={}):void{
- const body:OrbitViewBody=o.body||PLANET,c=canvas.getContext('2d')!,w=canvas.width,m=w/2;
+ const body:OrbitViewBody=o.body||PLANET,c=canvas.getContext('2d'),w=canvas.width,m=w/2;if(!c)throw Error('2D描画を初期化できません');
  const extent=(state:OrbitViewInput)=>Math.max(state.radius,Number.isFinite(state.apoapsis)?body.radius+state.apoapsis:body.radius*4);
  const limit=Math.min(body.sphereOfInfluence??Infinity,Math.max(body.radius*1.2,extent(o),preview?extent(preview.orbit):0)),scale=(m-(detail?52:12))/limit;
  c.clearRect(0,0,w,w);
@@ -28,7 +28,7 @@ export function drawOrbit(canvas:HTMLCanvasElement,o:OrbitViewInput,{detail=fals
  const marker=(r:Vector3,color:string,label:string,size=4)=>{const [px,py]=project(r);c.beginPath();c.arc(px,py,size,0,Math.PI*2);c.fillStyle=color;c.fill();if(detail&&label)c.fillText(label,px,label==='予定噴射'?py+32:py-13);};
  c.font='13px sans-serif';c.textAlign='center';marker(o.r,'#fff','機体',detail?5:3);
  if(detail){c.fillStyle='#d2e4e8';c.fillText((body.name||'母星')+' / 半径'+body.radius/1000+' km / 大気'+body.atmosphereTop/1000+' km',m,m+5);
-  if(eccentric&&o.normal.lengthSq()>.5){for(const [label,r,sign]of [['Pe',body.radius+o.periapsis,1],['Ap',body.radius+o.apoapsis,-1]] as [string,number,number][]){if(!Number.isFinite(r)||r>limit*1.2||r>(body.sphereOfInfluence??Infinity))continue;const ax=m+sign*r*scale;c.fillStyle=r<body.radius?'#fa7370':'#efb067';c.beginPath();c.arc(ax,m,4,0,2*Math.PI);c.fill();c.fillText(label,ax,m+20);}}
+  if(eccentric&&o.normal.lengthSq()>.5){for(const [label,r,sign]of [['Pe',body.radius+o.periapsis,1],['Ap',body.radius+o.apoapsis,-1]] as const){if(!Number.isFinite(r)||r>limit*1.2||r>(body.sphereOfInfluence??Infinity))continue;const ax=m+sign*r*scale;c.fillStyle=r<body.radius?'#fa7370':'#efb067';c.beginPath();c.arc(ax,m,4,0,2*Math.PI);c.fill();c.fillText(label,ax,m+20);}}
   if(preview)marker(preview.orbit.r,'#7de6ef','予定噴射',5);
  }
 }

@@ -1,4 +1,5 @@
 import {deliverySite} from './delivery-sites.js';
+import {element} from './dom.js';
 export type DepartureMode='surface'|'practice';
 export interface HistoryLabelEvent{type:string;siteId?:unknown;moonEventIds?:readonly unknown[];orbitEventIds?:unknown;orbit?:{periapsis:number;apoapsis:number};environment?:string}
 const environments:Readonly<Record<string,readonly [DepartureMode,string]>>={
@@ -28,11 +29,11 @@ export function historyActionLabel(event:HistoryLabelEvent):string|undefined{
  return (mode==='practice'?'練習配置':'出発')+' · '+label;
 }
 export function updateDepartureButton(root:ParentNode,environment:string):void{
- const {mode,label}=departureMode(environment),button=root.querySelector<HTMLElement>('#launch')!;
+ const {mode,label}=departureMode(environment),button=element(root,'#launch','button');
  root.querySelector('#targetPracticeControl')?.toggleAttribute('hidden',environment!=='orbit');
  button.textContent=mode==='practice'?'練習配置へ ↗':'出発 ↗';
  button.title=label+(mode==='practice'?'から独立した練習を開始します':'から現在の世界に機体を追加します');
- root.querySelector('#departureNotice')!.textContent=mode==='practice'
+ element(root,'#departureNotice','small').textContent=mode==='practice'
   ?'通常世界から独立した練習です。通常の機体・時刻・履歴は変わりません。組立棟・センターへの移動や再読込で練習を終了します。'
   :'地表から出発します。現在の世界の他の機体は保持されます。';
 }

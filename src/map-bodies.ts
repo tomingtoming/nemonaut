@@ -31,6 +31,6 @@ export class MapBodies{
   this.mesh.material=this.materials[kind];
   this.mesh.material.userData.rotation?.value.setFromMatrix4(new T.Matrix4().makeRotationFromQuaternion(surfaceOrientation(tick*10).invert()));
   this.camera.position.copy(center).addScaledVector(mapViewVector(0,0,1,yaw,pitch),PLANET.radius*3);this.camera.up.copy(mapViewVector(0,1,0,yaw,pitch));this.camera.lookAt(center);this.camera.updateMatrixWorld();
-  this.renderer.render(this.scene,this.camera);const ctx=entry.canvas.getContext('2d') as CanvasRenderingContext2D;ctx.clearRect(0,0,512,512);ctx.drawImage(this.renderer.domElement,0,0);entry.key=key;return entry.canvas;
+  this.renderer.render(this.scene,this.camera);const ctx=entry.canvas.getContext('2d');if(!ctx)throw Error('2D描画を初期化できません');ctx.clearRect(0,0,512,512);ctx.drawImage(this.renderer.domElement,0,0);entry.key=key;return entry.canvas;
  }
 }
