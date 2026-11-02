@@ -15,7 +15,7 @@ import {atmosphere} from './planet.js';
 import {engineBurn} from './resources.js';
 
 export type CoastPart=import('./aero.js').AeroPart&PowerPart;
-export interface CoastTelemetry{power:PowerReading;force:T.Vector3;torque:T.Vector3;engineForce:T.Vector3;commands:{pitch:number;yaw:number;roll:number};stallCount:number;contacts:number;atmosphere:{density:number;pressure:number;temperature:number};engine:string}
+export interface CoastTelemetry{power:PowerReading;force:T.Vector3;torque:T.Vector3;engineForce:T.Vector3;commands:{pitch:number;yaw:number;roll:number};stallCount:number;contacts:number;/** Written by each coast step; absent on a vessel that has not stepped yet. */atmosphere?:{density:number;pressure:number;temperature:number};engine:string}
 export interface CoastVessel extends ParkedVessel,BurnScheduleVessel,NavigationFrameFlight,ObservationVessel,FleetNode<CoastVessel>{parts:readonly CoastPart[];stats:{com:T.Vector3;mass:number};vesselId:string;vesselName?:string|null;throttle:number;failureDynamics?:boolean;thermal:ThermalMap;charge:ChargeMap;observations:ObservationMap;orbit?:OrbitState|null;lastThrust:number;engineThrust:Map<string,number>;rcsJets:readonly import('./rcs.js').RcsJet[];maxAltitude:number;telemetry:CoastTelemetry}
 export type CoastMarginVessel=Pick<import('./descent.js').DescentVessel,'pos'|'q'|'stats'|'vel'|'universalTime'|'networks'|'fuel'|'started'|'active'>;
 export interface CoastBlocker{reason:string;code:string|null;vesselId:string|null;vesselName:string;otherVesselId:string|null;otherVesselName:string|null;overdue:boolean;scheduledTime:number|null}

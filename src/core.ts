@@ -135,7 +135,7 @@ export class Flight {
  if(banking)axes.y=false;
  const bias=sasTrim(this,localError,correction.clone().add(new T.Vector3(this.trim,0,0)),axes,dt,!this.rocketAxes&&!this.telemetry.groundContact&&density*relativeVelocity.lengthSq()/2>50);
  correction.add(bias);for(const [name,axis]of [['pitch','x'],['yaw','y'],['roll','z']] as const)commands[name]=T.MathUtils.clamp(commands[name]+correction[axis],-1,1);
- }else sasTrim(this,null as T.Vector3|null as T.Vector3,null as T.Vector3|null as T.Vector3,null as SasTrimAxes|null as SasTrimAxes,dt,false);
+ }else sasTrim(this,null,null,null,dt,false);
  commands.pitch=T.MathUtils.clamp(commands.pitch+this.trim,-1,1);
  this.engineThrust=engineBurn(this.networks,this.fuel,this.started?this.active:new Set(),this.throttle,density,dt,air.pressure);const wheelContacts:WheelContact[]=[];let stallCount=0,contacts=0,wheelImpactSpeed=0;this.lastThrust=0;const wheelCount=this.parts.filter(p=>(PARTS as PartCatalog)[p.type].wheel).length;
  for(const p of this.parts){const d=(PARTS as PartCatalog)[p.type],orientation=this.q.clone().multiply(partRotation(p)),wp=partCenter(p).applyQuaternion(this.q).add(this.pos),r=wp.clone().sub(com),pv=relativeVelocity.clone().add(relativeOmega.clone().cross(r));

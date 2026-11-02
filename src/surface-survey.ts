@@ -4,10 +4,12 @@ import {deliveryStation,type StationVessel,type DeliveryStation,type LostDeliver
 import {fleet,type FleetNode} from './fleet.js';
 import {appendHistory,type WorldHistoryEvent} from './world-history.js';
 /** A live or saved vessel that may carry a delivered probe. */
-export interface SurveyVessel extends StationVessel{vesselId:string;vesselName?:string|null;time:number;observations?:Iterable<readonly [string,ObservationState]>|null}
+/** The vessel fields surveyProgress reads. */
+export interface SurveyStationVessel extends StationVessel{observations?:Iterable<readonly [string,ObservationState]>|null}
+export interface SurveyVessel extends SurveyStationVessel{vesselId:string;vesselName?:string|null;time:number}
 export interface SurveyRoot extends SurveyVessel,FleetNode<SurveyRoot>{}
-export interface SurveyProgress<V extends SurveyVessel=SurveyVessel>{completed:WorldHistoryEvent|undefined;station:DeliveryStation<WorldHistoryEvent,V>|LostDeliveryStation<WorldHistoryEvent>|null;quality:WorldHistoryEvent['quality'];day:number;night:number}
-export function surveyProgress<V extends SurveyVessel=SurveyVessel>(history:readonly WorldHistoryEvent[],vessels:readonly V[],site:DeliverySite=DELIVERY_SITE):SurveyProgress<V>{
+export interface SurveyProgress<V extends SurveyStationVessel=SurveyVessel>{completed:WorldHistoryEvent|undefined;station:DeliveryStation<WorldHistoryEvent,V>|LostDeliveryStation<WorldHistoryEvent>|null;quality:WorldHistoryEvent['quality'];day:number;night:number}
+export function surveyProgress<V extends SurveyStationVessel=SurveyVessel>(history:readonly WorldHistoryEvent[],vessels:readonly V[],site:DeliverySite=DELIVERY_SITE):SurveyProgress<V>{
  const completed=history.find(e=>e.type==='survey'&&e.siteId===site.id),station=deliveryStation(history,vessels,site),data=station?.vessel?observationData(new Map<string,ObservationState>(station.vessel.observations??[]).get(station.record.probePartId as string),site):null;
  return {completed,station,quality:data?.quality??completed?.quality,day:data?.day??completed?.day??0,night:data?.night??completed?.night??0};
 }

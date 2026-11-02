@@ -17,7 +17,7 @@ export function closestApproach(a:OrbitState,b:OrbitState|null|undefined,searchH
 }
 
 // Compare both alternatives over the SAME interval, starting at the burn.
-export function maneuverApproach(preview:import('./maneuver.js').ManeuverPreview|null|undefined,target:OrbitState|null|undefined):ManeuverApproach{
+export function maneuverApproach(preview:import('./maneuver.js').ManeuverPreview|import('./maneuver.js').NodeOrbitPreview|null|undefined,target:OrbitState|null|undefined):ManeuverApproach{
  if(!preview?.burnVel||!preview.original||!target)throw Error('目標と編集中のマニューバが必要です');
  const original=preview.original,epoch=preview.orbit.universalTime,delay=epoch-original.universalTime;
  if(!Number.isFinite(delay)||delay<0||delay>21600||original.bodyId!==target.bodyId||Math.abs(original.universalTime-target.universalTime)>1e-4)throw Error('同じ天体で6時間以内の将来噴射を選んでください');

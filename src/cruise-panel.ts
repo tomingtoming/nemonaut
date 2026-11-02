@@ -9,7 +9,7 @@ import {acceptsFlightKey} from './flight-keyboard.js';
 import {preserveManualControlEdit,type ManualControl} from './manual-control-edit.js';
 import {PARTS,type PartCatalog} from './catalog.js';
 import * as T from 'three';
-export interface CruisePanelFlight extends CruiseFlight,RunwayFlight{environment:string;cruiseSettings?:CruiseSettings;rocketAxes:boolean}
+export interface CruisePanelFlight extends CruiseFlight,RunwayFlight{environment:string;cruiseSettings?:CruiseSettings|null;rocketAxes:boolean}
 export interface CruisePanelState{flight:CruisePanelFlight|null|undefined;atCenter:boolean}
 export interface CruisePanelHooks{claim():void;sync():void}
 export interface CruisePanel{update():void;step(f:CruisePanelFlight,dt:number):AutopilotCommands|undefined;stop(reason?:string):void;close():void;readonly active:boolean}

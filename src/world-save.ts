@@ -3,7 +3,8 @@ import {validateHistory} from './world-history.js';
 import {loadFlight,saveFlight,type SavedFlight,type SavedFlightMeta} from './flight-save.js';
 import {validUniversalTime} from './universal-time.js';
 
-export type WorldVessel=Omit<SavedFlight,'detached'|'meta'>&{vesselId:string};
+/** A world vessel always carries the world's universalTime (validateWorld checks it). */
+export type WorldVessel=Omit<SavedFlight,'detached'|'meta'|'universalTime'>&{vesselId:string;universalTime:number};
 export interface SavedWorld{kind:string;version:number;universalTime:number;activeVesselId:string|null;vessels:WorldVessel[];history:import('./world-history.js').WorldHistoryEvent[];flightMeta:SavedFlightMeta}
 export interface WorldFromFlightOptions{universalTime?:number;history?:unknown}
 

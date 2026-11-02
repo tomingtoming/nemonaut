@@ -1,6 +1,6 @@
 import {fleet} from './fleet.js';
 import type {Flight,FlightInput} from './core.js';
-import type {CoastOptions,CoastResult,CoastVessel} from './coast-flight.js';
+import type {CoastOptions,CoastResult} from './coast-flight.js';
 import {resolveWorldTargets} from './relative-navigation.js';
 import {advanceWorldPhysics} from './world-physics.js';
 import {advanceWorldCoast} from './coast-flight.js';
@@ -24,7 +24,7 @@ export class WorldRuntime{
   const root=this.active;this.universalTime=advanceWorldPhysics(vessels,this.universalTime,dt,this.activeVesselId,input);this.replace(root!);
  }
  coast(duration:number,options:CoastOptions={}):CoastResult{
-  const result=advanceWorldCoast([...this.vessels.values()] as CoastVessel[],this.universalTime,this.activeVesselId,duration,options);
+  const result=advanceWorldCoast([...this.vessels.values()],this.universalTime,this.activeVesselId,duration,options);
   this.universalTime=result.universalTime;return result;
  }
 }

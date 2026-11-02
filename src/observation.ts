@@ -19,10 +19,7 @@ export interface ObservationStatusVessel extends Omit<ObservationVessel,'thermal
 export function createObservations(parts:readonly Pick<import('./catalog.js').Part,'id'|'type'>[]):ObservationMap{return new Map<string,ObservationState>(parts.filter(p=>p.type==='probe').map(p=>[p.id,{enabled:false,day:0,night:0}]));}
 export function observationDemand(v:ObservationDemandVessel,states:ReadonlyMap<string,ObservationState>=v.observations):number{return v.crashed?0:[...states].filter(([id,s])=>s.enabled&&!v.thermal.get(id)?.failed).length*OBSERVATION_POWER;}
 export function observationSite(v:ObservationSiteVessel,id:string):DeliverySite|null{const p=v.parts.find(p=>p.id===id);if(!p)return null;const point=new T.Vector3(...p.p).applyQuaternion(v.q).add(v.pos);return DELIVERY_SITES.find(site=>deliveryDistance(point,v.universalTime,site)<=site.radius)??null;}
-export function observationData(state:ObservationState|undefined,site?:DeliverySite):ObservationRecord|undefined;
-/** For untyped callers that copy a saved observation map (new Map(any)); remove once they pass a typed ObservationMap. */
-export function observationData(state:unknown,site?:DeliverySite):ObservationRecord|undefined;
-export function observationData(state:unknown,site:DeliverySite=DELIVERY_SITE):ObservationRecord|undefined{return site.id===DELIVERY_SITE.id?state as ObservationState|undefined:(state as ObservationState|undefined)?.sites?.[site.id]??{day:0,night:0};}
+export function observationData(state:ObservationState|undefined,site:DeliverySite=DELIVERY_SITE):ObservationRecord|undefined{return site.id===DELIVERY_SITE.id?state:state?.sites?.[site.id]??{day:0,night:0};}
 export function observationReason(v:ObservationVessel,id:string):string{
  const p=v.parts.find(p=>p.id===id),s=v.observations.get(id);
  if(!p||!s)return '観測装置なし';

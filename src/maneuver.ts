@@ -5,6 +5,8 @@ type OrbitState=import('./celestial.js').OrbitState;type Vector3=import('three')
 export interface ManeuverComponents{prograde:number;normal:number;radial:number}
 export type ManeuverLocation=string|{universalTime:number};
 export interface ManeuverPreview{original:OrbitState;orbit:OrbitState;universalTime:number;burnPos:Vector3;burnVel:Vector3;afterVel:Vector3;impulse:Vector3;time:number;deltaV:number}
+/** Only the planned orbit of an existing node (no editable burn); every other ManeuverPreview field is absent. */
+export type NodeOrbitPreview={orbit:OrbitState}&{[K in Exclude<keyof ManeuverPreview,'orbit'>]?:undefined};
 // A preview is pure: both inputs and the live vehicle remain untouched.
 export function maneuverPreview(pos:Vector3,vel:Vector3,location:ManeuverLocation,deltaV:number|ManeuverComponents,universalTime=0):ManeuverPreview{
  const components:ManeuverComponents=typeof deltaV==='number'?{prograde:deltaV,normal:0,radial:0}:deltaV;

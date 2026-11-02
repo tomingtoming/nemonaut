@@ -6,7 +6,7 @@ export type FiniteBurnPanelPart=import('./part-settings.js').SettablePart&{fuelC
 export interface FiniteBurnPanelFlight extends FiniteBurnVessel{parts:FiniteBurnPanelPart[];vesselId:string;time:number;stage:number}
 export interface FiniteBurnContext{impulse:T.Vector3;epoch:number;tolerance:number}
 export interface FiniteBurnPendingReturn{vesselId:string;epoch:number;impulse:T.Vector3;throttle:number}
-export interface FiniteBurnPanel{plannedThrottle(preview:Pick<import('./maneuver.js').ManeuverPreview,'universalTime'|'impulse'>):number|undefined;update(preview:Pick<import('./maneuver.js').ManeuverPreview,'universalTime'|'impulse'>|null|undefined,node:import('./maneuver-node.js').ManeuverNodeRecord|null|undefined):FiniteBurnPreview|null}
+export interface FiniteBurnPanel{plannedThrottle(preview:Pick<import('./maneuver.js').ManeuverPreview,'universalTime'|'impulse'>):number|undefined;update(preview:Pick<import('./maneuver.js').ManeuverPreview,'universalTime'|'impulse'>|Pick<import('./maneuver.js').NodeOrbitPreview,'universalTime'|'impulse'>|null|undefined,node:import('./maneuver-node.js').ManeuverNodeRecord|null|undefined):FiniteBurnPreview|null}
 export function mountFiniteBurn(anchor:Element,getFlight:()=>FiniteBurnPanelFlight|null|undefined):FiniteBurnPanel{
  const row=document.createElement('div'),power=document.createElement('select'),timing=document.createElement('select'),button=document.createElement('button'),readout=document.createElement('p');
  row.className='finiteBurnControls';timing.title='計画時刻に噴射を始めるか、噴射の中央を合わせるか選択';power.setAttribute('aria-label','有限噴射の推力');timing.setAttribute('aria-label','有限噴射の開始時刻');

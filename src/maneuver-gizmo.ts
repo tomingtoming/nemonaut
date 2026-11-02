@@ -1,7 +1,7 @@
 import {bodyState} from './celestial.js';
 import {projectTrackingPoint} from './tracking-orbits.js';
 export interface ManeuverHandle{id:string;color:string;label:string;dx:number;dy:number;sign:number}
-export function maneuverHandles(preview:import('./maneuver.js').ManeuverPreview|null|undefined,yaw:number,pitch:number):ManeuverHandle[]{
+export function maneuverHandles(preview:import('./maneuver.js').ManeuverPreview|import('./maneuver.js').NodeOrbitPreview|null|undefined,yaw:number,pitch:number):ManeuverHandle[]{
  if(!preview?.burnVel)return [];
  const p=preview.burnVel.clone().sub(bodyState(preview.orbit.body,preview.universalTime).velocity).normalize(),n=preview.orbit.r.clone().cross(p).normalize(),r=p.clone().cross(n).normalize();
  if(n.lengthSq()<.5)return [];

@@ -4,7 +4,7 @@ import {floatingWindow,type FloatingWindow} from './floating-window.js';
 import {acceptsFlightKey} from './flight-keyboard.js';
 import {preserveManualControlEdit} from './manual-control-edit.js';
 
-export interface OrbitalAscentFlight extends AscentFlight{rocketAxes?:unknown;orbitalAscentSettings?:AscentSettings;parts:{id:string}[]}
+export interface OrbitalAscentFlight extends AscentFlight{rocketAxes?:unknown;orbitalAscentSettings?:AscentSettings|null;parts:{id:string}[]}
 export interface OrbitalAscentState{flight:OrbitalAscentFlight|null|undefined;atCenter:boolean}
 interface NumericInput{min:string|number;max:string|number;step:string|number;value:string|number}
 export interface OrbitalAscentHooks{claim():void;sync():void;onRemoved(id:string):void}
