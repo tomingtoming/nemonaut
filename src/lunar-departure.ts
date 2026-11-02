@@ -2,30 +2,39 @@ import {PLANET,center,orbitState} from './planet.js';
 import {terminalBurnThrottle} from './maneuver-thrust-profile.js';
 import {MOON,bodyState,advanceCelestialOrbit} from './celestial.js';
 import {coastDrift} from './coast-orbit.js';
-import {lambertArc} from './lambert.js';
-import {predictTrajectory} from './trajectory.js';
-import {captureBurnEstimate} from './lunar-capture.js';
-import {engineBurn} from './resources.js';
+import {lambertArc,type LambertArc} from './lambert.js';
+import {predictTrajectory,type TrajectoryResult} from './trajectory.js';
+import {captureBurnEstimate,type BurnEstimateVessel,type CaptureBurnEstimate} from './lunar-capture.js';
+import {engineBurn,type FuelNetworks} from './resources.js';
+/** One instantaneous departure burn found on the parking conic. */
+export interface LunarDepartureCandidate{plannedAt:number;time:number;position:import('three').Vector3;velocity:import('three').Vector3;impulse:import('three').Vector3;afterVelocity:import('three').Vector3;deltaV:number;duration:number;offset:number}
+/** A candidate whose coast prediction reaches the Moon safely. */
+export interface LunarDepartureSearchPlan extends LunarDepartureCandidate{prediction:TrajectoryResult}
+/** A searched plan after the finite-burn check; finite is set unless an earlier warning stopped the check. */
+export interface LunarDeparturePlan extends LunarDepartureSearchPlan{burn:CaptureBurnEstimate;startTime:number;warnings:string[];ready:boolean;finite?:TrajectoryResult}
+export interface LunarDepartureSearchOptions{preparation?:number;phases?:number;periods?:number;flybys?:number[];accept?:((plan:LunarDepartureSearchPlan)=>boolean)|null}
+/** The vessel fields the lunar departure planner reads (a Flight satisfies it). */
+export interface LunarDepartureVessel extends BurnEstimateVessel{throttle:number;pos:import('three').Vector3;q:import('three').Quaternion;vel:import('three').Vector3;universalTime:number;time:number;stats:{mass:number;com:import('three').Vector3};networks:Pick<FuelNetworks,'groups'>}
 
 // Search departure time on the actual parking conic. No seed position, clock,
 // circularisation or propellant reset is applied to the vessel.
-export function searchLunarDeparture(position,velocity,time,{preparation=120,phases=48,periods=2,flybys=[400000,800000,1200000],accept=null}={}){
+export function searchLunarDeparture(position:import('three').Vector3,velocity:import('three').Vector3,time:number,{preparation=120,phases=48,periods=2,flybys=[400000,800000,1200000],accept=null}:LunarDepartureSearchOptions={}):LunarDepartureSearchPlan{
  const orbit=orbitState(position,velocity);
  if(!orbit.stable||orbit.apoapsis+PLANET.radius>=MOON.orbitRadius-MOON.sphereOfInfluence)throw Error('母星の安全な待機軌道から計画してください');
  if(!Number.isFinite(time)||time<0||!Number.isFinite(preparation)||preparation<60||!Number.isInteger(phases)||phases<8||phases>96||!Number.isInteger(periods)||periods<1||periods>8||!Array.isArray(flybys)||flybys.length>8||!flybys.length||flybys.some(x=>!Number.isFinite(x)||Math.abs(x)>2000000))throw Error('月遷移探索の条件が不正です');
- const candidates=[];
+ const candidates:LunarDepartureCandidate[]=[];
  for(let i=0;i<phases*periods;i++){
   const delay=preparation+orbit.period*i/phases,departureTime=time+delay,at=coastDrift(position,velocity,time,delay),from=at.position.clone().sub(center);
   for(const duration of [12000,18000,24000,30000,36000])for(const offset of flybys){
    const moon=bodyState(MOON,departureTime+duration),radial=moon.position.clone().sub(center).normalize(),target=moon.position.clone().addScaledVector(radial,offset).sub(center);
-   let arc;try{arc=lambertArc(from,target,duration,PLANET.mu,orbit.normal);}catch{continue;}
+   let arc:LambertArc;try{arc=lambertArc(from,target,duration,PLANET.mu,orbit.normal);}catch{continue;}
    const impulse=arc.departure.clone().sub(at.velocity),deltaV=impulse.length(),after=orbitState(at.position,arc.departure);
    if(deltaV>1500||deltaV<.5||after.periapsis<PLANET.atmosphereTop+1000)continue;
    candidates.push({plannedAt:time,time:departureTime,position:at.position,velocity:at.velocity,impulse,afterVelocity:arc.departure,deltaV,duration,offset});
   }
  }
  candidates.sort((a,b)=>a.deltaV-b.deltaV);
- let firstSafe=null;
+ let firstSafe:LunarDepartureSearchPlan|null=null;
  for(const candidate of candidates.slice(0,32)){
   const prediction=predictTrajectory(candidate.position,candidate.afterVelocity,candidate.time,{duration:Math.min(604800,candidate.duration*1.6),samples:160});
   if(prediction.events.some(e=>e.type==='enter-moon')&&prediction.closest.altitude>10000&&prediction.closest.altitude<1000000&&!prediction.closest.atBoundary&&prediction.reason==='duration'){
@@ -37,20 +46,20 @@ export function searchLunarDeparture(position,velocity,time,{preparation=120,pha
  throw Error('探索範囲内に安全な月接近案が見つかりません');
 }
 
-export function lunarDeparturePlan(vessel){
+export function lunarDeparturePlan(vessel:LunarDepartureVessel):LunarDeparturePlan{
  if(vessel.throttle!==0)throw Error('噴射を停止してから月遷移を計画してください');
  captureBurnEstimate(vessel,1);
- return searchLunarDeparture(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,{accept:plan=>evaluateFiniteDeparture(vessel,plan).ready});
+ return searchLunarDeparture(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,{accept:plan=>evaluateFiniteDeparture(vessel,plan as LunarDeparturePlan).ready}) as LunarDeparturePlan;
 }
 
 // The cheapest instantaneous burn may collide once its real duration is used.
 // Test other candidates before reporting that the vessel has no usable plan.
-function evaluateFiniteDeparture(vessel,plan){
+function evaluateFiniteDeparture(vessel:LunarDepartureVessel,plan:LunarDeparturePlan):LunarDeparturePlan{
  plan.burn=captureBurnEstimate(vessel,plan.deltaV);plan.startTime=plan.time-plan.burn.duration/2;plan.warnings=[];
  if(!plan.burn.enough)plan.warnings.push('現在の点火段では推進剤が不足しています');
  if(plan.startTime-vessel.universalTime<60)plan.warnings.push('姿勢調整の60秒を確保できません');
  if(plan.warnings.length){plan.ready=false;return plan;}
- const at=coastDrift(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,plan.startTime-vessel.universalTime),fuel=new Map<any,any>(vessel.fuel),direction=plan.impulse.clone().normalize();
+ const at=coastDrift(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,plan.startTime-vessel.universalTime),fuel=new Map<string,number>(vessel.fuel),direction=plan.impulse.clone().normalize();
  let pos=at.position,vel=at.velocity,time=plan.startTime,mass=vessel.stats.mass,left=plan.deltaV;
  for(let i=0;i<144000&&left>=.5;i++){
   const dt=1/120,before=[...fuel.values()].reduce((a,b)=>a+b,0),throttle=terminalBurnThrottle(left);
@@ -63,8 +72,8 @@ function evaluateFiniteDeparture(vessel,plan){
  plan.ready=plan.warnings.length===0;return plan;
 }
 
-export function lunarDepartureNode(plan,vessel){
+export function lunarDepartureNode(plan:LunarDeparturePlan,vessel:Pick<LunarDepartureVessel,'universalTime'|'time'>):import('./maneuver-node.js').ManeuverNodeRecord{
  if(!plan.ready)throw Error(plan.warnings.join(' / '));
  if(plan.plannedAt!==vessel.universalTime)throw Error('時刻が進んだため月遷移案を再計算してください');
- return {universalTime:plan.startTime,time:vessel.time+plan.startTime-vessel.universalTime,position:plan.position.toArray(),velocity:plan.afterVelocity.toArray(),impulse:plan.impulse.toArray(),remaining:plan.impulse.toArray(),complete:false,departure:{midTime:plan.time,duration:plan.burn.duration,deltaV:plan.deltaV,periapsis:plan.finite.closest.altitude}};
+ return {universalTime:plan.startTime,time:vessel.time+plan.startTime-vessel.universalTime,position:plan.position.toArray(),velocity:plan.afterVelocity.toArray(),impulse:plan.impulse.toArray(),remaining:plan.impulse.toArray(),complete:false,departure:{midTime:plan.time,duration:plan.burn.duration,deltaV:plan.deltaV,periapsis:plan.finite!.closest.altitude}};
 }

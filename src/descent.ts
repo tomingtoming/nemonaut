@@ -1,32 +1,36 @@
 import * as T from 'three';
-import {PARTS} from './catalog.js';
-import {bodyOrbitState,MOON} from './celestial.js';
-import {partCenter,partRotation} from './aero.js';
-import {engineBurn} from './resources.js';
+import {PARTS,type PartCatalog} from './catalog.js';
+import {bodyOrbitState,MOON,type CelestialBodyId} from './celestial.js';
+import {partCenter,partRotation,type AeroPart} from './aero.js';
+import {engineBurn,type FuelNetworks,type EngineSet} from './resources.js';
 import {atmosphere} from './planet.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
 
 // Geometry is evaluated at the lowest part, not the vehicle origin or COM.
 // Braking figures assume thrust aligned against motion and constant gravity;
 // they are conservative guidance, not a promised touchdown prediction.
-export function descentTelemetry(v){
+/** The vessel fields descentTelemetry reads (a Flight satisfies it). */
+export interface DescentVessel{pos:T.Vector3;q:T.Quaternion;vel:T.Vector3;universalTime:number;stats:{com:T.Vector3;mass:number};parts:readonly (AeroPart&{id:string})[];networks:Pick<FuelNetworks,'groups'>;fuel:ReadonlyMap<string,number>;started:boolean;active:EngineSet;landed?:boolean;crashed?:boolean}
+/** Lowest-part descent figures (SI units; tilt in degrees). */
+export interface DescentTelemetry{body:CelestialBodyId;energy:number;periapsis:number;apoapsis:number;clearance:number;vertical:number;horizontal:number;speed:number;gravity:number;thrust:number;acceleration:number;netAcceleration:number;hoverThrottle:number;brakingDistance:number;verticalBrakingDistance:number;tilt:number|null;landed:boolean|undefined;crashed:boolean|undefined;legs:number}
+export function descentTelemetry(v:DescentVessel):DescentTelemetry{
  const com=v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)),o=bodyOrbitState(com,v.vel,v.universalTime),up=o.r.clone().normalize();
  let clearance=Infinity;
  for(const p of v.parts){
-  const rotation=v.q.clone().multiply(partRotation(p)),c=partCenter(p).applyQuaternion(v.q).add(v.pos),[x,y,z]=PARTS[p.type].size;
+  const rotation=v.q.clone().multiply(partRotation(p)),c=partCenter(p).applyQuaternion(v.q).add(v.pos),[x,y,z]=(PARTS as PartCatalog)[p.type].size;
   for(const a of [-1,1])for(const b of [-1,1])for(const d of [-1,1]){const corner=new T.Vector3(a*x/2,b*y/2,d*z/2).applyQuaternion(rotation).add(c);clearance=Math.min(clearance,corner.distanceTo(o.center)-o.body.radius);}
  }
  const air=o.bodyId==='planet'?atmosphere(o.altitude):{density:0,pressure:0};
- const burns=engineBurn(v.networks,new Map(v.fuel),v.started?v.active:new Set(),1,air.density,.001,air.pressure),force=new T.Vector3();
+ const burns=engineBurn(v.networks,new Map<string,number>(v.fuel),v.started?v.active:new Set(),1,air.density,.001,air.pressure),force=new T.Vector3();
  for(const p of v.parts){const thrust=burns.get(p.id)||0;if(thrust)force.addScaledVector(new T.Vector3(0,1,0).applyQuaternion(partRotation(p)),thrust);}
  const velocity=surfaceRelativeVelocity(com,v.vel,v.universalTime,o.body),speed=velocity.length();
  const thrust=force.length(),acceleration=thrust/v.stats.mass,netAcceleration=acceleration-o.gravity,vertical=velocity.dot(up),horizontal=Math.sqrt(Math.max(0,speed**2-vertical**2)),fall=Math.max(0,-vertical);
  const brakingDistance=netAcceleration>0?speed**2/(2*netAcceleration):Infinity,verticalBrakingDistance=netAcceleration>0?fall*fall/(2*netAcceleration):Infinity;
  const tilt=force.lengthSq()?force.normalize().applyQuaternion(v.q).angleTo(up)*180/Math.PI:null;
- return {body:o.bodyId,energy:o.energy,periapsis:o.periapsis,apoapsis:o.apoapsis,clearance,vertical,horizontal,speed,gravity:o.gravity,thrust,acceleration,netAcceleration,hoverThrottle:acceleration>0?o.gravity/acceleration:Infinity,brakingDistance,verticalBrakingDistance,tilt,landed:v.landed&&!v.crashed,crashed:v.crashed,legs:v.parts.filter(p=>PARTS[p.type].landingLeg).length};
+ return {body:o.bodyId,energy:o.energy,periapsis:o.periapsis,apoapsis:o.apoapsis,clearance,vertical,horizontal,speed,gravity:o.gravity,thrust,acceleration,netAcceleration,hoverThrottle:acceleration>0?o.gravity/acceleration:Infinity,brakingDistance,verticalBrakingDistance,tilt,landed:v.landed&&!v.crashed,crashed:v.crashed,legs:v.parts.filter(p=>(PARTS as PartCatalog)[p.type].landingLeg).length};
 }
 
-export function descentGuidance(d,throttle=0){
+export function descentGuidance(d:DescentTelemetry,throttle=0):string{
  if(d.crashed)return '機体損傷';
  if(d.body==='planet'){
   if(d.landed)return throttle>0?'接地・静止：噴射を停止してください':'接地・静止';

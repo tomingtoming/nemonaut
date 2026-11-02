@@ -1,19 +1,26 @@
 import * as T from 'three';
 import {terminalBurnThrottle} from './maneuver-thrust-profile.js';
-import {MOON,bodyState,bodyOrbitState,advanceCelestialOrbit} from './celestial.js';
+import {MOON,bodyState,bodyOrbitState,advanceCelestialOrbit,type OrbitState,type BodyState} from './celestial.js';
 import {PLANET} from './planet.js';
 import {keplerDrift,coastDrift} from './coast-orbit.js';
-import {captureBurnEstimate} from './lunar-capture.js';
-import {engineBurn} from './resources.js';
+import {captureBurnEstimate,type LunarCaptureVessel,type CaptureBurnEstimate} from './lunar-capture.js';
+import {engineBurn,type FuelNetworks} from './resources.js';
 
 // The lunar conic is followed to its actual SOI radius, then translated using
 // the ephemeris at that epoch. No parent-planet velocity is added twice.
-export function lunarEscape(position,velocity,time){
+export interface LunarEscape{time:number;position:T.Vector3;velocity:T.Vector3;orbit:OrbitState}
+export interface ReturnCandidate{time:number;position:T.Vector3;velocity:T.Vector3;impulse:T.Vector3;afterVelocity:T.Vector3;deltaV:number;exit:LunarEscape}
+export interface LunarReturnSearch extends ReturnCandidate{plannedAt:number;targetPeriapsis:number}
+export interface LunarReturnOptions{targetPeriapsis?:number;phases?:number;preparation?:number}
+export interface FiniteReturnBurn{exit:LunarEscape;duration:number;remainingFuel:number}
+export interface LunarReturnPlan extends LunarReturnSearch{burn:CaptureBurnEstimate;startTime:number;warnings:string[];finite:FiniteReturnBurn|null;ready:boolean}
+export interface LunarReturnVessel extends LunarCaptureVessel{networks:Pick<FuelNetworks,'groups'>}
+export function lunarEscape(position:T.Vector3,velocity:T.Vector3,time:number):LunarEscape|null{
  const moon=bodyState(MOON,time),r=position.clone().sub(moon.position),v=velocity.clone().sub(moon.velocity);
  if(r.length()>=MOON.sphereOfInfluence||v.lengthSq()/2-MOON.mu/r.length()<=0)return null;
- let high=60,at;
+ let high=60,at:BodyState|undefined;
  for(let i=0;i<16;i++){at=keplerDrift(r,v,MOON.mu,high);if(at.position.length()>=MOON.sphereOfInfluence)break;high*=2;}
- if(at.position.length()<MOON.sphereOfInfluence)return null;
+ if(at!.position.length()<MOON.sphereOfInfluence)return null;
  let low=0;for(let i=0;i<40;i++){const mid=(low+high)/2,next=keplerDrift(r,v,MOON.mu,mid);if(next.position.length()<MOON.sphereOfInfluence)low=mid;else high=mid;}
  // A centimetre outside avoids ambiguous floating-point membership at the SOI.
  at=keplerDrift(r,v,MOON.mu,high+.001);const epoch=time+high+.001,endMoon=bodyState(MOON,epoch);
@@ -22,7 +29,7 @@ export function lunarEscape(position,velocity,time){
  return {time:epoch,position:pos,velocity:vel,orbit};
 }
 
-export function returnCandidate(position,velocity,time,deltaV){
+export function returnCandidate(position:T.Vector3,velocity:T.Vector3,time:number,deltaV:number):ReturnCandidate|null{
  if(!Number.isFinite(deltaV)||deltaV<=0)throw Error('帰還噴射量が不正です');
  const orbit=bodyOrbitState(position,velocity,time);if(orbit.bodyId!=='moon')return null;
  const impulse=orbit.relativeVelocity.clone().normalize().multiplyScalar(deltaV),afterVelocity=velocity.clone().add(impulse),exit=lunarEscape(position,afterVelocity,time);
@@ -32,15 +39,15 @@ export function returnCandidate(position,velocity,time,deltaV){
 
 // A bounded first search over one orbit. Refinement changes burn magnitude,
 // preserving the sampled orbital phase and the actual lunar orbital plane.
-export function searchLunarReturn(position,velocity,time,{targetPeriapsis=35000,phases=48,preparation=120}={}){
+export function searchLunarReturn(position:T.Vector3,velocity:T.Vector3,time:number,{targetPeriapsis=35000,phases=48,preparation=120}:LunarReturnOptions={}):LunarReturnSearch{
  if(!Number.isFinite(targetPeriapsis)||targetPeriapsis<10000||targetPeriapsis>=PLANET.atmosphereTop||!Number.isInteger(phases)||phases<8||phases>192||!Number.isFinite(preparation)||preparation<60)throw Error('帰還探索条件が不正です');
  const orbit=bodyOrbitState(position,velocity,time);
  if(orbit.bodyId!=='moon'||orbit.energy>=0||orbit.periapsis<1000||orbit.apoapsis+MOON.radius>=MOON.sphereOfInfluence)throw Error('月重力圏内の安全な周回軌道から計画してください');
- let best=null;
+ let best:ReturnCandidate|null=null;
  for(let phase=0;phase<phases;phase++){
   const delay=preparation+orbit.period*phase/phases,epoch=time+delay,at=coastDrift(position,velocity,time,delay),o=bodyOrbitState(at.position,at.velocity,epoch);
   const minimum=Math.sqrt(2*MOON.mu/o.r.length())-o.speed;
-  let prior=null;
+  let prior:ReturnCandidate|null=null;
   for(const excess of [5,20,50,100,175,275,400,600,900]){
    const candidate=returnCandidate(at.position,at.velocity,epoch,minimum+excess);
    if(candidate&&prior&&(candidate.exit.orbit.periapsis-targetPeriapsis)*(prior.exit.orbit.periapsis-targetPeriapsis)<=0){
@@ -58,8 +65,8 @@ export function searchLunarReturn(position,velocity,time,{targetPeriapsis=35000,
 
 // Ideal aligned finite burn using the same active fuel network and gravity.
 // This bounds the usefulness of the impulsive search before offering a plan.
-export function predictReturnBurn(vessel,plan){
- const fuel=new Map<any,any>(vessel.fuel),direction=plan.impulse.clone().normalize(),start=plan.time-plan.burn.duration/2;
+export function predictReturnBurn(vessel:LunarReturnVessel,plan:Pick<LunarReturnPlan,'impulse'|'time'|'burn'|'deltaV'>):FiniteReturnBurn|null{
+ const fuel=new Map<string,number>(vessel.fuel),direction=plan.impulse.clone().normalize(),start=plan.time-plan.burn.duration/2;
  const at=coastDrift(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,start-vessel.universalTime);
  let pos=at.position,vel=at.velocity,time=start,mass=vessel.stats.mass,remaining=plan.deltaV;
  for(let i=0;i<144000&&remaining>=.5;i++){
@@ -73,11 +80,11 @@ export function predictReturnBurn(vessel,plan){
  const exit=lunarEscape(pos,vel,time);return exit?{exit,duration:time-start,remainingFuel:[...fuel.values()].reduce((a,b)=>a+b,0)}:null;
 }
 
-export function lunarReturnPlan(vessel,options={}){
+export function lunarReturnPlan(vessel:LunarReturnVessel,options:LunarReturnOptions={}):LunarReturnPlan{
  if(vessel.throttle!==0)throw Error('噴射を停止してから帰還計画を作成してください');
  // Check the propulsion configuration before spending work on a search.
  captureBurnEstimate(vessel,1);
- const plan=searchLunarReturn(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,options);
+ const plan=searchLunarReturn(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,options) as LunarReturnPlan;
  plan.burn=captureBurnEstimate(vessel,plan.deltaV);plan.startTime=plan.time-plan.burn.duration/2;plan.warnings=[];
  if(!plan.burn.enough)plan.warnings.push('現在の点火段では推進剤が不足しています');
  if(plan.startTime-vessel.universalTime<60)plan.warnings.push('姿勢調整の60秒を確保できません');
@@ -88,8 +95,8 @@ export function lunarReturnPlan(vessel,options={}){
  plan.ready=plan.warnings.length===0;return plan;
 }
 
-export function lunarReturnNode(plan,vessel){
+export function lunarReturnNode(plan:LunarReturnPlan,vessel:Pick<LunarCaptureVessel,'universalTime'|'time'>):import('./maneuver-node.js').ManeuverNodeRecord{
  if(!plan.ready)throw Error(plan.warnings.join(' / '));
  if(plan.plannedAt!==vessel.universalTime)throw Error('時刻が進んだため帰還案を再計算してください');
- return {universalTime:plan.startTime,time:vessel.time+plan.startTime-vessel.universalTime,position:plan.position.toArray(),velocity:plan.afterVelocity.toArray(),impulse:plan.impulse.toArray(),remaining:plan.impulse.toArray(),complete:false,returnPlan:{targetPeriapsis:plan.targetPeriapsis,midTime:plan.time,duration:plan.burn.duration,deltaV:plan.deltaV,predictedPeriapsis:plan.finite.exit.orbit.periapsis,exitTime:plan.finite.exit.time}};
+ return {universalTime:plan.startTime,time:vessel.time+plan.startTime-vessel.universalTime,position:plan.position.toArray(),velocity:plan.afterVelocity.toArray(),impulse:plan.impulse.toArray(),remaining:plan.impulse.toArray(),complete:false,returnPlan:{targetPeriapsis:plan.targetPeriapsis,midTime:plan.time,duration:plan.burn.duration,deltaV:plan.deltaV,predictedPeriapsis:plan.finite!.exit.orbit.periapsis,exitTime:plan.finite!.exit.time}};
 }

@@ -1,19 +1,24 @@
 import * as T from 'three';
-import {PARTS} from './catalog.js';
-import {partCenter,partRotation} from './aero.js';
+import {PARTS,type PartCatalog} from './catalog.js';
+import {partCenter,partRotation,type AeroPart} from './aero.js';
 import {bodyAltitude,bodyUp,relativeMotion} from './celestial.js';
 import {surfaceAngularVelocity,surfaceVelocity} from './surface-frame.js';
 
 export const PHYSICS_MODEL='rotating-primary-v1';
-export function needsPhysicsMigration(record){return !!record&&(record.physicsModel===undefined||(record.detached||[]).some(needsPhysicsMigration));}
+/** A saved flight record (or one of its detached pieces) as far as migration detection reads it. */
+export interface PhysicsModelRecord{physicsModel?:unknown;detached?:readonly PhysicsModelRecord[]|null}
+/** The flight fields migrateLegacySurface reads and adjusts. */
+export interface MigratingFlight{pos:T.Vector3;q:T.Quaternion;vel:T.Vector3;omega:T.Vector3;universalTime:number;stats:{com:T.Vector3};parts:readonly AeroPart[]}
+export interface PhysicsMigrationSummary{surface:number;inertial:number}
+export function needsPhysicsMigration(record:PhysicsModelRecord|null|undefined):boolean{return !!record&&(record.physicsModel===undefined||(record.detached||[]).some(needsPhysicsMigration));}
 
 // Only call on a validated, independently loaded Flight after shared UT is
 // resolved. Preserve saved positions and inertial trajectories in space.
-export function migrateLegacySurface(v){
+export function migrateLegacySurface(v:MigratingFlight):boolean{
  const com=v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)),motion=relativeMotion(com,v.vel,v.universalTime);
  if(motion.body.id!=='planet')return false;
  const touching=v.parts.some(p=>{
-  const point=partCenter(p).applyQuaternion(v.q).add(v.pos),up=bodyUp(point,v.universalTime,motion.body),q=v.q.clone().multiply(partRotation(p)),size=PARTS[p.type].size;
+  const point=partCenter(p).applyQuaternion(v.q).add(v.pos),up=bodyUp(point,v.universalTime,motion.body),q=v.q.clone().multiply(partRotation(p)),size=(PARTS as PartCatalog)[p.type].size;
   const extent=[[1,0,0],[0,1,0],[0,0,1]].reduce((sum,axis,i)=>sum+Math.abs(new T.Vector3(...axis).applyQuaternion(q).dot(up))*size[i]/2,0);
   const height=bodyAltitude(point,v.universalTime,motion.body);
   return height-extent<.5&&height+extent>-.5;
@@ -22,7 +27,7 @@ export function migrateLegacySurface(v){
  v.vel.add(surfaceVelocity(com,v.universalTime,motion.body).sub(motion.bodyVelocity));
  v.omega.add(surfaceAngularVelocity(motion.body));return true;
 }
-export function physicsMigrationMessage(summary){
+export function physicsMigrationMessage(summary:PhysicsMigrationSummary|null|undefined):string{
  if(!summary)return '';
  return '自転対応へ保存を移行済み：地表で静止していた '+summary.surface+' 機は地表相対速度を維持、その他 '+summary.inertial+' 機は位置・慣性速度を維持しました。大気は地表と共に回転します。';
 }

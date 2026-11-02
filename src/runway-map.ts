@@ -1,18 +1,20 @@
-import {RUNWAY} from './runway-navigation.js';
+import {RUNWAY,type RunwayApproach,type RunwayTrack} from './runway-navigation.js';
 
+export interface MapPoint{x:number;y:number}
+export interface RunwayMapLayout{plane:MapPoint;threshold:MapPoint;far:MapPoint;scale:number;arrow:MapPoint|null}
 // Landing direction points up; threshold is (0,0), runway extends upward.
-export function runwayMapLayout(v){
+export function runwayMapLayout(v:RunwayApproach):RunwayMapLayout{
  const minX=Math.min(-1000,v.crossTrack),maxX=Math.max(1000,v.crossTrack);
  const minY=Math.min(-RUNWAY.length,v.remaining),maxY=Math.max(500,v.remaining);
  const scale=Math.min(192/(maxX-minX),112/(maxY-minY));
- const project=(x,y)=>({x:120+(x-(minX+maxX)/2)*scale,y:80+(y-(minY+maxY)/2)*scale});
+ const project=(x:number,y:number):MapPoint=>({x:120+(x-(minX+maxX)/2)*scale,y:80+(y-(minY+maxY)/2)*scale});
  const speed=v.track?Math.hypot(v.track.x,v.track.y):0;
  return {plane:project(v.crossTrack,v.remaining),threshold:project(0,0),far:project(0,-RUNWAY.length),scale,
-  arrow:speed>0?{x:v.track.x/speed*22,y:v.track.y/speed*22}:null};
+  arrow:speed>0?{x:(v.track as RunwayTrack).x/speed*22,y:(v.track as RunwayTrack).y/speed*22}:null};
 }
 
-export function drawRunwayMap(canvas,v,end){
- const c=canvas.getContext('2d');c.clearRect(0,0,240,160);c.fillStyle='#17242a';c.fillRect(0,0,240,160);
+export function drawRunwayMap(canvas:HTMLCanvasElement,v:RunwayApproach|null,end:string):void{
+ const c=canvas.getContext('2d') as CanvasRenderingContext2D;c.clearRect(0,0,240,160);c.fillStyle='#17242a';c.fillRect(0,0,240,160);
  if(!v){canvas.setAttribute('aria-label','滑走路平面図・母星の圏外');return;}
  const m=runwayMapLayout(v),a=m.threshold,b=m.far,p=m.plane;
  c.strokeStyle='#667c86';c.setLineDash([4,4]);c.beginPath();c.moveTo(a.x,12);c.lineTo(a.x,148);c.stroke();c.setLineDash([]);

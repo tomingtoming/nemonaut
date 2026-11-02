@@ -1,16 +1,21 @@
-import {cargoCollisionBoxes} from './cargo-geometry.js';
+import {cargoCollisionBoxes,type CargoBayDefinition} from './cargo-geometry.js';
 import * as T from 'three';
 import RAPIER from './physics.js';
-import {PARTS} from './catalog.js';
-import {partCenter,partRotation} from './aero.js';
+import {PARTS,type PartCatalog} from './catalog.js';
+import {partCenter,partRotation,type AeroPart} from './aero.js';
 
 // Box centers are relative to the part's mass center, in local part axes.
 // Volume-weighted geometry must preserve that center: statistics and free-flight
 // integration use the same center as Rapier.
-export function createPartColliders(world,body,part,mass){
- const d=PARTS[part.type],rotation=partRotation(part),center=partCenter(part);
- const boxes=d.cargoBay?cargoCollisionBoxes(d,part.cargoOpen):d.collisionBoxes;
- let pieces;
+/** The part fields createPartColliders reads (a catalog Part satisfies it). */
+export interface ColliderPart extends AeroPart{cargoOpen?:boolean}
+/** One Rapier collider of a part and its share of the part mass. */
+export interface PartCollider{weight:number;collider:import('./physics.js').Collider}
+interface ColliderPiece{shape:import('./physics.js').ColliderDesc;offset:T.Vector3;localRotation?:T.Quaternion;weight:number}
+export function createPartColliders(world:import('./physics.js').World,body:import('./physics.js').RigidBody,part:ColliderPart,mass:number):PartCollider[]{
+ const d=(PARTS as PartCatalog)[part.type],rotation=partRotation(part),center=partCenter(part);
+ const boxes=d.cargoBay?cargoCollisionBoxes(d as CargoBayDefinition,part.cargoOpen):d.collisionBoxes;
+ let pieces:ColliderPiece[];
  if(boxes){
   if(!Array.isArray(boxes)||!boxes.length)throw Error('Empty compound collider');
   let volume=0;const centroid=new T.Vector3();

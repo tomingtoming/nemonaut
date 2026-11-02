@@ -5,28 +5,35 @@ import {bodyUp,bodyAltitude,bodyGravity,referenceBody} from './celestial.js';
 import {compassFrame,compassHeading} from './navigation.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
 import {atmosphere} from './planet.js';
-import {PARTS} from './catalog.js';
-import {controlDeflection} from './aero.js';
-import {fuelNetworks,engineMaxThrust} from './resources.js';
+import {PARTS,type PartCatalog} from './catalog.js';
+import {controlDeflection,type ControlPart} from './aero.js';
+import {fuelNetworks,engineMaxThrust,type ResourcePart,type EngineSet} from './resources.js';
 const clamp=T.MathUtils.clamp,rad=Math.PI/180;
-export function cruiseSettings(value){
- if(!value||!['altitude','vertical'].includes(value.mode??'altitude')||!['speed','altitude','heading'].every(k=>Number.isFinite(value[k]))||value.speed<40||value.speed>350||value.altitude<300||value.altitude>15000||value.heading<0||value.heading>=360||!Number.isFinite(value.vertical??0)||Math.abs(value.vertical??0)>10)throw Error('巡航目標の範囲を確認してください');
- return {speed:value.speed,altitude:value.altitude,heading:value.heading,mode:value.mode??'altitude',vertical:value.vertical??0};
+export type CruiseSettingsInput={speed:number;altitude:number;heading:number;mode?:string;vertical?:number};
+export interface CruiseSettings{speed:number;altitude:number;heading:number;mode:string;vertical:number}
+export type CruisePart=ControlPart&ResourcePart;
+export interface CruiseStats{mass:number;com:T.Vector3;aero:{weight:number}}
+export interface CruiseFlight{pos:T.Vector3;vel:T.Vector3;q:T.Quaternion;universalTime:number;stats:CruiseStats;parts:CruisePart[];crashed?:boolean;rocketAxes?:boolean;started?:boolean;telemetry:{contacts?:number};fuel:ReadonlyMap<string,number>;active:EngineSet;vesselId:string;sas:boolean;sasMode:string;trim:number;throttle:number;holdQ?:T.Quaternion}
+export interface CruisePrevious{sas:boolean;sasMode:string;trim:number}
+export interface CruiseTelemetry{height:number;speed:number;vertical:number;heading:number;pitch:number;bank:number;throttle:number;liftAngle:number;liftMargin:number}
+export function cruiseSettings(value:Partial<CruiseSettingsInput>|null|undefined):CruiseSettings{
+ if(!value||!['altitude','vertical'].includes(value.mode??'altitude')||!(['speed','altitude','heading'] as const).every(k=>Number.isFinite(value[k]))||value.speed!<40||value.speed!>350||value.altitude!<300||value.altitude!>15000||value.heading!<0||value.heading!>=360||!Number.isFinite(value.vertical??0)||Math.abs(value.vertical??0)>10)throw Error('巡航目標の範囲を確認してください');
+ return {speed:value.speed!,altitude:value.altitude!,heading:value.heading!,mode:value.mode??'altitude',vertical:value.vertical??0};
 }
 // Conservative pre-stall estimate at the requested altitude, including a
 // 20-degree bank. This is an admission check, not a certified stall speed.
-export function cruiseTargetReadiness(f,target){
+export function cruiseTargetReadiness(f:Pick<CruiseFlight,'pos'|'universalTime'|'stats'>,target:CruiseSettings):string|null{
  const height=Math.max(bodyAltitude(f.pos,f.universalTime),target.mode==='vertical'?0:target.altitude);
  const density=atmosphere(height).density,area=f.stats.aero.weight;
  const minimum=Math.sqrt(2*f.stats.mass*bodyGravity(f.pos,f.universalTime).length()/(density*area*4.5*(12*rad)*Math.cos(20*rad)));
  return !Number.isFinite(minimum)||target.speed<minimum?'巡航速度不足 · 目安 '+(Number.isFinite(minimum)?Math.ceil(minimum)+' m/s以上':'大気・翼面積を確認'):null;
 }
-export function cruiseAuthority(f){
- if(!f||f.crashed||f.rocketAxes||!f.parts.some(p=>PARTS[p.type].aircraftControl))return '航空機の制御装置が必要';
- if(!['pitch','roll'].every(name=>f.parts.some(p=>PARTS[p.type].controlAxis&&Math.abs(controlDeflection(p,f.stats.com,{[name]:1}))>1e-6)))return '昇降舵・補助翼の制御が必要';
+export function cruiseAuthority(f:CruiseFlight|null|undefined):string|null{
+ if(!f||f.crashed||f.rocketAxes||!f.parts.some(p=>(PARTS as PartCatalog)[p.type].aircraftControl))return '航空機の制御装置が必要';
+ if(!['pitch','roll'].every(name=>f.parts.some(p=>(PARTS as PartCatalog)[p.type].controlAxis&&Math.abs(controlDeflection(p,f.stats.com,{[name]:1}))>1e-6)))return '昇降舵・補助翼の制御が必要';
  return null;
 }
-export function cruiseReadiness(f){
+export function cruiseReadiness(f:CruiseFlight):string|null{
  const authority=cruiseAuthority(f);if(authority)return authority;
  const up=bodyUp(f.pos,f.universalTime),forward=new T.Vector3(0,0,1).applyQuaternion(f.q),top=new T.Vector3(0,1,0).applyQuaternion(f.q);
  if(referenceBody(f.pos,f.universalTime).id!=='planet')return '大気圏内の巡航用';
@@ -35,24 +42,24 @@ export function cruiseReadiness(f){
  if(v.length()<40||Math.abs(vertical)>15||top.dot(up)<.75||pitch < -10||pitch>30)return '姿勢と昇降率を安定させてください';
  return cruisePropulsion(f);
 }
-export function cruisePropulsion(f){
- if(!fuelNetworks(f.parts).groups.some(g=>g.tanks.some(p=>(f.fuel.get(p.id)||0)>0)&&g.engines.some(p=>PARTS[p.type].air&&f.active.has(p.id)&&engineMaxThrust(p)>0)))return '点火済みの航空エンジンと燃料供給が必要';
+export function cruisePropulsion(f:CruiseFlight):string|null{
+ if(!fuelNetworks(f.parts).groups.some(g=>g.tanks.some(p=>(f.fuel.get(p.id)||0)>0)&&g.engines.some(p=>(PARTS as PartCatalog)[p.type].air&&f.active.has(p.id)&&engineMaxThrust(p)>0)))return '点火済みの航空エンジンと燃料供給が必要';
  return null;
 }
 export class CruisePilot{
- declare duration:any;declare elapsed:any;declare faultMessage:any;declare owner:any;declare pitchBias:any;declare powerBias:any;declare previous:any;declare reason:any;declare running:any;declare settled:any;declare status:any;declare target:any;declare telemetry:any;
- constructor(f,settings={speed:90,altitude:1000,heading:90}){
+ declare duration:number;declare elapsed:number;declare faultMessage:string|undefined;declare owner:string;declare pitchBias:number;declare powerBias:number;declare previous:CruisePrevious;declare reason:string|undefined;declare running:boolean;declare settled:number;declare status:string;declare target:CruiseSettings;declare telemetry:CruiseTelemetry|undefined;
+ constructor(f:CruiseFlight,settings:CruiseSettingsInput={speed:90,altitude:1000,heading:90}){
   const {speed,altitude,heading,mode,vertical}=cruiseSettings(settings);
   if(!f.parts.length||!(f.stats.mass>0))throw Error('Empty aircraft');
   this.target={speed,altitude,heading,mode,vertical};this.owner=f.vesselId;this.running=true;this.status='捕捉中';this.duration=0;this.settled=0;
   this.previous={sas:f.sas,sasMode:f.sasMode,trim:f.trim};
   this.pitchBias=0;this.powerBias=f.throttle;this.elapsed=.1;
  }
- stop(f,reason='manual'){
+ stop(f:CruiseFlight,reason='manual'):void{
   this.running=false;this.reason=reason;
   if(f.vesselId===this.owner){Object.assign(f,this.previous);f.holdQ=f.q.clone();if(reason==='fault')f.throttle=0;}
  }
- update(f,dt,{manual=false}={}){
+ update(f:CruiseFlight,dt:number,{manual=false}:{manual?:boolean}={}):void{
   if(!this.running)return;
   if(f.vesselId!==this.owner){this.running=false;this.reason='vessel changed';return;}
   if(manual){this.stop(f);return;}
