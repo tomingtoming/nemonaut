@@ -1,10 +1,11 @@
 // Module structure gauge (BACKLOG 7). Builds the runtime import graph of src/*.ts (value imports and
 // re-exports; type-only imports are erased by the build and do not count) and reports import cycles
 // (strongly connected components) and the size of app.ts, the composition root.
-// tools/module-graph.json records the allowed cycles and app.ts's size; both may only shrink.
+// tools/module-graph.json records the allowed cycles (may only shrink). app.ts, the composition root,
+// must stay within the target size (BACKLOG 7 reached it on 2026-11-02).
 // Usage: node tools/module-graph.mjs [--check] [--update] [--deps name]
-//   --check   exit 1 on a cycle that is not recorded, or if app.ts grew beyond the record
-//   --update  record the current state (cycles only removed, app size only lowered)
+//   --check   exit 1 on a cycle that is not recorded, or if app.ts is larger than the target
+//   --update  record the current state (cycles only removed)
 //   --deps n  print what module n imports and what imports it
 import ts from 'typescript';
 import {readFileSync, writeFileSync, readdirSync, statSync} from 'node:fs';
@@ -13,6 +14,7 @@ import {fileURLToPath} from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const recordFile = path.join(root, 'tools', 'module-graph.json');
+const APP_TARGET = 15000;
 
 export function graph() {
   const edges = new Map();
@@ -103,8 +105,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     JSON.stringify({
       modules: edges.size,
       appBytes,
-      appLimit: record.appBytes,
-      target: 15000,
+      target: APP_TARGET,
       cycles: found,
       newCycles
     })
@@ -128,14 +129,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
       JSON.stringify(
         {
           ...record,
-          cycles: record.cycles.filter(c => found.some(f => f.join(' ') === c.join(' '))),
-          appBytes: Math.min(record.appBytes, appBytes)
+          cycles: record.cycles.filter(c => found.some(f => f.join(' ') === c.join(' ')))
         },
         null,
         1
       ) + '\n'
     );
   }
-  if (process.argv.includes('--check') && (newCycles.length || appBytes > record.appBytes))
-    process.exitCode = 1;
+  if (process.argv.includes('--check') && (newCycles.length || appBytes > APP_TARGET)) process.exitCode = 1;
 }

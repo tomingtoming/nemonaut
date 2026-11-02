@@ -353,3 +353,4 @@ body.flying:has(#flightMenu[open]) #panelDock{visibility:hidden}
 
 #failureLog{flex-basis:100%;font:11px monospace}#failureLog summary{cursor:pointer;padding:5px 0}#failureLog ol{margin:0;padding:0 0 0 18px;max-height:160px;overflow:auto}#failureLog li{padding:4px 0;overflow-wrap:anywhere}
 .centerFirstSteps{margin:14px 0 18px;padding:14px 16px;border:1px solid #ffc18a;border-radius:8px;background:#22343a}.centerFirstSteps h2{font-size:15px;font-weight:600;margin:0;color:#ffc18a}.centerFirstSteps .centerGuide{margin:12px 0}.centerFirstSteps button{width:100%}
+body.touch button,body.touch select,body.touch input,body.touch summary,body.touch label{touch-action:manipulation;-webkit-tap-highlight-color:transparent}body.touch input:not([type=range]):not([type=checkbox]),body.touch select,body.touch textarea{font-size:16px}

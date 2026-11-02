@@ -1,4 +1,5 @@
 import './storage-migration.js';
+import {watchTouchDevice} from './touch-device.js';
 import {mountFailureLog} from './failure-feedback.js';
 import {FailureVisuals} from './failure-visuals.js';
 import './orbital-ascent-panel.js'; // keeps the module evaluation order (mounted in flight-panels)
@@ -97,6 +98,8 @@ wireHooks({
   updateWorkshop,
   renderInterferences
 });
+// Touch devices get body.touch (touch controls and layout); a mouse keeps the desktop layout.
+watchTouchDevice();
 // English display rewrites text through dist/i18n/en.json; Japanese changes nothing.
 await installTranslation();
 for (const id of ['language', 'centerLanguage']) {
