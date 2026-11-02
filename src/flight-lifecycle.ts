@@ -226,7 +226,12 @@ export function endFlight() {
 export function stage() {
   if (!state.flight || !canControl(state.flight)) return;
   const firstStage = !state.flight.started,
-    removed = state.flight.stageNext();
+    removed = state.flight.stageNext(),
+    hint = ignitionHint({
+      firstStage,
+      throttle: state.flight.throttle,
+      touch: document.body.classList.contains('touch')
+    });
   gameAudio().play('stage');
   updateFlightControls(document, state.flight);
   for (const id of removed) {
@@ -235,9 +240,7 @@ export function stage() {
   }
   notify(
     `ステージ ${String(state.flight.stage).padStart(2, '0')} 実行${removed.size ? ' / ' + removed.size + ' 部品分離' : ''}` +
-      (ignitionHint({firstStage, throttle: state.flight.throttle})
-        ? ' · ' + ignitionHint({firstStage, throttle: state.flight.throttle})
-        : '')
+      (hint ? ' · ' + hint : '')
   );
   $('#brake', 'button').classList.toggle('active', state.flight.brake);
   $('#brake', 'button').textContent = 'BRAKE ' + (state.flight.brake ? 'ON' : 'OFF');

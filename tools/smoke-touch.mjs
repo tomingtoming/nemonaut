@@ -47,10 +47,68 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   await page.tap('#launch');
   await page.waitForTimeout(6000);
   await shot('flight');
-  await page.tap('#stage');
+  // Flight controls (8b): stage, full throttle and the stick feed the keyboard's held-key path.
+  const controls = await page.evaluate(() => {
+    const visible = e => !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0;
+    const stage = document.getElementById('stage'),
+      box = stage?.getBoundingClientRect(),
+      top = box && document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    return {
+      pad: visible(document.getElementById('touchFlight')),
+      stick: visible(document.getElementById('touchStick')),
+      stageReachable: !!top && !!stage?.contains(top)
+    };
+  });
+  expect(`${tag} touch flight controls shown`, controls.pad && controls.stick, JSON.stringify(controls));
+  expect(`${tag} #stage still reachable`, controls.stageReachable, controls.stageReachable);
+  await page.tap('#touchFlight button[data-code=Space]');
   await page.waitForTimeout(1500);
   const toast = await page.evaluate(() => document.getElementById('toast')?.textContent ?? '');
-  expect(`${tag} stage by tap`, /ステージ|Stage/.test(toast), toast);
+  expect(`${tag} stage by touch button`, /ステージ|Stage/.test(toast), toast);
+  expect(`${tag} ignition hint without keys`, /「全推力」/.test(toast) && !/Zで/.test(toast), toast);
+  const readout = () =>
+    page.evaluate(() => ({
+      alt: Number(document.getElementById('alt')?.textContent?.replace(/[^0-9.-]/g, '')),
+      unit: document.getElementById('alt')?.nextElementSibling?.textContent ?? '',
+      attitude: document.getElementById('navPitch')?.textContent ?? '',
+      held: document.getElementById('touchFlight')?.dataset.held ?? '',
+      throttle: document.getElementById('throttleVal')?.textContent ?? ''
+    }));
+  const before = await readout();
+  await page.tap('#touchFlight button[data-code=KeyZ]');
+  await page.waitForTimeout(4000);
+  const climbing = await readout();
+  expect(`${tag} full throttle by tap`, climbing.throttle === '100%', climbing.throttle);
+  const meters = r => r.alt * (r.unit.trim() === 'km' ? 1000 : 1);
+  expect(
+    `${tag} altitude increases`,
+    meters(climbing) > meters(before) + 5,
+    `${before.alt} -> ${climbing.alt}`
+  );
+  // Drag the stick up (W, pitch) with a real touch through CDP and hold it.
+  const stick = await page.locator('#touchStick').boundingBox();
+  const cdp = await context.newCDPSession(page);
+  const cx = stick.x + stick.width / 2,
+    cy = stick.y + stick.height / 2;
+  const touch = (type, x, y) =>
+    cdp.send('Input.dispatchTouchEvent', {type, touchPoints: type === 'touchEnd' ? [] : [{x, y, id: 1}]});
+  await touch('touchStart', cx, cy);
+  for (let i = 1; i <= 5; i++) await touch('touchMove', cx + i, cy - i * 10);
+  await page.waitForTimeout(400);
+  const holding = await readout();
+  await page.waitForTimeout(2000);
+  const turned = await readout();
+  await shot('flight-stick');
+  await touch('touchEnd', cx, cy - 50);
+  await page.waitForTimeout(300);
+  const released = await readout();
+  expect(`${tag} stick holds W`, holding.held === 'KeyW', holding.held);
+  expect(
+    `${tag} attitude changes with the stick`,
+    turned.attitude !== climbing.attitude,
+    `${climbing.attitude} -> ${turned.attitude}`
+  );
+  expect(`${tag} stick released`, released.held === '', JSON.stringify(released.held));
   l = await layout();
   expect(`${tag} flight no overflow`, !l.overflow, l.overflow);
   expect(`${tag} console errors`, errors.length === 0, errors.length ? errors.slice(0, 3).join(' | ') : 0);

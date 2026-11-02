@@ -9,8 +9,18 @@ export function isFirstVisit({historyCount = 0, vesselCount = 0, designCount = 0
   return !historyCount && !vesselCount && !designCount;
 }
 // The first ignition with the throttle at 0 lights the engines without thrust, so nothing seems to happen.
-export function ignitionHint({firstStage, throttle}: {firstStage: boolean; throttle: number}): string {
-  return firstStage && throttle === 0 ? 'スロットル0%です。Zで全開、Xで停止' : '';
+// On touch the hint names the on-screen buttons (touch-flight.ts) instead of the keys.
+export function ignitionHint({
+  firstStage,
+  throttle,
+  touch = false
+}: {
+  firstStage: boolean;
+  throttle: number;
+  touch?: boolean;
+}): string {
+  if (!firstStage || throttle !== 0) return '';
+  return touch ? 'スロットル0%です。「全推力」で全開、「推力0」で停止' : 'スロットル0%です。Zで全開、Xで停止';
 }
 export function renderFirstSteps(
   host: HTMLElement,

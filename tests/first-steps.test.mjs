@@ -19,3 +19,9 @@ test('the first ignition at zero throttle says how to throttle up', () => {
     'later stages at zero throttle are normal (planned burns)'
   );
 });
+test('on touch the ignition hint names the on-screen buttons, not keys', () => {
+  const hint = ignitionHint({firstStage: true, throttle: 0, touch: true});
+  assert.doesNotMatch(hint, /Z|X/);
+  assert.match(hint, /全推力/);
+  assert.equal(ignitionHint({firstStage: true, throttle: 1, touch: true}), '');
+});
