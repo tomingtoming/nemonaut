@@ -21,5 +21,5 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Build dist (copy src, generate the bundles)
         run: npm run build
-      - name: Type check (strict tsc, no explicit any, no ts-ignore)
+      - name: Type check (strict tsc, no explicit any or ts-ignore, assertion counts only go down)
         run: npm run typecheck

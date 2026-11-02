@@ -1,0 +1,729 @@
+{
+ "note": "Recorded counts per src module (only go down) and the boundary modules allowed to keep type assertions. See tools/type-precision.mjs.",
+ "boundary": [
+  "game-storage",
+  "physics"
+ ],
+ "counts": {
+  "aero": {
+   "nonNull": 0,
+   "as": 11
+  },
+  "angular-momentum": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "app": {
+   "nonNull": 248,
+   "as": 212
+  },
+  "app-id": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "ascent-panel": {
+   "nonNull": 6,
+   "as": 1
+  },
+  "assembly-branch": {
+   "nonNull": 6,
+   "as": 5
+  },
+  "assembly-interference": {
+   "nonNull": 0,
+   "as": 2
+  },
+  "attachment-nodes": {
+   "nonNull": 8,
+   "as": 0
+  },
+  "body-drag": {
+   "nonNull": 1,
+   "as": 4
+  },
+  "buoyancy": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "buoyancy-panel": {
+   "nonNull": 4,
+   "as": 1
+  },
+  "burn-schedule": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "camera-up": {
+   "nonNull": 0,
+   "as": 4
+  },
+  "capture-panel": {
+   "nonNull": 17,
+   "as": 2
+  },
+  "cargo-access": {
+   "nonNull": 1,
+   "as": 2
+  },
+  "cargo-geometry": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "cargo-parts": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "catalog": {
+   "nonNull": 8,
+   "as": 6
+  },
+  "celestial": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "center-facilities": {
+   "nonNull": 2,
+   "as": 1
+  },
+  "closest-approach": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "coast-flight": {
+   "nonNull": 0,
+   "as": 17
+  },
+  "coast-orbit": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "core": {
+   "nonNull": 8,
+   "as": 53
+  },
+  "cruise-panel": {
+   "nonNull": 45,
+   "as": 17
+  },
+  "cruise-pilot": {
+   "nonNull": 9,
+   "as": 3
+  },
+  "delivery-panel": {
+   "nonNull": 17,
+   "as": 24
+  },
+  "delivery-sites": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "delivery-station": {
+   "nonNull": 1,
+   "as": 2
+  },
+  "deorbit-plan": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "departure-mode": {
+   "nonNull": 4,
+   "as": 1
+  },
+  "departure-panel": {
+   "nonNull": 22,
+   "as": 2
+  },
+  "descent": {
+   "nonNull": 0,
+   "as": 2
+  },
+  "descent-panel": {
+   "nonNull": 16,
+   "as": 2
+  },
+  "design-diagnostics": {
+   "nonNull": 2,
+   "as": 9
+  },
+  "design-diagnostics-panel": {
+   "nonNull": 12,
+   "as": 10
+  },
+  "design-library": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "design-part-windows": {
+   "nonNull": 3,
+   "as": 3
+  },
+  "docking": {
+   "nonNull": 4,
+   "as": 6
+  },
+  "docking-autopilot": {
+   "nonNull": 0,
+   "as": 4
+  },
+  "docking-window": {
+   "nonNull": 6,
+   "as": 5
+  },
+  "engine-medium": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "engine-plume": {
+   "nonNull": 1,
+   "as": 0
+  },
+  "engine-shrouds": {
+   "nonNull": 4,
+   "as": 3
+  },
+  "examples": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "exploration-history": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "failure-events": {
+   "nonNull": 0,
+   "as": 7
+  },
+  "failure-feedback": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "failure-visuals": {
+   "nonNull": 0,
+   "as": 4
+  },
+  "finite-burn": {
+   "nonNull": 3,
+   "as": 5
+  },
+  "finite-burn-panel": {
+   "nonNull": 9,
+   "as": 5
+  },
+  "finite-return-plan": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "first-steps": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "fleet": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "flight-challenge-history": {
+   "nonNull": 1,
+   "as": 0
+  },
+  "flight-controls": {
+   "nonNull": 4,
+   "as": 4
+  },
+  "flight-input": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "flight-keyboard": {
+   "nonNull": 0,
+   "as": 4
+  },
+  "flight-layout": {
+   "nonNull": 18,
+   "as": 0
+  },
+  "flight-map": {
+   "nonNull": 49,
+   "as": 25
+  },
+  "flight-pause": {
+   "nonNull": 6,
+   "as": 0
+  },
+  "flight-save": {
+   "nonNull": 12,
+   "as": 16
+  },
+  "flight-scenery": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "floating-window": {
+   "nonNull": 0,
+   "as": 2
+  },
+  "fracture": {
+   "nonNull": 2,
+   "as": 4
+  },
+  "fuel-overlay": {
+   "nonNull": 2,
+   "as": 1
+  },
+  "fuel-transfer": {
+   "nonNull": 3,
+   "as": 6
+  },
+  "game-audio": {
+   "nonNull": 7,
+   "as": 9
+  },
+  "game-save": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "game-storage": {
+   "nonNull": 0,
+   "as": 2
+  },
+  "ground-rest": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "i18n": {
+   "nonNull": 0,
+   "as": 2
+  },
+  "ksp-layout": {
+   "nonNull": 28,
+   "as": 2
+  },
+  "lambert": {
+   "nonNull": 1,
+   "as": 0
+  },
+  "large-parts": {
+   "nonNull": 1,
+   "as": 0
+  },
+  "launch-clearance": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "launch-fleet": {
+   "nonNull": 0,
+   "as": 3
+  },
+  "launch-pilot": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "launch-plane": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "launch-provenance": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "launchpad-scenery": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "lunar-achievements": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "lunar-ascent": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "lunar-capture": {
+   "nonNull": 4,
+   "as": 3
+  },
+  "lunar-departure": {
+   "nonNull": 1,
+   "as": 2
+  },
+  "lunar-return": {
+   "nonNull": 3,
+   "as": 1
+  },
+  "lunar-transfer": {
+   "nonNull": 0,
+   "as": 2
+  },
+  "maneuver": {
+   "nonNull": 0,
+   "as": 5
+  },
+  "maneuver-controller.d": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "maneuver-controls": {
+   "nonNull": 0,
+   "as": 3
+  },
+  "maneuver-gizmo": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "maneuver-node": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "maneuver-panel": {
+   "nonNull": 22,
+   "as": 4
+  },
+  "maneuver-stop": {
+   "nonNull": 17,
+   "as": 0
+  },
+  "maneuver-thrust-profile": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "maneuver-warp": {
+   "nonNull": 2,
+   "as": 0
+  },
+  "manual-control-edit": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "map-bodies": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "map-site": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "map-throttle": {
+   "nonNull": 3,
+   "as": 4
+  },
+  "map-vessels": {
+   "nonNull": 1,
+   "as": 0
+  },
+  "navigation": {
+   "nonNull": 1,
+   "as": 2
+  },
+  "navigation-frame": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "observation": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "observation-quality": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "orbit-plan": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "orbit-view": {
+   "nonNull": 1,
+   "as": 1
+  },
+  "orbital-ascent-controller.d": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "orbital-ascent-panel": {
+   "nonNull": 9,
+   "as": 8
+  },
+  "orbital-ascent-settings": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "overlay-panels": {
+   "nonNull": 3,
+   "as": 2
+  },
+  "part-actions": {
+   "nonNull": 20,
+   "as": 11
+  },
+  "part-colliders": {
+   "nonNull": 0,
+   "as": 5
+  },
+  "part-settings": {
+   "nonNull": 0,
+   "as": 4
+  },
+  "part-windows": {
+   "nonNull": 24,
+   "as": 14
+  },
+  "physics": {
+   "nonNull": 0,
+   "as": 9
+  },
+  "physics-clock": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "physics-migration": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "placement-poses": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "planet": {
+   "nonNull": 1,
+   "as": 0
+  },
+  "port-navigation": {
+   "nonNull": 0,
+   "as": 2
+  },
+  "port-scope": {
+   "nonNull": 1,
+   "as": 0
+  },
+  "port-window": {
+   "nonNull": 2,
+   "as": 2
+  },
+  "power": {
+   "nonNull": 1,
+   "as": 6
+  },
+  "practice-session": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "precision-landing": {
+   "nonNull": 1,
+   "as": 2
+  },
+  "rcs": {
+   "nonNull": 2,
+   "as": 3
+  },
+  "recovery": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "relative-navigation": {
+   "nonNull": 2,
+   "as": 7
+  },
+  "relative-orbit-plane": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "relative-stop-plan": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "rendezvous-burn": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "rendezvous-practice": {
+   "nonNull": 3,
+   "as": 2
+  },
+  "rendezvous-transfer": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "resources": {
+   "nonNull": 11,
+   "as": 23
+  },
+  "return-panel": {
+   "nonNull": 28,
+   "as": 2
+  },
+  "return-pilot": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "runway-map": {
+   "nonNull": 0,
+   "as": 3
+  },
+  "runway-navigation": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "runway-panel": {
+   "nonNull": 9,
+   "as": 0
+  },
+  "runway-selection": {
+   "nonNull": 0,
+   "as": 2
+  },
+  "runway-wheel-track": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "sas-attitude": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "sas-trim": {
+   "nonNull": 10,
+   "as": 0
+  },
+  "separation-name": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "site-approach": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "site-marker": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "space-center": {
+   "nonNull": 0,
+   "as": 5
+  },
+  "stage-fuel": {
+   "nonNull": 3,
+   "as": 3
+  },
+  "stage-visibility": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "staging": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "staging-diagnostics": {
+   "nonNull": 1,
+   "as": 4
+  },
+  "staging-panel": {
+   "nonNull": 1,
+   "as": 5
+  },
+  "storage-migration": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "surface-delivery": {
+   "nonNull": 0,
+   "as": 3
+  },
+  "surface-frame": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "surface-survey": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "survey-markers": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "symmetry": {
+   "nonNull": 1,
+   "as": 3
+  },
+  "symmetry-geometry": {
+   "nonNull": 2,
+   "as": 0
+  },
+  "takeoff-controller.d": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "thermal": {
+   "nonNull": 0,
+   "as": 3
+  },
+  "thrust-overlay": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "timed-rendezvous": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "tracking": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "tracking-map": {
+   "nonNull": 0,
+   "as": 8
+  },
+  "tracking-orbits": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "trajectory": {
+   "nonNull": 3,
+   "as": 2
+  },
+  "trajectory-panel": {
+   "nonNull": 0,
+   "as": 11
+  },
+  "universal-time": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "vessel-collision": {
+   "nonNull": 5,
+   "as": 5
+  },
+  "vessel-recovery": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "workshop-layout": {
+   "nonNull": 1,
+   "as": 0
+  },
+  "workshop-symmetry": {
+   "nonNull": 0,
+   "as": 1
+  },
+  "workspace-save": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "world-history": {
+   "nonNull": 2,
+   "as": 3
+  },
+  "world-operations": {
+   "nonNull": 2,
+   "as": 0
+  },
+  "world-physics": {
+   "nonNull": 0,
+   "as": 0
+  },
+  "world-runtime": {
+   "nonNull": 1,
+   "as": 0
+  },
+  "world-save": {
+   "nonNull": 1,
+   "as": 2
+  }
+ }
+}
