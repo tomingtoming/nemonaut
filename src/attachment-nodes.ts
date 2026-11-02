@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {nodes,type Part,type PartAttachment} from './catalog.js';
+import {nodes,nodePoint,nodeAxis,type Part,type PartAttachment} from './catalog.js';
 /** The part fields node attachment reads (a catalog Part satisfies it). */
 export type NodePart=Pick<Part,'id'|'type'|'p'|'r'|'parent'|'attachment'>;
 /** A node-to-node joint: parent part id and the node index used on each side. */
@@ -13,7 +13,7 @@ const key=(id:string,node:number):string=>JSON.stringify([id,node]);
 export function nodePose(part:Pick<Part,'type'|'p'|'r'>,index:number):NodePose{
  const n=nodes(part.type)[index];if(!n)throw Error('接続点が見つかりません');
  const q=new T.Quaternion().setFromEuler(new T.Euler(...part.r));
- return {position:new T.Vector3(...n.slice(0,3)).applyQuaternion(q).add(new T.Vector3(...part.p)),normal:new T.Vector3(...n.slice(3)).applyQuaternion(q)};
+ return {position:new T.Vector3(...nodePoint(n)).applyQuaternion(q).add(new T.Vector3(...part.p)),normal:new T.Vector3(...nodeAxis(n)).applyQuaternion(q)};
 }
 function aligned(parent:NodePart,parentNode:number,child:NodePart,ownNode:number):boolean{const a=nodePose(parent,parentNode),b=nodePose(child,ownNode);return a.position.distanceToSquared(b.position)<1e-10&&a.normal.dot(b.normal)<-1+1e-6;}
 export function validateAttachments(parts:readonly NodePart[]):void{

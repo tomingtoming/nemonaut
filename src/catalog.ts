@@ -1,7 +1,7 @@
 import {installCargoParts} from './cargo-parts.js';
 import {installLargeParts} from './large-parts.js';
 /** Catalog entry: base parts below, large variants (large-parts.ts) and the cargo bay (cargo-parts.ts) are installed at load. */
-export type PartDefinition={name:string;code:string;cat:string;mass:number;size:number[];desc:string;fuel?:number;decoupler?:boolean;thrust?:number;isp?:number;ispSeaLevel?:number;gimbal?:number;gimbalPivot?:number[];battery?:number;landingLeg?:boolean;heatShield?:boolean;shieldRadius?:number;shieldNormal?:number[];ablator?:number;noseRadius?:number;maxTemperature?:number;docking?:boolean;dockFace?:number;monoprop?:number;rcsThrust?:number;rcsIsp?:number;control?:boolean;reactionTorque?:number;aircraftControl?:boolean;air?:boolean;water?:boolean;streamlinedNose?:boolean;rootWing?:boolean;wing?:number;ac?:number[];massCenter?:number[];chord?:number;model?:string;controlAxis?:PartControlAxis;maxDeflection?:number;hingeY?:number;wheel?:boolean;steer?:boolean;parachute?:number;solarPower?:number;volume?:number;ballast?:number;attachmentNodes?:number[][];cargoBay?:{wall:number};heatCapacity?:number;emissivity?:number;breakPressure?:number;collisionBoxes?:import('./cargo-geometry.js').CargoBox[]};
+export type PartDefinition={name:string;code:string;cat:string;mass:number;size:number[];desc:string;fuel?:number;decoupler?:boolean;thrust?:number;isp?:number;ispSeaLevel?:number;gimbal?:number;gimbalPivot?:number[];battery?:number;landingLeg?:boolean;heatShield?:boolean;shieldRadius?:number;shieldNormal?:number[];ablator?:number;noseRadius?:number;maxTemperature?:number;docking?:boolean;dockFace?:number;monoprop?:number;rcsThrust?:number;rcsIsp?:number;control?:boolean;reactionTorque?:number;aircraftControl?:boolean;air?:boolean;water?:boolean;streamlinedNose?:boolean;rootWing?:boolean;wing?:number;ac?:number[];massCenter?:number[];chord?:number;model?:string;controlAxis?:PartControlAxis;maxDeflection?:number;hingeY?:number;wheel?:boolean;steer?:boolean;parachute?:number;solarPower?:number;volume?:number;ballast?:number;attachmentNodes?:readonly AttachmentNode[];cargoBay?:{wall:number};heatCapacity?:number;emissivity?:number;breakPressure?:number;collisionBoxes?:import('./cargo-geometry.js').CargoBox[]};
 /** String-keyed view of PARTS, including the large and cargo parts installed at load. */
 export type PartCatalog=Record<string,PartDefinition>;
 export type PartControlAxis='auto'|'pitch'|'roll'|'yaw';
@@ -9,7 +9,10 @@ export type PartControlAxis='auto'|'pitch'|'roll'|'yaw';
 export type PartType=keyof typeof BASE_PARTS|keyof typeof import('./large-parts.js').LARGE_VARIANTS|'cargoBay';
 export type PartVector=[number,number,number];
 /** Attachment node [x,y,z,nx,ny,nz]; slice(0,3)/slice(3) give the position/normal triples. */
-export interface AttachmentNode extends Array<number>{slice(start:0,end:3):PartVector;slice(start:3,end?:6):PartVector;slice(start?:number,end?:number):number[]}
+export type AttachmentNode=readonly [number,number,number,number,number,number];
+/** Position and outward direction of an attachment node, in part coordinates. */
+export const nodePoint=(n:AttachmentNode):PartVector=>[n[0],n[1],n[2]];
+export const nodeAxis=(n:AttachmentNode):PartVector=>[n[3],n[4],n[5]];
 export interface PartAttachment{mode:'node'|'surface'|'free';parentNode?:number;ownNode?:number}
 /** A placed part as created by part() and passed around the workshop, saves and flight. */
 export interface Part{id:string;type:PartType;p:PartVector;r:PartVector;parent:string|null;stage:number;reactionEnabled?:boolean;steeringEnabled?:boolean;fuelEnabled?:boolean;gimbalEnabled?:boolean;driveEnabled?:boolean;controlEnabled?:boolean;dockPartner?:string;attachment?:PartAttachment;symmetryGroup?:string;symmetryFrame?:number[];cargoOpen?:boolean}
@@ -60,7 +63,7 @@ export const PARTS:PartCatalog=BASE_PARTS;
 installLargeParts(PARTS);
 installCargoParts(PARTS);
 export const CATEGORIES=['すべて','指令','燃料','推進','構造','空力','走行','装備','船舶'];
-export function nodes(type:PartType):AttachmentNode[]{const d=PARTS[type], [x,y,z]=d.size;if(d.attachmentNodes)return d.attachmentNodes.map(n=>[...n]) as AttachmentNode[];if(d.rootWing)return [[0,0,0,-1,0,0],[x,0,0,1,0,0]] as AttachmentNode[];return [[0,y/2,0,0,1,0],[0,-y/2,0,0,-1,0],[x/2,0,0,1,0,0],[-x/2,0,0,-1,0,0],[0,0,z/2,0,0,1],[0,0,-z/2,0,0,-1]] as AttachmentNode[];}
+export function nodes(type:PartType):AttachmentNode[]{const d=PARTS[type], [x,y,z]=d.size;if(d.attachmentNodes)return d.attachmentNodes.map(n=>[...n]);if(d.rootWing)return [[0,0,0,-1,0,0],[x,0,0,1,0,0]];return [[0,y/2,0,0,1,0],[0,-y/2,0,0,-1,0],[x/2,0,0,1,0,0],[-x/2,0,0,-1,0,0],[0,0,z/2,0,0,1],[0,0,-z/2,0,0,-1]];}
 export function part(type:PartType,p:PartVector=[0,0,0],r:PartVector=[0,0,0],parent:string|null=null,stage=0):Part{return {id:crypto.randomUUID(),type,p,r,parent,stage};}
 /** The preset part matching test (presets are fixed tables, so a miss is a broken preset). */
 function presetPart(a:readonly Part[],test:(p:Part)=>boolean):Part{const p=a.find(test);if(!p)throw Error('プリセットの部品が見つかりません');return p;}

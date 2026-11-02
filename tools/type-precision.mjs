@@ -1,10 +1,11 @@
 // Type precision gauge (BACKLOG 6). Counts, per src/*.ts, the claims the type checker cannot verify:
 // non-null assertions (`x!`) and type assertions (`x as T`, except `as const`). The goal is zero,
 // except for `as` in the boundary modules listed in tools/precision.json (where untyped data enters:
-// the Wasm exports, parsed save JSON, DOM lookups). tools/precision.json also records the current
-// count of every module; a module may only go down (a ratchet), so CI fails on a step back.
+// the Wasm exports, parsed save JSON, DOM lookups), whose recorded counts may only go down.
+// Everywhere else both counts must be zero (reached 2026-11-02, BACKLOG 6), so CI fails on any new claim.
 // Usage: node tools/type-precision.mjs [--check] [--update] [--files a,b]
-//   --check    exit 1 if a module exceeds its recorded counts
+//   --check    exit 1 if a module has a `!`, a non-boundary module has an `as`, or a boundary module
+//              exceeds its recorded `as` count
 //   --update   lower the recorded counts to the current ones (never raises them)
 import ts from 'typescript';
 import {readFileSync,writeFileSync,readdirSync} from 'node:fs';
@@ -38,15 +39,15 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
  for(const [name,f] of files){
   total.nonNull+=f.nonNull;total.as+=f.as;if(!boundary.has(name))total.asOutsideBoundary+=f.as;
   if(f.nonNull===0&&(f.as===0||boundary.has(name)))total.clean++;
-  const was=record.counts[name]??{nonNull:0,as:0};
-  if(f.nonNull>was.nonNull||f.as>was.as)worse.push({name,now:f,recorded:was});
+  const allowed=boundary.has(name)?record.counts[name]?.as??0:0;
+  if(f.nonNull>0||f.as>allowed)worse.push({name,now:f,allowedAs:allowed});
  }
  console.log(JSON.stringify({...total,worse}));
  const only=process.argv.indexOf('--files');
  if(only>0)for(const name of process.argv[only+1].split(',')){const f=files.get(name);console.log(f?`${name}\tnonNull ${f.nonNull}\tas ${f.as}${boundary.has(name)?' (boundary)':''}`:`${name}\tmissing`);}
  if(process.argv.includes('--update')){
   const counts={};
-  for(const [name,f] of [...files].sort(([a],[b])=>a<b?-1:1)){const was=record.counts[name];counts[name]=was?{nonNull:Math.min(was.nonNull,f.nonNull),as:Math.min(was.as,f.as)}:f;}
+  for(const [name,f] of [...files].sort(([a],[b])=>a<b?-1:1))if(boundary.has(name)){const was=record.counts[name];counts[name]={nonNull:0,as:was?Math.min(was.as,f.as):f.as};}
   writeFileSync(recordFile,JSON.stringify({...record,counts},null,1)+'\n');
  }
  if(process.argv.includes('--check')&&worse.length)process.exitCode=1;

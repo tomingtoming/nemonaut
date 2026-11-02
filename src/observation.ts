@@ -15,7 +15,9 @@ export interface ObservationSiteVessel{parts:readonly Pick<import('./catalog.js'
 /** The vessel fields observationReason and advanceObservations read. */
 export interface ObservationVessel extends DescentVessel,ObservationDemandVessel{crashed?:boolean;landed?:boolean}
 /** The vessel (live or saved world record) fields observationStatus reads. */
-export interface ObservationStatusVessel extends Omit<ObservationVessel,'thermal'|'observations'>{state?:{crashed?:boolean};thermal:Iterable<readonly [string,{failed:boolean}]>;observations?:Iterable<readonly [string,ObservationState]>|null;telemetry:{power?:Pick<import('./power.js').PowerReading,'ratio'|'eclipse'>|null}}
+// What the status needs before the pause check (saved world vessels too); live vessels are recognised at runtime below.
+export interface ObservationStatusVessel{state?:{crashed?:boolean}|null;crashed?:boolean;thermal?:Iterable<readonly [string,{failed?:boolean}]>|null;observations?:Iterable<readonly [string,ObservationState]>|null}
+type LiveObservationVessel=ObservationStatusVessel&ObservationVessel&{telemetry:{power?:Pick<import('./power.js').PowerReading,'ratio'|'eclipse'>|null}};
 export function createObservations(parts:readonly Pick<import('./catalog.js').Part,'id'|'type'>[]):ObservationMap{return new Map<string,ObservationState>(parts.filter(p=>p.type==='probe').map(p=>[p.id,{enabled:false,day:0,night:0}]));}
 export function observationDemand(v:ObservationDemandVessel,states:ReadonlyMap<string,ObservationState>=v.observations):number{return v.crashed?0:[...states].filter(([id,s])=>s.enabled&&!v.thermal.get(id)?.failed).length*OBSERVATION_POWER;}
 export function observationSite(v:ObservationSiteVessel,id:string):DeliverySite|null{const p=v.parts.find(p=>p.id===id);if(!p)return null;const point=new T.Vector3(...p.p).applyQuaternion(v.q).add(v.pos);return DELIVERY_SITES.find(site=>deliveryDistance(point,v.universalTime,site)<=site.radius)??null;}
@@ -41,9 +43,9 @@ export function advanceObservations(v:ObservationVessel,states:Map<string,Observ
 }
 
 // Past the paused check only a live vessel is read, whose thermal and observation states are Maps.
-function isLiveObservationVessel(v:ObservationStatusVessel):v is ObservationStatusVessel&ObservationVessel{return v.thermal instanceof Map&&v.observations instanceof Map;}
+function isLiveObservationVessel(v:ObservationStatusVessel):v is LiveObservationVessel{return v.thermal instanceof Map&&v.observations instanceof Map&&'telemetry' in v&&'stats' in v;}
 export function observationStatus(v:ObservationStatusVessel,id:string,{paused=false}:{paused?:boolean}={}):string{
- const state=v.state??v,thermal=new Map<string,{failed:boolean}>(v.thermal),observation=new Map<string,ObservationState>(v.observations??[]).get(id);
+ const state=v.state??v,thermal=new Map<string,{failed?:boolean}>(v.thermal??[]),observation=new Map<string,ObservationState>(v.observations??[]).get(id);
  if(state.crashed||thermal.get(id)?.failed)return '機体損傷';
  if(!observation)return '観測装置なし';
  if(!observation.enabled)return '停止中';
