@@ -1,14 +1,16 @@
-import {engineMaxThrust} from './resources.js';
+import {engineMaxThrust,type FuelNetworks} from './resources.js';
 import * as T from 'three';
-import {PARTS} from './catalog.js';
+import {PARTS,type Part,type PartCatalog} from './catalog.js';
 import {localUp,orbitState} from './planet.js';
 const Y=new T.Vector3(0,1,0);
+/** The flight fields LaunchPilot reads and the actuators it commands. */
+export interface LaunchPilotVessel{navigationAuto:boolean;navigationFrame:string;crashed?:boolean;started:boolean;stageNext():unknown;throttle:number;active:ReadonlySet<string>;parts:readonly Part[];networks:Pick<FuelNetworks<Part>,'network'>;fuel:ReadonlyMap<string,number>;stage:number;stats:{com:T.Vector3;mass:number};q:T.Quaternion;pos:T.Vector3;vel:T.Vector3;holdQ:T.Quaternion|null;sas:boolean;sasMode:string}
 // Optional demonstration pilot: commands the same throttle, staging and attitude actuators as the player.
 export class LaunchPilot{
- declare completionMessage:any;declare done:any;declare message:any;declare phase:any;
+ declare completionMessage:string;declare done:boolean;declare message:string;declare phase:string;
  constructor(){this.completionMessage='周回達成。実演を終了しました。月遷移計画を作成できます。';this.phase='離昇';this.done=false;this.message='自動実演：離昇';}
- update(f){f.navigationAuto=false;f.navigationFrame='orbit';if(this.done||f.crashed){f.throttle=0;return;}if(!f.started)f.stageNext();const active=[...f.active].filter(id=>f.parts.some(p=>p.id===id));if(active.length&&active.every(id=>{const g=f.networks.network.get(id);return !g||g.tanks.every(p=>(f.fuel.get(p.id)||0)<.001);})){f.throttle=0;const next=f.parts.filter(p=>PARTS[p.type].thrust&&p.stage>f.stage).map(p=>p.stage);if(!next.length){this.done=true;this.phase='燃料切れ';this.completionMessage='燃料切れのため自動実演を終了しました。軌道投入は未達です。';this.message=this.completionMessage;return;}f.stageNext();}
- const com=f.stats.com.clone().applyQuaternion(f.q).add(f.pos),o=orbitState(com,f.vel),up=localUp(com),tangent=new T.Vector3(0,0,1).addScaledVector(up,-up.z).normalize();if(f.vel.clone().addScaledVector(up,-o.vertical).length()>50)tangent.copy(f.vel).addScaledVector(up,-o.vertical).normalize();let angle;
+ update(f:LaunchPilotVessel):void{f.navigationAuto=false;f.navigationFrame='orbit';if(this.done||f.crashed){f.throttle=0;return;}if(!f.started)f.stageNext();const active=[...f.active].filter(id=>f.parts.some(p=>p.id===id));if(active.length&&active.every(id=>{const g=f.networks.network.get(id);return !g||g.tanks.every(p=>(f.fuel.get(p.id)||0)<.001);})){f.throttle=0;const next=f.parts.filter(p=>(PARTS as PartCatalog)[p.type].thrust&&p.stage>f.stage).map(p=>p.stage);if(!next.length){this.done=true;this.phase='燃料切れ';this.completionMessage='燃料切れのため自動実演を終了しました。軌道投入は未達です。';this.message=this.completionMessage;return;}f.stageNext();}
+ const com=f.stats.com.clone().applyQuaternion(f.q).add(f.pos),o=orbitState(com,f.vel),up=localUp(com),tangent=new T.Vector3(0,0,1).addScaledVector(up,-up.z).normalize();if(f.vel.clone().addScaledVector(up,-o.vertical).length()>50)tangent.copy(f.vel).addScaledVector(up,-o.vertical).normalize();let angle:number;
  if(o.altitude<35000){angle=T.MathUtils.clamp((o.altitude-800)/34200,0,1)*Math.PI/3;this.phase='重力ターン';}
  else{const thrust=f.parts.filter(p=>f.active.has(p.id)).reduce((s,p)=>s+engineMaxThrust(p),0),a=thrust/f.stats.mass,vt=f.vel.dot(tangent),target=T.MathUtils.clamp((90000-o.altitude)/50,-100,500),ar=(target-o.vertical)/12+o.gravity-vt*vt/o.radius;
  // Command acceleration, not full thrust: powerful boosters must stop adding

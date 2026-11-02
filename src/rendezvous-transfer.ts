@@ -1,13 +1,15 @@
 import {lambertArc} from './lambert.js';
 import {keplerDrift} from './coast-orbit.js';
-import {bodyOrbitState,bodyState,MOON} from './celestial.js';
+import {bodyOrbitState,bodyState,MOON,type OrbitState} from './celestial.js';
+export interface RendezvousTransferOptions{duration?:number|'auto';preparation?:number}
+export interface RendezvousTransfer{epoch:number;arrivalTime:number;duration:number;deltaV:number;distance:number;arrivalSpeed:number;components:import('./maneuver.js').ManeuverComponents;automatic?:boolean;burn?:undefined}
 
 // One departure impulse. Arrival braking is reported, never silently applied.
-export function rendezvousTransfer(own,target,{duration=600,preparation=120}:{duration?:any,preparation?:number}={}){
+export function rendezvousTransfer(own:OrbitState,target:OrbitState|null|undefined,{duration=600,preparation=120}:RendezvousTransferOptions={}):RendezvousTransfer{
  if(!target||own.bodyId!==target.bodyId||Math.abs(own.universalTime-target.universalTime)>1e-4)throw Error('同じ天体・時刻の目標を選んでください');
  if(duration==='auto'){
   if(!Number.isFinite(preparation)||preparation<60||preparation>600||preparation>own.period)throw Error('準備60〜600秒で指定してください');
-  let best=null;
+  let best:RendezvousTransfer|null=null;
   // Search a bounded set of safe zero-revolution arcs. Include arrival braking
   // in the ranking so a cheap departure does not hide an expensive encounter.
   for(let seconds=60;seconds<=7200;seconds+=60){
@@ -19,7 +21,7 @@ export function rendezvousTransfer(own,target,{duration=600,preparation=120}:{du
   return {...best,automatic:true};
  }
  if(!Number.isFinite(duration)||duration<60||duration>7200||!Number.isFinite(preparation)||preparation<60||preparation>600||preparation>own.period)throw Error('準備60〜600秒、飛行60〜7200秒で指定してください');
- const validate=o=>{if(!o.stable||o.normal.lengthSq()<.5||o.body.radius+o.apoapsis>=(o.body.sphereOfInfluence??MOON.orbitRadius-MOON.sphereOfInfluence))throw Error('大気や重力圏を横切らない周回軌道が必要です');};
+ const validate=(o:OrbitState)=>{if(!o.stable||o.normal.lengthSq()<.5||o.body.radius+o.apoapsis>=(o.body.sphereOfInfluence??MOON.orbitRadius-MOON.sphereOfInfluence))throw Error('大気や重力圏を横切らない周回軌道が必要です');};
  validate(own);validate(target);
  const epoch=own.universalTime+preparation,arrivalTime=epoch+duration;
  const departure=keplerDrift(own.r,own.relativeVelocity,own.body.mu,preparation),arrival=keplerDrift(target.r,target.relativeVelocity,target.body.mu,preparation+duration);

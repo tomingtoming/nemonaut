@@ -1,9 +1,10 @@
 import * as T from 'three';
-import {bodyUp,relativeMotion,MOON} from './celestial.js';
+import {bodyUp,relativeMotion,MOON,type OrbitState} from './celestial.js';
 import {attitudeTarget} from './navigation.js';
+export interface AscentAttitudeFlight{crashed?:boolean;rocketAxes?:unknown;pos:T.Vector3;vel:T.Vector3;q:T.Quaternion;stats:{com:T.Vector3};universalTime:number;sas:boolean;sasMode:string;holdQ?:T.Quaternion|null}
 
 // Commands only a SAS target. The installed actuators must rotate the craft.
-export function setAscentAttitude(f,pitch){
+export function setAscentAttitude(f:AscentAttitudeFlight,pitch:number):T.Vector3{
  if(!Number.isFinite(pitch)||pitch<0||pitch>90||f.crashed||!f.rocketAxes)throw Error('離陸姿勢を指定できません');
  const pos=f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),up=bodyUp(pos,f.universalTime);
  const horizontal=relativeMotion(pos,f.vel,f.universalTime).velocity;
@@ -14,4 +15,4 @@ export function setAscentAttitude(f,pitch){
  return target;
 }
 
-export function lunarOrbitReached(orbit){return !!orbit&&orbit.bodyId==='moon'&&orbit.energy<0&&orbit.periapsis>1000&&orbit.apoapsis+MOON.radius<MOON.sphereOfInfluence;}
+export function lunarOrbitReached(orbit:Pick<OrbitState,'bodyId'|'energy'|'periapsis'|'apoapsis'>|null|undefined):boolean{return !!orbit&&orbit.bodyId==='moon'&&orbit.energy<0&&orbit.periapsis>1000&&orbit.apoapsis+MOON.radius<MOON.sphereOfInfluence;}

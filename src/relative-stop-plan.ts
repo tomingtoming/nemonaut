@@ -1,8 +1,12 @@
 import {closestApproach} from './closest-approach.js';
 import {keplerDrift} from './coast-orbit.js';
+import type {OrbitState} from './celestial.js';
+import type {ManeuverComponents} from './maneuver.js';
+/** A single impulsive burn that cancels velocity relative to the target, now or at closest approach. */
+export interface RelativeStopPlan{location:'now'|{universalTime:number};time:number;deltaV:number;distance:number;components:ManeuverComponents}
 
 // A single burn on the current coast trajectory, not a second planned node.
-export function relativeStopPlan(own,target,when='closest'){
+export function relativeStopPlan(own:OrbitState,target:OrbitState|null|undefined,when:string='closest'):RelativeStopPlan{
  if(!['closest','now'].includes(when))throw Error('速度合わせの時点を選んでください');
  if(!target||own.bodyId!==target.bodyId||Math.abs(own.universalTime-target.universalTime)>1e-4||own.normal.lengthSq()<.5)throw Error('同じ天体・時刻の機体を選んでください');
  const encounter=when==='closest'?closestApproach(own,target,Math.min(21600,own.period)):null;

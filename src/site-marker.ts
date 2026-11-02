@@ -1,8 +1,8 @@
 import * as T from 'three';
 import {PRIMARY,bodyState} from './celestial.js';
-import {DELIVERY_SITE,deliverySitePosition} from './delivery-sites.js';
+import {DELIVERY_SITE,deliverySitePosition,type DeliverySite} from './delivery-sites.js';
 // A HUD beacon anchored three metres over the site; not a physical structure.
-export function projectDeliverySite(camera,time,width,height,site=DELIVERY_SITE){
+export function projectDeliverySite(camera:T.Camera,time:number,width:number,height:number,site:DeliverySite=DELIVERY_SITE):{x:number;y:number}|null{
  if(!(width>0&&height>0))return null;
  const center=bodyState(PRIMARY,time).position,ground=deliverySitePosition(time,site),point=ground.clone().addScaledVector(ground.clone().sub(center).normalize(),3);
  const origin=camera.getWorldPosition(new T.Vector3()),direction=point.clone().sub(origin),length=direction.length();

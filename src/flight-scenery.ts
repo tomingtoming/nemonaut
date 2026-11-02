@@ -63,9 +63,11 @@ export function surfaceMaterial(water=false){
  };material.customProgramCacheKey=()=>water?'water-surface-v2':'land-surface-v1';return material;
 }
 
+/** Sky dome shader uniforms shared with the atmosphere shell. */
+export interface SkyUniforms{waterDepth:T.IUniform<number>;sunDir:T.IUniform<T.Vector3>;up:T.IUniform<T.Vector3>;air:T.IUniform<number>;day:T.IUniform<number>}
 export class FlightScenery{
- declare shell:any;declare sky:any;declare stars:any;declare uniforms:any;declare waterFog:any;
- constructor(group){
+ declare shell:T.Mesh<T.SphereGeometry,T.ShaderMaterial>;declare sky:T.Mesh<T.SphereGeometry,T.ShaderMaterial>;declare stars:T.Points<T.BufferGeometry,T.PointsMaterial>;declare uniforms:SkyUniforms;declare waterFog:T.FogExp2;
+ constructor(group:T.Object3D){
   const planetarySun=new T.DirectionalLight(0xfff0d8,2.4);planetarySun.layers.set(1);planetarySun.position.copy(center).addScaledVector(SUN_DIRECTION,1000000);planetarySun.target.position.copy(center);group.add(planetarySun,planetarySun.target);
   const starlight=new T.AmbientLight(0x8ca5cc,.08);starlight.layers.set(1);group.add(starlight);
   this.waterFog=new T.FogExp2('#073a49',.012);
@@ -111,7 +113,7 @@ export class FlightScenery{
   shell.vertexShader=shell.vertexShader.replace(';#include',';\n#include');
   this.shell=new T.Mesh(new T.SphereGeometry(PLANET.radius+12000,128,64),shell);this.shell.position.copy(center);group.add(this.shell);
  }
- update(camera,time,light,ambient,materials,water=false){
+ update(camera:T.Camera,time:number,light:T.Light,ambient:T.Light,materials:Iterable<T.Material|null|undefined>,water=false):T.FogExp2|null{
   const radial=camera.position.clone().sub(center),alt=radial.length()-PLANET.radius,up=radial.normalize();
   const depth=water?Math.max(0,-alt):0;this.uniforms.waterDepth.value=depth;this.shell.visible=depth===0;
   const day=T.MathUtils.smoothstep(up.dot(SUN_DIRECTION),-.16,.18),air=Math.exp(-Math.max(0,alt)/16000);
