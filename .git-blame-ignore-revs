@@ -1,0 +1,3 @@
+# Formatting-only commits (git config blame.ignoreRevsFile .git-blame-ignore-revs)
+# Prettier over src, tools and tests (2026-11-02)
+81e326e02189ff5b64b4fa750d5c5083d624e634
