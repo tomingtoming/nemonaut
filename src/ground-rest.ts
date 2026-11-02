@@ -1,4 +1,4 @@
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {partCenter,type AeroPart} from './aero.js';
 import {referenceBody} from './celestial.js';
 import {surfaceRelativeVelocity,surfaceAngularVelocity} from './surface-frame.js';
@@ -11,6 +11,6 @@ export function isParked(v:ParkedVessel):boolean|undefined{
  const speed=surfaceRelativeVelocity(center(v),v.vel,v.universalTime,body).length(),spin=v.omega.clone().sub(surfaceAngularVelocity(body)).length();
  // Bound solver jitter at the outermost material point, not just COM. A long
  // vehicle must not qualify while its extremities sweep across the surface.
- const radius=v.parts.reduce((r,p)=>Math.max(r,partCenter(p).distanceTo(v.stats.com)+Math.hypot(...(PARTS as PartCatalog)[p.type].size)/2),0);
+ const radius=v.parts.reduce((r,p)=>Math.max(r,partCenter(p).distanceTo(v.stats.com)+Math.hypot(...PARTS[p.type].size)/2),0);
  return contact&&v.environment!=='water'&&speed<.1&&spin<.02&&speed+spin*radius<.2;
 }

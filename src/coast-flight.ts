@@ -3,7 +3,7 @@ import {observationDemand,advanceObservations,type ObservationVessel,type Observ
 import {frozenSurfaceState,surfaceRelativeVelocity,surfaceAngularVelocity,surfaceOrientation,surfaceVelocity,type FrozenSurfaceSubject,type FrozenSurfaceState} from './surface-frame.js';
 import {pendingBurns,type BurnScheduleVessel} from './burn-schedule.js';
 import * as T from 'three';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {isParked,type ParkedVessel} from './ground-rest.js';
 export {isParked} from './ground-rest.js';
 import {fleet,type FleetNode} from './fleet.js';
@@ -33,7 +33,7 @@ export function coolVacuum(parts:readonly {id:string;type:string}[],states:Reado
 export function coolStationary(parts:readonly {id:string;type:string}[],states:ReadonlyMap<string,Pick<ThermalState,'temperature'>>,dt:number,air:{density:number;temperature:number}):void{
  if(!Number.isFinite(dt)||dt<=0)throw Error('冷却時間が不正です');
  for(const p of parts){
-  const d=(PARTS as PartCatalog)[p.type],s=states.get(p.id),[x,y,z]=d.size;
+  const d=PARTS[p.type],s=states.get(p.id),[x,y,z]=d.size;
   if(!s||!Number.isFinite(s.temperature)||s.temperature<3)throw Error('真空冷却の温度が不正です');
   const surface=2*(x*y+y*z+z*x),capacity=Math.max(1,d.mass)*(d.heatCapacity||THERMAL.heatCapacity);
   const k=(d.emissivity||THERMAL.emissivity)*THERMAL.sigma*surface/capacity,convection=air.density*10*surface/capacity,ambient=air.density>1e-9?air.temperature:3;
@@ -61,7 +61,7 @@ export function coastSurfaceMargin(v:CoastMarginVessel):number{
 }
 
 function blocker(reason:string,v:CoastVessel,code:string|null=null,other:CoastVessel|null=null):CoastBlocker{
- const anchor:(x:CoastVessel)=>string|null=x=>(x.parts.find(p=>(PARTS as PartCatalog)[p.type].control)||x.parts[0])?.id??null;
+ const anchor:(x:CoastVessel)=>string|null=x=>(x.parts.find(p=>PARTS[p.type].control)||x.parts[0])?.id??null;
  const scheduled=pendingBurns(v)[0]?.time??null;
  return {reason,code,vesselId:anchor(v),vesselName:v.vesselName||'名称未設定の機体',otherVesselId:other?anchor(other):null,otherVesselName:other?.vesselName||null,overdue:code==='maneuver'&&scheduled!==null&&scheduled<v.universalTime,scheduledTime:code==='maneuver'?scheduled:null};
 }
@@ -70,7 +70,7 @@ function throttleBlocksCoast(v:CoastVessel,active:CoastVessel):boolean{
  if(v.throttle===0)return false;
  // Keep the pilot's cutoff requirement. Only inert, uncontrolled debris may
  // retain an inherited throttle setting; wheels and marine drives need physics.
- if(v===active||v.parts.some(p=>(PARTS as PartCatalog)[p.type].control||p.type==='wheel'||(PARTS as PartCatalog)[p.type].water))return true;
+ if(v===active||v.parts.some(p=>PARTS[p.type].control||p.type==='wheel'||PARTS[p.type].water))return true;
  // Sample on a copy, with sea-level air as a conservative jet bound. A jet
  // currently in vacuum must not become powered unnoticed on atmospheric entry.
  return [...engineBurn(v.networks,new Map<string,number>(v.fuel),v.started?v.active:new Set(),v.throttle,1.225,1/120).values()].some(force=>force>0);

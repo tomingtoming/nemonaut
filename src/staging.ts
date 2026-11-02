@@ -1,4 +1,4 @@
-import {PARTS,type PartCatalog,type Part} from './catalog.js';
+import {PARTS,type Part} from './catalog.js';
 /** The part fields staging reads (a catalog Part satisfies it). */
 export type StagePart=Pick<Part,'id'|'type'|'stage'|'parent'>;
 /** One staged action: engine ignition, separation or parachute arming. effective is false for a separator with no parent edge. */
@@ -9,7 +9,7 @@ export interface StageSlot{stage:number;actions:StageAction[]}
 // Include empty slots: Space advances one integer, not one nonempty group.
 export function stagePlan(parts:readonly StagePart[]):StageSlot[]{
  const actions=parts.flatMap(p=>{
-  const d=(PARTS as PartCatalog)[p.type],a:StageAction[]=[];
+  const d=PARTS[p.type],a:StageAction[]=[];
   if(d.thrust)a.push({id:p.id,stage:p.stage,kind:'engine',label:'点火',effective:true});
   if(d.decoupler)a.push({id:p.id,stage:p.stage,kind:'separate',label:p.parent?'分離':'分離（親接続なし）',effective:!!p.parent});
   if(d.parachute)a.push({id:p.id,stage:p.stage,kind:'chute',label:'パラシュート待機',effective:true});

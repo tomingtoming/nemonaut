@@ -6,14 +6,15 @@ export type PartDefinition={name:string;code:string;cat:string;mass:number;size:
 export type PartCatalog=Record<string,PartDefinition>;
 export type PartControlAxis='auto'|'pitch'|'roll'|'yaw';
 /** Part type id: a base key of PARTS, a large variant installed by large-parts.ts, or the cargo bay. */
-export type PartType=keyof typeof PARTS|keyof typeof import('./large-parts.js').LARGE_VARIANTS|'cargoBay';
+export type PartType=keyof typeof BASE_PARTS|keyof typeof import('./large-parts.js').LARGE_VARIANTS|'cargoBay';
 export type PartVector=[number,number,number];
 /** Attachment node [x,y,z,nx,ny,nz]; slice(0,3)/slice(3) give the position/normal triples. */
 export interface AttachmentNode extends Array<number>{slice(start:0,end:3):PartVector;slice(start:3,end?:6):PartVector;slice(start?:number,end?:number):number[]}
 export interface PartAttachment{mode:'node'|'surface'|'free';parentNode?:number;ownNode?:number}
 /** A placed part as created by part() and passed around the workshop, saves and flight. */
 export interface Part{id:string;type:PartType;p:PartVector;r:PartVector;parent:string|null;stage:number;reactionEnabled?:boolean;steeringEnabled?:boolean;fuelEnabled?:boolean;gimbalEnabled?:boolean;driveEnabled?:boolean;controlEnabled?:boolean;dockPartner?:string;attachment?:PartAttachment;symmetryGroup?:string;symmetryFrame?:number[];cargoOpen?:boolean}
-export const PARTS = {
+// The literal table keeps its keys for PartType; PARTS is its string-keyed view (the same object).
+const BASE_PARTS = {
  tankSmall:{name:'小型タンク',code:'FT-225',cat:'燃料',mass:25,fuel:225,size:[0.625,1,0.625],desc:'直径0.625 m・推進剤225 kg。接続したエンジンへ供給。'},
  tankLarge:{name:'大型タンク',code:'FT-14400',cat:'燃料',mass:1200,fuel:14400,size:[2.5,4,2.5],desc:'直径2.5 m・推進剤14400 kg。接続したエンジンへ供給。'},
  adapterSmall:{name:'異径アダプター 0.625–1.25',code:'AD-125',cat:'構造',mass:30,size:[1.25,0.6,1.25],desc:'上面0.625 m／下面1.25 m。燃料は通過。回転して逆向きにも接続可能。'},
@@ -55,10 +56,11 @@ export const PARTS = {
  pontoon:{name:'フロート',code:'FL-3',cat:'船舶',mass:85,size:[1,3,.8],volume:1.9,desc:'水密の浮体。水没体積に応じた浮力を生む。'},
  ballast:{name:'バラストタンク',code:'BT-1',cat:'船舶',mass:110,size:[1.25,1,1.25],volume:1.05,ballast:1050,desc:'注排水で質量を変え、浮上・潜航を調整する。'}
 } satisfies PartCatalog;
+export const PARTS:PartCatalog=BASE_PARTS;
 installLargeParts(PARTS);
 installCargoParts(PARTS);
 export const CATEGORIES=['すべて','指令','燃料','推進','構造','空力','走行','装備','船舶'];
-export function nodes(type:PartType):AttachmentNode[]{const d=(PARTS as PartCatalog)[type], [x,y,z]=d.size;if(d.attachmentNodes)return d.attachmentNodes.map(n=>[...n]) as AttachmentNode[];if(d.rootWing)return [[0,0,0,-1,0,0],[x,0,0,1,0,0]] as AttachmentNode[];return [[0,y/2,0,0,1,0],[0,-y/2,0,0,-1,0],[x/2,0,0,1,0,0],[-x/2,0,0,-1,0,0],[0,0,z/2,0,0,1],[0,0,-z/2,0,0,-1]] as AttachmentNode[];}
+export function nodes(type:PartType):AttachmentNode[]{const d=PARTS[type], [x,y,z]=d.size;if(d.attachmentNodes)return d.attachmentNodes.map(n=>[...n]) as AttachmentNode[];if(d.rootWing)return [[0,0,0,-1,0,0],[x,0,0,1,0,0]] as AttachmentNode[];return [[0,y/2,0,0,1,0],[0,-y/2,0,0,-1,0],[x/2,0,0,1,0,0],[-x/2,0,0,-1,0,0],[0,0,z/2,0,0,1],[0,0,-z/2,0,0,-1]] as AttachmentNode[];}
 export function part(type:PartType,p:PartVector=[0,0,0],r:PartVector=[0,0,0],parent:string|null=null,stage=0):Part{return {id:crypto.randomUUID(),type,p,r,parent,stage};}
 export function preset(kind:string):Part[]{let a:Part[]=[];const add=(t:PartType,p:PartVector,r:PartVector=[0,0,0],par=0,stage=0)=>{const o=part(t,p,r,a[par]?.id??null,stage);a.push(o);return a.length-1;};
  if(kind==='atlas'){

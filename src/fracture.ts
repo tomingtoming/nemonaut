@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {PARTS,type PartCatalog,type Part} from './catalog.js';
+import {PARTS,type Part} from './catalog.js';
 import {normalizeSymmetry} from './symmetry.js';
 import {fuelNetworks,type FuelMap,type FuelNetworks} from './resources.js';
 import {bodyOrbitState,type OrbitState} from './celestial.js';
@@ -34,7 +34,7 @@ export function fractureComponents(parts:readonly Part[],failedIds:Iterable<unkn
 export function fractureVessel(f:FractureFlight,failedIds:readonly unknown[],createFlight:(parts:Part[],environment:string,universalTime:number)=>FractureFlight,statistics:FractureStatistics):void{
  if(f.failureDynamics||!failedIds.length)return;
  const components=fractureComponents(f.parts,failedIds);
- const priority=(c:FractureComponent):number=>c.parts.some(p=>(PARTS as PartCatalog)[p.type].control)?(c.wreck?1:2):(c.wreck?-1:0);
+ const priority=(c:FractureComponent):number=>c.parts.some(p=>PARTS[p.type].control)?(c.wreck?1:2):(c.wreck?-1:0);
  components.sort((a,b)=>priority(b)-priority(a)||b.parts.length-a.parts.length);
  const before={...f,stats:statistics(f.parts,f.fuel,f.ballast,f.thermal),pos:f.pos.clone(),vel:f.vel.clone(),q:f.q.clone(),omega:f.omega.clone()};
  const oldCenter=before.stats.com.clone().applyQuaternion(before.q),children:FractureFlight[]=[];

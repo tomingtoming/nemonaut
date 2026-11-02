@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {PARTS,type Part,type PartCatalog} from './catalog.js';
+import {PARTS,type Part} from './catalog.js';
 export interface EngineShroudSpec{engineId:string;supportId:string;diameter:number;height:number}
 
 // Covers are derived from actual axial connections, never saved as extra parts.
@@ -9,11 +9,11 @@ export function engineShrouds(parts:readonly Part[]):EngineShroudSpec[]{
  for(const p of parts)if(byId.has(p.parent)){adjacent.get(p.id)!.push(byId.get(p.parent)!);adjacent.get(p.parent)!.push(p);}
  const result:EngineShroudSpec[]=[];
  for(const p of parts){
-  const d=(PARTS as PartCatalog)[p.type];if(!d.thrust||d.air||d.water)continue;
+  const d=PARTS[p.type];if(!d.thrust||d.air||d.water)continue;
   const q=new T.Quaternion().setFromEuler(new T.Euler(...p.r)),down=new T.Vector3(0,-1,0).applyQuaternion(q);
   const bottom=new T.Vector3(...p.p).addScaledVector(down,d.size[1]/2);
   for(const support of adjacent.get(p.id)!){
-   const s=(PARTS as PartCatalog)[support.type];if(!(s.decoupler||s.fuel||support.type.startsWith('adapter')))continue;
+   const s=PARTS[support.type];if(!(s.decoupler||s.fuel||support.type.startsWith('adapter')))continue;
    const sq=new T.Quaternion().setFromEuler(new T.Euler(...support.r));
    const matched=[1,-1].some(sign=>{
     const normal=new T.Vector3(0,sign,0).applyQuaternion(sq);

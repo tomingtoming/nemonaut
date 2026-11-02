@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {floatingWindow} from './floating-window.js';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {buoyancyBalance,type BuoyantPart} from './buoyancy.js';
 
 /** The design state the buoyancy panel reads on each update. */
@@ -16,7 +16,7 @@ export function mountBuoyancyPanel(document:Document,scene:T.Object3D,getState:(
  const massMarker=marker(.1,'#e7cf4c',false),buoyMarker=marker(.21,'#bf8dff',true),input=panel.querySelector('input')!,values=panel.querySelectorAll('dd');let open=false;
  function update(){
   const {parts,flight,atCenter}=getState(),visible=open&&!flight&&!atCenter;window.element.hidden=!visible;group.visible=visible;baseComMarker.material.visible=!visible;if(!visible)return;
-  const hasBallast=parts.some(p=>(PARTS as PartCatalog)[p.type].ballast);input.closest('label')!.hidden=!hasBallast;const ballast=hasBallast?Number(input.value)/100:0,b=buoyancyBalance(parts,ballast);
+  const hasBallast=parts.some(p=>PARTS[p.type].ballast);input.closest('label')!.hidden=!hasBallast;const ballast=hasBallast?Number(input.value)/100:0,b=buoyancyBalance(parts,ballast);
   panel.querySelector('output')!.textContent=Math.round(ballast*100)+'%';massMarker.position.copy(b.com);buoyMarker.position.copy(b.center);group.visible=parts.length>0;
   values[0].textContent=(b.mass/1000).toFixed(2)+' t';values[1].textContent=(b.displacement/1000).toFixed(2)+' t';const delta=b.center.y-b.com.y;values[2].textContent=(delta>=0?'+':'')+delta.toFixed(2)+' m';
  }

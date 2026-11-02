@@ -1,10 +1,10 @@
-import {PARTS,type PartCatalog,type Part} from './catalog.js';
+import {PARTS,type Part} from './catalog.js';
 import {canControl,type ControllableVessel} from './fleet.js';
 import {fuelNetworks,type ResourcePart,type FuelMap} from './resources.js';
 /** A vessel whose tanks can exchange propellant: parts, kg-by-part-id stores and optional thermal failures. */
 export interface TransferVessel<P extends ResourcePart=ResourcePart> extends ControllableVessel{parts:readonly P[];fuel:FuelMap;thermal?:ReadonlyMap<string,{failed?:boolean}>|null}
-export const transferCapacity=(p:Pick<ResourcePart,'type'>):number=>(PARTS as PartCatalog)[p.type].fuel||(PARTS as PartCatalog)[p.type].monoprop||0;
-const resourceKind=(p:Pick<ResourcePart,'type'>):'fuel'|'monoprop'|null=>(PARTS as PartCatalog)[p.type].fuel?'fuel':(PARTS as PartCatalog)[p.type].monoprop?'monoprop':null;
+export const transferCapacity=(p:Pick<ResourcePart,'type'>):number=>PARTS[p.type].fuel||PARTS[p.type].monoprop||0;
+const resourceKind=(p:Pick<ResourcePart,'type'>):'fuel'|'monoprop'|null=>PARTS[p.type].fuel?'fuel':PARTS[p.type].monoprop?'monoprop':null;
 export function transferTargets<P extends ResourcePart=Part>(f:TransferVessel<P>,id:string):P[]{
  const p=f?.parts.find(p=>p.id===id);if(!p||!canControl(f)||!transferCapacity(p)||f.thermal?.get(id)?.failed)return [];
  const group=fuelNetworks(f.parts).network.get(id);

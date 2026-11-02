@@ -7,7 +7,7 @@ import {bodyAltitude} from './celestial.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
 import {acceptsFlightKey} from './flight-keyboard.js';
 import {preserveManualControlEdit,type ManualControl} from './manual-control-edit.js';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import * as T from 'three';
 export interface CruisePanelFlight extends CruiseFlight,RunwayFlight{environment:string;cruiseSettings?:CruiseSettings|null;rocketAxes:boolean}
 export interface CruisePanelState{flight:CruisePanelFlight|null|undefined;atCenter:boolean}
@@ -79,7 +79,7 @@ export function mountCruisePanel(root:Document,getState:()=>CruisePanelState,{cl
   if(landing.pilot){const wasSas=f.sas,wasMode=f.sasMode,commands=landing.step(f,dt);if(!landing.pilot){message=landing.state==='landed'?'着陸完了':landing.state==='failed'?'異常停止 · '+(landing.faultMessage||'制御不能'):'待機';sync();}else if(wasSas!==f.sas||wasMode!==f.sasMode)sync();return commands;}
   if(takeoff){if(f!==owner){stop('機体切替 · 待機');return {};}const fault=cruiseAuthority(f)||cruisePropulsion(f);if(fault){stop('異常停止');message=fault;return {};}const wasSas=f.sas,wasMode=f.sasMode;const commands=takeoff.update(f,dt);if(takeoff.phase==='stopped')stop('異常停止');else if(wasSas!==f.sas||wasMode!==f.sasMode)sync();return commands;}
   if(!pilot)return;if(f!==owner){stop('機体切替 · 待機');return;}
-  if(f.crashed||!f.parts.some(p=>(PARTS as PartCatalog)[p.type].aircraftControl)){stop('異常停止');return;}
+  if(f.crashed||!f.parts.some(p=>PARTS[p.type].aircraftControl)){stop('異常停止');return;}
   const wasSas=f.sas,wasMode=f.sasMode;pilot.update(f,dt);if(!pilot.running){const detail=pilot.faultMessage;stop('異常停止');if(detail)message='異常停止 · '+detail;}else if(wasSas!==f.sas||wasMode!==f.sasMode)sync();
  }
  button.onclick=()=>{if(panel){panel.front();return;}panel=floatingWindow(root.body,{title:'自動操縦',x:innerWidth-330,y:150,onClose:close});render(getState().flight!);update();};

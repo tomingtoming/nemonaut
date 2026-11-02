@@ -1,4 +1,4 @@
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {partSettings,type SettablePart} from './part-settings.js';
 import {symmetryTargets} from './symmetry.js';
 import {floatingWindow,type FloatingWindow} from './floating-window.js';
@@ -19,7 +19,7 @@ export function mountDesignPartWindows(getParts:()=>SettablePart[]|null|undefine
   }
  }
  function open(id:string,x:number,y:number):void{const parts=getParts(),p=parts?.find(p=>p.id===id);if(!p)return;if(windows.has(id)){windows.get(id)!.front();return;}for(const [other,w]of windows)if(!w.pinned)close(other);
-  const w=floatingWindow(host,{title:(PARTS as PartCatalog)[p.type].name+' · '+(parts!.indexOf(p)+1),x:x+12,y:y+12,onClose:()=>close(id)}) as DesignPartWindow;windows.set(id,w);w.rows=new Map<string,DesignPartWindowRow>();w.element.onpointerenter=()=>highlight(id);w.element.onpointerleave=()=>highlight(null);
+  const w=floatingWindow(host,{title:PARTS[p.type].name+' · '+(parts!.indexOf(p)+1),x:x+12,y:y+12,onClose:()=>close(id)}) as DesignPartWindow;windows.set(id,w);w.rows=new Map<string,DesignPartWindowRow>();w.element.onpointerenter=()=>highlight(id);w.element.onpointerleave=()=>highlight(null);
   const link=document.createElement('label');w.link=document.createElement('input');w.link.type='checkbox';w.link.checked=true;link.append('対称配置に適用',w.link);w.content.append(link);w.link.onchange=update;
   for(const s of partSettings(p)){const label=document.createElement('label'),input=document.createElement('input') as PartRangeInput,state=document.createElement('small'),value=document.createElement('span');input.setAttribute('aria-label',s.label);const name=document.createElement('span');name.append(s.label,state);label.append(name);
    if(s.type==='boolean')input.type='checkbox';else{label.className='partThrustLimit';input.type='range';input.min=0;input.max=s.max;input.step=s.step;label.append(value);input.oninput=()=>{value.textContent=Number(input.value).toFixed(s.unit==='°'?1:0)+s.unit;};}

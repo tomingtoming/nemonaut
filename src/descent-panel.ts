@@ -1,4 +1,4 @@
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {floatingWindow,type FloatingWindow} from './floating-window.js';
 import {descentTelemetry,descentGuidance,type DescentVessel} from './descent.js';
 
@@ -24,7 +24,7 @@ export function mountDescentPanel(host:Element,getFlight:()=>DescentPanelFlight|
   button.onclick=()=>{if(window){closeWindow();return;}window=floatingWindow(document.body,{title:'降下・接地計器',x:innerWidth-330,y:155,onClose:closeWindow});window.element.classList.add('descentWindow');window.content.append(panel);button!.setAttribute('aria-pressed','true');window.clamp();};
  }
  function update(){
-  const f=getFlight(),ground=f?.orbit?.bodyId==='planet'&&f.environment!=='water'&&f.rocketAxes&&f.parts.some(p=>(PARTS as PartCatalog)[p.type].landingLeg)&&f.orbit.altitude<10000;panel.hidden=!f||(!ground&&(f.orbit?.bodyId!=='moon'||(f.orbit.energy>=0&&f.orbit.altitude>30000)));if(button)button.hidden=panel.hidden;if(panel.hidden){closeWindow();return;}
+  const f=getFlight(),ground=f?.orbit?.bodyId==='planet'&&f.environment!=='water'&&f.rocketAxes&&f.parts.some(p=>PARTS[p.type].landingLeg)&&f.orbit.altitude<10000;panel.hidden=!f||(!ground&&(f.orbit?.bodyId!=='moon'||(f.orbit.energy>=0&&f.orbit.altitude>30000)));if(button)button.hidden=panel.hidden;if(panel.hidden){closeWindow();return;}
   panel.querySelector('strong')!.textContent=ground?'降下・接地計器':'月面降下・接地計器';expeditionHelp.hidden=ground;(basicHelp.closest('details')||basicHelp).hidden=ground;
   const d=descentTelemetry(f!);for(const button of panel.querySelectorAll('button'))button.disabled=f!.crashed;
   panel.querySelector<HTMLButtonElement>('.descentHover')!.disabled=f!.crashed||!Number.isFinite(d.hoverThrottle)||d.hoverThrottle>1;

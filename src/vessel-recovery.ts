@@ -5,14 +5,14 @@ import {fleet,canControl} from './fleet.js';
 import {resolveTargets} from './relative-navigation.js';
 import {partCenter,partRotation} from './aero.js';
 import {bodyAltitude,bodyUp,relativeMotion} from './celestial.js';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 
 export type RecoveryVessel=Pick<import('./core.js').Flight,'pos'|'vel'|'universalTime'|'stats'|'q'|'omega'|'throttle'|'environment'|'parts'|'crashed'|'time'|'landed'>;
 export interface RecoveryStatus{recoverable:boolean;bodyId:string;action:string;reason:string}
 export function recoveryStatus(v:RecoveryVessel):RecoveryStatus{
  const motion=relativeMotion(v.pos,v.vel,v.universalTime),quiet=surfaceRelativeVelocity(v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)),v.vel,v.universalTime,motion.body).length()<.8&&v.omega.clone().sub(surfaceAngularVelocity(motion.body)).length()<.15&&v.throttle===0;
  const afloat=v.environment==='water'&&motion.body.id==='planet'&&v.parts.some(p=>{
-  const center=partCenter(p).applyQuaternion(v.q).add(v.pos),normal=bodyUp(center,v.universalTime),q=v.q.clone().multiply(partRotation(p)),size=(PARTS as PartCatalog)[p.type].size;
+  const center=partCenter(p).applyQuaternion(v.q).add(v.pos),normal=bodyUp(center,v.universalTime),q=v.q.clone().multiply(partRotation(p)),size=PARTS[p.type].size;
   const extent=[[1,0,0],[0,1,0],[0,0,1]].reduce((sum,axis,i)=>sum+Math.abs(new T.Vector3(...axis).applyQuaternion(q).dot(normal))*size[i]/2,0);
   return Math.abs(bodyAltitude(center,v.universalTime))<=extent+.1;
  });

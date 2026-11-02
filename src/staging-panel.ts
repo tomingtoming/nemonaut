@@ -1,5 +1,5 @@
 import {renderStageStack,type StackPart,type StageStackOptions} from './ksp-layout.js';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {stagePlan} from './staging.js';
 import {stagingDiagnostics,type StagingDiagnostics} from './staging-diagnostics.js';
 const references=new WeakMap<Element,string|null>();
@@ -14,9 +14,9 @@ export function renderStagingPanel(host:Element,parts:readonly StackPart[],{flig
  let diagnostic:StagingDiagnostics|null=null;
  if(!flight){
   diagnostic=stagingDiagnostics(parts,references.get(host));references.set(host,diagnostic.referenceId);
-  const controlParts=parts.filter(p=>(PARTS as PartCatalog)[p.type].control),label=document.createElement('label');label.className='stageReference';label.textContent='基準の制御部品';
+  const controlParts=parts.filter(p=>PARTS[p.type].control),label=document.createElement('label');label.className='stageReference';label.textContent='基準の制御部品';
   const select=document.createElement('select');select.setAttribute('aria-label','段診断の基準制御部品');
-  for(const p of controlParts){const option=document.createElement('option');option.value=p.id;option.textContent=(parts.indexOf(p)+1)+'. '+(PARTS as PartCatalog)[p.type].name;select.append(option);}
+  for(const p of controlParts){const option=document.createElement('option');option.value=p.id;option.textContent=(parts.indexOf(p)+1)+'. '+PARTS[p.type].name;select.append(option);}
   if(!controlParts.length){const option=document.createElement('option');option.textContent='制御部品なし';select.append(option);select.disabled=true;}
   else select.value=diagnostic.referenceId as string;
   select.onchange=()=>{references.set(host,select.value);renderStagingPanel(host,parts,{flight,onSelect,onMove,onPreview,previewStage});};label.append(select);host.append(label);
@@ -31,7 +31,7 @@ export function renderStagingPanel(host:Element,parts:readonly StackPart[],{flig
   row.append(heading);
   if(!slot.actions.length){const empty=document.createElement('small');empty.textContent=flight&&slot.stage<=flight.stage?'現在の機体に対象なし':'対象なし（Spaceで進む）';row.append(empty);}
   for(const action of slot.actions){
-   const p=parts.find(p=>p.id===action.id)!,button=document.createElement('button');button.textContent=action.label+' · '+(parts.indexOf(p)+1)+'. '+(PARTS as PartCatalog)[p.type].name;
+   const p=parts.find(p=>p.id===action.id)!,button=document.createElement('button');button.textContent=action.label+' · '+(parts.indexOf(p)+1)+'. '+PARTS[p.type].name;
    button.disabled=!!flight;button.onclick=()=>onSelect(p.id);row.append(button);
    const forecast=diagnostic?.actions.find(a=>a.id===action.id&&a.kind===action.kind);
    if(forecast&&forecast.status!=='reference'){

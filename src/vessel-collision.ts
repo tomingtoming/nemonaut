@@ -1,6 +1,6 @@
 import * as T from 'three';
 import RAPIER,{pairQuery} from './physics.js';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {partMass,partRotation} from './aero.js';
 import {inertiaAbout,DOCK_LIMITS} from './docking.js';
 import {centerOfVessel} from './relative-navigation.js';
@@ -44,7 +44,7 @@ function shapes(v:Flight):ContactShape[]{
 }
 // Facing docking ports belong to the docking capture, not to collision.
 function dockingFaces(a:Flight,pa:FlightPart|undefined,b:Flight,pb:FlightPart|undefined):boolean{
- if(!(PARTS as PartCatalog)[pa?.type as string]?.docking||!(PARTS as PartCatalog)[pb?.type as string]?.docking)return false;
+ if(!PARTS[pa?.type as string]?.docking||!PARTS[pb?.type as string]?.docking)return false;
  const up=(v:Flight,p:FlightPart)=>new T.Vector3(0,1,0).applyQuaternion(v.q.clone().multiply(partRotation(p)));
  return Math.acos(T.MathUtils.clamp(-up(a,pa!).dot(up(b,pb!)),-1,1))<=2*DOCK_LIMITS.angle;
 }

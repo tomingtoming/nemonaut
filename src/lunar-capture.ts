@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {PARTS,type Part,type PartCatalog} from './catalog.js';
+import {PARTS,type Part} from './catalog.js';
 import {bodyOrbitState,MOON} from './celestial.js';
 import {apsisPlan} from './orbit-plan.js';
 import {coastDrift} from './coast-orbit.js';
@@ -17,7 +17,7 @@ export interface LunarCapturePlan{time:number;midTime:number;startTime:number;de
 // thrust-duration estimate, not an attitude/gravity simulation or autopilot.
 export function captureBurnEstimate(vessel:BurnEstimateVessel,deltaV:number):CaptureBurnEstimate{
  if(!Number.isFinite(deltaV)||deltaV<=0)throw Error('減速量が不正です');
- const engines=vessel.parts.filter(p=>vessel.started&&vessel.active.has(p.id)&&(PARTS as PartCatalog)[p.type].thrust&&!(PARTS as PartCatalog)[p.type].air&&!(PARTS as PartCatalog)[p.type].water);
+ const engines=vessel.parts.filter(p=>vessel.started&&vessel.active.has(p.id)&&PARTS[p.type].thrust&&!PARTS[p.type].air&&!PARTS[p.type].water);
  if(!engines.length)throw Error('点火済みのロケットエンジンが必要です（スロットルは0）');
  if(!vessel.rocketAxes)throw Error('月周回案内は主推力が機体の上方向のロケットに対応しています');
  for(const p of engines){const axis=new T.Vector3(0,1,0).applyEuler(new T.Euler(...p.r));if(axis.angleTo(new T.Vector3(0,1,0))>.01)throw Error('主エンジンの推力軸を機体の上方向へ揃えてください');}

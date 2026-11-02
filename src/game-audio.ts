@@ -1,6 +1,6 @@
 import {storageKey} from './app-id.js';
 import {FailureAudioCursor,type FailureFleet} from './failure-feedback.js';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {floatingWindow} from './floating-window.js';
 
 const KEY=storageKey('audio-v1');
@@ -20,7 +20,7 @@ export function audioSettings(value:AudioSettingsInput|null={}):AudioSettings{
 export function soundState(flight?:SoundFlight|null,center=false,paused=false):SoundState{
  return {scene:center?'center':!flight?'workshop':(flight.orbit?.altitude||0)>=70000?'space':'flight',
   thrust:flight&&!flight.crashed&&!paused?Math.min(1,Math.sqrt(Math.max(0,flight.lastThrust||0)/180000)):0,
-  rolling:flight&&!paused&&(flight.telemetry?.contacts||0)>0?Math.min(1,Math.max(0,...flight.parts.filter(p=>(PARTS as PartCatalog)[p.type].wheel).map(p=>Math.abs(flight.wheelMotion?.get(p.id)?.speed||0)*(PARTS as PartCatalog)[p.type].size[1]/2))/18):0,
+  rolling:flight&&!paused&&(flight.telemetry?.contacts||0)>0?Math.min(1,Math.max(0,...flight.parts.filter(p=>PARTS[p.type].wheel).map(p=>Math.abs(flight.wheelMotion?.get(p.id)?.speed||0)*PARTS[p.type].size[1]/2))/18):0,
   jets:flight&&!flight.crashed&&!paused&&flight.rcsJets?.some(j=>j.level>.01)?1:0,crashed:!!flight?.crashed};
 }
 // Original four-bar motifs: MIDI pitches, one bar per chord. No external audio assets.

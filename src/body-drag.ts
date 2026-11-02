@@ -1,6 +1,6 @@
 import {cargoShellBoxes,type CargoBox,type CargoBayDefinition} from './cargo-geometry.js';
 import * as T from 'three';
-import {PARTS,type PartCatalog,type PartDefinition} from './catalog.js';
+import {PARTS,type PartDefinition} from './catalog.js';
 import {partRotation,type AeroPart} from './aero.js';
 // D = 1/2 rho v² Cd A. Bounding-box face quadrature approximates exposed
 // projected area; this is a game model, not measured Cd or compressible CFD.
@@ -19,7 +19,7 @@ function hitBox(point:T.Vector3,direction:T.Vector3,box:BodyDragBox):number|null
  return far>=Math.max(near,0)?Math.max(near,0):null;
 }
 export function createBodyAerodynamics(parts:BodyDragPart[]):BodyAerodynamics{
- const boxes=parts.filter(p=>!(PARTS as PartCatalog)[p.type].wing).flatMap((p):BodyDragBox[]=>{const d=(PARTS as PartCatalog)[p.type],rotation=partRotation(p),pieces:CargoBox[]=d.cargoBay?cargoShellBoxes(d as PartDefinition&CargoBayDefinition,p.cargoOpen):[{center:[0,0,0],size:d.size}];return pieces.map(piece=>{const q=rotation.clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(...(piece.rotation||[0,0,0]))));return {id:p.id,type:p.type,center:new T.Vector3(...piece.center).applyQuaternion(rotation).add(new T.Vector3(...p.p)),half:new T.Vector3(...piece.size).multiplyScalar(.5),rotation:q,inverse:q.clone().invert(),axes:[new T.Vector3(1,0,0),new T.Vector3(0,1,0),new T.Vector3(0,0,1)].map(a=>a.applyQuaternion(q))};});});
+ const boxes=parts.filter(p=>!PARTS[p.type].wing).flatMap((p):BodyDragBox[]=>{const d=PARTS[p.type],rotation=partRotation(p),pieces:CargoBox[]=d.cargoBay?cargoShellBoxes(d as PartDefinition&CargoBayDefinition,p.cargoOpen):[{center:[0,0,0],size:d.size}];return pieces.map(piece=>{const q=rotation.clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(...(piece.rotation||[0,0,0]))));return {id:p.id,type:p.type,center:new T.Vector3(...piece.center).applyQuaternion(rotation).add(new T.Vector3(...p.p)),half:new T.Vector3(...piece.size).multiplyScalar(.5),rotation:q,inverse:q.clone().invert(),axes:[new T.Vector3(1,0,0),new T.Vector3(0,1,0),new T.Vector3(0,0,1)].map(a=>a.applyQuaternion(q))};});});
  let lastDirection:T.Vector3|null=null,lastArea=0;
  const maxCdArea=boxes.reduce((sum,b)=>sum+4*(b.half.x*b.half.y+b.half.y*b.half.z+b.half.z*b.half.x)*(b.type==='heatShield'?1.1:.4),0);
  return {maxCdArea,dragArea(direction){
@@ -38,7 +38,7 @@ export function createBodyAerodynamics(parts:BodyDragPart[]):BodyAerodynamics{
     }
     // Shield disc uses its circular face area. Other dimensions are box bounds.
     const round=box.type==='heatShield'&&axis===1?Math.PI/4:1;
-    const cd=box.type==='heatShield'&&axis===1?1.1:(PARTS as PartCatalog)[box.type].streamlinedNose&&axis===1&&sign>0?.15:.4;
+    const cd=box.type==='heatShield'&&axis===1?1.1:PARTS[box.type].streamlinedNose&&axis===1&&sign>0?.15:.4;
     cdArea+=4*box.half[u]*box.half[v]*cos*exposed/16*round*cd;
    }
   }

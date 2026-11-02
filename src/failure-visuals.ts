@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {fleet} from './fleet.js';
 import {bodyUp} from './celestial.js';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 type FailureEvent=import('./failure-events.js').FailureEvent;
 /** Age-dependent size and fade of one failure effect. */
 export interface FailureEnvelope{age:number;radius:number;alive:boolean;flash:number;smoke:number}
@@ -60,7 +60,7 @@ export class FailureVisuals{
    for(const {mesh,smoke,direction}of item.particles){
     const life=smoke?env.smoke:Math.max(0,1-age/(e.effect==='fuel-burst'?1.6:1.1));
     mesh.visible=life>0;mesh.material.opacity=life*(smoke?.45:.9);
-    const shell=e.effect==='fragments'?Math.max(...((PARTS as PartCatalog)[e.type]?.size??[1]))*.55:0;
+    const shell=e.effect==='fragments'?Math.max(...(PARTS[e.type]?.size??[1]))*.55:0;
     mesh.position.copy(direction).multiplyScalar(shell+(smoke?.45:4)*env.radius*age).addScaledVector(up,smoke?age*env.radius*.35:-age*age*.35);
     mesh.scale.setScalar(smoke?env.radius*(.35+age*.14):e.effect==='fuel-burst'?env.radius*(.12+env.flash*.45):.05+.04*(1-life));
    }

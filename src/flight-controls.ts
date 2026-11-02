@@ -1,4 +1,4 @@
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {canControl,type ControllableVessel} from './fleet.js';
 
 const commands=['stage','throttle','ballast','trim','sas','brake','sasMode','reactionEnabled','steeringEnabled','driveEnabled','rcsEnabled','armChutes','autoReturn','autoLaunch'];
@@ -12,9 +12,9 @@ export function updateFlightControls(root:ParentNode,flight:FlightControlsVessel
  const controllable=canControl(flight),parts=flight.parts;
  for(const id of commands)root.querySelector<HTMLButtonElement|HTMLInputElement|HTMLSelectElement>('#'+id)!.disabled=!controllable;
  for(const [key,available] of [
-  ['rcsEnabled',parts.some(p=>(PARTS as PartCatalog)[p.type].rcsThrust)],
-  ['reactionEnabled',parts.some(p=>(PARTS as PartCatalog)[p.type].reactionTorque)],
-  ['steeringEnabled',parts.some(p=>(PARTS as PartCatalog)[p.type].steer)],
+  ['rcsEnabled',parts.some(p=>PARTS[p.type].rcsThrust)],
+  ['reactionEnabled',parts.some(p=>PARTS[p.type].reactionTorque)],
+  ['steeringEnabled',parts.some(p=>PARTS[p.type].steer)],
   ['driveEnabled',parts.some(p=>p.type==='wheel')]
  ] as const){
   const input=root.querySelector<HTMLInputElement>('#'+key)!;
@@ -22,5 +22,5 @@ export function updateFlightControls(root:ParentNode,flight:FlightControlsVessel
   input.disabled=!controllable||!available;
   input.parentElement!.hidden=!available;
  }
- root.querySelector<HTMLElement>('#ballastControl')!.hidden=!parts.some(p=>(PARTS as PartCatalog)[p.type].ballast);
+ root.querySelector<HTMLElement>('#ballastControl')!.hidden=!parts.some(p=>PARTS[p.type].ballast);
 }

@@ -5,7 +5,7 @@ import {bodyUp,bodyAltitude,bodyGravity,referenceBody} from './celestial.js';
 import {compassFrame,compassHeading} from './navigation.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
 import {atmosphere} from './planet.js';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {controlDeflection,type ControlPart} from './aero.js';
 import {fuelNetworks,engineMaxThrust,type ResourcePart,type EngineSet} from './resources.js';
 const clamp=T.MathUtils.clamp,rad=Math.PI/180;
@@ -29,8 +29,8 @@ export function cruiseTargetReadiness(f:Pick<CruiseFlight,'pos'|'universalTime'|
  return !Number.isFinite(minimum)||target.speed<minimum?'巡航速度不足 · 目安 '+(Number.isFinite(minimum)?Math.ceil(minimum)+' m/s以上':'大気・翼面積を確認'):null;
 }
 export function cruiseAuthority(f:CruiseFlight|null|undefined):string|null{
- if(!f||f.crashed||f.rocketAxes||!f.parts.some(p=>(PARTS as PartCatalog)[p.type].aircraftControl))return '航空機の制御装置が必要';
- if(!['pitch','roll'].every(name=>f.parts.some(p=>(PARTS as PartCatalog)[p.type].controlAxis&&Math.abs(controlDeflection(p,f.stats.com,{[name]:1}))>1e-6)))return '昇降舵・補助翼の制御が必要';
+ if(!f||f.crashed||f.rocketAxes||!f.parts.some(p=>PARTS[p.type].aircraftControl))return '航空機の制御装置が必要';
+ if(!['pitch','roll'].every(name=>f.parts.some(p=>PARTS[p.type].controlAxis&&Math.abs(controlDeflection(p,f.stats.com,{[name]:1}))>1e-6)))return '昇降舵・補助翼の制御が必要';
  return null;
 }
 export function cruiseReadiness(f:CruiseFlight):string|null{
@@ -43,7 +43,7 @@ export function cruiseReadiness(f:CruiseFlight):string|null{
  return cruisePropulsion(f);
 }
 export function cruisePropulsion(f:CruiseFlight):string|null{
- if(!fuelNetworks(f.parts).groups.some(g=>g.tanks.some(p=>(f.fuel.get(p.id)||0)>0)&&g.engines.some(p=>(PARTS as PartCatalog)[p.type].air&&f.active.has(p.id)&&engineMaxThrust(p)>0)))return '点火済みの航空エンジンと燃料供給が必要';
+ if(!fuelNetworks(f.parts).groups.some(g=>g.tanks.some(p=>(f.fuel.get(p.id)||0)>0)&&g.engines.some(p=>PARTS[p.type].air&&f.active.has(p.id)&&engineMaxThrust(p)>0)))return '点火済みの航空エンジンと燃料供給が必要';
  return null;
 }
 export class CruisePilot{

@@ -1,7 +1,7 @@
 import {portPose} from './port-navigation.js';
 export {portPose} from './port-navigation.js';
 import * as T from 'three';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {partRotation,partMass,partCenter} from './aero.js';
 import {centerOfVessel,resolveTargets,type CenteredVessel} from './relative-navigation.js';
 import {Flight,statistics,descendants,validateCraft,type FlightPart} from './core.js';
@@ -19,7 +19,7 @@ export function dockingStatus(a:Flight,aId:string,b:Flight,bId:string):DockingSt
  const invalid=(reason:string)=>({ready:false,reason});
  if(a===b)return invalid('同じ機体です');if(a.crashed||b.crashed)return invalid('損傷した機体です');
  if((a.environment==='water')!==(b.environment==='water'))return invalid('海面と地上の環境は結合できません');
- if(a.ballast!==b.ballast&&[...a.parts,...b.parts].some(p=>(PARTS as PartCatalog)[p.type].ballast))return invalid('結合前に両機のバラスト設定を合わせてください');
+ if(a.ballast!==b.ballast&&[...a.parts,...b.parts].some(p=>PARTS[p.type].ballast))return invalid('結合前に両機のバラスト設定を合わせてください');
  const pa=portPose(a,aId),pb=portPose(b,bId);if(!pa||!pb)return invalid('ポートが見つかりません');
  if(pa.part.dockPartner||pb.part.dockPartner)return invalid('使用中のポートです');
  const distance=pa.position.distanceTo(pb.position),angle=Math.acos(T.MathUtils.clamp(-pa.normal.dot(pb.normal),-1,1)),speed=pa.velocity.distanceTo(pb.velocity),angularSpeed=a.omega.distanceTo(b.omega);
@@ -28,13 +28,13 @@ export function dockingStatus(a:Flight,aId:string,b:Flight,bId:string):DockingSt
 }
 
 // Match the cuboid / wheel-sphere mass model used by the Rapier colliders.
-export function inertiaAbout(v:CenteredVessel,point:T.Vector3):T.Matrix3{const tensor=new T.Matrix3().set(0,0,0,0,0,0,0,0,0);for(const p of v.parts){const d=(PARTS as PartCatalog)[p.type],m=partMass(p,v.fuel,v.ballast,v.thermal),[x,y,z]=d.size.map(n=>Math.max(.04,n)),q=v.q.clone().multiply(partRotation(p)),r=new T.Matrix3().setFromMatrix4(new T.Matrix4().makeRotationFromQuaternion(q)),sphere=.4*m*.35**2,local=new T.Matrix3().set(d.wheel?sphere:m*(y*y+z*z)/12,0,0,0,d.wheel?sphere:m*(x*x+z*z)/12,0,0,0,d.wheel?sphere:m*(x*x+y*y)/12),world=r.clone().multiply(local).multiply(r.clone().transpose()),offset=partCenter(p).applyQuaternion(v.q).add(v.pos).sub(point),a=offset.toArray(),s=offset.lengthSq();for(let i=0;i<3;i++)for(let j=0;j<3;j++)tensor.elements[j*3+i]+=world.elements[j*3+i]+m*((i===j?s:0)-a[i]*a[j]);}return tensor;}
+export function inertiaAbout(v:CenteredVessel,point:T.Vector3):T.Matrix3{const tensor=new T.Matrix3().set(0,0,0,0,0,0,0,0,0);for(const p of v.parts){const d=PARTS[p.type],m=partMass(p,v.fuel,v.ballast,v.thermal),[x,y,z]=d.size.map(n=>Math.max(.04,n)),q=v.q.clone().multiply(partRotation(p)),r=new T.Matrix3().setFromMatrix4(new T.Matrix4().makeRotationFromQuaternion(q)),sphere=.4*m*.35**2,local=new T.Matrix3().set(d.wheel?sphere:m*(y*y+z*z)/12,0,0,0,d.wheel?sphere:m*(x*x+z*z)/12,0,0,0,d.wheel?sphere:m*(x*x+y*y)/12),world=r.clone().multiply(local).multiply(r.clone().transpose()),offset=partCenter(p).applyQuaternion(v.q).add(v.pos).sub(point),a=offset.toArray(),s=offset.lengthSq();for(let i=0;i<3;i++)for(let j=0;j<3;j++)tensor.elements[j*3+i]+=world.elements[j*3+i]+m*((i===j?s:0)-a[i]*a[j]);}return tensor;}
 export function combinedMotion(a:DockingBody,b:DockingBody):CombinedMotion{const vessels=[a,b],masses=vessels.map(v=>v.parts.reduce((s,p)=>s+partMass(p,v.fuel,v.ballast,v.thermal),0)),centers=vessels.map(centerOfVessel),mass=masses[0]+masses[1],center=centers[0].clone().multiplyScalar(masses[0]).addScaledVector(centers[1],masses[1]).divideScalar(mass),momentum=new T.Vector3(),angularMomentum=new T.Vector3(),inertia=new T.Matrix3().set(0,0,0,0,0,0,0,0,0);vessels.forEach((v,i)=>{const linear=v.vel.clone().multiplyScalar(masses[i]);momentum.add(linear);angularMomentum.add(v.omega.clone().applyMatrix3(inertiaAbout(v,centers[i]))).add(centers[i].clone().sub(center).cross(linear));const tensor=inertiaAbout(v,center);tensor.elements.forEach((n,j)=>inertia.elements[j]+=n);});return {mass,center,velocity:momentum.clone().divideScalar(mass),omega:angularMomentum.clone().applyMatrix3(inertia.clone().invert()),momentum,angularMomentum,inertia};}
 
 function rebuilt(source:Flight,parts:FlightPart[],sources:readonly Flight[]=[source]):Flight{
  validateCraft({version:1,parts});const out=new Flight(parts,source.environment),ids=new Set(parts.map(p=>p.id));out.transferGuide=null;
  for(const key of ['vesselName','time','universalTime','stage','started','ballast','trim','brake','reactionEnabled','steeringEnabled','driveEnabled','rcsEnabled','maxAltitude'] as const)(out as Record<typeof key,unknown>)[key]=source[key];
- out.pos.copy(source.pos);out.q.copy(source.q);out.vel.copy(source.vel);out.omega.copy(source.omega);out.holdQ=source.q.clone();out.sas=parts.some(p=>(PARTS as PartCatalog)[p.type].control)&&source.sas;out.sasMode='hold';out.navigationFrame=source.navigationFrame;out.navigationAuto=source.navigationAuto;out.throttle=0;out.maneuver=null;out.targetPartId=source.targetPartId;
+ out.pos.copy(source.pos);out.q.copy(source.q);out.vel.copy(source.vel);out.omega.copy(source.omega);out.holdQ=source.q.clone();out.sas=parts.some(p=>PARTS[p.type].control)&&source.sas;out.sasMode='hold';out.navigationFrame=source.navigationFrame;out.navigationAuto=source.navigationAuto;out.throttle=0;out.maneuver=null;out.targetPartId=source.targetPartId;
  for(const key of ['fuel','charge','thermal','chutes','deflections','gimbals','wheelMotion','observations'] as const)(out as Record<typeof key,Map<string,DockingMapValue>>)[key]=new Map<string,DockingMapValue>(sources.flatMap(v=>[...(v as Record<typeof key,Map<string,DockingMapValue>>)[key]]).filter(([id])=>ids.has(id)).map(([id,value])=>[id,value?.isVector3?value.clone():structuredClone(value)]));
  out.active=new Set(sources.flatMap(v=>[...v.active]).filter(id=>ids.has(id)));out.networks=fuelNetworks(out.parts);out.stats=statistics(out.parts,out.fuel,out.ballast,out.thermal);out.buildColliders();return out;
 }

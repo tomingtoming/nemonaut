@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {partCenter} from './aero.js';
 import {canControl,fleet} from './fleet.js';
 import {bodyOrbitState} from './celestial.js';
@@ -22,11 +22,11 @@ export type DockingAutopilotState='idle'|'aligning'|'routing'|'holding'|'approac
 export interface DockingPlan{center:T.Vector3;radius:number;standby:number;point:T.Vector3}
 const zero=():DockingCommands=>({portForward:0,portRight:0,portUp:0});
 const clamp=(x:number,a=1)=>T.MathUtils.clamp(x,-a,a);
-const fuelAvailable=(f:Flight)=>f.parts.some(p=>(PARTS as PartCatalog)[p.type].rcsThrust&&p.fuelEnabled!==false&&(f.fuel.get(p.id)||0)>0);
+const fuelAvailable=(f:Flight)=>f.parts.some(p=>PARTS[p.type].rcsThrust&&p.fuelEnabled!==false&&(f.fuel.get(p.id)||0)>0);
 const signature=(f:Flight)=>JSON.stringify(f.parts.map(p=>[p.id,p.p,p.r,p.fuelEnabled]));
 // Farthest material point from `point`, using each part's bounding sphere.
 function reach(v:Flight,point:T.Vector3):number{
- return v.parts.reduce((r,p)=>Math.max(r,partCenter(p).applyQuaternion(v.q).add(v.pos).distanceTo(point)+Math.hypot(...(PARTS as PartCatalog)[p.type].size)/2),0);
+ return v.parts.reduce((r,p)=>Math.max(r,partCenter(p).applyQuaternion(v.q).add(v.pos).distanceTo(point)+Math.hypot(...PARTS[p.type].size)/2),0);
 }
 export class DockingAutopilot{
  declare elapsed:number;declare state:DockingAutopilotState;declare held:number;declare message:string;declare ownParts:Set<string>;declare ownShape:string;declare owner:Flight|null;declare peak:{speed:number};declare ports:DockingPortPair;declare previous:Pick<Flight,'sas'|'sasMode'|'rcsEnabled'|'portTranslationEnabled'>;declare stable:number;declare target:Flight;declare targetShape:string;

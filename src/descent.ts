@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {bodyOrbitState,MOON,type CelestialBodyId} from './celestial.js';
 import {partCenter,partRotation,type AeroPart} from './aero.js';
 import {engineBurn,type FuelNetworks,type EngineSet} from './resources.js';
@@ -17,7 +17,7 @@ export function descentTelemetry(v:DescentVessel):DescentTelemetry{
  const com=v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)),o=bodyOrbitState(com,v.vel,v.universalTime),up=o.r.clone().normalize();
  let clearance=Infinity;
  for(const p of v.parts){
-  const rotation=v.q.clone().multiply(partRotation(p)),c=partCenter(p).applyQuaternion(v.q).add(v.pos),[x,y,z]=(PARTS as PartCatalog)[p.type].size;
+  const rotation=v.q.clone().multiply(partRotation(p)),c=partCenter(p).applyQuaternion(v.q).add(v.pos),[x,y,z]=PARTS[p.type].size;
   for(const a of [-1,1])for(const b of [-1,1])for(const d of [-1,1]){const corner=new T.Vector3(a*x/2,b*y/2,d*z/2).applyQuaternion(rotation).add(c);clearance=Math.min(clearance,corner.distanceTo(o.center)-o.body.radius);}
  }
  const air=o.bodyId==='planet'?atmosphere(o.altitude):{density:0,pressure:0};
@@ -27,7 +27,7 @@ export function descentTelemetry(v:DescentVessel):DescentTelemetry{
  const thrust=force.length(),acceleration=thrust/v.stats.mass,netAcceleration=acceleration-o.gravity,vertical=velocity.dot(up),horizontal=Math.sqrt(Math.max(0,speed**2-vertical**2)),fall=Math.max(0,-vertical);
  const brakingDistance=netAcceleration>0?speed**2/(2*netAcceleration):Infinity,verticalBrakingDistance=netAcceleration>0?fall*fall/(2*netAcceleration):Infinity;
  const tilt=force.lengthSq()?force.normalize().applyQuaternion(v.q).angleTo(up)*180/Math.PI:null;
- return {body:o.bodyId,energy:o.energy,periapsis:o.periapsis,apoapsis:o.apoapsis,clearance,vertical,horizontal,speed,gravity:o.gravity,thrust,acceleration,netAcceleration,hoverThrottle:acceleration>0?o.gravity/acceleration:Infinity,brakingDistance,verticalBrakingDistance,tilt,landed:v.landed&&!v.crashed,crashed:v.crashed,legs:v.parts.filter(p=>(PARTS as PartCatalog)[p.type].landingLeg).length};
+ return {body:o.bodyId,energy:o.energy,periapsis:o.periapsis,apoapsis:o.apoapsis,clearance,vertical,horizontal,speed,gravity:o.gravity,thrust,acceleration,netAcceleration,hoverThrottle:acceleration>0?o.gravity/acceleration:Infinity,brakingDistance,verticalBrakingDistance,tilt,landed:v.landed&&!v.crashed,crashed:v.crashed,legs:v.parts.filter(p=>PARTS[p.type].landingLeg).length};
 }
 
 export function descentGuidance(d:DescentTelemetry,throttle=0):string{

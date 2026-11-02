@@ -1,7 +1,7 @@
 import {stageFuelLevels} from './stage-fuel.js';
 import {stagePerformance,type ResourcePart} from './resources.js';
 import {stagePlan,type StagePart} from './staging.js';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {chuteNames,type ParachuteState} from './recovery.js';
 export type StackPart=ResourcePart&StagePart;
 export interface StackFlight{fuel:ReadonlyMap<string,number>;stage:number;chutes:ReadonlyMap<string,ParachuteState>;active:ReadonlySet<string>}
@@ -17,7 +17,7 @@ export function renderStageStack(host:Element,parts:readonly StackPart[],{flight
   const icons=document.createElement('div');icons.className='stageStackIcons';
   for(const action of slot.actions){const p=parts.find(p=>p.id===action.id)!,button=document.createElement('button');
    const chute=action.kind==='chute'&&flight?flight.chutes.get(p.id)?.status:null;if(chute){button.dataset.chute=chute;row.classList.toggle('chuteActive',row.classList.contains('chuteActive')||['armed','reefed','open'].includes(chute));}
-   const name=(chute?'パラシュート '+chuteNames[chute]:action.label)+' · '+(parts.indexOf(p)+1)+'. '+(PARTS as PartCatalog)[p.type].name;button.title=name;button.setAttribute('aria-label',name);button.disabled=!!flight;
+   const name=(chute?'パラシュート '+chuteNames[chute]:action.label)+' · '+(parts.indexOf(p)+1)+'. '+PARTS[p.type].name;button.title=name;button.setAttribute('aria-label',name);button.disabled=!!flight;
    button.innerHTML={engine:'<svg viewBox="0 0 24 24"><path d="M9 3h6l1 5-2 3 4 8H6l4-8-2-3z"/><path d="M9 21v2m3-2v2m3-2v2"/></svg>',separate:'<svg viewBox="0 0 24 24"><path d="M4 7h16v3H4zm0 7h16v3H4z"/></svg>',chute:'<svg viewBox="0 0 24 24"><path d="M3 10a9 9 0 0 1 18 0zM3 10l9 11 9-11M12 10v11"/></svg>'}[action.kind];button.onclick=()=>onSelect(p.id);icons.append(button);
   }
   if(!slot.actions.length){const empty=document.createElement('span');empty.textContent='—';icons.append(empty);}row.append(icons);

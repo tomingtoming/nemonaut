@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {partCenter,partRotation,type AeroPart} from './aero.js';
 import {bodyAltitude,bodyUp,relativeMotion} from './celestial.js';
 import {surfaceAngularVelocity,surfaceVelocity} from './surface-frame.js';
@@ -18,7 +18,7 @@ export function migrateLegacySurface(v:MigratingFlight):boolean{
  const com=v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)),motion=relativeMotion(com,v.vel,v.universalTime);
  if(motion.body.id!=='planet')return false;
  const touching=v.parts.some(p=>{
-  const point=partCenter(p).applyQuaternion(v.q).add(v.pos),up=bodyUp(point,v.universalTime,motion.body),q=v.q.clone().multiply(partRotation(p)),size=(PARTS as PartCatalog)[p.type].size;
+  const point=partCenter(p).applyQuaternion(v.q).add(v.pos),up=bodyUp(point,v.universalTime,motion.body),q=v.q.clone().multiply(partRotation(p)),size=PARTS[p.type].size;
   const extent=[[1,0,0],[0,1,0],[0,0,1]].reduce((sum,axis,i)=>sum+Math.abs(new T.Vector3(...axis).applyQuaternion(q).dot(up))*size[i]/2,0);
   const height=bodyAltitude(point,v.universalTime,motion.body);
   return height-extent<.5&&height+extent>-.5;

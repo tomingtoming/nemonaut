@@ -1,4 +1,4 @@
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {fleet,type FleetNode} from './fleet.js';
 import {descentTelemetry,type DescentVessel} from './descent.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
@@ -27,7 +27,7 @@ export function recordFlightChallenges(history:readonly WorldHistoryEvent[],root
  if(practice||!root)return history;
  let next=history;
  for(const v of fleet(root)){
-  if(v.time<=0||!v.parts.some(p=>(PARTS as PartCatalog)[p.type].control))continue;
+  if(v.time<=0||!v.parts.some(p=>PARTS[p.type].control))continue;
   const ids=v.parts.map(p=>p.id),{origins,phases}=evidence(next),sources=surfaceOrigins(ids,origins);if(!sources)continue;
   const airborne=phaseSources(ids,phases,'flight-ascent'),touchdowns=phaseSources(ids,phases,'flight-touchdown');
   const damaged=v.crashed||[...v.thermal.values()].some(s=>s.failed);

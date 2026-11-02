@@ -1,4 +1,4 @@
-import {PARTS,type PartCatalog} from './catalog.js';
+import {PARTS} from './catalog.js';
 import {fleet,type FleetNode} from './fleet.js';
 import {descentTelemetry,type DescentVessel} from './descent.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
@@ -15,7 +15,7 @@ export function deliveryTelemetry(v:DeliveryVessel,history:readonly WorldHistory
  const distance=deliveryDistance(center,v.universalTime,site),speed=surfaceRelativeVelocity(center,v.vel,v.universalTime).length();
  const probe=v.parts.find(p=>p.type==='probe'),solar=v.parts.some(p=>p.type==='solar');
  const sources=surfaceOrigins(v.parts.map(p=>p.id),launchOrigins(history));
- const transport=v.parts.some(p=>(PARTS as PartCatalog)[p.type].wheel||(PARTS as PartCatalog)[p.type].thrust);
+ const transport=v.parts.some(p=>PARTS[p.type].wheel||PARTS[p.type].thrust);
  let reason='';
  if(practice||!sources)reason='通常出発が必要';
  else if(v.crashed||[...v.thermal.values()].some(s=>s.failed))reason='機体損傷';
