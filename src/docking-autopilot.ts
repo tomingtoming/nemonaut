@@ -1,10 +1,10 @@
 import * as T from 'three';
-import {PARTS} from './catalog.js';
+import {PARTS,type PartCatalog} from './catalog.js';
 import {partCenter} from './aero.js';
 import {canControl,fleet} from './fleet.js';
 import {bodyOrbitState} from './celestial.js';
-import {centerOfVessel} from './relative-navigation.js';
-import {portGuidance} from './port-navigation.js';
+import {centerOfVessel,type DockingPortPair} from './relative-navigation.js';
+import {portGuidance,type PortGuidance} from './port-navigation.js';
 import {dockingStatus} from './docking.js';
 
 // Automatic docking with RCS. The structure follows MechJeb2's docking autopilot (design only,
@@ -14,19 +14,25 @@ import {dockingStatus} from './docking.js';
 // translations (portForward/Right/Up); the existing docking wait performs the actual coupling.
 export const DOCKING_AUTOPILOT={margin:2,standbyMin:8,routeSpeed:1,routeGain:.25,approachSpeed:.5,finalSpeed:.15,lateralGain:.15,velocityGain:2,
  holdTolerance:1,holdSpeed:.08,corridor:.5,timeLimit:1800,startRange:500,startSpeed:1};
-const zero=()=>({portForward:0,portRight:0,portUp:0});
-const clamp=(x,a=1)=>T.MathUtils.clamp(x,-a,a);
-const fuelAvailable=f=>f.parts.some(p=>PARTS[p.type].rcsThrust&&p.fuelEnabled!==false&&(f.fuel.get(p.id)||0)>0);
-const signature=f=>JSON.stringify(f.parts.map(p=>[p.id,p.p,p.r,p.fuelEnabled]));
+type Flight=import('./core.js').Flight;
+/** Target-port-frame translation commands (FlightInput portForward/portRight/portUp). */
+export interface DockingCommands{portForward:number;portRight:number;portUp:number}
+export type DockingAutopilotState='idle'|'aligning'|'routing'|'holding'|'approaching'|'docking'|'complete'|'cancelled'|'failed';
+/** Safety sphere around the target and the standby point on the port axis. */
+export interface DockingPlan{center:T.Vector3;radius:number;standby:number;point:T.Vector3}
+const zero=():DockingCommands=>({portForward:0,portRight:0,portUp:0});
+const clamp=(x:number,a=1)=>T.MathUtils.clamp(x,-a,a);
+const fuelAvailable=(f:Flight)=>f.parts.some(p=>(PARTS as PartCatalog)[p.type].rcsThrust&&p.fuelEnabled!==false&&(f.fuel.get(p.id)||0)>0);
+const signature=(f:Flight)=>JSON.stringify(f.parts.map(p=>[p.id,p.p,p.r,p.fuelEnabled]));
 // Farthest material point from `point`, using each part's bounding sphere.
-function reach(v,point){
- return v.parts.reduce((r,p)=>Math.max(r,partCenter(p).applyQuaternion(v.q).add(v.pos).distanceTo(point)+Math.hypot(...PARTS[p.type].size)/2),0);
+function reach(v:Flight,point:T.Vector3):number{
+ return v.parts.reduce((r,p)=>Math.max(r,partCenter(p).applyQuaternion(v.q).add(v.pos).distanceTo(point)+Math.hypot(...(PARTS as PartCatalog)[p.type].size)/2),0);
 }
 export class DockingAutopilot{
- declare elapsed:any;declare state:any;declare held:any;declare message:any;declare ownParts:any;declare ownShape:any;declare owner:any;declare peak:any;declare ports:any;declare previous:any;declare stable:any;declare target:any;declare targetShape:any;
+ declare elapsed:number;declare state:DockingAutopilotState;declare held:number;declare message:string;declare ownParts:Set<string>;declare ownShape:string;declare owner:Flight|null;declare peak:{speed:number};declare ports:DockingPortPair;declare previous:Pick<Flight,'sas'|'sasMode'|'rcsEnabled'|'portTranslationEnabled'>;declare stable:number;declare target:Flight;declare targetShape:string;
  constructor(){this.owner=null;this.state='idle';this.message='待機';}
- get active(){return !!this.owner;}
- start(f){
+ get active():boolean{return !!this.owner;}
+ start(f:Flight|null|undefined):void{
   if(this.owner)throw Error('自動ドッキングを中止してから開始してください');
   const target=f?.navigationTarget,ports=f?.dockingPorts;
   if(!f||!canControl(f)||!target||target.crashed||!fleet(f).includes(target)||!ports)throw Error('操作可能な機体と、目標機のポートを選択してください');
@@ -41,18 +47,18 @@ export class DockingAutopilot{
   this.owner=f;this.target=target;this.ports={...ports};this.ownParts=new Set(f.parts.map(p=>p.id));this.ownShape=signature(f);this.targetShape=signature(target);
   this.elapsed=0;this.stable=0;this.held=0;this.state='aligning';this.message='ポート整列';this.peak={speed:0};
  }
- stop(state='cancelled',message='中止'){
+ stop(state:DockingAutopilotState='cancelled',message='中止'):void{
   if(!this.owner)return;
   if(state!=='complete'){Object.assign(this.owner,this.previous);this.owner.holdQ=this.owner.q.clone();}
   this.owner=null;this.state=state;this.message=message;
  }
  // Geometry of the route: safety sphere around the target and the standby point on the port axis.
- plan(f,nav){
+ plan(f:Flight,nav:PortGuidance):DockingPlan{
   const center=centerOfVessel(this.target),radius=reach(this.target,center)+reach(f,nav.own.position)+DOCKING_AUTOPILOT.margin;
   const depth=nav.target.position.clone().sub(center).dot(nav.outward),standby=Math.max(DOCKING_AUTOPILOT.standbyMin,radius-depth+1);
   return {center,radius,standby,point:nav.target.position.clone().addScaledVector(nav.outward,standby)};
  }
- step(f,dt){
+ step(f:Flight,dt:number):DockingCommands{
   if(!this.owner)return zero();
   if(f!==this.owner){
    // The docking wait replaced the flight with the coupled vessel.
@@ -64,7 +70,7 @@ export class DockingAutopilot{
   if(!canControl(f)||f.navigationTarget!==this.target||this.target.crashed||f.crashed||!fleet(f).includes(this.target)||JSON.stringify(f.dockingPorts)!==JSON.stringify(this.ports)||signature(f)!==this.ownShape||signature(this.target)!==this.targetShape){this.stop('cancelled','機体またはポートが変更されました');return zero();}
   if(f.throttle!==0){this.stop('cancelled','主エンジン操作');return zero();}
   if(this.elapsed>0&&(!f.sas||f.sasMode!=='dock'||!f.rcsEnabled||!f.portTranslationEnabled)){
-   const changed=Object.fromEntries(Object.entries({sas:true,sasMode:'dock',rcsEnabled:true,portTranslationEnabled:true}).filter(([k,v])=>f[k]!==v).map(([k])=>[k,f[k]]));
+   const changed=Object.fromEntries(Object.entries({sas:true,sasMode:'dock',rcsEnabled:true,portTranslationEnabled:true}).filter(([k,v])=>f[k as keyof DockingAutopilot['previous']]!==v).map(([k])=>[k,f[k as keyof DockingAutopilot['previous']]]));
    this.stop('cancelled','操縦設定の変更');Object.assign(f,changed);return zero();
   }
   if(!fuelAvailable(f)){this.stop('failed','RCS推進剤不足');return zero();}
@@ -117,7 +123,7 @@ export class DockingAutopilot{
  }
 }
 // True when the straight segment a→b stays outside the sphere (center, radius).
-export function segmentClear(a,b,center,radius){
+export function segmentClear(a:T.Vector3,b:T.Vector3,center:T.Vector3,radius:number):boolean{
  const ab=b.clone().sub(a),t=ab.lengthSq()>0?T.MathUtils.clamp(center.clone().sub(a).dot(ab)/ab.lengthSq(),0,1):0;
  return a.clone().addScaledVector(ab,t).distanceTo(center)>=radius;
 }

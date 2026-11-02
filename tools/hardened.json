@@ -5,6 +5,7 @@
   "angular-momentum",
   "app-id",
   "ascent-panel",
+  "assembly-branch",
   "assembly-interference",
   "attachment-nodes",
   "body-drag",
@@ -35,8 +36,11 @@
   "descent-panel",
   "design-diagnostics",
   "design-diagnostics-panel",
+  "design-library",
   "design-part-windows",
   "docking",
+  "docking-autopilot",
+  "docking-window",
   "engine-medium",
   "engine-plume",
   "engine-shrouds",
@@ -57,6 +61,7 @@
   "flight-layout",
   "flight-map",
   "flight-pause",
+  "flight-save",
   "flight-scenery",
   "floating-window",
   "fracture",
@@ -113,6 +118,7 @@
   "planet",
   "port-navigation",
   "port-scope",
+  "port-window",
   "power",
   "precision-landing",
   "rcs",
@@ -147,6 +153,7 @@
   "surface-survey",
   "survey-markers",
   "symmetry",
+  "symmetry-geometry",
   "takeoff-controller.d",
   "thermal",
   "thrust-overlay",
@@ -160,6 +167,7 @@
   "workshop-layout",
   "workshop-symmetry",
   "world-history",
-  "world-physics"
+  "world-physics",
+  "world-runtime"
  ]
 }
