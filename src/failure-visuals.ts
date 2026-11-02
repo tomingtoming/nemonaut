@@ -22,7 +22,7 @@ export function markWreckVisual(object:T.Object3D,vessel:{failureDynamics?:unkno
  const event=vessel.failureEvents?.find(e=>e.partId===object.userData.partId),burned=event?.effect==='fuel-burst'||event?.cause==='thermal';
  object.traverse((o:WreckNode)=>{if(!o.isMesh)return;o.userData.wreckMaterials=true;const tint=(m:TintableMaterial)=>{const copy=m.clone();if(copy.color)copy.color.multiplyScalar(burned?.18:.55);if(copy.emissive)copy.emissive.set(0);return copy;};o.material=Array.isArray(o.material)?o.material.map(tint):tint(o.material);});
 }
-export function disposeWreckVisual(object:T.Object3D):void{object.traverse((o:T.Object3D&{material?:T.Material|T.Material[]})=>{if(!o.userData.wreckMaterials)return;for(const m of Array.isArray(o.material)?o.material:[o.material as T.Material])m.dispose();delete o.userData.wreckMaterials;});}
+export function disposeWreckVisual(object:T.Object3D):void{object.traverse((o:T.Object3D&{material?:T.Material|T.Material[]})=>{if(!o.userData.wreckMaterials)return;const material=o.material;if(!material)throw Error('破損表示の材質が見つかりません');for(const m of Array.isArray(material)?material:[material])m.dispose();delete o.userData.wreckMaterials;});}
 function plumeTexture(){
  const size=64,data=new Uint8Array(size*size*4);
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
@@ -55,8 +55,8 @@ export class FailureVisuals{
     }
     item={root,materials,particles};this.scene.add(root);this.items.set(e.id,item);
    }
-   const age=env.age,up=bodyUp(new T.Vector3(...e.position as T.Vector3Tuple),e.time);
-   item.root.position.fromArray(e.position).addScaledVector(new T.Vector3(...e.velocity as T.Vector3Tuple),age);
+   const age=env.age,up=bodyUp(new T.Vector3(...e.position),e.time);
+   item.root.position.fromArray(e.position).addScaledVector(new T.Vector3(...e.velocity),age);
    for(const {mesh,smoke,direction}of item.particles){
     const life=smoke?env.smoke:Math.max(0,1-age/(e.effect==='fuel-burst'?1.6:1.1));
     mesh.visible=life>0;mesh.material.opacity=life*(smoke?.45:.9);

@@ -22,15 +22,20 @@ export function recordFailure(f:FailureRecorder,part:{id:string;type:PartType}|n
 }
 export function validateFailureEvents(value:unknown):FailureEvent[]{
  if(value===undefined)return [];
- const fail=()=>{throw Error('破損履歴が不正です');},ids=new Set<string>();
- if(!Array.isArray(value)||value.length>FAILURE_EVENT_LIMIT)fail();
+ if(!isFailureEventList(value))throw Error('破損履歴が不正です');
+ return structuredClone(value);
+}
+// The checks run on untrusted save data; the elements are typed only once every check passes.
+function isFailureEventList(value:unknown):value is FailureEvent[]{
+ const ids=new Set<string>();
+ if(!Array.isArray(value)||value.length>FAILURE_EVENT_LIMIT)return false;
  let last=-1;
- for(const e of value as FailureEvent[]){
-  if(!e||typeof e.id!=='string'||!e.id.length||e.id.length>200||ids.has(e.id)||typeof e.partId!=='string'||!e.partId.length||e.partId.length>200||!Object.hasOwn(PARTS,e.type)||!['impact','thermal','structural'].includes(e.cause))fail();
+ for(const e of value){
+  if(!e||typeof e.id!=='string'||!e.id.length||e.id.length>200||ids.has(e.id)||typeof e.partId!=='string'||!e.partId.length||e.partId.length>200||!Object.hasOwn(PARTS,e.type)||!['impact','thermal','structural'].includes(e.cause))return false;
   ids.add(e.id);
-  if(!(['time','speed','fuel','temperature'] as ('time'|'speed'|'fuel'|'temperature')[]).every(k=>Number.isFinite(e[k])&&e[k]>=0&&e[k]<=1e12)||e.time<last)fail();last=e.time;
-  for(const k of ['position','velocity'] as ('position'|'velocity')[])if(!Array.isArray(e[k])||e[k].length!==3||e[k].some(n=>!Number.isFinite(n)||Math.abs(n)>1e12))fail();
-  const d=PARTS[e.type];if(e.fuel>(d.fuel||d.monoprop||0)||e.effect!==(e.fuel>0&&(d.fuel||d.monoprop)?'fuel-burst':'fragments'))fail();
+  if(!(['time','speed','fuel','temperature'] as const).every(k=>Number.isFinite(e[k])&&e[k]>=0&&e[k]<=1e12)||e.time<last)return false;last=e.time;
+  for(const k of ['position','velocity'] as const)if(!Array.isArray(e[k])||e[k].length!==3||e[k].some((n:unknown)=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>1e12))return false;
+  const d=PARTS[e.type];if(e.fuel>(d.fuel||d.monoprop||0)||e.effect!==(e.fuel>0&&(d.fuel||d.monoprop)?'fuel-burst':'fragments'))return false;
  }
- return structuredClone(value as FailureEvent[]);
+ return true;
 }

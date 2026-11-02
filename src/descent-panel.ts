@@ -14,7 +14,7 @@ export function mountDescentPanel(host:Element,getFlight:()=>DescentPanelFlight|
  expeditionHelp.innerHTML='<summary>高い月周回から着陸・帰還する手順</summary><small>Selene Expedition向け：①F5で保存。逆行へ整列して噴射し、近点を約1 kmまで下げて停止。②惰性で降下。高速航行が止まったら通常速度で逆行・減速し、水平速度と鉛直速度を確認。停止高度は安全着陸を保証しません。③低速で天頂へ整列し、静止推力を目安に下降速度を調整。高高度で長く低速降下すると燃料を使い切ります。地面へ近づくほど減速し、最後は1 m/s未満で接地・噴射停止。④「月面から再離陸」の手順で周回し、帰還計画を作成。母星の大気へ入る前に次の段で脚・タンク・エンジンを分離、さらに次の段で傘を待機。熱シールドを進行方向へ向けます。</small><small>上級向けの見本です。新規見本は真空用上段を搭載。保存済み機体の構成は変わりません。操作の遅れ・長い滞空・再計画で不足し得ます。出発時刻で軌道も変わるため、高度・時刻を固定せず計器と計画を確認してください。</small>';
  panel.append(expeditionHelp);
  host.after(panel);
- for(const [name,mode]of [['Retro','retrograde'],['Up','radial']] as [string,string][])element(panel,'.descent'+name,'button').onclick=()=>{const f=getFlight();if(f&&!f.crashed){f.sas=true;f.sasMode=mode;changed();}};
+ for(const [name,mode]of [['Retro','retrograde'],['Up','radial']] as const)element(panel,'.descent'+name,'button').onclick=()=>{const f=getFlight();if(f&&!f.crashed){f.sas=true;f.sasMode=mode;changed();}};
  for(const name of ['Full','Hover','Less','More','Stop'])element(panel,'.descent'+name,'button').onclick=()=>{const f=getFlight();if(!f||f.crashed)return;const d=descentTelemetry(f);f.throttle=name==='Stop'?0:name==='Full'?1:name==='Hover'?Math.min(1,d.hoverThrottle):Math.max(0,Math.min(1,f.throttle+(name==='More'?.005:-.005)));changed();};
  let window:FloatingWindow|null=null,button:HTMLButtonElement|null=null,anchor:Comment|null=null;
  function closeWindow(){if(!window)return;if(!anchor||!button)throw Error('降下計器の窓が設置されていません');anchor.after(panel);window.remove();window=null;button.setAttribute('aria-pressed','false');}

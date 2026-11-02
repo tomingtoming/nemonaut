@@ -21,7 +21,9 @@ interface CollisionBody{v:Flight;mass:number;center:T.Vector3;inverseInertia:T.M
 // the contacts; this pass applies equal and opposite impulses to the game state, which is
 // what the next step imports. Momentum is conserved; restitution is 0 like the colliders.
 // onContact(event) observes resolved vessel contacts (tests, diagnostics); null by default.
-export const VESSEL_COLLISION={enabled:true,onContact:null as ((event:VesselContactEvent)=>void)|null,prediction:.05,slop:.005,correction:.8,friction:.5,iterations:4,impactSpeed:9};
+/** Tunables of the vessel-vessel pass; tests swap onContact and enabled. */
+export interface VesselCollisionSettings{enabled:boolean;onContact:((event:VesselContactEvent)=>void)|null;prediction:number;slop:number;correction:number;friction:number;iterations:number;impactSpeed:number}
+export const VESSEL_COLLISION:VesselCollisionSettings={enabled:true,onContact:null,prediction:.05,slop:.005,correction:.8,friction:.5,iterations:4,impactSpeed:9};
 // Pairs that were already touching when first seen (fresh stages, fracture fragments, restored
 // saves) do not collide until they have separated once.
 const ignored=new Map<string,boolean>();
@@ -44,9 +46,9 @@ function shapes(v:Flight):ContactShape[]{
 }
 // Facing docking ports belong to the docking capture, not to collision.
 function dockingFaces(a:Flight,pa:FlightPart|undefined,b:Flight,pb:FlightPart|undefined):boolean{
- if(!PARTS[pa?.type as string]?.docking||!PARTS[pb?.type as string]?.docking)return false;
+ if(!pa||!pb||!PARTS[pa.type]?.docking||!PARTS[pb.type]?.docking)return false;
  const up=(v:Flight,p:FlightPart)=>new T.Vector3(0,1,0).applyQuaternion(v.q.clone().multiply(partRotation(p)));
- return Math.acos(T.MathUtils.clamp(-up(a,pa!).dot(up(b,pb!)),-1,1))<=2*DOCK_LIMITS.angle;
+ return Math.acos(T.MathUtils.clamp(-up(a,pa).dot(up(b,pb)),-1,1))<=2*DOCK_LIMITS.angle;
 }
 function body(v:Flight):CollisionBody{
  const mass=v.parts.reduce((s,p)=>s+partMass(p,v.fuel,v.ballast,v.thermal),0),center=centerOfVessel(v);
@@ -102,9 +104,9 @@ export function resolveVesselCollisions(vessels:readonly Flight[],dt:number):Ves
   if(depth>0){const n=contacts.reduce((m,c)=>c.distance<m.distance?c:m).normal,total=A.mass+B.mass,shift=depth*VESSEL_COLLISION.correction;a.pos.addScaledVector(n,-shift*B.mass/total);b.pos.addScaledVector(n,shift*A.mass/total);}
   if(!impact.contact&&depth<=0)continue;// within prediction range but not touching this step
   const event={a:a.vesselId,b:b.vesselId,contacts:contacts.length,speed:impact.speed};events.push(event);VESSEL_COLLISION.onContact?.(event);
-  if(impact.speed>VESSEL_COLLISION.impactSpeed)for(const [v,p]of [[a,impact.contact!.parts[0]],[b,impact.contact!.parts[1]]] as const){
+  const hit=impact.contact;if(hit&&impact.speed>VESSEL_COLLISION.impactSpeed)for(const [v,p]of [[a,hit.parts[0]],[b,hit.parts[1]]] as const){
    if(!p||v.failureDynamics)continue;
-   recordFailure(v,p,'impact',{speed:impact.speed,position:impact.contact!.point.clone()});v.crashed=true;
+   recordFailure(v,p,'impact',{speed:impact.speed,position:hit.point.clone()});v.crashed=true;
    fractureVessel(v,[p.id],(parts,environment,time)=>new Flight(parts,environment,time),statistics);
   }
  }

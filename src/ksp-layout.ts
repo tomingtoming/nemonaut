@@ -16,7 +16,7 @@ export function renderStageStack(host:Element,parts:readonly StackPart[],{flight
   row.classList.toggle('next',!!flight&&slot.stage===flight.stage+1);row.classList.toggle('spent',!!flight&&slot.stage<=flight.stage);
   const label=document.createElement(!flight&&onPreview?'button':'b');label.textContent=String(slot.stage).padStart(2,'0');if(!flight&&onPreview){label.className='stagePreview';label.title='段 '+slot.stage+' の分離後機体・重心・推力線を表示／解除';label.setAttribute('aria-label',label.title);label.setAttribute('aria-pressed',String(previewStage===slot.stage));label.onclick=()=>onPreview(slot.stage);}row.append(label);
   const icons=document.createElement('div');icons.className='stageStackIcons';
-  for(const action of slot.actions){const p=parts.find(p=>p.id===action.id)!,button=document.createElement('button');
+  for(const action of slot.actions){const p=parts.find(p=>p.id===action.id),button=document.createElement('button');if(!p)throw Error('段の部品が見つかりません: '+action.id);
    const chute=action.kind==='chute'&&flight?flight.chutes.get(p.id)?.status:null;if(chute){button.dataset.chute=chute;row.classList.toggle('chuteActive',row.classList.contains('chuteActive')||['armed','reefed','open'].includes(chute));}
    const name=(chute?'パラシュート '+chuteNames[chute]:action.label)+' · '+(parts.indexOf(p)+1)+'. '+PARTS[p.type].name;button.title=name;button.setAttribute('aria-label',name);button.disabled=!!flight;
    button.innerHTML={engine:'<svg viewBox="0 0 24 24"><path d="M9 3h6l1 5-2 3 4 8H6l4-8-2-3z"/><path d="M9 21v2m3-2v2m3-2v2"/></svg>',separate:'<svg viewBox="0 0 24 24"><path d="M4 7h16v3H4zm0 7h16v3H4z"/></svg>',chute:'<svg viewBox="0 0 24 24"><path d="M3 10a9 9 0 0 1 18 0zM3 10l9 11 9-11M12 10v11"/></svg>'}[action.kind];button.onclick=()=>onSelect(p.id);icons.append(button);
@@ -45,4 +45,4 @@ export function mountKspLayout():void{
  const menu=document.createElement('details');menu.id='flightMenu';const menuLabel=document.createElement('summary');menuLabel.textContent='飛行';menu.append(menuLabel,element(document,'.hudtop','div'));hud.append(menu);
 }
 
-export function updateSasDirections(f:SasDirectionFlight):void{for(const b of document.querySelectorAll<HTMLButtonElement>('#sasDirections button')){const m=b.dataset.mode;b.disabled=m==='maneuver'?!f.maneuver:m==='dock'?!f.dockingPorts:(['target','relativeRetrograde'] as (string|undefined)[]).includes(m)?!f.navigationTarget:false;b.setAttribute('aria-pressed',String(f.sas&&f.sasMode===m));}}
+export function updateSasDirections(f:SasDirectionFlight):void{for(const b of document.querySelectorAll<HTMLButtonElement>('#sasDirections button')){const m=b.dataset.mode;b.disabled=m==='maneuver'?!f.maneuver:m==='dock'?!f.dockingPorts:(m==='target'||m==='relativeRetrograde')?!f.navigationTarget:false;b.setAttribute('aria-pressed',String(f.sas&&f.sasMode===m));}}

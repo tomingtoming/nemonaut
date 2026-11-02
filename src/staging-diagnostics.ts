@@ -17,7 +17,7 @@ export function stagingDiagnostics(parts:readonly StagePart[],referenceId?:strin
   for(const action of slot.actions){
    if(!action.effective)continue;
    const vessel=vessels.find(v=>v.some(p=>p.id===action.id));
-   const controlIds=vessel!.filter(p=>PARTS[p.type].control).map(p=>p.id);
+   if(!vessel)throw Error('分離後の機体が見つかりません');const controlIds=vessel.filter(p=>PARTS[p.type].control).map(p=>p.id);
    actions.push({...action,referenceId:reference?.id??null,controlIds,separatedAt:separatedAt.get(action.id)??null,status:!controlIds.length?'uncontrolled':vessel===referenceVessel?'reference':'switch'});
   }
   const next:(readonly StagePart[])[]=[];

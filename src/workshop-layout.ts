@@ -9,7 +9,8 @@ export function workshopLayout(bounds:T.Box3,fov=40,aspect=1):WorkshopLayout{
  const width=2*Math.max(Math.abs(bounds.min.x-x),Math.abs(bounds.max.x-x));
  const depth=2*Math.max(Math.abs(bounds.min.z-z),Math.abs(bounds.max.z-z));
  // Keep the framing camera inside the hangar, including the narrower viewport axis.
- const clearance=workshopFrame(bounds,fov,aspect)!.distance+2;
+ const frame=workshopFrame(bounds,fov,aspect);if(!frame)throw Error('組立棟の視点を決められません');
+ const clearance=frame.distance+2;
  const roomScale=[Math.max(1,(width+8)/36,clearance/18),Math.max(1,(bounds.max.y-floor+4)/18,(center.y-floor+clearance)/19),Math.max(1,(depth+12)/40,clearance/20)];
  return {origin:[x,floor,z],roomScale,platformScale:Math.max(1,(Math.hypot(width,depth)/2+.8)/4.9),gridSize:Math.ceil(Math.max(80,width+30,depth+30)/2)*2};
 }

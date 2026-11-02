@@ -18,7 +18,7 @@ export function renderStagingPanel(host:Element,parts:readonly StackPart[],{flig
   const select=document.createElement('select');select.setAttribute('aria-label','段診断の基準制御部品');
   for(const p of controlParts){const option=document.createElement('option');option.value=p.id;option.textContent=(parts.indexOf(p)+1)+'. '+PARTS[p.type].name;select.append(option);}
   if(!controlParts.length){const option=document.createElement('option');option.textContent='制御部品なし';select.append(option);select.disabled=true;}
-  else select.value=diagnostic.referenceId as string;
+  else if(diagnostic.referenceId!==null)select.value=diagnostic.referenceId;
   select.onchange=()=>{references.set(host,select.value);renderStagingPanel(host,parts,{flight,onSelect,onMove,onPreview,previewStage});};label.append(select);host.append(label);
   const summary=document.createElement('p');summary.className='muted';const different=diagnostic.actions.filter(a=>a.status!=='reference').length;
   summary.textContent=different?'分離後の作動を確認：'+different+' 対象。各段の注記から部品を見直せます。':'作動予定の '+diagnostic.actions.length+' 対象は、予定段まで基準機と一緒に残ります。';host.append(summary);
@@ -31,7 +31,7 @@ export function renderStagingPanel(host:Element,parts:readonly StackPart[],{flig
   row.append(heading);
   if(!slot.actions.length){const empty=document.createElement('small');empty.textContent=flight&&slot.stage<=flight.stage?'現在の機体に対象なし':'対象なし（Spaceで進む）';row.append(empty);}
   for(const action of slot.actions){
-   const p=parts.find(p=>p.id===action.id)!,button=document.createElement('button');button.textContent=action.label+' · '+(parts.indexOf(p)+1)+'. '+PARTS[p.type].name;
+   const p=parts.find(p=>p.id===action.id),button=document.createElement('button');if(!p)throw Error('段の部品が見つかりません: '+action.id);button.textContent=action.label+' · '+(parts.indexOf(p)+1)+'. '+PARTS[p.type].name;
    button.disabled=!!flight;button.onclick=()=>onSelect(p.id);row.append(button);
    const forecast=diagnostic?.actions.find(a=>a.id===action.id&&a.kind===action.kind);
    if(forecast&&forecast.status!=='reference'){

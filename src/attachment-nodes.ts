@@ -22,14 +22,15 @@ export function validateAttachments(parts:readonly NodePart[]):void{
   if(!a||!['node','surface','free'].includes(a.mode))throw Error('取付方法が不正です');
   if(a.mode==='node'){
    const parent=byId.get(p.parent);
-   if(!Number.isInteger(a.ownNode)||!nodes(p.type)[a.ownNode!]||!Number.isInteger(a.parentNode)||a.parentNode!<0||(parent&&!nodes(parent.type)[a.parentNode!]))throw Error('接続点の番号が不正です');
+   const {ownNode,parentNode}=a;
+    if(typeof ownNode!=='number'||!Number.isInteger(ownNode)||!nodes(p.type)[ownNode]||typeof parentNode!=='number'||!Number.isInteger(parentNode)||parentNode<0||(parent&&!nodes(parent.type)[parentNode]))throw Error('接続点の番号が不正です');
   }
  }
 }
 export function nodeConnection(parts:readonly NodePart[],child:NodePart):NodeConnection|null{
  const parent=parts.find(p=>p.id===child.parent);if(!parent)return null;
  const a=child.attachment;
- if(a){if(a.mode!=='node'||!aligned(parent,a.parentNode!,child,a.ownNode!))return null;return {parent:parent.id,parentNode:a.parentNode!,ownNode:a.ownNode!};}
+ if(a){if(a.mode!=='node')return null;const {parentNode,ownNode}=a;if(parentNode===undefined||ownNode===undefined)throw Error('接続点が見つかりません');if(!aligned(parent,parentNode,child,ownNode))return null;return {parent:parent.id,parentNode,ownNode};}
  // Legacy designs have no attachment mode. Infer only one exact, opposing pair.
  const matches:NodeConnection[]=[];
  for(let i=0;i<nodes(parent.type).length;i++)for(let j=0;j<nodes(child.type).length;j++)if(aligned(parent,i,child,j))matches.push({parent:parent.id,parentNode:i,ownNode:j});
@@ -38,7 +39,7 @@ export function nodeConnection(parts:readonly NodePart[],child:NodePart):NodeCon
 export function occupiedNodes(parts:readonly NodePart[],{ignoreEdges=new Set<string>()}:{ignoreEdges?:ReadonlySet<string>}={}):OccupiedNodes{
  const used=new Map<string,string[]>();
  for(const p of parts){if(ignoreEdges.has(p.id))continue;const c=nodeConnection(parts,p);if(!c)continue;
-  for(const endpoint of [key(c.parent,c.parentNode),key(p.id,c.ownNode)]){if(!used.has(endpoint))used.set(endpoint,[]);used.get(endpoint)!.push(p.id);}
+  for(const endpoint of [key(c.parent,c.parentNode),key(p.id,c.ownNode)]){let list=used.get(endpoint);if(!list){list=[];used.set(endpoint,list);}list.push(p.id);}
  }return used;
 }
 export function nodeAvailable(used:ReadonlyMap<string,readonly string[]>,id:string,index:number):boolean{return !used.has(key(id,index));}

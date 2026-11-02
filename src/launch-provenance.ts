@@ -26,6 +26,7 @@ export function orbitalOrigins(history:Iterable<ProvenanceEvent>,type='orbit'):M
  return origins;
 }
 export function orbitalReturnSources(partIds:readonly string[],origins:ReadonlyMap<string,string>):string[]|null{
- if(!partIds.length||partIds.some(id=>!origins.has(id)))return null;
- return [...new Set(partIds.map(id=>origins.get(id) as string))].sort();
+ if(!partIds.length)return null;
+ const sources:string[]=[];for(const id of partIds){const origin=origins.get(id);if(origin===undefined)return null;sources.push(origin);}
+ return [...new Set(sources)].sort();
 }

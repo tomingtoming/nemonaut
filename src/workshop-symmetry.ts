@@ -10,8 +10,8 @@ export function mountWorkshopSymmetry(select:HTMLSelectElement,button:HTMLElemen
   select.innerHTML=mode==='mirror'?'<option value="1">なし</option><option value="mirror">鏡面 ×2</option>':RADIAL_COUNTS.map(n=>`<option value="${n}">${n===1?'なし':'軸対称 ×'+n}</option>`).join('');
   select.value=value;button.textContent=(mode==='mirror'?'鏡面':'軸対称')+' R';
  }
- select.onchange=()=>{if(mode==='radial')radial=select.value;};
+ const change=()=>{if(mode==='radial')radial=select.value;};select.onchange=change;
  function toggle(){if(select.disabled)return;if(mode==='radial'){radial=select.value;mode='mirror';render('mirror');}else{mode='radial';render(radial);}}
  button.onclick=toggle;render('1');
- return {toggle,cycle(reverse=false){if(select.disabled)return;select.value=nextSymmetry(select.value,mode,reverse);(select.onchange as ()=>void)();},setBay(bay:string){mode=bay==='sph'?'mirror':'radial';render(mode==='mirror'?'mirror':radial);}};
+ return {toggle,cycle(reverse=false){if(select.disabled)return;select.value=nextSymmetry(select.value,mode,reverse);change();},setBay(bay:string){mode=bay==='sph'?'mirror':'radial';render(mode==='mirror'?'mirror':radial);}};
 }

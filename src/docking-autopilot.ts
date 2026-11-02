@@ -70,7 +70,8 @@ export class DockingAutopilot{
   if(!canControl(f)||f.navigationTarget!==this.target||this.target.crashed||f.crashed||!fleet(f).includes(this.target)||JSON.stringify(f.dockingPorts)!==JSON.stringify(this.ports)||signature(f)!==this.ownShape||signature(this.target)!==this.targetShape){this.stop('cancelled','機体またはポートが変更されました');return zero();}
   if(f.throttle!==0){this.stop('cancelled','主エンジン操作');return zero();}
   if(this.elapsed>0&&(!f.sas||f.sasMode!=='dock'||!f.rcsEnabled||!f.portTranslationEnabled)){
-   const changed=Object.fromEntries(Object.entries({sas:true,sasMode:'dock',rcsEnabled:true,portTranslationEnabled:true}).filter(([k,v])=>f[k as keyof DockingAutopilot['previous']]!==v).map(([k])=>[k,f[k as keyof DockingAutopilot['previous']]]));
+   const expected={sas:true,sasMode:'dock',rcsEnabled:true,portTranslationEnabled:true};
+    const changed=Object.fromEntries((['sas','sasMode','rcsEnabled','portTranslationEnabled'] as const).filter(k=>f[k]!==expected[k]).map(k=>[k,f[k]] as const));
    this.stop('cancelled','操縦設定の変更');Object.assign(f,changed);return zero();
   }
   if(!fuelAvailable(f)){this.stop('failed','RCS推進剤不足');return zero();}

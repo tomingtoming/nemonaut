@@ -43,11 +43,11 @@ export function lunarCapturePlan(vessel:LunarCaptureVessel):LunarCapturePlan{
  if(orbit.vertical>=0)throw Error('月の近点を通過済みです。次回の接近を計画してください');
  if(orbit.periapsis<1000)throw Error('近点が月面に近すぎます。先に衝突を避ける軌道へ修正してください');
  const peri=apsisPlan(orbit).periapsis;
- if(!peri||!Number.isFinite(peri.time)||peri.time!<=0)throw Error('月の近点を通過済み、または到達時刻を求められません');
- const deltaV=-peri.deltaV!;
+ if(!peri||peri.time===null||!Number.isFinite(peri.time)||peri.time<=0)throw Error('月の近点を通過済み、または到達時刻を求められません');
+ if(peri.deltaV===null)throw Error('近点での減速量を求められません');const deltaV=-peri.deltaV;
  if(!(deltaV>.5))throw Error('近点での減速量を求められません');
- const burn=captureBurnEstimate(vessel,deltaV),midTime=time+peri.time!,startTime=midTime-burn.duration/2;
- const at=coastDrift(pos,vessel.vel,time,peri.time!),atOrbit=bodyOrbitState(at.position,at.velocity,midTime);
+ const burn=captureBurnEstimate(vessel,deltaV),midTime=time+peri.time,startTime=midTime-burn.duration/2;
+ const at=coastDrift(pos,vessel.vel,time,peri.time),atOrbit=bodyOrbitState(at.position,at.velocity,midTime);
  if(atOrbit.bodyId!=='moon')throw Error('近点の前に月重力圏を離れる軌道です');
  const impulse=atOrbit.relativeVelocity.clone().normalize().multiplyScalar(-deltaV),afterVelocity=at.velocity.clone().add(impulse),afterOrbit=bodyOrbitState(at.position,afterVelocity,midTime);
  const warnings:string[]=[];

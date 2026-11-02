@@ -24,7 +24,7 @@ export function symmetryTargets<P extends SymmetryPart=SettablePart>(parts:reado
 }
 // Mutates only the owned copy supplied by editing/launch operations.
 export function normalizeSymmetry<A extends SymmetryPart[]>(parts:A,{fresh=false}:{fresh?:boolean}={}):A{
- const groups=new Map<string,SymmetryPart[]>();for(const p of parts)if(p.symmetryGroup){if(!groups.has(p.symmetryGroup))groups.set(p.symmetryGroup,[]);groups.get(p.symmetryGroup)!.push(p);}
+ const groups=new Map<string,SymmetryPart[]>();for(const p of parts)if(p.symmetryGroup){let group=groups.get(p.symmetryGroup);if(!group){group=[];groups.set(p.symmetryGroup,group);}group.push(p);}
  for(const members of groups.values()){
   if(members.length<2){delete members[0].symmetryGroup;delete members[0].symmetryFrame;continue;}
   if(fresh){const id=crypto.randomUUID();for(const p of members)p.symmetryGroup=id;}
@@ -39,8 +39,8 @@ export function transformSymmetryFrames(parts:readonly Pick<SymmetryPart,'symmet
 export function editSymmetrySetting<P extends SettablePart>(parts:P[],id:string,key:string,value:unknown,linked=true):P[]{
  validateSymmetry(parts);
  const copy=structuredClone(parts),targets=symmetryTargets(copy,id,linked);
- if(key==='stage'){if(!Number.isInteger(value)||(value as number)<0||(value as number)>9)throw Error('作動段が不正です');}
+ if(key==='stage'){if(typeof value!=='number'||!Number.isInteger(value)||value<0||value>9)throw Error('作動段が不正です');}
  else if(targets.some(p=>!validPartSetting(p,key,value)))throw Error('この部品では変更できない作動設定です');
- for(const p of targets)(p as SettablePart&Record<string,unknown>)[key]=value;
+ for(const p of targets)Object.assign(p,{[key]:value});
  return copy;
 }

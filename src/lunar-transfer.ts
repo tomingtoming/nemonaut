@@ -9,8 +9,8 @@ export interface TransferGuide{startTime:number;target:number;burnTime:number;de
 // Circular, coplanar departure with a finite-burn midpoint approximation.
 // phaseOffset is an explicit encounter geometry parameter, not a clock offset.
 // Subsequent trajectory prediction must check the encounter, not just this seed.
-export function lunarTransferSeed(time:number,{mass,thrust,isp,radius=680000,phaseOffset=.26,preparation=0}:LunarTransferOptions={} as LunarTransferOptions):LunarTransferSeed{
- if(![time,mass,thrust,isp,radius,phaseOffset,preparation].every(Number.isFinite)||time<0||preparation<0||preparation>3600||mass<=0||thrust<=0||isp<=0||radius<=PLANET.radius+PLANET.atmosphereTop||radius>=MOON.orbitRadius)throw Error('月遷移の初期条件が不正です');
+export function lunarTransferSeed(time:number,{mass,thrust,isp,radius=680000,phaseOffset=.26,preparation=0}:Partial<LunarTransferOptions>={}):LunarTransferSeed{
+ if(mass===undefined||thrust===undefined||isp===undefined||![time,mass,thrust,isp,radius,phaseOffset,preparation].every(Number.isFinite)||time<0||preparation<0||preparation>3600||mass<=0||thrust<=0||isp<=0||radius<=PLANET.radius+PLANET.atmosphereTop||radius>=MOON.orbitRadius)throw Error('月遷移の初期条件が不正です');
  const a=(radius+MOON.orbitRadius)/2,circularSpeed=Math.sqrt(PLANET.mu/radius),deltaV=Math.sqrt(PLANET.mu*(2/radius-1/a))-circularSpeed,coastTime=Math.PI*Math.sqrt(a**3/PLANET.mu),exhaustVelocity=isp*9.81;
  const fuelRequired=mass*(1-Math.exp(-deltaV/exhaustVelocity)),burnTime=fuelRequired*exhaustVelocity/thrust,orbitalRate=circularSpeed/radius;
  const moon=bodyState(MOON,time+preparation+coastTime+burnTime/2).position.sub(center),phase=Math.atan2(moon.z,moon.y)-Math.PI-orbitalRate*(preparation+burnTime/2)+phaseOffset;
@@ -26,6 +26,6 @@ export function advanceTransferGuide(guide:TransferGuide|null|undefined,force:T.
 }
 export function validateTransferGuide(value:TransferGuide|null|undefined):TransferGuide|null{
  if(value==null)return null;
- if(!(['startTime','target','burnTime','delivered'] as (keyof TransferGuide)[]).every(k=>Number.isFinite(value[k]))||value.startTime<0||value.startTime>1e12||value.target<=0||value.target>10000||value.burnTime<=0||value.burnTime>1e6||Math.abs(value.delivered)>1e8||(value.firstBurnTime!==null&&(!Number.isFinite(value.firstBurnTime)||value.firstBurnTime<0||value.firstBurnTime>1e12)))throw Error('月遷移ガイドの保存値が不正です');
+ if(!(['startTime','target','burnTime','delivered'] as const).every(k=>Number.isFinite(value[k]))||value.startTime<0||value.startTime>1e12||value.target<=0||value.target>10000||value.burnTime<=0||value.burnTime>1e6||Math.abs(value.delivered)>1e8||(value.firstBurnTime!==null&&(!Number.isFinite(value.firstBurnTime)||value.firstBurnTime<0||value.firstBurnTime>1e12)))throw Error('月遷移ガイドの保存値が不正です');
  return {startTime:value.startTime,target:value.target,burnTime:value.burnTime,delivered:value.delivered,firstBurnTime:value.firstBurnTime};
 }

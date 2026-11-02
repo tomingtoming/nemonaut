@@ -7,8 +7,10 @@ import {bodyOrbitState,type OrbitState} from './celestial.js';
 export interface FractureComponent{parts:Part[];wreck:boolean}
 /** Per-part state maps copied to each piece: a value is a Vector3 (cloned) or plain data (structured-cloned). */
 export type FractureMapValue=T.Vector3|{readonly isVector3?:never};
-type FractureMapKey='fuel'|'charge'|'thermal'|'chutes'|'observations'|'deflections'|'gimbals'|'wheelMotion';
-type FractureCopiedKey='time'|'universalTime'|'environment'|'stage'|'started'|'ballast'|'trim'|'brake'|'navigationFrame'|'navigationAuto'|'reactionEnabled'|'steeringEnabled'|'driveEnabled'|'rcsEnabled';
+/** True for a three.js Vector3 (its isVector3 flag), which per-part state copies clone instead of structured-cloning. */
+const isVector3=(v:unknown):v is T.Vector3=>typeof v==='object'&&v!==null&&'isVector3' in v&&!!v.isVector3;
+/** A copy of a per-part state map keeping the entries of `ids`: Vector3 values cloned, plain data structured-cloned. */
+export function copyPartState<V>(m:ReadonlyMap<string,V>,ids:ReadonlySet<string>):Map<string,V>{return new Map<string,V>([...m].filter(([id])=>ids.has(id)).map(([id,v])=>[id,isVector3(v)?v.clone():structuredClone(v)]));}
 /** The statistics fields fracture reads. */
 export interface FractureStats{com:T.Vector3}
 /** The flight fields fractureVessel reads and resets on every piece (a Flight satisfies it). */
@@ -19,9 +21,9 @@ export function fractureComponents(parts:readonly Part[],failedIds:Iterable<unkn
  const failed=new Set<unknown>(failedIds),byId=new Map<string,Part>(parts.map(p=>[p.id,p])),groups=new Map<string,Part[]>();
  for(const p of parts){
   let root=p;
-  if(!failed.has(p.id))while(root.parent&&byId.has(root.parent)&&!failed.has(root.parent))root=byId.get(root.parent)!;
+  if(!failed.has(p.id))for(let parent=root.parent?byId.get(root.parent):undefined;parent&&!failed.has(parent.id);parent=root.parent?byId.get(root.parent):undefined)root=parent;
   const key=failed.has(p.id)?p.id:root.id;
-  if(!groups.has(key))groups.set(key,[]);groups.get(key)!.push(structuredClone(p));
+  let group=groups.get(key);if(!group){group=[];groups.set(key,group);}group.push(structuredClone(p));
  }
  return [...groups.values()].map(group=>{
   const ids=new Set<string|null|undefined>(group.map(p=>p.id));
@@ -40,8 +42,8 @@ export function fractureVessel(f:FractureFlight,failedIds:readonly unknown[],cre
  const oldCenter=before.stats.com.clone().applyQuaternion(before.q),children:FractureFlight[]=[];
  const initialize=(v:FractureFlight,component:FractureComponent):void=>{
   const ids=new Set(component.parts.map(p=>p.id));v.parts=component.parts;
-  for(const key of ['fuel','charge','thermal','chutes','observations','deflections','gimbals','wheelMotion'] as const)(v as Record<FractureMapKey,Map<string,FractureMapValue>>)[key]=new Map<string,FractureMapValue>([...(before as Record<FractureMapKey,Map<string,FractureMapValue>>)[key]].filter(([id])=>ids.has(id)).map(([id,s])=>[id,s?.isVector3?s.clone():structuredClone(s)]));
-  for(const key of ['time','universalTime','environment','stage','started','ballast','trim','brake','navigationFrame','navigationAuto','reactionEnabled','steeringEnabled','driveEnabled','rcsEnabled'] as const)(v as Record<FractureCopiedKey,unknown>)[key]=before[key];
+  v.fuel=copyPartState(before.fuel,ids);v.charge=copyPartState(before.charge,ids);v.thermal=copyPartState(before.thermal,ids);v.chutes=copyPartState(before.chutes,ids);v.observations=copyPartState(before.observations,ids);v.deflections=copyPartState(before.deflections,ids);v.gimbals=copyPartState(before.gimbals,ids);v.wheelMotion=copyPartState(before.wheelMotion,ids);
+  v.time=before.time;v.universalTime=before.universalTime;v.environment=before.environment;v.stage=before.stage;v.started=before.started;v.ballast=before.ballast;v.trim=before.trim;v.brake=before.brake;v.navigationFrame=before.navigationFrame;v.navigationAuto=before.navigationAuto;v.reactionEnabled=before.reactionEnabled;v.steeringEnabled=before.steeringEnabled;v.driveEnabled=before.driveEnabled;v.rcsEnabled=before.rcsEnabled;
   v.failureEvents=structuredClone(before.failureEvents);v.failureDynamics=component.wreck;v.crashed=component.wreck;
   v.throttle=0;v.lastThrust=0;v.engineThrust=new Map();v.rcsJets=[];v.sas=!component.wreck&&before.sas;v.sasMode='hold';v.holdQ=before.q.clone();v.maneuver=null;v.transferGuide=null;v.dockingPorts=null;v.portTranslationEnabled=false;
   v.active=new Set([...before.active].filter(id=>ids.has(id)&&!component.wreck));

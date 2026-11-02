@@ -39,7 +39,7 @@ export function mountTrajectoryPanel(host:Element,getSnapshot:()=>TrajectorySnap
    if(snapshot.burn)planned=await predictTrajectoryAsync(snapshot.position,snapshot.velocity,snapshot.time,{...options,burn:snapshot.burn});
    if(id!==serial)return;data={base,planned};results.replaceChildren();for(const [label,r]of [['無推力',base],['予定噴射後',planned]] as const)if(r){const p=document.createElement('p');p.textContent=label+'\n'+predictionSummary(r)+(label==='予定噴射後'&&!r.burnApplied?'\n予測範囲内では予定噴射に到達しません。':'');results.append(p);}
    status.textContent=snapshot.name+' · UT '+snapshot.time.toFixed(1)+' s時点の予測'+(snapshot.burn?' · 計画比較あり':' · 比較する将来の噴射計画なし')+(snapshot.note?' · '+snapshot.note:'');cursor.value='0';draw();
-  }catch(error){if(id===serial)status.textContent=(error as Error).name==='AbortError'?'計算を中断しました。前回の結果があれば保持しています。':(error as Error).message;}
+  }catch(error){if(id===serial)status.textContent=error instanceof Error?(error.name==='AbortError'?'計算を中断しました。前回の結果があれば保持しています。':error.message):String(error);}
   finally{if(id===serial){cancel.disabled=true;controller=null;}}
  };
  cancel.onclick=()=>controller?.abort();frame.onchange=draw;cursor.oninput=draw;

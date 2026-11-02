@@ -10,9 +10,9 @@ export type NodeOrbitPreview={orbit:OrbitState}&{[K in Exclude<keyof ManeuverPre
 // A preview is pure: both inputs and the live vehicle remain untouched.
 export function maneuverPreview(pos:Vector3,vel:Vector3,location:ManeuverLocation,deltaV:number|ManeuverComponents,universalTime=0):ManeuverPreview{
  const components:ManeuverComponents=typeof deltaV==='number'?{prograde:deltaV,normal:0,radial:0}:deltaV;
- if(!components||!(['prograde','normal','radial'] as (keyof ManeuverComponents)[]).every(k=>Number.isFinite(components[k]))||Math.hypot(components.prograde,components.normal,components.radial)>10000)throw new Error('合計Δvは10000 m/s以内で入力してください');
+ if(!components||!(['prograde','normal','radial'] as const).every(k=>Number.isFinite(components[k]))||Math.hypot(components.prograde,components.normal,components.radial)>10000)throw new Error('合計Δvは10000 m/s以内で入力してください');
  const custom=location&&typeof location==='object';
- if(!custom&&!['now','apoapsis','periapsis'].includes(location as string))throw new Error('噴射地点を選んでください');
+ if(!custom&&location!=='now'&&location!=='apoapsis'&&location!=='periapsis')throw new Error('噴射地点を選んでください');
  const original=bodyOrbitState(pos,vel,universalTime),body=original.body,plan=apsisPlan(original);let burnPos=pos.clone(),burnVel=vel.clone(),time=0;
  if(custom){
   time=location.universalTime-universalTime;
@@ -20,13 +20,13 @@ export function maneuverPreview(pos:Vector3,vel:Vector3,location:ManeuverLocatio
   if(body.sphereOfInfluence&&body.radius+original.apoapsis>=body.sphereOfInfluence)throw Error('重力圏を出る軌道の将来噴射は未対応です');
   const next=coastDrift(pos,vel,universalTime,time);burnPos=next.position;burnVel=next.velocity;
  }else if(location!=='now'){
-  const point=plan[location as 'apoapsis'|'periapsis'];
-  if(!point||!Number.isFinite(point.time))throw new Error('この軌道には指定できる次の遠近点がありません');
+  const point=location==='apoapsis'||location==='periapsis'?plan[location]:null;
+  if(!point||point.time===null||!Number.isFinite(point.time))throw new Error('この軌道には指定できる次の遠近点がありません');
   if(original.periapsis<0)throw new Error('地表と交差する軌道では将来の噴射を計画できません');
   const radius=body.radius+point.altitude,direction=original.evec.clone().normalize().multiplyScalar(location==='apoapsis'?-1:1);
   if(body.sphereOfInfluence&&body.radius+original.apoapsis>=body.sphereOfInfluence)throw Error('重力圏を出る軌道の将来噴射は未対応です');
-  const future=bodyState(body,universalTime+(point.time as number));burnPos=direction.clone().multiplyScalar(radius).add(future.position);
-  burnVel=original.normal.clone().cross(direction).multiplyScalar(Math.sqrt(Math.max(0,2*(original.energy+body.mu/radius))));burnVel.add(future.velocity);time=point.time as number;
+  const future=bodyState(body,universalTime+point.time);burnPos=direction.clone().multiplyScalar(radius).add(future.position);
+  burnVel=original.normal.clone().cross(direction).multiplyScalar(Math.sqrt(Math.max(0,2*(original.energy+body.mu/radius))));burnVel.add(future.velocity);time=point.time;
  }
  const relativeVelocity=burnVel.clone().sub(bodyState(body,universalTime+time).velocity);if(relativeVelocity.length()<.5)throw new Error('速度が小さすぎるため順行方向を決められません');
  const prograde=relativeVelocity.normalize(),radius=burnPos.clone().sub(bodyState(body,universalTime+time).position),normal=radius.clone().cross(prograde);

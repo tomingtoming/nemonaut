@@ -13,7 +13,7 @@ export function lambertArc(from:Vector3,to:Vector3,duration:number,mu:number,nor
  const at=(z:number)=>{const {c,s}=stumpff(z);if(c<=0)return null;const y=r1+r2+a*(z*s-1)/Math.sqrt(c);if(y<=0)return null;const t=((y/c)**1.5*s+a*Math.sqrt(y))/root;return Number.isFinite(t)&&t>=0?{t,y}:null;};
  let lo=0,hi=4*Math.PI*Math.PI-1e-6,zero=at(0);
  if(!zero||zero.t>duration){hi=0;lo=-1;for(let i=0;i<32;i++){const value=at(lo);if(!value||value.t<=duration)break;lo*=2;}}
- if(!at(hi)||at(hi)!.t<duration)throw Error('遷移時間を囲めません');
+ const upper=at(hi);if(!upper||upper.t<duration)throw Error('遷移時間を囲めません');
  for(let i=0;i<100;i++){const mid=(lo+hi)/2,value=at(mid);if(!value||value.t<duration)lo=mid;else hi=mid;}
  const solution=at((lo+hi)/2);if(!solution||Math.abs(solution.t-duration)>1e-7*Math.max(1,duration))throw Error('遷移時間が収束しません');
  const f=1-solution.y/r1,g=a*Math.sqrt(solution.y/mu),gdot=1-solution.y/r2;

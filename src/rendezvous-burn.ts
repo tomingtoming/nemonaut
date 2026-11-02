@@ -4,9 +4,10 @@ export const transferThrottle=(remaining:number):number=>remaining<.5?.01:remain
 export interface RendezvousContract{burnThrottle:number|null;duration:number;targetPartId:string}
 export type RendezvousContractInput=Omit<RendezvousContract,'targetPartId'>&{targetPartId?:string|null};
 export function validateRendezvousBurn(value:RendezvousContractInput):RendezvousContract{
- if(!value||![null,.1].includes(value.burnThrottle)||!Number.isFinite(value.duration)||value.duration<=0||value.duration>1200||typeof value.targetPartId!=='string'||!value.targetPartId.length||value.targetPartId.length>200)throw Error('会合噴射計画の保存値が不正です');
- return value as RendezvousContract;
+ if(!value||![null,.1].includes(value.burnThrottle)||!Number.isFinite(value.duration)||value.duration<=0||value.duration>1200||!hasTargetPart(value)||!value.targetPartId.length||value.targetPartId.length>200)throw Error('会合噴射計画の保存値が不正です');
+ return value;
 }
+function hasTargetPart(value:RendezvousContractInput):value is RendezvousContract{return typeof value.targetPartId==='string';}
 
 // Editing invalidates the timed contract; it cannot silently become an impulse
 // epoch with a second half-burn correction. The UI binds only the exact preview.

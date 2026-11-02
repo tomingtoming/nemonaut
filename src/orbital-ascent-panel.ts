@@ -2,10 +2,14 @@ import {AscentSession,type AscentFlight,type AscentSettings} from './orbital-asc
 import {orbitalAscentSettings} from './orbital-ascent-settings.js';
 import {floatingWindow,type FloatingWindow} from './floating-window.js';
 import {acceptsFlightKey} from './flight-keyboard.js';
-import {preserveManualControlEdit} from './manual-control-edit.js';
+import {preserveManualControlEdit,type ManualControl} from './manual-control-edit.js';
 import {element} from './dom.js';
 
 export interface OrbitalAscentFlight extends AscentFlight{rocketAxes?:unknown;orbitalAscentSettings?:AscentSettings|null;parts:{id:string}[]}
+type ControlTarget=EventTarget&ManualControl&{closest?(selectors:string):Element|null};
+// The fields the capture listener reads: an optional string value, boolean checked and closest().
+const isControlTarget=(target:EventTarget|null):target is ControlTarget=>target!==null&&(!('value' in target)||target.value===undefined||typeof target.value==='string')&&(!('checked' in target)||target.checked===undefined||typeof target.checked==='boolean')&&(!('closest' in target)||target.closest===undefined||typeof target.closest==='function');
+function missing(what:string):never{throw Error(what+'が見つかりません');}
 export interface OrbitalAscentState{flight:OrbitalAscentFlight|null|undefined;atCenter:boolean}
 export interface OrbitalAscentHooks{claim():void;sync():void;onRemoved(id:string):void}
 export interface OrbitalAscentPanel{update():void;step(f:OrbitalAscentFlight,dt:number):void;stop():void;close():void;readonly active:boolean}
@@ -21,10 +25,10 @@ export function mountOrbitalAscent(root:Document,getState:()=>OrbitalAscentState
    const row=root.createElement('label'),input=root.createElement('input');row.textContent=label;input.type='number';input.min=String(min);input.max=String(max);input.step='1';input.value=String(value);input.setAttribute('aria-label',label);input.style.width='90px';row.style.cssText='display:flex;justify-content:space-between;gap:12px;margin:6px 0';row.append(input);content.append(row);inputs[key]=input;
   }
   const read=()=>{if(Object.values(inputs).some(input=>input.value.trim()===''))throw Error('目標を入力してください');return orbitalAscentSettings({altitude:Number(inputs.altitude.value)*1000,inclination:Number(inputs.inclination.value)});};
-  for(const input of Object.values(inputs))input.onchange=()=>{stop();try{f.orbitalAscentSettings=read();message='待機';}catch(e){message=(e as Error).message;}update();};
+  for(const input of Object.values(inputs))input.onchange=()=>{stop();try{f.orbitalAscentSettings=read();message='待機';}catch(e){message=e instanceof Error?e.message:String(e);}update();};
   const start=root.createElement('button'),halt=root.createElement('button'),status=root.createElement('output');
   start.textContent='投入開始';halt.textContent='停止';status.setAttribute('role','status');
-  start.onclick=()=>{try{const settings=read();session.start(f,settings);f.orbitalAscentSettings=settings;claim();message='離昇';}catch(e){message=(e as Error).message;}update();};
+  start.onclick=()=>{try{const settings=read();session.start(f,settings);f.orbitalAscentSettings=settings;claim();message='離昇';}catch(e){message=e instanceof Error?e.message:String(e);}update();};
   halt.onclick=()=>{stop();update();};content.append(start,halt,status);
  }
  function update(){
@@ -32,7 +36,7 @@ export function mountOrbitalAscent(root:Document,getState:()=>OrbitalAscentState
   if(bound!==f){bound=f;message='待機';}
   button.hidden=!f||atCenter||!f.rocketAxes;
   if(button.hidden||!f){close();return;}
-  button.textContent=session.owner?'自動投入 · '+session.pilot!.phase:'自動投入';
+  button.textContent=session.owner?'自動投入 · '+(session.pilot??missing('自動投入の操縦')).phase:'自動投入';
   if(!panel)return;if(shown!==f){message='待機';render(f);}
   element(panel.content,'output','output').textContent=session.owner?session.message:message;
   element(panel.content,'button','button').disabled=!!session.owner;
@@ -43,9 +47,9 @@ export function mountOrbitalAscent(root:Document,getState:()=>OrbitalAscentState
   if(was&&!session.owner)message=session.message;
   if(stage!==f.stage||sas!==f.sas||!session.owner)sync();
  }
- button.onclick=()=>{if(panel){panel.front();return;}panel=floatingWindow(root.body,{title:'自動投入',x:innerWidth-330,y:150,onClose:close});render(getState().flight!);update();};
+ button.onclick=()=>{if(panel){panel.front();return;}panel=floatingWindow(root.body,{title:'自動投入',x:innerWidth-330,y:150,onClose:close});render(getState().flight??missing('自動投入の対象機体'));update();};
  const direct='#throttle,#trim,#sas,#sasDirections,#sasMode,#stage,#autoLaunch,#autoReturn,#navigationFrame,#navigationAuto,#brake,#rcsEnabled,#reactionEnabled,#mapCutoff,#alignManeuver';
- for(const type of ['input','click','change'])root.addEventListener(type,e=>{if(session.owner&&(e.target as HTMLInputElement).closest?.(direct))preserveManualControlEdit(e.target as HTMLInputElement,stop);},true);
+ for(const type of ['input','click','change'])root.addEventListener(type,e=>{const target=e.target;if(session.owner&&isControlTarget(target)&&target.closest?.(direct))preserveManualControlEdit(target,stop);},true);
  window.addEventListener('keydown',e=>{
   if(!session.owner||!acceptsFlightKey(e.target,e.code)||! /^(Key[WASDQEZXTB]|Space|ShiftLeft|ShiftRight|ControlLeft|ControlRight)$/.test(e.code))return;
   const f=session.owner;stop();if(['KeyX','KeyZ'].includes(e.code)&&!e.ctrlKey&&!e.metaKey&&!e.altKey){f.throttle=e.code==='KeyZ'?1:0;sync();}update();

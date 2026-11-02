@@ -62,6 +62,8 @@ installCargoParts(PARTS);
 export const CATEGORIES=['すべて','指令','燃料','推進','構造','空力','走行','装備','船舶'];
 export function nodes(type:PartType):AttachmentNode[]{const d=PARTS[type], [x,y,z]=d.size;if(d.attachmentNodes)return d.attachmentNodes.map(n=>[...n]) as AttachmentNode[];if(d.rootWing)return [[0,0,0,-1,0,0],[x,0,0,1,0,0]] as AttachmentNode[];return [[0,y/2,0,0,1,0],[0,-y/2,0,0,-1,0],[x/2,0,0,1,0,0],[-x/2,0,0,-1,0,0],[0,0,z/2,0,0,1],[0,0,-z/2,0,0,-1]] as AttachmentNode[];}
 export function part(type:PartType,p:PartVector=[0,0,0],r:PartVector=[0,0,0],parent:string|null=null,stage=0):Part{return {id:crypto.randomUUID(),type,p,r,parent,stage};}
+/** The preset part matching test (presets are fixed tables, so a miss is a broken preset). */
+function presetPart(a:readonly Part[],test:(p:Part)=>boolean):Part{const p=a.find(test);if(!p)throw Error('プリセットの部品が見つかりません');return p;}
 export function preset(kind:string):Part[]{let a:Part[]=[];const add=(t:PartType,p:PartVector,r:PartVector=[0,0,0],par=0,stage=0)=>{const o=part(t,p,r,a[par]?.id??null,stage);a.push(o);return a.length-1;};
  if(kind==='atlas'){
   add('probe',[0,0,0]);const upper=add('tank',[0,-1.2,0]);
@@ -91,21 +93,21 @@ export function preset(kind:string):Part[]{let a:Part[]=[];const add=(t:PartType
  }
  if(kind==='lunar-surface-expedition'){
   a=preset('lunar-expedition');
-  const tank=a.find(p=>p.type==='tank')!;
+  const tank=presetPart(a,p=>p.type==='tank');
   for(const x of [-1.3,1.3])a.push(part('tank',[x,-2.15,0],[0,0,0],tank.id));
   for(const [x,z]of [[1,0],[-1,0],[0,1],[0,-1]]){
    const frame=part('truss',[x*1.8,-3.2,z*1.8],[0,0,0],tank.id);
    a.push(frame,part('landingLeg',[x*1.8,-4.25,z*1.8],[0,0,0],frame.id));
   }
   for(const p of a.filter(p=>p.type==='solar'))p.p[0]*=1.8;
-  const middle=a.find(p=>p.type==='tank'&&p.p[1]===-5.57)!,lower=a.find(p=>p.type==='tank'&&p.p[1]<-18)!;
+  const middle=presetPart(a,p=>p.type==='tank'&&p.p[1]===-5.57),lower=presetPart(a,p=>p.type==='tank'&&p.p[1]<-18);
   for(const x of [-1.3,1.3])a.push(part('tank',[x,-5.57,0],[0,0,0],middle.id));
   for(const z of [-1.4,1.4])a.push(part('engine',[0,-9.17,z],[0,0,0],middle.id,1));
   for(const x of [-1.3,1.3])for(const y of [-14.99,-16.99])a.push(part('tank',[x,y,0],[0,0,0],lower.id));
   for(const [x,z]of [[2.5,0],[-2.5,0],[0,2.5],[0,-2.5]])a.push(part('engine',[x,-20.59,z],[0,0,0],lower.id));
   for(let i=0;i<4;i++){const angle=i*Math.PI/2+Math.PI/4;a.push(part('engine',[2.5*Math.cos(angle),-20.59,2.5*Math.sin(angle)],[0,0,0],lower.id));}
   // Vacuum upper stage: keep the tank socket fixed and extend the lower stack.
-  const upperEngine=a.find(p=>p.type==='engine'&&p.stage===2)!;
+  const upperEngine=presetPart(a,p=>p.type==='engine'&&p.stage===2);
   upperEngine.type='engineVacMedium';upperEngine.p[1]-=.3;
   for(const p of a)if(p!==upperEngine&&p.p[1]<-4.35)p.p[1]-=.6;
   for(const p of a)if(p.type==='landingLeg'||p.type==='truss')p.p[1]-=.6;
@@ -118,14 +120,14 @@ export function preset(kind:string):Part[]{let a:Part[]=[];const add=(t:PartType
  if(kind==='rendezvous'){a=preset('twin');for(const core of a.filter(p=>p.type==='probe')){core.reactionEnabled=false;for(const x of [-.9,.9])for(const y of [-1.2,1.2])a.push(part('rcs',[x,core.p[1]-1.3+y,0],[0,0,0],core.id));}}
  if(kind==='orbital-tug'){a=preset('orbiter');add('dockingPort',[0,2.821,0]);for(const z of [-.9,.9])for(const y of [.2,2.4])add('rcs',[0,y,z],[0,0,0],1);}
  if(kind==='tug-launcher'){
-  a=preset('orbital-tug');const engine=a.find(p=>p.type==='engine')!;engine.stage=1;
+  a=preset('orbital-tug');const engine=presetPart(a,p=>p.type==='engine');engine.stage=1;
   const upper=add('tank',[0,-.7,0],[0,0,0],1);engine.parent=a[upper].id;engine.p[1]-=2;
   const separator=add('decoupler',[0,-3.01,0],[0,0,0],a.indexOf(engine),1);let tank=separator;
   for(let i=0;i<3;i++)tank=add('tank',[0,-4.12-i*2,0],[0,0,0],tank);
   for(const x of [-.7,.7])for(const z of [-.7,.7])add('engine',[x,-9.72,z],[0,0,0],tank);
   for(let i=0;i<4;i++){const angle=i*Math.PI/2;add('fin',[.625*Math.cos(angle),-8.15,-.625*Math.sin(angle)],[0,angle,0],tank);}
  }
- if(kind==='docking'){add('probe',[0,-1.4,0]);add('truss',[0,-.7,0]);add('dockingPort',[0,-.079,0],[0,0,0],1);add('dockingPort',[0,.163,0],[Math.PI,0,0],2);add('truss',[0,.784,0],[Math.PI,0,0],3);add('probe',[0,1.484,0],[Math.PI,0,0],4);a[2].dockPartner=a[3].id;a[3].dockPartner=a[2].id;for(const [core,ys]of [[0,[-1.2,-.2]],[5,[.284,1.284]]] as [number,number[]][])for(const x of [-.74,.74])for(const y of ys)add('rcs',[x,y,0],[0,0,0],core);}
+ if(kind==='docking'){add('probe',[0,-1.4,0]);add('truss',[0,-.7,0]);add('dockingPort',[0,-.079,0],[0,0,0],1);add('dockingPort',[0,.163,0],[Math.PI,0,0],2);add('truss',[0,.784,0],[Math.PI,0,0],3);add('probe',[0,1.484,0],[Math.PI,0,0],4);a[2].dockPartner=a[3].id;a[3].dockPartner=a[2].id;for(const [core,ys]of [[0,[-1.2,-.2]],[5,[.284,1.284]]] as const)for(const x of [-.74,.74])for(const y of ys)add('rcs',[x,y,0],[0,0,0],core);}
  if(kind==='plane'){
  const r:PartVector=[Math.PI/2,0,0],left:PartVector=[Math.PI/2,Math.PI,0],vertical:PartVector=[Math.PI/2,Math.PI/2,0];
  add('cockpit',[0,1.3,2.2],r);add('tank',[0,1.3,.2],r);add('jet',[0,1.3,-1.4],r,1);
@@ -171,17 +173,17 @@ export function preset(kind:string):Part[]{let a:Part[]=[];const add=(t:PartType
  if(['plane-large','boat-large','sub-large'].includes(kind)){
   const base=kind.replace('-large',''),s=base==='plane'?3:4;
   const mapping:Record<string,PartType>=base==='plane'?{cockpit:'cockpitLarge',tank:'fuselageLarge',jet:'jetLarge',wing:'wingLarge',stabilizer:'stabilizerLarge',elevator:'elevatorLarge',aileron:'aileronLarge',rudder:'rudderLarge',nosegear:'nosegearLarge',maingear:'maingearLarge'}:{cockpit:'marineCabin',truss:'marineFrame',pontoon:'hullLarge',ballast:'ballastLarge',propeller:'propellerLarge'};
-  a=preset(base);for(const p of a){p.type=mapping[p.type];p.p=p.p.map(v=>v*s) as PartVector;}
+  a=preset(base);for(const p of a){p.type=mapping[p.type];p.p=[p.p[0]*s,p.p[1]*s,p.p[2]*s];}
   // Raise the submarine thrust line to counter the bow-up moment under power.
-  if(base==='sub')a.find(p=>p.type==='propellerLarge')!.p[1]=1;
+  if(base==='sub')presetPart(a,p=>p.type==='propellerLarge').p[1]=1;
   if(base==='plane'){
-   const engine=a.find(p=>p.type==='jetLarge')!;engine.p=[3,2.7,-1.2];
+   const engine=presetPart(a,p=>p.type==='jetLarge');engine.p=[3,2.7,-1.2];
    a.push(part('jetLarge',[-3,2.7,-1.2],[...engine.r],engine.parent,engine.stage));
   }
  }
  if(kind==='transport-cargo'){
   a=preset('transport');
-  const bay=a.find(p=>p.type==='transportFuselage'&&p.p[2]===0)!;
+  const bay=presetPart(a,p=>p.type==='transportFuselage'&&p.p[2]===0);
   bay.type='cargoBay';bay.r=[Math.PI/2,0,0];
   // Belly doors clear the high wing; the payload hangs from the internal mount.
   const lab=preset('cargo-lab'),source=lab[0];

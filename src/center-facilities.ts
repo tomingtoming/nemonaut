@@ -11,7 +11,7 @@ export interface CenterGuidanceInput{partCount:number;designCount:number;vesselC
 export interface CenterGuidanceItem{title:string;completed:boolean;text:string}
 export function explorationProgress(history:readonly CenterHistoryEvent[]=[]):ExplorationProgress{
  return {
-  departure:history.find(e=>e.type==='launch'&&['land','runway','water'].includes(e.environment as string))??null,
+  departure:history.find(e=>e.type==='launch'&&e.environment!==undefined&&['land','runway','water'].includes(e.environment))??null,
   orbit:history.find(e=>e.type==='orbit')??null,
   returned:history.find(e=>e.type==='recover'&&e.orbitEventIds?.length)??null,
   moonArrival:history.find(e=>e.type==='moon-arrival')??null,
@@ -24,9 +24,10 @@ export function centerGuidance({partCount,designCount,vesselCount,libraryError=f
  const build=libraryError?'保存設計を確認できません。発射台・滑走路で詳細を確認できます。':designCount?`保存済み ${designCount} 設計。発射台・滑走路で選んで出発できます。`:partCount?`作業中 ${partCount} 部品。組立棟で設計を保存して、発射台・滑走路へ。`:'VAB/SPHで機体を作り、設計を保存して地表から出発しましょう。';
  const title=(name:string,event:CenterHistoryEvent|null)=>name+(event?' · 記録済み':' · 記録なし');
  const evidence=(event:CenterHistoryEvent)=>event.name+' · UT '+event.universalTime.toFixed(1)+' s';
+ const apsides=(event:CenterHistoryEvent)=>{const orbit=event.orbit;if(!orbit)throw Error('軌道投入の記録に近点・遠点がありません');return `。近点 ${(orbit.periapsis/1000).toFixed(1)} km / 遠点 ${(orbit.apoapsis/1000).toFixed(1)} km。`;};
  return [
   {title:title('地表出発',progress.departure),completed:!!progress.departure,text:progress.departure?evidence(progress.departure)+'。'+build:build},
-  {title:title('母星軌道投入',progress.orbit),completed:!!progress.orbit,text:progress.orbit?evidence(progress.orbit)+`。近点 ${(progress.orbit.orbit!.periapsis/1000).toFixed(1)} km / 遠点 ${(progress.orbit.orbit!.apoapsis/1000).toFixed(1)} km。`: '地表から打ち上げ、母星に束縛された軌道で近点を70 kmより高くします。練習・旧保存の未記録の飛行は達成数に含めません。'},
+  {title:title('母星軌道投入',progress.orbit),completed:!!progress.orbit,text:progress.orbit?evidence(progress.orbit)+apsides(progress.orbit): '地表から打ち上げ、母星に束縛された軌道で近点を70 kmより高くします。練習・旧保存の未記録の飛行は達成数に含めません。'},
   {title:title('軌道から帰還・回収',progress.returned),completed:!!progress.returned,text:progress.returned?evidence(progress.returned)+'。次は衛星の運用や月への探査へ。':(vesselCount?`保持中 ${vesselCount} 機は追跡施設で確認できます。`:'帰還装備を備えた機体を設計しましょう。')+'軌道から逆噴射し、無損傷で着地・静止した機体を回収します。'}
  ,
   {title:title('月到達',progress.moonArrival),completed:!!progress.moonArrival,text:progress.moonArrival?evidence(progress.moonArrival):'地表から出発した機体で月の重力圏へ。周回後、月遷移計画で接近を準備します。'},

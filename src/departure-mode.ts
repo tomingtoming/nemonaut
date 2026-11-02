@@ -8,6 +8,7 @@ const environments:Readonly<Record<string,readonly [DepartureMode,string]>>={
  orbit:['practice','母星80 km円軌道'],'moon-orbit':['practice','月20 km円軌道'],
  'moon-surface':['practice','月面'],transfer:['practice','月遷移用の母星80 km軌道']
 };
+const ACTION_LABELS:Readonly<Record<string,string|undefined>>={recover:'回収',terminate:'運用終了'};
 export function departureMode(environment:string):{mode:DepartureMode;label:string}{
  if(!Object.hasOwn(environments,environment))throw Error('出発環境が不正です');
  const [mode,label]=environments[environment];return {mode,label};
@@ -22,8 +23,8 @@ export function historyActionLabel(event:HistoryLabelEvent):string|undefined{
  if(event.type==='moon-arrival')return '月の重力圏に到達';
  if(event.type==='moon-landing')return '月面に着陸';
  if(event.type==='recover'&&event.orbitEventIds)return '母星軌道から帰還・回収';
- if(event.type==='orbit')return '母星軌道投入 · 近点 '+(event.orbit!.periapsis/1000).toFixed(1)+' km / 遠点 '+(event.orbit!.apoapsis/1000).toFixed(1)+' km';
- if(event.type!=='launch')return ({recover:'回収',terminate:'運用終了'} as Readonly<Record<string,string|undefined>>)[event.type];
+ if(event.type==='orbit'){const o=event.orbit;if(!o)throw Error('軌道投入の記録に軌道がありません');return '母星軌道投入 · 近点 '+(o.periapsis/1000).toFixed(1)+' km / 遠点 '+(o.apoapsis/1000).toFixed(1)+' km';}
+ if(event.type!=='launch')return ACTION_LABELS[event.type];
  if(event.environment===undefined)return '出発（開始条件の記録なし）';
  const {mode,label}=departureMode(event.environment);
  return (mode==='practice'?'練習配置':'出発')+' · '+label;

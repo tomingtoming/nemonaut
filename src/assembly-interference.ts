@@ -3,12 +3,12 @@ import {PARTS,type Part} from './catalog.js';
 export interface OrientedBounds{center:T.Vector3;half:T.Vector3;axes:T.Vector3[];quaternion:T.Quaternion;aabb:T.Box3}
 export interface InterferencePair{a:string;b:string;depth:number}
 export interface AssemblyInterferences{total:number;pairs:InterferencePair[]}
-import {cargoShellBoxes} from './cargo-geometry.js';
+import {cargoShellBoxes,hasCargoBay} from './cargo-geometry.js';
 
 export function partInterferenceBounds(p:Part,bounds:ReadonlyMap<string,T.Box3>):OrientedBounds[]{
- const d=PARTS[p.type];if(!d?.cargoBay)return [orientedBounds(p,bounds.get(p.type))];
+ const d=PARTS[p.type];if(!d||!hasCargoBay(d))return [orientedBounds(p,bounds.get(p.type))];
  const q=new T.Quaternion().setFromEuler(new T.Euler(...p.r));
- return cargoShellBoxes(d as import('./cargo-geometry.js').CargoBayDefinition,p.cargoOpen).map(b=>{
+ return cargoShellBoxes(d,p.cargoOpen).map(b=>{
   const center=new T.Vector3(...b.center).applyQuaternion(q).add(new T.Vector3(...p.p)),rotation=new T.Euler().setFromQuaternion(q.clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(...(b.rotation||[0,0,0]))))),half=new T.Vector3(...b.size).multiplyScalar(.5);
   return orientedBounds({...p,p:center.toArray(),r:[rotation.x,rotation.y,rotation.z]},new T.Box3(half.clone().negate(),half));
  });

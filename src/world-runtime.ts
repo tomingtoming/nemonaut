@@ -21,7 +21,7 @@ export class WorldRuntime{
  get active():Flight|undefined{return this.vessels.get(this.activeVesselId);}
  step(dt:number,input:FlightInput={}):void{
   const vessels=[...this.vessels.values()];resolveWorldTargets(vessels);
-  const root=this.active;this.universalTime=advanceWorldPhysics(vessels,this.universalTime,dt,this.activeVesselId,input);this.replace(root!);
+  const root=this.active;this.universalTime=advanceWorldPhysics(vessels,this.universalTime,dt,this.activeVesselId,input);if(!root)throw Error('操縦中の機体が見つかりません');this.replace(root);
  }
  coast(duration:number,options:CoastOptions={}):CoastResult{
   const result=advanceWorldCoast([...this.vessels.values()],this.universalTime,this.activeVesselId,duration,options);

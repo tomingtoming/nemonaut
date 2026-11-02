@@ -10,7 +10,8 @@ import {flightFromWorld,worldFromFlight,type SavedWorld} from './world-save.js';
 
 // Initial conditions only. Both vessels subsequently use ordinary fleet physics.
 export function withRendezvousTarget(world:SavedWorld,{close=false}:{close?:boolean}={}):SavedWorld{
- const own=loadFlight(flightFromWorld(world)!);
+ const saved=flightFromWorld(world);if(!saved)throw Error('移送練習は単独機の母星円軌道から開始してください');
+ const own=loadFlight(saved);
  try{
   if(own.environment!=='orbit'||own.detached.length)throw Error('移送練習は単独機の母星円軌道から開始してください');
   const target=new Flight(preset('orbital-tug'),'orbit',own.universalTime);
@@ -24,8 +25,8 @@ export function withRendezvousTarget(world:SavedWorld,{close=false}:{close?:bool
   if(close){
    const a=own.parts.find(p=>PARTS[p.type].docking&&!p.dockPartner),b=target.parts.find(p=>PARTS[p.type].docking&&!p.dockPartner);
    if(!a||!b)throw Error('空いているドッキングポートが必要です');
-   const pose=portPose(own,a.id)!;target.q.copy(pose.q).multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),Math.PI)).multiply(partRotation(b).invert());
-   target.pos.add(pose.position.clone().addScaledVector(pose.normal,20).sub(portPose(target,b.id)!.position));target.vel.copy(own.vel);target.holdQ=target.q.clone();target.sasMode='hold';
+   const pose=portPose(own,a.id);if(!pose)throw Error('ドッキングポートが見つかりません');target.q.copy(pose.q).multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),Math.PI)).multiply(partRotation(b).invert());
+   const targetPose=portPose(target,b.id);if(!targetPose)throw Error('ドッキングポートが見つかりません');target.pos.add(pose.position.clone().addScaledVector(pose.normal,20).sub(targetPose.position));target.vel.copy(own.vel);target.holdQ=target.q.clone();target.sasMode='hold';
    own.dockingPorts={own:a.id,target:b.id};own.portTranslationEnabled=true;
   }
   return worldFromFlight(saveFlight(own,world.flightMeta),{history:world.history});

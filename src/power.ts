@@ -9,7 +9,7 @@ export type ChargeMap=Map<string,number>;
 export interface PowerCommands{pitch:number;yaw:number;roll:number}
 /** One powerStep result: rates in EC/s, eclipse when the sun is hidden. */
 export interface PowerReading{stored:number;capacity:number;generation:number;demand:number;consumption:number;ratio:number;eclipse:boolean;net:number}
-export function createCharge(parts:readonly Pick<Part,'id'|'type'>[]):ChargeMap{return new Map<string,number>(parts.filter(p=>PARTS[p.type].battery).map(p=>[p.id,PARTS[p.type].battery!]));}
+export function createCharge(parts:readonly Pick<Part,'id'|'type'>[]):ChargeMap{return new Map<string,number>(parts.flatMap((p):[string,number][]=>{const battery=PARTS[p.type].battery;return battery?[[p.id,battery]]:[];}));}
 export function powerTotals(parts:readonly Pick<Part,'id'|'type'>[],charge:ReadonlyMap<string,number>):{stored:number;capacity:number}{return {stored:parts.reduce((s,p)=>s+(charge.get(p.id)||0),0),capacity:parts.reduce((s,p)=>s+(PARTS[p.type].battery||0),0)};}
 export function inEclipse(pos:T.Vector3,time=0):boolean{return [PRIMARY,MOON].some(body=>{const r=pos.clone().sub(bodyState(body,time).position),along=r.dot(SUN_DIRECTION);return along<0&&r.lengthSq()-along*along<body.radius**2;});}
 export function solarGeneration(parts:readonly PowerPart[],pos:T.Vector3,q:T.Quaternion,time=0):number{if(inEclipse(pos,time))return 0;return parts.reduce((sum,p)=>{const rate=PARTS[p.type].solarPower||0;if(!rate)return sum;const normal=new T.Vector3(0,0,1).applyEuler(new T.Euler(...p.r)).applyQuaternion(q);return sum+rate*Math.max(0,normal.dot(SUN_DIRECTION));},0);}

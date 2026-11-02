@@ -18,11 +18,12 @@ export function* trajectorySteps(position:T.Vector3,velocity:T.Vector3,time:numb
  if(burn&&(!Number.isFinite(burn.time)||burn.time<time||!Array.isArray(burn.deltaV)||burn.deltaV.length!==3||!burn.deltaV.every(Number.isFinite)))throw Error('予測噴射が不正です');
  let pos=position.clone(),vel=velocity.clone(),now=time,steps=0,nextSample=time,applied=false,reason:TrajectoryEndReason='duration';
  const end=time+duration,interval=duration/samples,points:TrajectoryPoint[]=[],events:TrajectoryEvent[]=[],zero=new T.Vector3();
- let body=referenceBody(pos,now),closest=null as TrajectoryClosest|null;
+ let body=referenceBody(pos,now);
  const sample=():TrajectoryPoint=>({time:now,position:pos.toArray(),moon:bodyState(MOON,now).position.toArray(),bodyId:body.id});
  const remember=()=>{const point=sample();if(points.at(-1)?.time!==now)points.push(point);};
- const checkClosest=()=>{const distance=pos.distanceTo(bodyState(MOON,now).position);if(!closest||distance<closest.distance)closest={time:now,distance,altitude:distance-MOON.radius,position:pos.toArray()};};
- remember();checkClosest();
+ // The closer of best and the current moon distance (best stays when not beaten).
+ const closer=(best:TrajectoryClosest|null):TrajectoryClosest=>{const distance=pos.distanceTo(bodyState(MOON,now).position);return !best||distance<best.distance?{time:now,distance,altitude:distance-MOON.radius,position:pos.toArray()}:best;};
+ remember();let closest=closer(null);
  while(now<end&&steps<maxSteps){
   const local=relativeMotion(pos,vel,now,body),radius=local.r.length(),altitude=radius-body.radius;
   if(altitude<=0){reason='surface';break;}
@@ -38,11 +39,11 @@ export function* trajectorySteps(position:T.Vector3,velocity:T.Vector3,time:numb
   if(!(dt>0)||now+dt===now){reason='resolution';break;}
   const next=advanceCelestialOrbit(pos,vel,zero,dt,now);pos=next.pos;vel=next.vel;now+=dt;steps++;
   const nextBody=referenceBody(pos,now);if(nextBody.id!==body.id){events.push({type:nextBody.id==='moon'?'enter-moon':'leave-moon',time:now,position:pos.toArray()});body=nextBody;remember();}
-  checkClosest();if(now>=nextSample){remember();nextSample=now+interval;}
+  closest=closer(closest);if(now>=nextSample){remember();nextSample=now+interval;}
   if(steps%chunk===0)yield {steps,time:now};
  }
  if(now<end&&steps>=maxSteps)reason='budget';remember();
- return {points,events,closest:{...closest!,atBoundary:closest!.time===time||closest!.time===now},startTime:time,endTime:now,requestedEndTime:end,complete:reason==='duration'&&now>=end,reason,steps,burnApplied:applied,position:pos.toArray(),velocity:vel.toArray()};
+ return {points,events,closest:{...closest,atBoundary:closest.time===time||closest.time===now},startTime:time,endTime:now,requestedEndTime:end,complete:reason==='duration'&&now>=end,reason,steps,burnApplied:applied,position:pos.toArray(),velocity:vel.toArray()};
 }
 
 export function predictTrajectory(position:T.Vector3,velocity:T.Vector3,time:number,options?:TrajectoryOptions):TrajectoryResult{const iterator=trajectorySteps(position,velocity,time,options);let next:IteratorResult<TrajectoryProgress,TrajectoryResult>;do{next=iterator.next();}while(!next.done);return next.value;}
@@ -58,6 +59,8 @@ export function trajectoryAt(result:Pick<TrajectoryResult,'startTime'|'endTime'|
 
 export async function predictTrajectoryAsync(position:T.Vector3,velocity:T.Vector3,time:number,{signal,yieldTask=()=>new Promise(resolve=>setTimeout(resolve,0)),...options}:TrajectoryAsyncOptions={}):Promise<TrajectoryResult>{
  const iterator=trajectorySteps(position,velocity,time,options);
+ // The same generator, typed so return() may be called without a final result.
+ const closing:Generator<TrajectoryProgress,TrajectoryResult|void,void>=iterator;
  try{while(true){if(signal?.aborted)throw new DOMException('予測を中断しました','AbortError');const next=iterator.next();if(next.done)return next.value;await yieldTask();}}
- finally{(iterator as Generator<TrajectoryProgress,TrajectoryResult|void,void>).return();}
+ finally{closing.return();}
 }

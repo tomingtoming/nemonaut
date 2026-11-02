@@ -4,7 +4,8 @@ import {normalizeSymmetry} from './symmetry.js';
 import {Flight,validateCraft,type FlightPart} from './core.js';import {PARTS} from './catalog.js';import {loadFlight,type SavedFlight} from './flight-save.js';import {fleet} from './fleet.js';
 export function freshLaunchParts(parts:FlightPart[],used:ReadonlySet<string>=new Set<string>(),makeId:()=>unknown=()=>crypto.randomUUID()):FlightPart[]{
  const copy=validateCraft({version:1,parts}),ids=new Map<string,string>();for(const p of copy){const id=makeId();if(typeof id!=='string'||!id||id.length>200||used.has(id)||[...ids.values()].includes(id))throw Error('新しい部品IDが重複しています');ids.set(p.id,id);}
- for(const p of copy){const old=p.id;p.id=ids.get(old) as string;if(p.parent)p.parent=ids.get(p.parent) as string;if(p.dockPartner)p.dockPartner=ids.get(p.dockPartner);}return normalizeSymmetry(copy,{fresh:true});
+ const fresh=(old:string):string=>{const id=ids.get(old);if(id===undefined)throw Error('新しい部品IDが見つかりません');return id;};
+ for(const p of copy){const old=p.id;p.id=fresh(old);if(p.parent)p.parent=fresh(p.parent);if(p.dockPartner)p.dockPartner=ids.get(p.dockPartner);}return normalizeSymmetry(copy,{fresh:true});
 }
 // Returns a new owned fleet. The serialized prior world is never mutated, even
 // on failure. Callers dispose this returned root if they do not adopt it.

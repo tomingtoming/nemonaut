@@ -3,6 +3,7 @@ const worldUp=new Vector3(0,1,0);
 type OrbitControls=import('three/addons/controls/OrbitControls.js').OrbitControls;
 // three r180 OrbitControls keeps these private frame caches; @types/three does not declare them.
 export type OrbitControlsFrame=OrbitControls&{_quat:Quaternion;_quatInverse:Quaternion};
+const hasFrame=(controls:OrbitControls):controls is OrbitControlsFrame=>'_quat' in controls&&controls._quat instanceof Quaternion&&'_quatInverse' in controls&&controls._quatInverse instanceof Quaternion;
 
 // A low marine view follows shallow dives below the opaque sea surface.
 // This only chooses the initial/F-key offset; orbit input remains unrestricted.
@@ -15,8 +16,9 @@ export function flightFrameOffset(distance:number,up:Vector3,water=false):Vector
 // local vertical so orbit/pan input and camera.lookAt use the same up direction.
 export function setOrbitUp(controls:OrbitControls,up:Vector3):void{
  controls.object.up.copy(up);
- (controls as OrbitControlsFrame)._quat.setFromUnitVectors(controls.object.up,worldUp);
- (controls as OrbitControlsFrame)._quatInverse.copy((controls as OrbitControlsFrame)._quat).invert();
+ if(!hasFrame(controls))throw Error('OrbitControls の内部フレーム(_quat/_quatInverse)が見つかりません');
+ controls._quat.setFromUnitVectors(controls.object.up,worldUp);
+ controls._quatInverse.copy(controls._quat).invert();
 }
 
 export function frameTrackedVessel(controls:OrbitControls,focus:Vector3,up:Vector3):void{
@@ -30,7 +32,8 @@ export function frameTrackedVessel(controls:OrbitControls,focus:Vector3,up:Vecto
 // Apply after OrbitControls, including its damping. Do not move the focus or
 // the vessel. Water mode deliberately permits the camera below sea level.
 export function constrainSurfaceCamera(controls:OrbitControls,center:Vector3,radius:number):boolean{
- const camera=controls.object as import('three').PerspectiveCamera,radial=camera.position.clone().sub(center);
+ const camera=controls.object,radial=camera.position.clone().sub(center);
+ if(!('near' in camera)||typeof camera.near!=='number')throw Error('カメラの近クリップ面(near)が見つかりません');
  const minimum=radius+Math.max(.5,camera.near*2);
  if(radial.lengthSq()>=minimum*minimum)return false;
  if(radial.lengthSq()<1e-12)radial.copy(camera.up);

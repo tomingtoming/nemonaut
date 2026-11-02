@@ -24,10 +24,11 @@ test('text nodes and labels translate; typed input values do not',()=>{
  translateTree({nodeType:1,tagName:'DIV',childNodes:[button,input],getAttribute:()=>null,setAttribute(){}},t);
  assert.equal(text.data,'Save');assert.equal(attrs['aria-label'],'Craft name');assert.equal(input.value,'保存');
 });
-test('the English dictionary has no Japanese in values and no keys missing from the code',async()=>{
+test('the English dictionary covers every Japanese string, has no Japanese in values and no stale keys',async()=>{
  const en=JSON.parse(readFileSync(new URL('../dist/i18n/en.json',import.meta.url),'utf8')),found=await extract();
  assert.deepEqual(Object.entries(en).filter(([,v])=>JA.test(v)).map(([k])=>k),[],'Japanese left in values');
  assert.deepEqual(Object.keys(en).filter(k=>!found.has(k)),[],'stale keys: the source text changed');
+ assert.deepEqual([...found.keys()].filter(k=>!(k in en)),[],'untranslated: add these to src/i18n/en.json');
 });
 test('extraction reads nested template pieces and open tags, and skips comments',async()=>{
  const {mkdtempSync,writeFileSync,rmSync}=await import('node:fs'),{tmpdir}=await import('node:os'),path=await import('node:path'),{pathToFileURL}=await import('node:url');

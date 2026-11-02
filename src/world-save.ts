@@ -10,9 +10,12 @@ export interface WorldFromFlightOptions{universalTime?:number;history?:unknown}
 
 // Persistent ownership is a flat world. The flight tree is only an adapter for
 // the existing simulation, and must not dictate ownership or vessel identity.
+/** saveFlight output names its vessel and clock; a world vessel needs both. */
+function isWorldVessel(v:Omit<SavedFlight,'detached'|'meta'>):v is WorldVessel{return typeof v.vesselId==='string'&&typeof v.universalTime==='number';}
 function flatten(record:SavedFlight,out:WorldVessel[]=[]):WorldVessel[]{
  const {detached,meta,...vessel}=record;
- out.push(vessel as WorldVessel);
+ if(!isWorldVessel(vessel))throw Error('世界の機体に機体IDまたは時刻がありません');
+ out.push(vessel);
  for(const child of detached??[])flatten(child,out);
  return out;
 }
@@ -30,7 +33,7 @@ export function worldFromFlight(record:SavedFlight|null,{universalTime,history=r
  const root=loadFlight(record);
  try{
   if(universalTime!==undefined&&root.universalTime!==universalTime)throw Error('世界と機体の共通時刻が一致しません');
-  const normalized=saveFlight(root,record.meta);const {worldHistory,...flightMeta}=normalized.meta as SavedFlightMeta;
+  const normalized=saveFlight(root,record.meta),savedMeta=normalized.meta;if(!savedMeta)throw Error('飛行保存の表示情報がありません');const {worldHistory,...flightMeta}=savedMeta;
   return {kind:saveKind('world'),version:1,universalTime:root.universalTime,activeVesselId:root.vesselId,vessels:flatten(normalized),history:validateHistory(history,root.universalTime),flightMeta};
  }finally{root.dispose();}
 }
@@ -49,7 +52,7 @@ export function validateWorld(value:SavedWorld):SavedWorld{
  // validation across the entire world, not independently per vessel.
  const normalized=worldFromFlight(raw,{universalTime:time,history});
  const byId=new Map(normalized.vessels.map(v=>[v.vesselId,v]));
- normalized.vessels=value.vessels.map(v=>byId.get(v.vesselId)!);
+ normalized.vessels=value.vessels.map(v=>{const vessel=byId.get(v.vesselId);if(!vessel)throw Error('正規化した世界に機体がありません: '+v.vesselId);return vessel;});
  normalized.activeVesselId=value.activeVesselId;
  return normalized;
 }

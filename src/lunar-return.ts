@@ -20,7 +20,7 @@ export function lunarEscape(position:T.Vector3,velocity:T.Vector3,time:number):L
  if(r.length()>=MOON.sphereOfInfluence||v.lengthSq()/2-MOON.mu/r.length()<=0)return null;
  let high=60,at:BodyState|undefined;
  for(let i=0;i<16;i++){at=keplerDrift(r,v,MOON.mu,high);if(at.position.length()>=MOON.sphereOfInfluence)break;high*=2;}
- if(at!.position.length()<MOON.sphereOfInfluence)return null;
+ if(!at||at.position.length()<MOON.sphereOfInfluence)return null;
  let low=0;for(let i=0;i<40;i++){const mid=(low+high)/2,next=keplerDrift(r,v,MOON.mu,mid);if(next.position.length()<MOON.sphereOfInfluence)low=mid;else high=mid;}
  // A centimetre outside avoids ambiguous floating-point membership at the SOI.
  at=keplerDrift(r,v,MOON.mu,high+.001);const epoch=time+high+.001,endMoon=bodyState(MOON,epoch);
@@ -84,8 +84,8 @@ export function lunarReturnPlan(vessel:LunarReturnVessel,options:LunarReturnOpti
  if(vessel.throttle!==0)throw Error('噴射を停止してから帰還計画を作成してください');
  // Check the propulsion configuration before spending work on a search.
  captureBurnEstimate(vessel,1);
- const plan=searchLunarReturn(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,options) as LunarReturnPlan;
- plan.burn=captureBurnEstimate(vessel,plan.deltaV);plan.startTime=plan.time-plan.burn.duration/2;plan.warnings=[];
+ const search=searchLunarReturn(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,options),burn=captureBurnEstimate(vessel,search.deltaV);
+ const plan:LunarReturnPlan={...search,burn,startTime:search.time-burn.duration/2,warnings:[],finite:null,ready:false};
  if(!plan.burn.enough)plan.warnings.push('現在の点火段では推進剤が不足しています');
  if(plan.startTime-vessel.universalTime<60)plan.warnings.push('姿勢調整の60秒を確保できません');
  const orbit=bodyOrbitState(plan.position,plan.velocity,plan.time);
@@ -98,5 +98,6 @@ export function lunarReturnPlan(vessel:LunarReturnVessel,options:LunarReturnOpti
 export function lunarReturnNode(plan:LunarReturnPlan,vessel:Pick<LunarCaptureVessel,'universalTime'|'time'>):import('./maneuver-node.js').ManeuverNodeRecord{
  if(!plan.ready)throw Error(plan.warnings.join(' / '));
  if(plan.plannedAt!==vessel.universalTime)throw Error('時刻が進んだため帰還案を再計算してください');
- return {universalTime:plan.startTime,time:vessel.time+plan.startTime-vessel.universalTime,position:plan.position.toArray(),velocity:plan.afterVelocity.toArray(),impulse:plan.impulse.toArray(),remaining:plan.impulse.toArray(),complete:false,returnPlan:{targetPeriapsis:plan.targetPeriapsis,midTime:plan.time,duration:plan.burn.duration,deltaV:plan.deltaV,predictedPeriapsis:plan.finite!.exit.orbit.periapsis,exitTime:plan.finite!.exit.time}};
+ const finite=plan.finite;if(!finite)throw Error('有限噴射の帰還予測がありません');
+ return {universalTime:plan.startTime,time:vessel.time+plan.startTime-vessel.universalTime,position:plan.position.toArray(),velocity:plan.afterVelocity.toArray(),impulse:plan.impulse.toArray(),remaining:plan.impulse.toArray(),complete:false,returnPlan:{targetPeriapsis:plan.targetPeriapsis,midTime:plan.time,duration:plan.burn.duration,deltaV:plan.deltaV,predictedPeriapsis:finite.exit.orbit.periapsis,exitTime:finite.exit.time}};
 }

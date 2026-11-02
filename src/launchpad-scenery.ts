@@ -5,7 +5,7 @@ import {PLANET} from './planet.js';
 export function addLaunchpad(parent:T.Object3D,source:T.Object3D|null|undefined):T.Object3D|null{
  if(!source)return null;
  const pad=source.clone(true);pad.name='Launch complex 01';pad.position.set(0,PLANET.radius,0);
- pad.traverse(o=>{if((o as T.Mesh).isMesh){o.userData.sharedAsset=true;o.castShadow=true;o.receiveShadow=true;}});
+ pad.traverse(o=>{if('isMesh' in o&&o.isMesh){o.userData.sharedAsset=true;o.castShadow=true;o.receiveShadow=true;}});
  for(const [x,z]of [[-30,26],[30,26],[30,-26]]){
   const light=new T.PointLight('#ffe2a7',1100,85,2);light.position.set(x,10,z);pad.add(light);
  }

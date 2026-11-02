@@ -8,6 +8,7 @@ import {Flight,statistics,descendants,validateCraft,type FlightPart} from './cor
 import {fleet} from './fleet.js';
 import {fuelNetworks} from './resources.js';
 import {bodyOrbitState} from './celestial.js';
+import {copyPartState} from './fracture.js';
 export const DOCK_LIMITS={distance:.15,angle:8*Math.PI/180,speed:.3,angularSpeed:.15};
 /** Whether two ports may dock now; the measurements are present when both ports were found. */
 export interface DockingStatus{ready:boolean;reason:string;distance?:number;angle?:number;speed?:number;angularSpeed?:number}
@@ -33,13 +34,15 @@ export function combinedMotion(a:DockingBody,b:DockingBody):CombinedMotion{const
 
 function rebuilt(source:Flight,parts:FlightPart[],sources:readonly Flight[]=[source]):Flight{
  validateCraft({version:1,parts});const out=new Flight(parts,source.environment),ids=new Set(parts.map(p=>p.id));out.transferGuide=null;
- for(const key of ['vesselName','time','universalTime','stage','started','ballast','trim','brake','reactionEnabled','steeringEnabled','driveEnabled','rcsEnabled','maxAltitude'] as const)(out as Record<typeof key,unknown>)[key]=source[key];
+ out.vesselName=source.vesselName;out.time=source.time;out.universalTime=source.universalTime;out.stage=source.stage;out.started=source.started;out.ballast=source.ballast;out.trim=source.trim;out.brake=source.brake;out.reactionEnabled=source.reactionEnabled;out.steeringEnabled=source.steeringEnabled;out.driveEnabled=source.driveEnabled;out.rcsEnabled=source.rcsEnabled;out.maxAltitude=source.maxAltitude;
  out.pos.copy(source.pos);out.q.copy(source.q);out.vel.copy(source.vel);out.omega.copy(source.omega);out.holdQ=source.q.clone();out.sas=parts.some(p=>PARTS[p.type].control)&&source.sas;out.sasMode='hold';out.navigationFrame=source.navigationFrame;out.navigationAuto=source.navigationAuto;out.throttle=0;out.maneuver=null;out.targetPartId=source.targetPartId;
- for(const key of ['fuel','charge','thermal','chutes','deflections','gimbals','wheelMotion','observations'] as const)(out as Record<typeof key,Map<string,DockingMapValue>>)[key]=new Map<string,DockingMapValue>(sources.flatMap(v=>[...(v as Record<typeof key,Map<string,DockingMapValue>>)[key]]).filter(([id])=>ids.has(id)).map(([id,value])=>[id,value?.isVector3?value.clone():structuredClone(value)]));
+ // Every source's entries in order (a later duplicate id overwrites the value in place), kept for this vessel's parts.
+ function merged<V>(pick:(v:Flight)=>ReadonlyMap<string,V>):Map<string,V>{return copyPartState(new Map<string,V>(sources.flatMap(v=>[...pick(v)])),ids);}
+ out.fuel=merged(v=>v.fuel);out.charge=merged(v=>v.charge);out.thermal=merged(v=>v.thermal);out.chutes=merged(v=>v.chutes);out.deflections=merged(v=>v.deflections);out.gimbals=merged(v=>v.gimbals);out.wheelMotion=merged(v=>v.wheelMotion);out.observations=merged(v=>v.observations);
  out.active=new Set(sources.flatMap(v=>[...v.active]).filter(id=>ids.has(id)));out.networks=fuelNetworks(out.parts);out.stats=statistics(out.parts,out.fuel,out.ballast,out.thermal);out.buildColliders();return out;
 }
-/** Per-part state maps merged on docking: a value is a Vector3 (cloned) or plain data (structured-cloned). */
-type DockingMapValue=import('./fracture.js').FractureMapValue;
+/** A part the docking edit must find (ports checked by dockingStatus, parents of a validated craft). */
+function required(p:FlightPart|undefined,id:string):FlightPart{if(!p)throw Error('結合する部品が見つかりません: '+id);return p;}
 function updateOrbit(v:Flight):void{v.orbit=bodyOrbitState(centerOfVessel(v),v.vel,v.universalTime);}
 function replaceFleet(root:Flight,removed:readonly Flight[],replacement:Flight,extras:readonly Flight[]=[]):Flight{const others=fleet(root).filter(v=>!removed.includes(v));for(const v of [...others,...removed])v.detached=[];replacement.detached=[...others,...extras];resolveTargets(replacement);for(const v of removed)v.dispose();return replacement;}
 
@@ -48,11 +51,11 @@ export function dockVessels(root:Flight,target:Flight,rootPort:string,targetPort
  if(root.parts.length+target.parts.length>400)throw Error('結合後の部品数が上限を超えます');
  const parts=structuredClone(root.parts),incoming=structuredClone(target.parts),inverse=root.q.clone().invert(),relative=inverse.clone().multiply(target.q),offset=target.pos.clone().sub(root.pos).applyQuaternion(inverse),byId=new Map<string,FlightPart>(incoming.map(p=>[p.id,p]));
  // Reverse the path from the incoming port to its old root, preserving every edge.
- let current=byId.get(targetPort)!,parent=current.parent;current.parent=rootPort;
- while(parent){const next=byId.get(parent)!,previous=next.parent;next.parent=current.id;current=next;parent=previous;}
+ let current=required(byId.get(targetPort),targetPort),parent=current.parent;current.parent=rootPort;
+ while(parent){const next=required(byId.get(parent),parent),previous=next.parent;next.parent=current.id;current=next;parent=previous;}
  for(const p of incoming){p.p=new T.Vector3(...p.p).applyQuaternion(relative).add(offset).toArray();const e=new T.Euler().setFromQuaternion(relative.clone().multiply(partRotation(p)));p.r=[e.x,e.y,e.z];}
  for(const [v,list] of [[root,parts],[target,incoming]] as const)for(const p of list)if(!p.missionOrigin)p.missionOrigin={name:v.vesselName,epoch:v.universalTime-v.time};
- parts.find(p=>p.id===rootPort)!.dockPartner=targetPort;byId.get(targetPort)!.dockPartner=rootPort;parts.push(...incoming);
+ required(parts.find(p=>p.id===rootPort),rootPort).dockPartner=targetPort;required(byId.get(targetPort),targetPort).dockPartner=rootPort;parts.push(...incoming);
  const motion=combinedMotion(root,target),merged=rebuilt(root,parts,[root,target]);merged.vesselId=root.vesselId;merged.vel.copy(motion.velocity);merged.omega.copy(motion.omega);updateOrbit(merged);
  return replaceFleet(root,[root,target],merged);
 }

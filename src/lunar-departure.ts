@@ -49,16 +49,19 @@ export function searchLunarDeparture(position:import('three').Vector3,velocity:i
 export function lunarDeparturePlan(vessel:LunarDepartureVessel):LunarDeparturePlan{
  if(vessel.throttle!==0)throw Error('噴射を停止してから月遷移を計画してください');
  captureBurnEstimate(vessel,1);
- return searchLunarDeparture(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,{accept:plan=>evaluateFiniteDeparture(vessel,plan as LunarDeparturePlan).ready}) as LunarDeparturePlan;
+ // Every plan the search returns has passed through accept, which completes it in place.
+ const evaluated=new Map<LunarDepartureSearchPlan,LunarDeparturePlan>();
+ const found=searchLunarDeparture(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,{accept:plan=>{const result=evaluateFiniteDeparture(vessel,plan);evaluated.set(plan,result);return result.ready;}}),result=evaluated.get(found);
+ if(!result)throw Error('月遷移案の有限噴射を確認できません');return result;
 }
 
 // The cheapest instantaneous burn may collide once its real duration is used.
 // Test other candidates before reporting that the vessel has no usable plan.
-function evaluateFiniteDeparture(vessel:LunarDepartureVessel,plan:LunarDeparturePlan):LunarDeparturePlan{
- plan.burn=captureBurnEstimate(vessel,plan.deltaV);plan.startTime=plan.time-plan.burn.duration/2;plan.warnings=[];
+function evaluateFiniteDeparture(vessel:LunarDepartureVessel,search:LunarDepartureSearchPlan):LunarDeparturePlan{
+ const burn=captureBurnEstimate(vessel,search.deltaV),warnings:string[]=[],plan=Object.assign(search,{burn,startTime:search.time-burn.duration/2,warnings});
  if(!plan.burn.enough)plan.warnings.push('現在の点火段では推進剤が不足しています');
  if(plan.startTime-vessel.universalTime<60)plan.warnings.push('姿勢調整の60秒を確保できません');
- if(plan.warnings.length){plan.ready=false;return plan;}
+ if(plan.warnings.length)return Object.assign(plan,{ready:false});
  const at=coastDrift(vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),vessel.vel,vessel.universalTime,plan.startTime-vessel.universalTime),fuel=new Map<string,number>(vessel.fuel),direction=plan.impulse.clone().normalize();
  let pos=at.position,vel=at.velocity,time=plan.startTime,mass=vessel.stats.mass,left=plan.deltaV;
  for(let i=0;i<144000&&left>=.5;i++){
@@ -67,13 +70,14 @@ function evaluateFiniteDeparture(vessel:LunarDepartureVessel,plan:LunarDeparture
   if(thrust<=0)break;
   const next=advanceCelestialOrbit(pos,vel,direction.clone().multiplyScalar(thrust/mass),dt,time);pos=next.pos;vel=next.vel;time+=dt;left-=thrust/mass*dt;mass-=used;
  }
- plan.finite=predictTrajectory(pos,vel,time,{duration:plan.duration*1.6,samples:160});
- if(left>=.5||!plan.finite.events.some(e=>e.type==='enter-moon')||plan.finite.closest.altitude<10000||plan.finite.closest.altitude>1000000||plan.finite.closest.atBoundary||plan.finite.reason!=='duration')plan.warnings.push('有限噴射では安全な月接近を確認できません');
- plan.ready=plan.warnings.length===0;return plan;
+ const finite=predictTrajectory(pos,vel,time,{duration:plan.duration*1.6,samples:160});
+ if(left>=.5||!finite.events.some(e=>e.type==='enter-moon')||finite.closest.altitude<10000||finite.closest.altitude>1000000||finite.closest.atBoundary||finite.reason!=='duration')plan.warnings.push('有限噴射では安全な月接近を確認できません');
+ return Object.assign(plan,{finite,ready:plan.warnings.length===0});
 }
 
 export function lunarDepartureNode(plan:LunarDeparturePlan,vessel:Pick<LunarDepartureVessel,'universalTime'|'time'>):import('./maneuver-node.js').ManeuverNodeRecord{
  if(!plan.ready)throw Error(plan.warnings.join(' / '));
  if(plan.plannedAt!==vessel.universalTime)throw Error('時刻が進んだため月遷移案を再計算してください');
- return {universalTime:plan.startTime,time:vessel.time+plan.startTime-vessel.universalTime,position:plan.position.toArray(),velocity:plan.afterVelocity.toArray(),impulse:plan.impulse.toArray(),remaining:plan.impulse.toArray(),complete:false,departure:{midTime:plan.time,duration:plan.burn.duration,deltaV:plan.deltaV,periapsis:plan.finite!.closest.altitude}};
+ const finite=plan.finite;if(!finite)throw Error('有限噴射の月接近予測がありません');
+ return {universalTime:plan.startTime,time:vessel.time+plan.startTime-vessel.universalTime,position:plan.position.toArray(),velocity:plan.afterVelocity.toArray(),impulse:plan.impulse.toArray(),remaining:plan.impulse.toArray(),complete:false,departure:{midTime:plan.time,duration:plan.burn.duration,deltaV:plan.deltaV,periapsis:finite.closest.altitude}};
 }

@@ -1,6 +1,6 @@
 import * as T from 'three';
 // Each nozzle's exhaust points opposite its force. Positions are in part-local meters.
-export const RCS_NOZZLES=[...Array(3)].flatMap((_,axis)=>[-1,1].map(sign=>{const direction:T.Vector3Tuple=[0,0,0];direction[axis]=sign;return {direction,position:direction.map(v=>-.24*v) as T.Vector3Tuple};}));
+export const RCS_NOZZLES=[...Array(3)].flatMap((_,axis)=>[-1,1].map(sign=>{const direction:T.Vector3Tuple=[0,0,0];direction[axis]=sign;const position:T.Vector3Tuple=[-.24*direction[0],-.24*direction[1],-.24*direction[2]];return {direction,position};}));
 export interface RcsThruster{id:string;index:number;position:T.Vector3;direction:T.Vector3;thrust:number;isp:number}
 export interface RcsJet extends RcsThruster{level:number;force:T.Vector3}
 export interface RcsPart{id:string;type:string;p:T.Vector3Tuple;r:T.Vector3Tuple;fuelEnabled?:boolean}
@@ -31,12 +31,12 @@ export function mixRCS(thrusters:readonly RcsThruster[],com:T.Vector3,rotation:T
  return levels;
 }
 
-export function rcsThrusters(parts:readonly RcsPart[],definitions:Readonly<Record<string,RcsDefinition>>):RcsThruster[]{return parts.flatMap(p=>{const d=definitions[p.type];if(!d.rcsThrust||p.fuelEnabled===false)return [];const q=new T.Quaternion().setFromEuler(new T.Euler(...p.r));return RCS_NOZZLES.map((n,index)=>({id:p.id,index,position:new T.Vector3(...n.position).applyQuaternion(q).add(new T.Vector3(...p.p)),direction:new T.Vector3(...n.direction).applyQuaternion(q),thrust:d.rcsThrust as number,isp:d.rcsIsp as number}));});}
+export function rcsThrusters(parts:readonly RcsPart[],definitions:Readonly<Record<string,RcsDefinition>>):RcsThruster[]{return parts.flatMap(p=>{const d=definitions[p.type],thrust=d.rcsThrust,isp=d.rcsIsp;if(!thrust||p.fuelEnabled===false)return [];if(isp===undefined)throw Error('RCSの比推力が定義されていません: '+p.type);const q=new T.Quaternion().setFromEuler(new T.Euler(...p.r));return RCS_NOZZLES.map((n,index)=>({id:p.id,index,position:new T.Vector3(...n.position).applyQuaternion(q).add(new T.Vector3(...p.p)),direction:new T.Vector3(...n.direction).applyQuaternion(q),thrust,isp}));});}
 
 // Internal monopropellant reservoirs supply only their own block. No main-fuel
 // crossfeed, and no resource transfer across separated craft.
 export function burnRCS(thrusters:readonly RcsThruster[],levels:readonly number[],propellant:Map<string,number>,dt:number):RcsJet[]{
  const needs=new Map<string,number>();thrusters.forEach((t,i)=>needs.set(t.id,(needs.get(t.id)||0)+t.thrust*levels[i]*dt/(t.isp*9.81)));
  const fractions=new Map<string,number>();for(const [id,need]of needs){const available=propellant.get(id)||0;fractions.set(id,need>0?Math.min(1,available/need):0);propellant.set(id,Math.max(0,available-need));}
- return thrusters.map((t,i)=>({...t,level:levels[i]*fractions.get(t.id)!,force:t.direction.clone().multiplyScalar(t.thrust*levels[i]*fractions.get(t.id)!)}));
+ return thrusters.map((t,i)=>{const fraction=fractions.get(t.id);if(fraction===undefined)throw Error('RCSの推進剤配分が見つかりません: '+t.id);return {...t,level:levels[i]*fraction,force:t.direction.clone().multiplyScalar(t.thrust*levels[i]*fraction)};});
 }

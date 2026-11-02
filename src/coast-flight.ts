@@ -16,11 +16,12 @@ import {engineBurn} from './resources.js';
 
 export type CoastPart=import('./aero.js').AeroPart&PowerPart;
 export interface CoastTelemetry{power:PowerReading;force:T.Vector3;torque:T.Vector3;engineForce:T.Vector3;commands:{pitch:number;yaw:number;roll:number};stallCount:number;contacts:number;/** Written by each coast step; absent on a vessel that has not stepped yet. */atmosphere?:{density:number;pressure:number;temperature:number};engine:string}
-export interface CoastVessel extends ParkedVessel,BurnScheduleVessel,NavigationFrameFlight,ObservationVessel,FleetNode<CoastVessel>{parts:readonly CoastPart[];stats:{com:T.Vector3;mass:number};vesselId:string;vesselName?:string|null;throttle:number;failureDynamics?:boolean;thermal:ThermalMap;charge:ChargeMap;observations:ObservationMap;orbit?:OrbitState|null;lastThrust:number;engineThrust:Map<string,number>;rcsJets:readonly import('./rcs.js').RcsJet[];maxAltitude:number;telemetry:CoastTelemetry}
+export interface CoastVessel extends ParkedVessel,BurnScheduleVessel,NavigationFrameFlight,ObservationVessel,FleetNode<CoastVessel>{parts:readonly CoastPart[];stats:{com:T.Vector3;mass:number};vesselId:string;vesselName?:string|null;throttle:number;failureDynamics?:boolean;thermal:ThermalMap;charge:ChargeMap;observations:ObservationMap;orbit?:OrbitState|null;lastThrust:number;engineThrust:Map<string,number>;rcsJets:readonly import('./rcs.js').RcsJet[];maxAltitude:number;/** Partial until the vessel's first step (contacts starts at 0); each coast step writes a full CoastTelemetry. */telemetry:Partial<CoastTelemetry>&Pick<CoastTelemetry,'contacts'>}
 export type CoastMarginVessel=Pick<import('./descent.js').DescentVessel,'pos'|'q'|'stats'|'vel'|'universalTime'|'networks'|'fuel'|'started'|'active'>;
 export interface CoastBlocker{reason:string;code:string|null;vesselId:string|null;vesselName:string;otherVesselId:string|null;otherVesselName:string|null;overdue:boolean;scheduledTime:number|null}
-interface FrozenCoastUpdate extends FrozenSurfaceState{v:CoastVessel}
-interface LiveCoastUpdate{v:CoastVessel;parked:boolean|undefined;air:{density:number;pressure:number;temperature:number};turn:T.Quaternion;pos:T.Vector3;vel:T.Vector3;q:T.Quaternion;charge:ChargeMap;thermal:ThermalMap;power:PowerReading;observations:ObservationMap;orbit:OrbitState}
+/** A wreck without failure dynamics: carried along the surface/orbit with its attitude frozen. */
+interface FrozenCoastUpdate extends FrozenSurfaceState{kind:'frozen';v:CoastVessel}
+interface LiveCoastUpdate{kind:'live';v:CoastVessel;parked:boolean|undefined;air:{density:number;pressure:number;temperature:number};turn:T.Quaternion;pos:T.Vector3;vel:T.Vector3;q:T.Quaternion;charge:ChargeMap;thermal:ThermalMap;power:PowerReading;observations:ObservationMap;orbit:OrbitState}
 export interface CoastOptions{input?:boolean;maxSteps?:number}
 export interface CoastResult{universalTime:number;advanced:number;steps:number;reason:string|null;blocker:CoastBlocker|null;remaining:number}
 
@@ -84,7 +85,7 @@ function worldCoastBlocker(vessels:readonly CoastVessel[],universalTime:number,a
   if([...v.thermal.values()].some(s=>(s.failed&&!v.failureDynamics)||!Number.isFinite(s.temperature)||s.temperature<3))return blocker('熱状態を確認してください',v,'thermal');
   if(isParked(v))continue;
   const limit=coastStepLimit(center(v),v.vel,v.universalTime,{deadline:deadline(v),surfaceMargin:coastSurfaceMargin(v)});
-  if(limit.dt<.05)return blocker({surface:'大気・地表への接近',soi:'月重力圏の境界',maneuver:'予定噴射の直前'}[limit.reason as CoastLimitReason]||'通常物理が必要',v,limit.reason);
+  if(limit.dt<.05)return blocker((limit.reason&&{surface:'大気・地表への接近',soi:'月重力圏の境界',maneuver:'予定噴射の直前'}[limit.reason])||'通常物理が必要',v,limit.reason);
  }
  return null;
 }
@@ -112,7 +113,7 @@ export function advanceWorldCoast(vessels:readonly CoastVessel[],universalTime:n
    const safe=Math.max(0,clearance)/(a.vel.clone().sub(b.vel).length()+100)*.5;
    if(safe<dt){dt=safe;limiting='proximity';limitingVessel=a;nearby=b;}
   }
-  if(dt<.05&&dt<requested-advanced){reason={surface:'大気・地表への接近',soi:'月重力圏の境界',maneuver:'予定噴射の直前',proximity:'他機体への接近'}[limiting as CoastLimitReason|'proximity']||'通常物理が必要';blocked=blocker(reason,limitingVessel||active,limiting,nearby);break;}
+  if(dt<.05&&dt<requested-advanced){reason=(limiting&&{surface:'大気・地表への接近',soi:'月重力圏の境界',maneuver:'予定噴射の直前',proximity:'他機体への接近'}[limiting])||'通常物理が必要';blocked=blocker(reason,limitingVessel||active,limiting,nearby);break;}
   const time=universalTime,end=time+dt;
   if(end===time){
    // A completed multi-step request can leave a sub-ULP subtraction residue.
@@ -121,8 +122,8 @@ export function advanceWorldCoast(vessels:readonly CoastVessel[],universalTime:n
    reason='時刻の計算精度の上限';blocked=blocker(reason,active,'precision');break;
   }
   // Compute on copies first: a failed propagation cannot split fleet clocks.
-  const updates:(FrozenCoastUpdate|LiveCoastUpdate)[]=vessels.map(v=>{
-   if(v.crashed&&!v.failureDynamics)return {v,...frozenSurfaceState(v,time,dt)};
+  const updates=vessels.map((v):FrozenCoastUpdate|LiveCoastUpdate=>{
+   if(v.crashed&&!v.failureDynamics)return {kind:'frozen',v,...frozenSurfaceState(v,time,dt)};
    const c=center(v),parked=isParked(v),body=referenceBody(c,time),start=bodyState(body,time);
    const drift:(duration:number)=>BodyState=duration=>{if(!parked)return coastDrift(c,v.vel,time,duration);const end=bodyState(body,time+duration),turn=surfaceOrientation(duration,body),position=c.clone().sub(start.position).applyQuaternion(turn).add(end.position),velocity=surfaceVelocity(position,time+duration,body);return {position,velocity};};
    const next=drift(dt),mid=drift(dt/2),turn=parked?surfaceOrientation(dt,body):new T.Quaternion(),q=v.q.clone().premultiply(turn),midQ=parked?v.q.clone().premultiply(surfaceOrientation(dt/2,body)):q,air=parked&&body.id==='planet'?atmosphere(c.distanceTo(start.position)-body.radius):{density:0,pressure:0,temperature:3};
@@ -130,15 +131,15 @@ export function advanceWorldCoast(vessels:readonly CoastVessel[],universalTime:n
    const power=powerStep(v.parts,charge,mid.position,midQ,commands,false,dt,time+dt/2,observationDemand(v));
    const observations=new Map<string,ObservationState>([...v.observations].map(([id,s])=>[id,structuredClone(s)]));advanceObservations({...v,landed:parked,pos:mid.position.clone().sub(v.stats.com.clone().applyQuaternion(midQ)),q:midQ,vel:mid.velocity,universalTime:time+dt/2},observations,power,dt);
    coolStationary(v.parts,thermal,dt,air);
-   return {v,parked,air,turn,pos:next.position.clone().sub(v.stats.com.clone().applyQuaternion(q)),vel:next.velocity,q,charge,thermal,power,observations,orbit:bodyOrbitState(next.position,next.velocity,end)};
+   return {kind:'live',v,parked,air,turn,pos:next.position.clone().sub(v.stats.com.clone().applyQuaternion(q)),vel:next.velocity,q,charge,thermal,power,observations,orbit:bodyOrbitState(next.position,next.velocity,end)};
   });
   for(const u of updates){
    const v=u.v;v.pos.copy(u.pos);v.vel.copy(u.vel);v.universalTime=end;
-   if(v.crashed&&!v.failureDynamics){v.q.copy(u.q);v.omega.copy((u as FrozenCoastUpdate).omega);if(v.holdQ)v.holdQ.premultiply(u.turn).normalize();v.orbit=bodyOrbitState(center(v),v.vel,end);continue;}
-   v.time+=dt;v.q.copy(u.q);if((u as LiveCoastUpdate).parked){v.omega.copy(surfaceAngularVelocity(referenceBody(center(v),end)));if(v.holdQ)v.holdQ.premultiply(u.turn);}v.charge=(u as LiveCoastUpdate).charge;v.observations=(u as LiveCoastUpdate).observations;v.thermal=(u as LiveCoastUpdate).thermal;v.orbit=(u as LiveCoastUpdate).orbit;
-   v.landed=(u as LiveCoastUpdate).parked;v.landedTime=(u as LiveCoastUpdate).parked?Math.max(.500001,v.landedTime)+dt:0;v.lastThrust=0;v.engineThrust.clear();v.rcsJets=[];
-   v.maxAltitude=Math.max(v.maxAltitude,(u as LiveCoastUpdate).orbit.altitude);updateNavigationFrame(v);
-   v.telemetry={power:(u as LiveCoastUpdate).power,force:zero.clone(),torque:zero.clone(),engineForce:zero.clone(),commands:{...commands},stallCount:0,contacts:0,atmosphere:(u as LiveCoastUpdate).air,engine:'Kepler coast'};
+   if(u.kind==='frozen'){v.q.copy(u.q);v.omega.copy(u.omega);if(v.holdQ)v.holdQ.premultiply(u.turn).normalize();v.orbit=bodyOrbitState(center(v),v.vel,end);continue;}
+   v.time+=dt;v.q.copy(u.q);if(u.parked){v.omega.copy(surfaceAngularVelocity(referenceBody(center(v),end)));if(v.holdQ)v.holdQ.premultiply(u.turn);}v.charge=u.charge;v.observations=u.observations;v.thermal=u.thermal;v.orbit=u.orbit;
+   v.landed=u.parked;v.landedTime=u.parked?Math.max(.500001,v.landedTime)+dt:0;v.lastThrust=0;v.engineThrust.clear();v.rcsJets=[];
+   v.maxAltitude=Math.max(v.maxAltitude,u.orbit.altitude);updateNavigationFrame(v);
+   v.telemetry={power:u.power,force:zero.clone(),torque:zero.clone(),engineForce:zero.clone(),commands:{...commands},stallCount:0,contacts:0,atmosphere:u.air,engine:'Kepler coast'};
   }
   universalTime=end;advanced+=dt;steps++;blocked=worldCoastBlocker(vessels,universalTime,active);reason=blocked?.reason??null;
  }

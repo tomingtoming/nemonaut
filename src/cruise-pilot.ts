@@ -17,8 +17,10 @@ export interface CruiseFlight{pos:T.Vector3;vel:T.Vector3;q:T.Quaternion;univers
 export interface CruisePrevious{sas:boolean;sasMode:string;trim:number}
 export interface CruiseTelemetry{height:number;speed:number;vertical:number;heading:number;pitch:number;bank:number;throttle:number;liftAngle:number;liftMargin:number}
 export function cruiseSettings(value:Partial<CruiseSettingsInput>|null|undefined):CruiseSettings{
- if(!value||!['altitude','vertical'].includes(value.mode??'altitude')||!(['speed','altitude','heading'] as const).every(k=>Number.isFinite(value[k]))||value.speed!<40||value.speed!>350||value.altitude!<300||value.altitude!>15000||value.heading!<0||value.heading!>=360||!Number.isFinite(value.vertical??0)||Math.abs(value.vertical??0)>10)throw Error('巡航目標の範囲を確認してください');
- return {speed:value.speed!,altitude:value.altitude!,heading:value.heading!,mode:value.mode??'altitude',vertical:value.vertical??0};
+ if(!value)throw Error('巡航目標の範囲を確認してください');
+ const {speed,altitude,heading}=value;
+ if(!['altitude','vertical'].includes(value.mode??'altitude')||typeof speed!=='number'||typeof altitude!=='number'||typeof heading!=='number'||!Number.isFinite(speed)||!Number.isFinite(altitude)||!Number.isFinite(heading)||speed<40||speed>350||altitude<300||altitude>15000||heading<0||heading>=360||!Number.isFinite(value.vertical??0)||Math.abs(value.vertical??0)>10)throw Error('巡航目標の範囲を確認してください');
+ return {speed,altitude,heading,mode:value.mode??'altitude',vertical:value.vertical??0};
 }
 // Conservative pre-stall estimate at the requested altitude, including a
 // 20-degree bank. This is an admission check, not a certified stall speed.

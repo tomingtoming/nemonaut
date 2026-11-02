@@ -9,7 +9,10 @@ export type Language='ja'|'en';
 export type Translator=(text:string)=>string;
 export interface TranslationOptions{document?:Document;language?:Language;fetchJson?:(url:URL)=>Promise<Record<string,string>>}
 // The walk reads Text.data on text nodes and the attribute API on elements, after checking nodeType.
-interface TranslatableNode extends ChildNode{data:string;tagName:string;getAttribute(name:string):string|null;setAttribute(name:string,value:string):void}
+interface TextLike{data:string}
+interface ElementLike{tagName:string;getAttribute(name:string):string|null;setAttribute(name:string,value:string):void}
+const isTextNode=<N extends Node>(node:N):node is N&TextLike=>node.nodeType===3;
+const isElementNode=<N extends Node>(node:N):node is N&ElementLike=>node.nodeType===1;
 type CanvasTextMethod=(this:CanvasRenderingContext2D,text:string,...rest:never[])=>unknown;
 const JA=/[぀-ヿ㐀-鿿！-｠]/;
 const LANG_KEY=storageKey('lang');
@@ -38,14 +41,14 @@ export function makeTranslator(dictionary:Record<string,string>):Translator{
  };
 }
 export function translateTree(root:Node,translate:Translator):void{
- const walk=(node:TranslatableNode)=>{
-  if(node.nodeType===3){const t=translate(node.data);if(t!==node.data)node.data=t;return;}
-  if(node.nodeType!==1||SKIP.has(node.tagName))return;
+ const walk=(node:Node)=>{
+  if(isTextNode(node)){const t=translate(node.data);if(t!==node.data)node.data=t;return;}
+  if(!isElementNode(node)||SKIP.has(node.tagName))return;
   for(const a of ATTRIBUTES){const v=node.getAttribute(a);if(v){const t=translate(v);if(t!==v)node.setAttribute(a,t);}}
   if(FIELDS.has(node.tagName))return;
-  for(const child of node.childNodes)walk(child as TranslatableNode);
+  for(const child of node.childNodes)walk(child);
  };
- walk(root as TranslatableNode);
+ walk(root);
 }
 export async function installTranslation({document:doc=globalThis.document,language=currentLanguage(),fetchJson=(url:URL)=>fetch(url).then(r=>r.json())}:TranslationOptions={}):Promise<Translator|null>{
  if(language!=='en'||!doc)return null;

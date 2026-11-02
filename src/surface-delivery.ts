@@ -31,10 +31,10 @@ export function recordDeliveryAchievements(history:readonly WorldHistoryEvent[],
  if(practice||!root)return history;
  for(const site of DELIVERY_SITES){if(history.some(e=>e.type==='delivery'&&e.siteId===site.id))continue;
  for(const v of fleet(root)){
-  const d=deliveryTelemetry(v,history,{site});if(!d.ready||v.time<=0)continue;
+  const d=deliveryTelemetry(v,history,{site});if(!d.ready||v.time<=0)continue;const sources=d.launchEventIds;if(!sources)throw Error('配達記録の出発元が見つかりません');
   return appendHistory({history,universalTime:root.universalTime},'delivery',{
    vesselId:v.vesselId,vesselName:v.vesselName,state:{time:v.time},parts:v.parts
-  },{launchEventIds:d.launchEventIds as string[],delivery:{siteId:site.id,probePartId:d.probePartId,distance:d.distance,speed:d.speed}});
+  },{launchEventIds:sources,delivery:{siteId:site.id,probePartId:d.probePartId,distance:d.distance,speed:d.speed}});
  }}
  return history;
 }

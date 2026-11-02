@@ -8,6 +8,7 @@ export interface FiniteBurnPanelFlight extends FiniteBurnVessel{parts:FiniteBurn
 export interface FiniteBurnContext{impulse:T.Vector3;epoch:number;tolerance:number}
 export interface FiniteBurnPendingReturn{vesselId:string;epoch:number;impulse:T.Vector3;throttle:number}
 export interface FiniteBurnPanel{plannedThrottle(preview:Pick<import('./maneuver.js').ManeuverPreview,'universalTime'|'impulse'>):number|undefined;update(preview:Pick<import('./maneuver.js').ManeuverPreview,'universalTime'|'impulse'>|Pick<import('./maneuver.js').NodeOrbitPreview,'universalTime'|'impulse'>|null|undefined,node:import('./maneuver-node.js').ManeuverNodeRecord|null|undefined):FiniteBurnPreview|null}
+const need=<V>(value:V|null|undefined):V=>{if(value===null||value===undefined)throw Error('飛行中の機体が見つかりません');return value;};
 export function mountFiniteBurn(anchor:Element,getFlight:()=>FiniteBurnPanelFlight|null|undefined):FiniteBurnPanel{
  const row=document.createElement('div'),power=document.createElement('select'),timing=document.createElement('select'),button=document.createElement('button'),readout=document.createElement('p');
  row.className='finiteBurnControls';timing.title='計画時刻に噴射を始めるか、噴射の中央を合わせるか選択';power.setAttribute('aria-label','有限噴射の推力');timing.setAttribute('aria-label','有限噴射の開始時刻');
@@ -26,17 +27,17 @@ export function mountFiniteBurn(anchor:Element,getFlight:()=>FiniteBurnPanelFlig
   const km=(n:number)=>Number.isFinite(n)?(n/1000).toFixed(2)+' km':'なし';
   readout.textContent='計算時点 · 近点 '+km(result.orbit.periapsis)+' / 遠点 '+km(result.orbit.apoapsis)+'\n開始まで '+(startTime-f.universalTime).toFixed(1)+'秒 · 噴射 '+result.duration.toFixed(1)+'秒';
   readout.title='緑：有限噴射後。計算UT '+result.computedAt.toFixed(1)+' / 開始UT '+startTime.toFixed(1)+'。'+(result.atmospheric?'大気中の胴体抗力を含みます。':'')+'停止精度 '+context.tolerance+' m/s、姿勢固定の近似。自動点火・計画時刻の変更は行いません';
- }catch(error){readout.textContent=(error as Error).message;}};
+ }catch(error){readout.textContent=error instanceof Error?error.message:String(error);}};
  returnButton.onclick=()=>{clear();try{
-  const plan=finiteReturnPlan(getFlight()!,{throttle:Number(power.value)}),location=element(document,'#planLocation','select');
+  const plan=finiteReturnPlan(need(getFlight()),{throttle:Number(power.value)}),location=element(document,'#planLocation','select');
   location.value='custom';location.dataset.epoch=String(plan.location.universalTime);location.dataset.tolerance='0.05';
   for(const [id,key]of [['planDeltaV','prograde'],['planNormal','normal'],['planRadial','radial']] as const)byId(id,'input').value=String(plan.components[key]);
-  element(document,'#planEnabled','input').checked=true;timing.value='start';location.dispatchEvent(new Event('input',{bubbles:true}));pendingReturn={vesselId:getFlight()!.vesselId,epoch:plan.location.universalTime,impulse:plan.preview.impulse.clone(),throttle:plan.throttle};button.click();
- }catch(error){readout.textContent=(error as Error).message;}};
+  element(document,'#planEnabled','input').checked=true;timing.value='start';location.dispatchEvent(new Event('input',{bubbles:true}));pendingReturn={vesselId:need(getFlight()).vesselId,epoch:plan.location.universalTime,impulse:plan.preview.impulse.clone(),throttle:plan.throttle};button.click();
+ }catch(error){readout.textContent=error instanceof Error?error.message:String(error);}};
  return {plannedThrottle(preview){const f=getFlight(),p=pendingReturn;return p&&f?.vesselId===p.vesselId&&Math.abs(preview.universalTime-p.epoch)<1e-6&&preview.impulse.distanceTo(p.impulse)<.001?p.throttle:undefined;},update(preview,node){
-  const f=getFlight();context=preview?.impulse?{impulse:preview.impulse,epoch:preview.universalTime,tolerance:.05}:node&&!node.complete&&!node.capture&&!node.returnPlan&&!node.departure?{impulse:new T.Vector3(...node.remaining),epoch:node.universalTime??f!.universalTime+node.time-f!.time,tolerance:node.tolerance??.5}:null;
+  const f=getFlight();context=preview?.impulse?{impulse:preview.impulse,epoch:preview.universalTime,tolerance:.05}:node&&!node.complete&&!node.capture&&!node.returnPlan&&!node.departure?{impulse:new T.Vector3(...node.remaining),epoch:node.universalTime??need(f).universalTime+node.time-need(f).time,tolerance:node.tolerance??.5}:null;
   signature=JSON.stringify([f?.vesselId,f?.parts.map(p=>[p.id,p.thrustLimit,p.fuelEnabled,p.fuelCrossfeed]),f?[...f.fuel]:null,f?.stats.mass,f?.stage,context?.epoch,context?.impulse.toArray().map(x=>x.toFixed(3)),context?.tolerance]);
-  if(result&&(signature!==computedSignature||f!.throttle>0||f!.universalTime>=result.startTime))clear();
+  if(result&&(signature!==computedSignature||need(f).throttle>0||need(f).universalTime>=result.startTime))clear();
   returnButton.disabled=!f||f.throttle!==0;
   button.disabled=!context||!f||f.throttle!==0||context.epoch<f.universalTime;
   return result;

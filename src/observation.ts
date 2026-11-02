@@ -40,13 +40,15 @@ export function advanceObservations(v:ObservationVessel,states:Map<string,Observ
  }
 }
 
+// Past the paused check only a live vessel is read, whose thermal and observation states are Maps.
+function isLiveObservationVessel(v:ObservationStatusVessel):v is ObservationStatusVessel&ObservationVessel{return v.thermal instanceof Map&&v.observations instanceof Map;}
 export function observationStatus(v:ObservationStatusVessel,id:string,{paused=false}:{paused?:boolean}={}):string{
  const state=v.state??v,thermal=new Map<string,{failed:boolean}>(v.thermal),observation=new Map<string,ObservationState>(v.observations??[]).get(id);
  if(state.crashed||thermal.get(id)?.failed)return '機体損傷';
  if(!observation)return '観測装置なし';
  if(!observation.enabled)return '停止中';
  if(paused)return '観測ON · 時間停止中';
- const reason=observationReason(v as ObservationStatusVessel&ObservationVessel,id);if(reason)return reason;
+ if(!isLiveObservationVessel(v))throw Error('観測状態を確認できません');const reason=observationReason(v,id);if(reason)return reason;
  const power=v.telemetry.power;if(!power)return '給電確認中';
  if(power.ratio<=0)return '電力不足 · 観測停止';
  const period=power.eclipse?'夜間':'日照';

@@ -10,7 +10,7 @@ export interface SurveyVessel extends SurveyStationVessel{vesselId:string;vessel
 export interface SurveyRoot extends SurveyVessel,FleetNode<SurveyRoot>{}
 export interface SurveyProgress<V extends SurveyStationVessel=SurveyVessel>{completed:WorldHistoryEvent|undefined;station:DeliveryStation<WorldHistoryEvent,V>|LostDeliveryStation<WorldHistoryEvent>|null;quality:WorldHistoryEvent['quality'];day:number;night:number}
 export function surveyProgress<V extends SurveyStationVessel=SurveyVessel>(history:readonly WorldHistoryEvent[],vessels:readonly V[],site:DeliverySite=DELIVERY_SITE):SurveyProgress<V>{
- const completed=history.find(e=>e.type==='survey'&&e.siteId===site.id),station=deliveryStation(history,vessels,site),data=station?.vessel?observationData(new Map<string,ObservationState>(station.vessel.observations??[]).get(station.record.probePartId as string),site):null;
+ const completed=history.find(e=>e.type==='survey'&&e.siteId===site.id),station=deliveryStation(history,vessels,site),data=station?.vessel?observationData(new Map<string|undefined,ObservationState>(station.vessel.observations??[]).get(station.record.probePartId),site):null;
  return {completed,station,quality:data?.quality??completed?.quality,day:data?.day??completed?.day??0,night:data?.night??completed?.night??0};
 }
 export function recordSurveyAchievement(history:readonly WorldHistoryEvent[],root:SurveyRoot|null|undefined,{practice=false}:{practice?:boolean}={}):readonly WorldHistoryEvent[]{

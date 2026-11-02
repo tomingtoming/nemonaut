@@ -10,7 +10,7 @@ export function migrateLegacyStorage(storage:Storage|undefined=globalThis.localS
  if(!storage)return 0;let moved=0;
  try{
   const old:string[]=[];for(let i=0;i<storage.length;i++){const k=storage.key(i);if(k?.startsWith(LEGACY_APP+'-'))old.push(k);}
-  for(const k of old){const next=APP+k.slice(LEGACY_APP.length);if(storage.getItem(next)===null){storage.setItem(next,storage.getItem(k) as string);moved++;}storage.removeItem(k);}
+  for(const k of old){const next=APP+k.slice(LEGACY_APP.length),value=storage.getItem(k);if(value!==null&&storage.getItem(next)===null){storage.setItem(next,value);moved++;}storage.removeItem(k);}
  }catch{}
  return moved;
 }

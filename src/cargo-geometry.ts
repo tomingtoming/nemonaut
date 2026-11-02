@@ -1,6 +1,8 @@
 // Local Y is the fuselage axis; local +Z is the cargo opening.
 export interface CargoBox{center:number[];size:number[];rotation?:number[]}
 export interface CargoBayDefinition{size:readonly number[];cargoBay:{wall:number};massCenter?:readonly number[]}
+/** Narrows a catalogue definition to one with a cargo bay (the check the callers already make). */
+export function hasCargoBay<D extends {cargoBay?:{wall:number}}>(d:D):d is D&{cargoBay:{wall:number}}{return !!d.cargoBay;}
 export function cargoShellBoxes(d:CargoBayDefinition,open=false):CargoBox[]{
  const [w,l,h]=d.size,t=d.cargoBay.wall,r=w/2-t/2,N=24,boxes:CargoBox[]=[];
  for(let i=0;i<N;i++){
@@ -18,7 +20,7 @@ export function cargoMassCenter(d:CargoBayDefinition):number[]{
 export function cargoCollisionBoxes(d:CargoBayDefinition,open=false):CargoBox[]{return cargoShellBoxes(d,open).map(b=>({...b,center:b.center.map((n,i)=>n-(d.massCenter?.[i]||0))}));}
 export function syncCargoVisual(visual:import('three').Object3D,p:{cargoOpen?:boolean},d:{cargoBay?:unknown;size:readonly number[]}):void{
  if(!d.cargoBay)return;
- for(const [name,side]of [['CargoDoorLeft',-1],['CargoDoorRight',1]] as [string,number][]){
+ for(const [name,side]of [['CargoDoorLeft',-1],['CargoDoorRight',1]] as const){
   const door=visual.getObjectByName(name);if(door)door.position.x=side*(p.cargoOpen?d.size[0]/2:0);
  }
 }

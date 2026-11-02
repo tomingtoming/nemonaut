@@ -23,12 +23,12 @@ export function thrustBalance(parts:readonly DiagnosticPart[],active:EngineSet,f
  const thrust=engineBurn(fuelNetworks(parts),new Map(fuel),active,1,density,.001),engineIds:string[]=[];
  for(const p of parts){const n=thrust.get(p.id)||0;if(n<=0)continue;engineIds.push(p.id);
   const d=PARTS[p.type],q=partRotation(p),f=new T.Vector3(0,n,0).applyQuaternion(q),point=partCenter(p);
-  if(d.gimbal)point.add(new T.Vector3(...d.gimbalPivot!).applyQuaternion(q));
+  if(d.gimbal){if(!d.gimbalPivot)throw Error('ジンバル支点が定義されていません');point.add(new T.Vector3(...d.gimbalPivot).applyQuaternion(q));}
   force.add(f);torque.add(point.sub(com).cross(f));
  }
  const magnitude=force.length(),direction=magnitude>1e-8?force.clone().divideScalar(magnitude):null;
  const axialTorque=direction?torque.dot(direction):null;
- const offset=direction?torque.clone().addScaledVector(direction,-axialTorque!).length()/magnitude:null;
+ const offset=direction&&axialTorque!==null?torque.clone().addScaledVector(direction,-axialTorque).length()/magnitude:null;
  return {mass,com:com.toArray(),force:force.toArray(),torque:torque.toArray(),thrust:magnitude,offset,axialTorque,engineIds};
 }
 

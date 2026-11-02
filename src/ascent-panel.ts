@@ -12,10 +12,10 @@ export function mountAscentPanel(host:Element,getFlight:()=>AscentPanelFlight|nu
  for(const button of elements(panel,'[data-pitch]','button'))button.onclick=()=>{const f=getFlight();if(!f||!canControl(f))return;setAscentAttitude(f,Number(button.dataset.pitch));changed();};
  element(panel,'.ascentPrograde','button').onclick=()=>{const f=getFlight();if(f&&canControl(f)){f.sas=true;f.sasMode='prograde';changed();}};
  for(const [selector,throttle]of [['.ascentBurn',.3],['.ascentStop',0]] as const)element(panel,selector,'button').onclick=()=>{const f=getFlight();if(f&&canControl(f)){f.throttle=throttle;changed();}};
- function update(){const f=getFlight();panel.hidden=!f||f.orbit?.bodyId!=='moon'||!f.rocketAxes;if(panel.hidden||!f)return;
+ function update(){const f=getFlight(),o=f?.orbit;panel.hidden=!f||o?.bodyId!=='moon'||!f.rocketAxes;if(panel.hidden||!f||!o)return;
   if(vessel!==f){vessel=f;panel.open=f.environment==='moon-surface';}
   for(const button of panel.querySelectorAll('button'))button.disabled=!canControl(f);
-  const o=f.orbit!,d=descentTelemetry(f),success=lunarOrbitReached(o)&&o.periapsis>5000;
+  const d=descentTelemetry(f),success=lunarOrbitReached(o)&&o.periapsis>5000;
   element(panel,'.ascentStatus','p').textContent=f.crashed?'機体損傷':success?(f.throttle>0?'周回条件を満たしました：噴射を停止':'月周回成立：近点5 km超・遠点は重力圏内'):!f.started?'直立へ整列し、Spaceで点火段を作動':d.thrust===0?'推進剤・点火済みエンジンを確認':f.landed?'30%で離陸し、300 mで45°へ':o.apoapsis>=20000?(f.throttle>0&&o.vertical>5?'遠点20 km以上：噴射を止め、遠点へ上昇':'鉛直速度が約3 m/sになったら順行・30%。近点5 kmで停止'):o.altitude<300?'直立で上昇：高度300 mで45°へ':o.altitude<3000?'45°で加速：高度3 kmで水平へ':'水平加速：遠点20 kmで噴射停止';
   const km=(n:number)=>Number.isFinite(n)?(n/1000).toFixed(1)+' km':'脱出';
   element(panel,'.ascentNumbers','p').textContent=`高度 ${km(o.altitude)} · 鉛直 ${o.vertical.toFixed(1)} m/s · 水平 ${d.horizontal.toFixed(1)} m/s。遠点 ${km(o.apoapsis)} / 近点 ${km(o.periapsis)}。燃料 ${(100*f.fuelRatio).toFixed(0)}% · 月TWR ${(d.acceleration/d.gravity).toFixed(1)}（全開）。`;

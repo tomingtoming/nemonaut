@@ -1,4 +1,4 @@
-import {RUNWAY,type RunwayApproach,type RunwayTrack} from './runway-navigation.js';
+import {RUNWAY,type RunwayApproach} from './runway-navigation.js';
 
 export interface MapPoint{x:number;y:number}
 export interface RunwayMapLayout{plane:MapPoint;threshold:MapPoint;far:MapPoint;scale:number;arrow:MapPoint|null}
@@ -8,9 +8,9 @@ export function runwayMapLayout(v:RunwayApproach):RunwayMapLayout{
  const minY=Math.min(-RUNWAY.length,v.remaining),maxY=Math.max(500,v.remaining);
  const scale=Math.min(192/(maxX-minX),112/(maxY-minY));
  const project=(x:number,y:number):MapPoint=>({x:120+(x-(minX+maxX)/2)*scale,y:80+(y-(minY+maxY)/2)*scale});
- const speed=v.track?Math.hypot(v.track.x,v.track.y):0;
+ const track=v.track,speed=track?Math.hypot(track.x,track.y):0;
  return {plane:project(v.crossTrack,v.remaining),threshold:project(0,0),far:project(0,-RUNWAY.length),scale,
-  arrow:speed>0?{x:(v.track as RunwayTrack).x/speed*22,y:(v.track as RunwayTrack).y/speed*22}:null};
+  arrow:speed>0&&track?{x:track.x/speed*22,y:track.y/speed*22}:null};
 }
 
 export function drawRunwayMap(canvas:HTMLCanvasElement,v:RunwayApproach|null,end:string):void{
