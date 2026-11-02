@@ -19,6 +19,18 @@ expect "tracking opens" "$(ev "()=>{document.getElementById('centerTracking').cl
 ev "()=>{document.getElementById('enterVAB').click();return 1}" >/dev/null; sleep 3
 expect "part selected" "$(ev "()=>{const c=[...document.querySelectorAll('.partcard')][1];c.click();return document.querySelector('.partcard.active, .partcard[aria-pressed=\"true\"]')?'yes':c?'clicked':'none'}")" 'yes|clicked'
 "$P" -s=$S press Escape >/dev/null 2>&1
+count(){ ev "()=>document.getElementById('assemblyTreeCount').textContent"; }
+before=$(count)
+ev "()=>{[...document.querySelectorAll('#assemblyTreeRows button')].at(-1).click();document.activeElement?.blur();return 1}" >/dev/null; sleep 1
+"$P" -s=$S press Delete >/dev/null 2>&1; sleep 1; deleted=$(count)
+"$P" -s=$S press Control+z >/dev/null 2>&1; sleep 1; undone=$(count)
+"$P" -s=$S press Control+y >/dev/null 2>&1; sleep 1; redone=$(count)
+"$P" -s=$S press Control+z >/dev/null 2>&1; sleep 1
+expect "delete/undo/redo" "$before $deleted $undone $redone" '^"7" "6" "7" "6"$'
+ev "()=>{[...document.querySelectorAll('.partcard')].find(c=>/小型タンク|Small tank/.test(c.textContent))?.click();return 1}" >/dev/null; sleep 1
+# Place on the top attachment node of the default rocket (the canvas takes pointer events, not page clicks).
+expect "place part" "$(ev "()=>{const c=[...document.querySelectorAll('canvas')].find(c=>c.offsetParent&&c.getBoundingClientRect().width>600);const o={clientX:633,clientY:212,bubbles:true,button:0,pointerId:1,isPrimary:true};for(const t of ['pointermove','pointerdown','pointerup'])c?.dispatchEvent(new PointerEvent(t,o));return new Promise(r=>setTimeout(()=>r(document.getElementById('assemblyTreeCount').textContent),800))}")" '^"8"$'
+"$P" -s=$S press Control+z >/dev/null 2>&1; sleep 1
 expect "example dialog" "$(click 見本機)" '見本機'
 ev "()=>{document.querySelector('[data-example=\"rocket\"]')?.click();document.getElementById('modal').open&&document.getElementById('modal').close();return 1}" >/dev/null; sleep 2
 expect "save craft" "$(click 保存)" '保存'
