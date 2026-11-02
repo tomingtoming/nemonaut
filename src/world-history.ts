@@ -1,16 +1,24 @@
-import {flightChallengeTypes,validateFlightChallenge} from './flight-challenge-history.js';
-import {copyObservationQuality} from './observation-quality.js';
+import {flightChallengeTypes,validateFlightChallenge,type FlightChallengeEvent} from './flight-challenge-history.js';
+import {copyObservationQuality,type ObservationQuality} from './observation-quality.js';
 import {deliverySite,SURVEY_TARGET_SECONDS} from './delivery-sites.js';
 import {departureMode} from './departure-mode.js';
 import {PLANET} from './planet.js';
-import {surfaceOrigins,orbitalOrigins,orbitalReturnSources} from './launch-provenance.js';
-const types=new Set(['launch','recover','terminate','orbit','moon-arrival','moon-landing','delivery','survey',...flightChallengeTypes]);
-export function validateHistory(value=[],time){
+import {surfaceOrigins,orbitalOrigins,orbitalReturnSources,type ProvenanceEvent} from './launch-provenance.js';
+const types=new Set<string>(['launch','recover','terminate','orbit','moon-arrival','moon-landing','delivery','survey',...flightChallengeTypes]);
+export interface HistoryOrbit{bodyId:string;periapsis:number;apoapsis:number}
+// A stored, validated history event. Fits CenterHistoryEvent, ProvenanceEvent, DeliveryRecord and HistoryLabelEvent.
+export interface WorldHistoryEvent extends ProvenanceEvent{id:string;type:string;vesselId:string;name:string;universalTime:number;missionTime:number;parts:number;environment?:string;partIds?:string[];launchEventIds?:string[];bodyId?:string;orbit?:HistoryOrbit;orbitEventIds?:string[];moonEventIds?:string[];siteId?:string;probePartId?:string;distance?:number;speed?:number;deliveryEventId?:string;day?:number;night?:number;quality?:ObservationQuality;clearance?:number;flightEventIds?:string[];damaged?:boolean}
+// The shape an untrusted saved event claims to have; validateHistory checks every field at runtime.
+interface UncheckedHistoryEvent extends FlightChallengeEvent{vesselId:string;name:string;universalTime:number;missionTime:number;parts:number;environment?:string;bodyId?:string;orbit?:{bodyId:unknown;periapsis:number;apoapsis:number};orbitEventIds?:unknown;moonEventIds?:unknown;deliveryEventId?:unknown;day:number;night:number;quality?:ObservationQuality|null}
+export interface HistoryWorld{history:readonly WorldHistoryEvent[];universalTime:number}
+export interface HistoryVessel{vesselId:string;vesselName?:string|null;state:{time:number};parts:readonly {id:string}[];environment?:string}
+export interface HistoryAppendOptions{orbit?:HistoryOrbit;launchEventIds?:string[];bodyId?:string;delivery?:Partial<WorldHistoryEvent>;survey?:Partial<WorldHistoryEvent>;challenge?:Partial<WorldHistoryEvent>}
+export function validateHistory(value:unknown=[],time:number):WorldHistoryEvent[]{
  if(!Array.isArray(value)||value.length>10000)throw Error('運用記録の形式または件数が不正です');
- const phases=new Map(),precisionCompleted=new Set();
- const deliveries=new Set(),deliveryEvents=new Map(),surveys=new Set();
- const ids=new Set(),surfaceLaunches=new Set(),orbits=new Set(),origins=new Map(),orbitalParts=new Map(),lunarEvents=new Set(),arrivedParts=new Set(),lunarParts=new Map();let previous=0;
- for(const event of value){
+ const phases=new Map<string,FlightChallengeEvent>(),precisionCompleted=new Set<unknown>();
+ const deliveries=new Set<unknown>(),deliveryEvents=new Map<unknown,UncheckedHistoryEvent>(),surveys=new Set<unknown>();
+ const ids=new Set<string>(),surfaceLaunches=new Set<string>(),orbits=new Set<string>(),origins=new Map<string,UncheckedHistoryEvent>(),orbitalParts=new Map<string,string>(),lunarEvents=new Set<string>(),arrivedParts=new Set<string>(),lunarParts=new Map<string,string>();let previous=0;
+ for(const event of value as UncheckedHistoryEvent[]){
   if(!event||typeof event.id!=='string'||!event.id.length||event.id.length>256||ids.has(event.id)||!types.has(event.type)||typeof event.vesselId!=='string'||!event.vesselId.length||event.vesselId.length>256||typeof event.name!=='string'||event.name.length>80||!Number.isFinite(event.universalTime)||event.universalTime<previous||event.universalTime>time||!Number.isFinite(event.missionTime)||event.missionTime<0||event.missionTime>1e12||!Number.isInteger(event.parts)||event.parts<1||event.parts>400)throw Error('運用記録の値・順序・IDが不正です');
   if(event.environment!==undefined){if(event.type!=='launch')throw Error('開始条件は出発記録にのみ保存できます');departureMode(event.environment);}
   if(event.type==='launch'&&event.environment!==undefined&&departureMode(event.environment).mode==='surface')surfaceLaunches.add(event.vesselId);
@@ -32,11 +40,11 @@ export function validateHistory(value=[],time){
   if(!flightChallengeTypes.includes(event.type)&&['clearance','flightEventIds','damaged'].some(k=>event[k]!==undefined))throw Error('飛行課題の証拠の種類が不正です');
   if(event.type==='delivery'){
    const sources=event.partIds&&surfaceOrigins(event.partIds,origins);
-   if(!deliverySite(event.siteId)||deliveries.has(event.siteId)||!sources||!Array.isArray(event.launchEventIds)||JSON.stringify([...event.launchEventIds].sort())!==JSON.stringify(sources)||!event.partIds.includes(event.probePartId)||!Number.isFinite(event.distance)||event.distance<0||event.distance>deliverySite(event.siteId).radius||!Number.isFinite(event.speed)||event.speed<0||event.speed>=.5)throw Error('観測点設置の出発履歴・距離・速度・重複が不正です');
+   if(!deliverySite(event.siteId)||deliveries.has(event.siteId)||!sources||!Array.isArray(event.launchEventIds)||JSON.stringify([...event.launchEventIds].sort())!==JSON.stringify(sources)||!event.partIds.includes(event.probePartId as string)||!Number.isFinite(event.distance)||event.distance<0||event.distance>deliverySite(event.siteId)!.radius||!Number.isFinite(event.speed)||event.speed<0||event.speed>=.5)throw Error('観測点設置の出発履歴・距離・速度・重複が不正です');
    deliveries.add(event.siteId);deliveryEvents.set(event.id,event);
   }else if(event.type==='survey'){
    const source=deliveryEvents.get(event.deliveryEventId);
-   if(!source||event.siteId!==source.siteId||event.probePartId!==source.probePartId||!event.partIds?.includes(event.probePartId)||surveys.has(event.siteId)||!['day','night'].every(k=>Number.isFinite(event[k])&&event[k]>=SURVEY_TARGET_SECONDS&&event[k]<=1e12)||event.distance!==undefined||event.speed!==undefined)throw Error('観測記録の設置元・測定時間・重複が不正です');
+   if(!source||event.siteId!==source.siteId||event.probePartId!==source.probePartId||!event.partIds?.includes(event.probePartId as string)||surveys.has(event.siteId)||!(['day','night'] as const).every(k=>Number.isFinite(event[k])&&event[k]>=SURVEY_TARGET_SECONDS&&event[k]<=1e12)||event.distance!==undefined||event.speed!==undefined)throw Error('観測記録の設置元・測定時間・重複が不正です');
    copyObservationQuality(event.quality,event);surveys.add(event.siteId);
   }else if(!flightChallengeTypes.includes(event.type)&&['siteId','probePartId','distance','speed'].some(k=>event[k]!==undefined))throw Error('設置の証拠は設置記録にのみ保存できます');
   if(event.type!=='survey'&&['deliveryEventId','day','night','quality'].some(k=>event[k]!==undefined))throw Error('測定時間は観測記録にのみ保存できます');
@@ -62,11 +70,11 @@ export function validateHistory(value=[],time){
   }
   ids.add(event.id);previous=event.universalTime;
  }
- return structuredClone(value);
+ return structuredClone<WorldHistoryEvent[]>(value);
 }
-export function appendHistory(world,type,vessel,{orbit,launchEventIds,bodyId,delivery,survey,challenge}:any={}){
- const event:any={id:crypto.randomUUID(),type,vesselId:vessel.vesselId,name:vessel.vesselName||'名称未設定の機体',universalTime:world.universalTime,missionTime:vessel.state.time,parts:vessel.parts.length};
- if(type==='launch'){departureMode(vessel.environment);event.environment=vessel.environment;event.partIds=vessel.parts.map(p=>p.id);}
+export function appendHistory(world:HistoryWorld,type:string,vessel:HistoryVessel,{orbit,launchEventIds,bodyId,delivery,survey,challenge}:HistoryAppendOptions={}):WorldHistoryEvent[]{
+ const event:WorldHistoryEvent={id:crypto.randomUUID(),type,vesselId:vessel.vesselId,name:vessel.vesselName||'名称未設定の機体',universalTime:world.universalTime,missionTime:vessel.state.time,parts:vessel.parts.length};
+ if(type==='launch'){departureMode(vessel.environment!);event.environment=vessel.environment;event.partIds=vessel.parts.map(p=>p.id);}
  if(type==='orbit'){event.orbit=orbit;event.partIds=vessel.parts.map(p=>p.id);event.launchEventIds=launchEventIds;}
  if(['moon-arrival','moon-landing'].includes(type)){event.bodyId='moon';event.partIds=vessel.parts.map(p=>p.id);event.launchEventIds=launchEventIds;}
  if(flightChallengeTypes.includes(type)){Object.assign(event,challenge);event.partIds=vessel.parts.map(p=>p.id);event.launchEventIds=launchEventIds;}
