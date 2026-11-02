@@ -2,11 +2,11 @@ import * as T from 'three';
 import RAPIER,{pairQuery} from './physics.js';
 import {PARTS} from './catalog.js';
 import {partMass,partRotation} from './aero.js';
-import {inertiaAbout,DOCK_LIMITS} from './docking.js';
+import {inertiaAbout} from './vessel-inertia.js';
+import {DOCK_LIMITS} from './docking-limits.js';
 import {centerOfVessel} from './relative-navigation.js';
 import {recordFailure} from './failure-events.js';
-import {fractureVessel} from './fracture.js';
-import {Flight,statistics,type FlightPart} from './core.js';
+import type {Flight,FlightPart} from './core.js';
 
 /** One resolved vessel-vessel contact pass (VESSEL_COLLISION.onContact receives it). */
 export interface VesselContactEvent{a:string;b:string;contacts:number;speed:number}
@@ -107,7 +107,7 @@ export function resolveVesselCollisions(vessels:readonly Flight[],dt:number):Ves
   const hit=impact.contact;if(hit&&impact.speed>VESSEL_COLLISION.impactSpeed)for(const [v,p]of [[a,hit.parts[0]],[b,hit.parts[1]]] as const){
    if(!p||v.failureDynamics)continue;
    recordFailure(v,p,'impact',{speed:impact.speed,position:hit.point.clone()});v.crashed=true;
-   fractureVessel(v,[p.id],(parts,environment,time)=>new Flight(parts,environment,time),statistics);
+   v.fractureParts([p.id]);
   }
  }
  for(const k of ignored.keys())if(!seen.has(k))ignored.delete(k);

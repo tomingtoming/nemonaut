@@ -2,14 +2,17 @@ import {portPose} from './port-navigation.js';
 export {portPose} from './port-navigation.js';
 import * as T from 'three';
 import {PARTS} from './catalog.js';
-import {partRotation,partMass,partCenter} from './aero.js';
-import {centerOfVessel,resolveTargets,type CenteredVessel} from './relative-navigation.js';
+import {partRotation,partMass} from './aero.js';
+import {centerOfVessel,resolveTargets} from './relative-navigation.js';
 import {Flight,statistics,descendants,validateCraft,type FlightPart} from './core.js';
 import {fleet} from './fleet.js';
 import {fuelNetworks} from './resources.js';
 import {bodyOrbitState} from './celestial.js';
 import {copyPartState} from './fracture.js';
-export const DOCK_LIMITS={distance:.15,angle:8*Math.PI/180,speed:.3,angularSpeed:.15};
+import {inertiaAbout} from './vessel-inertia.js';
+export {inertiaAbout} from './vessel-inertia.js';
+import {DOCK_LIMITS} from './docking-limits.js';
+export {DOCK_LIMITS} from './docking-limits.js';
 /** Whether two ports may dock now; the measurements are present when both ports were found. */
 export interface DockingStatus{ready:boolean;reason:string;distance?:number;angle?:number;speed?:number;angularSpeed?:number}
 /** A vessel as a rigid body with motion (combinedMotion). */
@@ -28,8 +31,6 @@ export function dockingStatus(a:Flight,aId:string,b:Flight,bId:string):DockingSt
  return {ready:!reason,reason,distance,angle,speed,angularSpeed};
 }
 
-// Match the cuboid / wheel-sphere mass model used by the Rapier colliders.
-export function inertiaAbout(v:CenteredVessel,point:T.Vector3):T.Matrix3{const tensor=new T.Matrix3().set(0,0,0,0,0,0,0,0,0);for(const p of v.parts){const d=PARTS[p.type],m=partMass(p,v.fuel,v.ballast,v.thermal),[x,y,z]=d.size.map(n=>Math.max(.04,n)),q=v.q.clone().multiply(partRotation(p)),r=new T.Matrix3().setFromMatrix4(new T.Matrix4().makeRotationFromQuaternion(q)),sphere=.4*m*.35**2,local=new T.Matrix3().set(d.wheel?sphere:m*(y*y+z*z)/12,0,0,0,d.wheel?sphere:m*(x*x+z*z)/12,0,0,0,d.wheel?sphere:m*(x*x+y*y)/12),world=r.clone().multiply(local).multiply(r.clone().transpose()),offset=partCenter(p).applyQuaternion(v.q).add(v.pos).sub(point),a=offset.toArray(),s=offset.lengthSq();for(let i=0;i<3;i++)for(let j=0;j<3;j++)tensor.elements[j*3+i]+=world.elements[j*3+i]+m*((i===j?s:0)-a[i]*a[j]);}return tensor;}
 export function combinedMotion(a:DockingBody,b:DockingBody):CombinedMotion{const vessels=[a,b],masses=vessels.map(v=>v.parts.reduce((s,p)=>s+partMass(p,v.fuel,v.ballast,v.thermal),0)),centers=vessels.map(centerOfVessel),mass=masses[0]+masses[1],center=centers[0].clone().multiplyScalar(masses[0]).addScaledVector(centers[1],masses[1]).divideScalar(mass),momentum=new T.Vector3(),angularMomentum=new T.Vector3(),inertia=new T.Matrix3().set(0,0,0,0,0,0,0,0,0);vessels.forEach((v,i)=>{const linear=v.vel.clone().multiplyScalar(masses[i]);momentum.add(linear);angularMomentum.add(v.omega.clone().applyMatrix3(inertiaAbout(v,centers[i]))).add(centers[i].clone().sub(center).cross(linear));const tensor=inertiaAbout(v,center);tensor.elements.forEach((n,j)=>inertia.elements[j]+=n);});return {mass,center,velocity:momentum.clone().divideScalar(mass),omega:angularMomentum.clone().applyMatrix3(inertia.clone().invert()),momentum,angularMomentum,inertia};}
 
 function rebuilt(source:Flight,parts:FlightPart[],sources:readonly Flight[]=[source]):Flight{

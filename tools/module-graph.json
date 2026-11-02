@@ -1,12 +1,5 @@
 {
  "note": "Allowed runtime import cycles among src modules and the size limit of app.ts in bytes; both may only shrink (BACKLOG 7). See tools/module-graph.mjs.",
- "cycles": [
-  [
-   "core",
-   "docking",
-   "vessel-collision",
-   "world-physics"
-  ]
- ],
- "appBytes": 40743
+ "cycles": [],
+ "appBytes": 7395
 }

@@ -100,6 +100,8 @@ export class Flight {
  this.orbit=bodyOrbitState(this.pos.clone().add(this.stats.com.clone().applyQuaternion(this.q)),this.vel,this.universalTime);return moved;
  }
  armParachutes(){for(const state of this.chutes.values())if(state.status==='stowed')state.status='armed';}
+ /** Breaks the given parts away (vessel-collision calls this so that it does not need the Flight class or statistics). */
+ fractureParts(ids:readonly string[]):void{fractureVessel(this,ids,(parts,environment,time)=>new Flight(parts,environment,time),statistics);}
  dispose(){for(const child of this.detached)child.dispose();this.world.free();}
  stageNext(){if(!this.started)this.brake=false;this.stage++;this.started=true;for(const p of this.parts)if(PARTS[p.type].parachute&&p.stage===this.stage){const chute=this.chutes.get(p.id);if(chute?.status==='stowed')chute.status='armed';}for(const p of this.parts)if(p.stage===this.stage&&PARTS[p.type].thrust)this.active.add(p.id);return this.separateRoots(this.parts.filter(p=>p.parent&&PARTS[p.type].decoupler&&p.stage===this.stage));}
  canDecouplePart(id:string):boolean{const p=this.parts.find(p=>p.id===id);return !!(canControl(this)&&p?.parent&&PARTS[p.type].decoupler&&cargoReleaseAllowed(this.parts,p)&&!this.thermal.get(id)?.failed);}
