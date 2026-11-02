@@ -1,8 +1,13 @@
-import {coastSurfaceMargin} from './coast-flight.js';
+import {coastSurfaceMargin,type CoastMarginVessel} from './coast-flight.js';
+
+export interface PhysicsClockFlight extends CoastMarginVessel{crashed?:boolean;landed?:boolean;universalTime:number;orbit?:Pick<import('./celestial.js').OrbitState,'bodyId'|'periapsis'|'vertical'|'altitude'>|null;maneuver?:{complete?:boolean;universalTime:number}|null;transferGuide?:{firstBurnTime:number|null;startTime:number}|null}
+export interface PhysicsClockLimits{step?:number;maxSteps?:number}
+export interface PhysicsClockAdvance{steps:number;advanced:number;limited:boolean;effectiveRate:number}
+export type PhysicsClockStep=(step:number)=>boolean|void;
 
 // Frame scheduling only: simulated time advances exclusively through step().
 // Overload discards wall-clock demand, never integrates a larger physics step.
-export function physicalWarpStop(flight,input=false){
+export function physicalWarpStop(flight:PhysicsClockFlight,input=false):string{
  if(input)return '操縦入力';
  if(flight.crashed)return '機体損傷';
  if(flight.landed)return '着地';
@@ -17,13 +22,13 @@ export function physicalWarpStop(flight,input=false){
  return '';
 }
 export class PhysicsClock {
- declare maxSteps:any;declare remainder:any;declare step:any;
- constructor({step=1/120,maxSteps=64}={}){
+ declare maxSteps:number;declare remainder:number;declare step:number;
+ constructor({step=1/120,maxSteps=64}:PhysicsClockLimits={}){
   if(!Number.isFinite(step)||step<=0||!Number.isInteger(maxSteps)||maxSteps<1)throw Error('Invalid physics clock limits');
   this.step=step;this.maxSteps=maxSteps;this.remainder=0;
  }
- reset(){this.remainder=0;}
- advance(elapsed,rate,step){
+ reset():void{this.remainder=0;}
+ advance(elapsed:number,rate:number,step:PhysicsClockStep):PhysicsClockAdvance{
   if(!Number.isFinite(elapsed)||elapsed<0||!Number.isFinite(rate)||rate<1||typeof step!=='function')throw Error('Invalid physics clock input');
   const requested=this.remainder+elapsed*rate;
   if(!Number.isFinite(requested))throw Error('Physics clock demand overflow');

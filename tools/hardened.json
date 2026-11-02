@@ -22,8 +22,10 @@
   "closest-approach",
   "coast-flight",
   "coast-orbit",
+  "core",
   "cruise-panel",
   "cruise-pilot",
+  "delivery-panel",
   "delivery-sites",
   "delivery-station",
   "deorbit-plan",
@@ -34,6 +36,7 @@
   "design-diagnostics",
   "design-diagnostics-panel",
   "design-part-windows",
+  "docking",
   "engine-medium",
   "engine-plume",
   "engine-shrouds",
@@ -43,6 +46,7 @@
   "failure-feedback",
   "failure-visuals",
   "finite-burn",
+  "finite-burn-panel",
   "finite-return-plan",
   "first-steps",
   "fleet",
@@ -103,6 +107,7 @@
   "part-colliders",
   "part-settings",
   "physics",
+  "physics-clock",
   "physics-migration",
   "placement-poses",
   "planet",
@@ -151,8 +156,10 @@
   "trajectory",
   "trajectory-panel",
   "universal-time",
+  "vessel-collision",
   "workshop-layout",
   "workshop-symmetry",
-  "world-history"
+  "world-history",
+  "world-physics"
  ]
 }

@@ -1,30 +1,39 @@
 import * as T from 'three';
 import RAPIER,{pairQuery} from './physics.js';
-import {PARTS} from './catalog.js';
+import {PARTS,type PartCatalog} from './catalog.js';
 import {partMass,partRotation} from './aero.js';
 import {inertiaAbout,DOCK_LIMITS} from './docking.js';
 import {centerOfVessel} from './relative-navigation.js';
 import {recordFailure} from './failure-events.js';
 import {fractureVessel} from './fracture.js';
-import {Flight,statistics} from './core.js';
+import {Flight,statistics,type FlightPart} from './core.js';
+
+/** One resolved vessel-vessel contact pass (VESSEL_COLLISION.onContact receives it). */
+export interface VesselContactEvent{a:string;b:string;contacts:number;speed:number}
+/** A collider of a vessel in the pair query: its owning part and the engine's shape arguments. */
+interface ContactShape{part:FlightPart|undefined;args:[number,number,number,number,number,number,number,number,number,number,number]}
+/** A contact point between two vessels (world position, normal from a to b, signed gap). */
+interface VesselContact{point:T.Vector3;normal:T.Vector3;distance:number;parts:[FlightPart|undefined,FlightPart|undefined]}
+/** A vessel as a rigid body for impulse resolution. */
+interface CollisionBody{v:Flight;mass:number;center:T.Vector3;inverseInertia:T.Matrix3}
 
 // Vessel-vessel collision after every vessel has stepped in its own world. Rust (parry) finds
 // the contacts; this pass applies equal and opposite impulses to the game state, which is
 // what the next step imports. Momentum is conserved; restitution is 0 like the colliders.
 // onContact(event) observes resolved vessel contacts (tests, diagnostics); null by default.
-export const VESSEL_COLLISION={enabled:true,onContact:null,prediction:.05,slop:.005,correction:.8,friction:.5,iterations:4,impactSpeed:9};
+export const VESSEL_COLLISION={enabled:true,onContact:null as ((event:VesselContactEvent)=>void)|null,prediction:.05,slop:.005,correction:.8,friction:.5,iterations:4,impactSpeed:9};
 // Pairs that were already touching when first seen (fresh stages, fracture fragments, restored
 // saves) do not collide until they have separated once.
-const ignored=new Map();
-const key=(a,b)=>a.vesselId<b.vesselId?a.vesselId+'|'+b.vesselId:b.vesselId+'|'+a.vesselId;
-function radius(v){
+const ignored=new Map<string,boolean>();
+const key=(a:Flight,b:Flight)=>a.vesselId<b.vesselId?a.vesselId+'|'+b.vesselId:b.vesselId+'|'+a.vesselId;
+function radius(v:Flight):number{
  let r=0;
  for(let i=0;i<v.body.numColliders();i++){const c=v.body.collider(i),p=c.translationWrtParent(),h=c.shapeType()===RAPIER.ShapeType.Ball?{x:c.radius(),y:c.radius(),z:c.radius()}:c.halfExtents();r=Math.max(r,Math.hypot(p.x,p.y,p.z)+Math.hypot(h.x,h.y,h.z));}
  return r;
 }
-function shapes(v){
- const owner=new Map();for(const [id,group]of v.colliderGroups)for(const {collider}of group)owner.set(collider.handle,id);
- const out=[];
+function shapes(v:Flight):ContactShape[]{
+ const owner=new Map<number,string>();for(const [id,group]of v.colliderGroups)for(const {collider}of group)owner.set(collider.handle,id);
+ const out:ContactShape[]=[];
  for(let i=0;i<v.body.numColliders();i++){
   const c=v.body.collider(i),p=c.translationWrtParent(),q=c.rotationWrtParent(),ball=c.shapeType()===RAPIER.ShapeType.Ball;
   if(!ball&&c.shapeType()!==RAPIER.ShapeType.Cuboid)throw Error('Rust物理: unsupported collider for vessel contact');
@@ -34,28 +43,28 @@ function shapes(v){
  return out;
 }
 // Facing docking ports belong to the docking capture, not to collision.
-function dockingFaces(a,pa,b,pb){
- if(!PARTS[pa?.type]?.docking||!PARTS[pb?.type]?.docking)return false;
- const up=(v,p)=>new T.Vector3(0,1,0).applyQuaternion(v.q.clone().multiply(partRotation(p)));
- return Math.acos(T.MathUtils.clamp(-up(a,pa).dot(up(b,pb)),-1,1))<=2*DOCK_LIMITS.angle;
+function dockingFaces(a:Flight,pa:FlightPart|undefined,b:Flight,pb:FlightPart|undefined):boolean{
+ if(!(PARTS as PartCatalog)[pa?.type as string]?.docking||!(PARTS as PartCatalog)[pb?.type as string]?.docking)return false;
+ const up=(v:Flight,p:FlightPart)=>new T.Vector3(0,1,0).applyQuaternion(v.q.clone().multiply(partRotation(p)));
+ return Math.acos(T.MathUtils.clamp(-up(a,pa!).dot(up(b,pb!)),-1,1))<=2*DOCK_LIMITS.angle;
 }
-function body(v){
+function body(v:Flight):CollisionBody{
  const mass=v.parts.reduce((s,p)=>s+partMass(p,v.fuel,v.ballast,v.thermal),0),center=centerOfVessel(v);
  return {v,mass,center,inverseInertia:inertiaAbout(v,center).invert()};
 }
-const velocityAt=(b,r)=>b.v.vel.clone().add(b.v.omega.clone().cross(r));
-function applyImpulse(b,r,impulse,sign){b.v.vel.addScaledVector(impulse,sign/b.mass);b.v.omega.add(r.clone().cross(impulse).applyMatrix3(b.inverseInertia).multiplyScalar(sign));}
-function effectiveMass(A,B,rA,rB,n){
- const term=(b,r)=>r.clone().cross(n).applyMatrix3(b.inverseInertia).cross(r).dot(n);
+const velocityAt=(b:CollisionBody,r:T.Vector3)=>b.v.vel.clone().add(b.v.omega.clone().cross(r));
+function applyImpulse(b:CollisionBody,r:T.Vector3,impulse:T.Vector3,sign:number):void{b.v.vel.addScaledVector(impulse,sign/b.mass);b.v.omega.add(r.clone().cross(impulse).applyMatrix3(b.inverseInertia).multiplyScalar(sign));}
+function effectiveMass(A:CollisionBody,B:CollisionBody,rA:T.Vector3,rB:T.Vector3,n:T.Vector3):number{
+ const term=(b:CollisionBody,r:T.Vector3)=>r.clone().cross(n).applyMatrix3(b.inverseInertia).cross(r).dot(n);
  return 1/A.mass+1/B.mass+term(A,rA)+term(B,rB);
 }
 // Speculative contacts: within the prediction distance, the approach that just closes the gap
 // during this step (distance/dt) is allowed, so vessels touch instead of stopping early.
-export function resolveVesselCollisions(vessels,dt){
+export function resolveVesselCollisions(vessels:readonly Flight[],dt:number):VesselContactEvent[]{
  if(!(dt>0))throw Error('vessel collision needs the step dt');
  if(!VESSEL_COLLISION.enabled)return [];
  const pair=pairQuery();if(!pair)return [];// the engine failed to load (worlds then fail too)
- const events=[],live=vessels.filter(v=>v.body&&v.parts.length),seen=new Set();
+ const events:VesselContactEvent[]=[],live=vessels.filter(v=>v.body&&v.parts.length),seen=new Set<string>();
  for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){
   const a=live[i],b=live[j],k=key(a,b);
   if(a.pos.distanceTo(b.pos)>radius(a)+radius(b)+VESSEL_COLLISION.prediction){ignored.delete(k);continue;}
@@ -66,16 +75,16 @@ export function resolveVesselCollisions(vessels,dt){
   for(const s of sb)if(pair.pair_shape(1,...s.args)!==1)throw Error('Rust物理: vessel contact shape rejected');
   if(pair.pair_pose(0,0,0,0,a.q.x,a.q.y,a.q.z,a.q.w)!==1||pair.pair_pose(1,offset.x,offset.y,offset.z,b.q.x,b.q.y,b.q.z,b.q.w)!==1)throw Error('Rust物理: vessel contact pose rejected');
   const count=pair.pair_query(VESSEL_COLLISION.prediction);if(!Number.isInteger(count))throw Error('Rust物理: vessel contact query failed');
-  const contacts=[];
+  const contacts:VesselContact[]=[];
   for(let c=0;c<count;c++){
-   const read=f=>pair.pair_read(c,f),pa=sa[read(7)].part,pb=sb[read(8)].part;
+   const read=(f:number)=>pair.pair_read(c,f),pa=sa[read(7)].part,pb=sb[read(8)].part;
    if(dockingFaces(a,pa,b,pb))continue;
    contacts.push({point:new T.Vector3(read(0),read(1),read(2)).add(origin),normal:new T.Vector3(read(3),read(4),read(5)).normalize(),distance:read(6),parts:[pa,pb]});
   }
   if(!ignored.has(k))ignored.set(k,contacts.length>0);
   if(!contacts.length){ignored.set(k,false);continue;}
   if(ignored.get(k))continue;
-  const A=body(a),B=body(b);let impact:{speed:number,contact?:any}={speed:0};
+  const A=body(a),B=body(b);let impact:{speed:number,contact?:VesselContact}={speed:0};
   for(let pass=0;pass<VESSEL_COLLISION.iterations;pass++)for(const c of contacts){
    const rA=c.point.clone().sub(A.center),rB=c.point.clone().sub(B.center),n=c.normal;
    const relative=velocityAt(B,rB).sub(velocityAt(A,rA)),vn=relative.dot(n),closing=vn+Math.max(c.distance,0)/dt;
@@ -93,9 +102,9 @@ export function resolveVesselCollisions(vessels,dt){
   if(depth>0){const n=contacts.reduce((m,c)=>c.distance<m.distance?c:m).normal,total=A.mass+B.mass,shift=depth*VESSEL_COLLISION.correction;a.pos.addScaledVector(n,-shift*B.mass/total);b.pos.addScaledVector(n,shift*A.mass/total);}
   if(!impact.contact&&depth<=0)continue;// within prediction range but not touching this step
   const event={a:a.vesselId,b:b.vesselId,contacts:contacts.length,speed:impact.speed};events.push(event);VESSEL_COLLISION.onContact?.(event);
-  if(impact.speed>VESSEL_COLLISION.impactSpeed)for(const [v,p]of [[a,impact.contact.parts[0]],[b,impact.contact.parts[1]]]){
+  if(impact.speed>VESSEL_COLLISION.impactSpeed)for(const [v,p]of [[a,impact.contact!.parts[0]],[b,impact.contact!.parts[1]]] as const){
    if(!p||v.failureDynamics)continue;
-   recordFailure(v,p,'impact',{speed:impact.speed,position:impact.contact.point.clone()});v.crashed=true;
+   recordFailure(v,p,'impact',{speed:impact.speed,position:impact.contact!.point.clone()});v.crashed=true;
    fractureVessel(v,[p.id],(parts,environment,time)=>new Flight(parts,environment,time),statistics);
   }
  }

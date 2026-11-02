@@ -1,7 +1,7 @@
 import {resolveVesselCollisions} from './vessel-collision.js';
 // The scheduler owns the epoch and reads every target at the same step boundary.
 // It accepts a flat fleet; neither its order nor its selected vessel owns time.
-export function advanceWorldPhysics(vessels,universalTime,dt,activeVesselId,input={}){
+export function advanceWorldPhysics(vessels:readonly import('./core.js').Flight[],universalTime:number,dt:number,activeVesselId:string,input:import('./core.js').FlightInput={}):number{
  if(!Number.isFinite(dt)||dt<=0||!Number.isFinite(universalTime)||universalTime<0)throw Error('物理更新の時刻が不正です');
  const ids=new Set();
  for(const v of vessels){
@@ -9,9 +9,9 @@ export function advanceWorldPhysics(vessels,universalTime,dt,activeVesselId,inpu
   ids.add(v.vesselId);
  }
  if(!ids.has(activeVesselId))throw Error('操縦対象が世界に存在しません');
- const snapshots=new Map(vessels.map(v=>[v,{
+ const snapshots=new Map<import('./core.js').Flight|null,import('./core.js').FlightTarget>(vessels.map(v=>[v,{
   parts:v.parts,pos:v.pos.clone(),q:v.q.clone(),vel:v.vel.clone(),omega:v.omega.clone(),
-  fuel:new Map(v.fuel),ballast:v.ballast,thermal:new Map([...v.thermal].map(([id,s])=>[id,{...s}]))
+  fuel:new Map(v.fuel),ballast:v.ballast,thermal:new Map<string,import('./thermal.js').ThermalState>([...v.thermal].map(([id,s])=>[id,{...s}]))
  }]));
  const endTime=universalTime+dt;
  for(const v of vessels)v.universalTime=endTime;
