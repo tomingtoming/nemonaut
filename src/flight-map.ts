@@ -27,6 +27,7 @@ import {element, byId, closest} from './dom.js';
 import {PRIMARY, MOON, bodyState, type CelestialBody, type OrbitState} from './celestial.js';
 import {center} from './planet.js';
 import {projectTrackingPoint} from './tracking-orbits.js';
+import {clampExtent, hitRadius, DoubleTap, Pinch} from './touch-map.js';
 /** The flight fields the map reads (a Flight satisfies it). */
 export type FlightMapVessel = TimedTransferVessel & MapVessel & {environment?: string};
 /** Orbit fields mapConic draws from. */
@@ -475,9 +476,36 @@ export function mountFlightMap(
   toolbar.append(status);
   canvas.title =
     '右ドラッグで回転（左ドラッグも可） · ホイールで拡大縮小 · 天体をダブルクリックで中心へ · 軌道クリックで計画 · 色付きハンドルでΔv調整（Shiftで微調整）';
+  // Touch (BACKLOG 8d): two fingers pinch-zoom like the wheel, a double tap re-centres like dblclick.
+  const pinch = new Pinch(),
+    doubleTap = new DoubleTap();
+  let lastPointerType = '';
+  const cancelDrag = () => {
+    if (drag?.handle) {
+      const input = byId(drag.handle.id, 'input');
+      input.value = String(drag.start);
+      input.dispatchEvent(new Event('input', {bubbles: true}));
+    }
+    drag = null;
+  };
+  const touchUp = (e: PointerEvent) => {
+    if (e.pointerType === 'touch') pinch.up(e.pointerId);
+  };
   canvas.addEventListener('pointerdown', e => {
+    lastPointerType = e.pointerType;
+    if (e.pointerType === 'touch') {
+      const rect = canvas.getBoundingClientRect();
+      if (pinch.down(e.pointerId, e.clientX - rect.left, e.clientY - rect.top, extent)) {
+        cancelDrag();
+        doubleTap.reset();
+      }
+      if (pinch.count > 1) return;
+    }
     const rect = canvas.getBoundingClientRect(),
-      handle = handles.find(h => Math.hypot(h.x - e.clientX + rect.left, h.y - e.clientY + rect.top) < 12);
+      handle = handles.find(
+        h =>
+          Math.hypot(h.x - e.clientX + rect.left, h.y - e.clientY + rect.top) < hitRadius(12, e.pointerType)
+      );
     if (e.button !== 0 && e.button !== 2) return;
     drag = {
       button: e.button,
@@ -490,6 +518,15 @@ export function mountFlightMap(
     canvas.setPointerCapture(e.pointerId);
   });
   canvas.addEventListener('pointermove', e => {
+    if (e.pointerType === 'touch') {
+      const rect = canvas.getBoundingClientRect(),
+        zoomed = pinch.move(e.pointerId, e.clientX - rect.left, e.clientY - rect.top);
+      if (zoomed !== null) {
+        extent = zoomed;
+        draw();
+        return;
+      }
+    }
     if (!drag) return;
     const dx = e.clientX - drag.x,
       dy = e.clientY - drag.y;
@@ -513,11 +550,21 @@ export function mountFlightMap(
     draw();
   });
   canvas.addEventListener('pointerup', e => {
+    touchUp(e);
+    if (e.pointerType === 'touch') {
+      const rect = canvas.getBoundingClientRect();
+      if (!drag || drag.moved) doubleTap.reset();
+      else if (doubleTap.tap(e.timeStamp, e.clientX - rect.left, e.clientY - rect.top)) {
+        recenter(e.clientX - rect.left, e.clientY - rect.top, hitRadius(12, 'touch'));
+        drag = null;
+        return;
+      }
+    }
     if (drag && drag.button === 0 && !drag.moved && !drag.handle) {
       const rect = canvas.getBoundingClientRect(),
         hit = markers
           .map(m => ({...m, d: Math.hypot(m.x - (e.clientX - rect.left), m.y - (e.clientY - rect.top))}))
-          .filter(m => m.d < 22)
+          .filter(m => m.d < hitRadius(22, e.pointerType))
           .sort((a, b) => a.d - b.d)[0];
       if (hit?.key?.startsWith('epoch:')) {
         const select = element(document, '#planLocation', 'select');
@@ -549,7 +596,7 @@ export function mountFlightMap(
         const x = e.clientX - rect.left,
           y = e.clientY - rect.top,
           near = orbitHits.map(p => ({...p, d: Math.hypot(p.x - x, p.y - y)})).sort((a, b) => a.d - b.d)[0];
-        if (near && near.d < 14) {
+        if (near && near.d < hitRadius(14, e.pointerType)) {
           try {
             const epoch = mapPointEpoch(orbitNow(), near.point),
               select = element(document, '#planLocation', 'select');
@@ -568,26 +615,32 @@ export function mountFlightMap(
     }
     drag = null;
   });
-  canvas.addEventListener('pointercancel', () => (drag = null));
+  canvas.addEventListener('pointercancel', e => {
+    touchUp(e);
+    drag = null;
+  });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
-  canvas.addEventListener('dblclick', e => {
-    const rect = canvas.getBoundingClientRect(),
-      x = e.clientX - rect.left,
-      y = e.clientY - rect.top;
+  const recenter = (x: number, y: number, minRadius: number) => {
     const hit = focusHits
-      .filter(p => Math.hypot(p.x - x, p.y - y) <= p.radius)
+      .filter(p => Math.hypot(p.x - x, p.y - y) <= Math.max(p.radius, minRadius))
       .sort((a, b) => a.radius - b.radius)[0];
     if (hit) {
       focus = hit.focus;
       extent = null;
       draw();
     }
+  };
+  canvas.addEventListener('dblclick', e => {
+    // A touch double tap is handled on pointerup; ignore the dblclick Chrome may synthesize from it.
+    if (lastPointerType === 'touch') return;
+    const rect = canvas.getBoundingClientRect();
+    recenter(e.clientX - rect.left, e.clientY - rect.top, 0);
   });
   canvas.addEventListener(
     'wheel',
     e => {
       e.preventDefault();
-      extent = T.MathUtils.clamp((extent ?? 0) * Math.exp(e.deltaY * 0.001), 10000, 6e7);
+      extent = clampExtent((extent ?? 0) * Math.exp(e.deltaY * 0.001));
       draw();
     },
     {passive: false}

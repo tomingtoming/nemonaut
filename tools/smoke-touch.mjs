@@ -175,6 +175,76 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
     `${climbing.attitude} -> ${turned.attitude}`
   );
   expect(`${tag} stick released`, released.held === '', JSON.stringify(released.held));
+  // Orbit map (8d): open by tap, pinch out zooms in (the #mapScale readout shrinks), a double tap on the
+  // body re-centres (focus switches, extent resets), close by tap.
+  await page.tap('#openOrbitMap');
+  await page.waitForTimeout(1500);
+  const mapState = () =>
+    page.evaluate(() => {
+      const overlay = document.getElementById('orbitOverlay');
+      return {
+        visible: !!overlay && !overlay.hidden && overlay.getBoundingClientRect().width > 0,
+        km: Number(document.getElementById('mapScale')?.textContent?.replace(/[^0-9.]/g, '')),
+        focus: document.querySelector('.mapToolbar button[aria-pressed=true]')?.dataset.focus ?? ''
+      };
+    });
+  const mapOpen = await mapState();
+  expect(`${tag} orbit map opens by tap`, mapOpen.visible && mapOpen.km > 0, JSON.stringify(mapOpen));
+  // Free canvas points (not under the toolbar or panels), nearest the canvas centre first.
+  const mapPoints = await page.evaluate(() => {
+    const c = document.getElementById('largeOrbitMap').getBoundingClientRect(),
+      cx = c.left + c.width / 2,
+      cy = c.top + c.height / 2,
+      out = [];
+    for (let x = c.left + 10; x < c.right; x += 10)
+      for (let y = c.top + 10; y < c.bottom; y += 10)
+        if (document.elementFromPoint(x, y)?.id === 'largeOrbitMap') out.push([x, y]);
+    return out.sort((a, b) => Math.hypot(a[0] - cx, a[1] - cy) - Math.hypot(b[0] - cx, b[1] - cy));
+  });
+  // A horizontal pair of free points 40 px apart moving to 160 px apart.
+  const pair = mapPoints.find(([x, y]) =>
+    [-80, -20, 20, 80].every(d => mapPoints.some(p => p[0] === x + d && p[1] === y))
+  );
+  expect(`${tag} free map area for a pinch`, !!pair, JSON.stringify(pair));
+  if (pair) {
+    const [px, py] = pair,
+      fingers = d => [
+        {x: px - d, y: py, id: 11},
+        {x: px + d, y: py, id: 12}
+      ];
+    await cdp.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: fingers(20)});
+    for (let d = 30; d <= 80; d += 10)
+      await cdp.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: fingers(d)});
+    await cdp.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+    await page.waitForTimeout(500);
+    const pinched = await mapState();
+    expect(
+      `${tag} pinch out zooms in`,
+      pinched.km < mapOpen.km * 0.5 && pinched.km > 0,
+      `${mapOpen.km} km -> ${pinched.km} km`
+    );
+    await shot('orbitmap-pinch');
+    // Zoomed in, the current body fills the middle of the map: double tap there re-centres on it.
+    await page.waitForTimeout(400);
+    for (let i = 0; i < 2; i++) {
+      await touch('touchStart', px, py);
+      await page.waitForTimeout(50);
+      await touch('touchEnd', px, py);
+      await page.waitForTimeout(120);
+    }
+    await page.waitForTimeout(500);
+    const centred = await mapState();
+    expect(
+      `${tag} double tap re-centres`,
+      centred.focus !== pinched.focus && centred.km !== pinched.km,
+      `${pinched.focus} ${pinched.km} km -> ${centred.focus} ${centred.km} km`
+    );
+    await shot('orbitmap-doubletap');
+  }
+  await page.tap('#closeOrbitMap');
+  await page.waitForTimeout(800);
+  const mapClosed = await mapState();
+  expect(`${tag} orbit map closes by tap`, !mapClosed.visible, JSON.stringify(mapClosed));
   l = await layout();
   expect(`${tag} flight no overflow`, !l.overflow, l.overflow);
   expect(`${tag} console errors`, errors.length === 0, errors.length ? errors.slice(0, 3).join(' | ') : 0);
