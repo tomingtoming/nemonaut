@@ -28,6 +28,48 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   page.on('pageerror', e => errors.push(e.message));
   const shot = file => page.screenshot({path: path.join(outDir, `${name.replace(/\s+/g, '-')}-${file}.png`)});
   const tag = name.includes('landscape') ? 'landscape' : 'portrait';
+  const cdp = await context.newCDPSession(page);
+  const touch = (type, x, y) =>
+    cdp.send('Input.dispatchTouchEvent', {type, touchPoints: type === 'touchEnd' ? [] : [{x, y, id: 1}]});
+  // Part windows (8c): a long press on the canvas over a part opens the part window (right click on desktop).
+  const partWindows = host =>
+    page.evaluate(h => document.querySelectorAll(`#${h} .floatingWindow`).length, host);
+  const closePartWindows = host =>
+    page.evaluate(
+      h =>
+        document.querySelectorAll(`#${h} .floatingWindow header button:last-child`).forEach(b => b.click()),
+      host
+    );
+  // The craft's screen point is not exposed: try canvas points nearest the canvas centre (only where the
+  // canvas itself is on top) until a long press opens a window.
+  const longPressPart = async host => {
+    const points = await page.evaluate(() => {
+      const c = document.getElementById('scene').getBoundingClientRect(),
+        cx = c.left + c.width / 2,
+        cy = c.top + c.height / 2,
+        out = [];
+      for (let x = c.left + 10; x < c.right; x += 10)
+        for (let y = c.top + 10; y < c.bottom; y += 10)
+          if (document.elementFromPoint(x, y)?.id === 'scene') out.push([x, y]);
+      return out.sort((a, b) => Math.hypot(a[0] - cx, a[1] - cy) - Math.hypot(b[0] - cx, b[1] - cy));
+    });
+    for (const [i, [x, y]] of points.slice(0, 40).entries()) {
+      await touch('touchStart', x, y);
+      await page.waitForTimeout(700);
+      const during = await partWindows(host);
+      await touch('touchEnd', x, y);
+      await page.waitForTimeout(300);
+      if (during > 0 && (await partWindows(host)) > 0) return {x, y, tries: i + 1};
+    }
+    return null;
+  };
+  const shortTap = async (x, y) => {
+    await touch('touchStart', x, y);
+    await page.waitForTimeout(80);
+    await touch('touchEnd', x, y);
+    await page.waitForTimeout(700);
+  };
+  const selectedPart = () => page.evaluate(() => !!document.querySelector('#selection .parttitle'));
   await page.goto(url);
   await page.waitForTimeout(7000);
   const layout = () =>
@@ -44,9 +86,36 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   l = await layout();
   expect(`${tag} workshop no overflow`, !l.overflow, l.overflow);
   await shot('workshop');
+  const selectedBefore = await selectedPart();
+  const designHit = await longPressPart('designPartWindows');
+  expect(`${tag} workshop long press opens a design part window`, !!designHit, JSON.stringify(designHit));
+  if (designHit) {
+    await shot('workshop-partwindow');
+    expect(
+      `${tag} long press release does not select`,
+      (await selectedPart()) === selectedBefore,
+      `${selectedBefore} -> ${await selectedPart()}`
+    );
+    await closePartWindows('designPartWindows');
+    await shortTap(designHit.x, designHit.y);
+    const opened = await partWindows('designPartWindows');
+    expect(`${tag} workshop short tap opens no window`, opened === 0, opened);
+    expect(`${tag} workshop short tap still selects`, await selectedPart(), await selectedPart());
+    await closePartWindows('designPartWindows');
+  }
   await page.tap('#launch');
   await page.waitForTimeout(6000);
   await shot('flight');
+  // On the pad (before staging) the vessel stands still.
+  const flightHit = await longPressPart('partWindows');
+  expect(`${tag} flight long press opens a part window`, !!flightHit, JSON.stringify(flightHit));
+  if (flightHit) {
+    await shot('flight-partwindow');
+    await closePartWindows('partWindows');
+    await shortTap(flightHit.x, flightHit.y);
+    const opened = await partWindows('partWindows');
+    expect(`${tag} flight short tap opens no window`, opened === 0, opened);
+  }
   // Flight controls (8b): stage, full throttle and the stick feed the keyboard's held-key path.
   const controls = await page.evaluate(() => {
     const visible = e => !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0;
@@ -87,11 +156,8 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   );
   // Drag the stick up (W, pitch) with a real touch through CDP and hold it.
   const stick = await page.locator('#touchStick').boundingBox();
-  const cdp = await context.newCDPSession(page);
   const cx = stick.x + stick.width / 2,
     cy = stick.y + stick.height / 2;
-  const touch = (type, x, y) =>
-    cdp.send('Input.dispatchTouchEvent', {type, touchPoints: type === 'touchEnd' ? [] : [{x, y, id: 1}]});
   await touch('touchStart', cx, cy);
   for (let i = 1; i <= 5; i++) await touch('touchMove', cx + i, cy - i * 10);
   await page.waitForTimeout(400);

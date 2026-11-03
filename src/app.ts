@@ -1,6 +1,7 @@
 import './storage-migration.js';
 import {watchTouchDevice} from './touch-device.js';
 import {mountTouchFlight} from './touch-flight.js';
+import {wireTouchPartWindows} from './touch-part-windows.js';
 import {mountFailureLog} from './failure-feedback.js';
 import {FailureVisuals} from './failure-visuals.js';
 import './orbital-ascent-panel.js'; // keeps the module evaluation order (mounted in flight-panels)
@@ -159,22 +160,31 @@ createSelectionOverlays();
 wireSelection();
 wirePlacement();
 const {partWindows, designPartWindows} = mountPartWindowPanels();
+const canOpenPartWindow = () => !state.atCenter && !state.placing && !state.movingBranch && !gizmo.dragging;
+function openPartWindow(x: number, y: number) {
+  pointer({clientX: x, clientY: y});
+  const hit = hitPart();
+  if (hit) (state.flight ? partWindows : designPartWindows).open(hit.id, x, y);
+}
 canvas.addEventListener('pointerup', e => {
   if (
-    state.atCenter ||
+    !canOpenPartWindow() ||
     e.button !== 2 ||
     !state.pointerDown ||
-    state.placing ||
-    state.movingBranch ||
     state.pointerDown.wasGizmo ||
-    gizmo.dragging ||
     Math.hypot(e.clientX - state.pointerDown.x, e.clientY - state.pointerDown.y) > 5
   )
     return;
-  pointer(e);
-  const hit = hitPart();
-  if (hit) (state.flight ? partWindows : designPartWindows).open(hit.id, e.clientX, e.clientY);
+  openPartWindow(e.clientX, e.clientY);
 });
+wireTouchPartWindows(
+  canvas,
+  () => canOpenPartWindow() && !state.pointerDown?.wasGizmo,
+  (x, y) => {
+    state.pointerDown = null; // the release is no tap: no select / place
+    openPartWindow(x, y);
+  }
+);
 wireFlightHud();
 $('.close', 'button').onclick = () => $('#modal', 'dialog').close();
 $('#modal', 'dialog').addEventListener('click', e => {
