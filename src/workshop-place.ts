@@ -16,12 +16,30 @@ import {sceneCore, selectionOverlays, editorMarkers, objects, partObject} from '
 import {cloneModel} from './part-visuals.js';
 import {snapshot, checkpoint} from './workshop-undo.js';
 import {partById, clearInterferenceHighlight} from './workshop-panels.js';
+import {TouchPlacementTaps, wireTouchGizmoSize} from './touch-placement.js';
 const raycaster = new T.Raycaster(),
-  mouse = new T.Vector2();
+  mouse = new T.Vector2(),
+  touchTaps = new TouchPlacementTaps();
 function placementLabel() {
   const label = $('#placement', 'div').firstChild;
   if (!label) throw Error('画面要素が見つかりません: #placement の文言');
   return label;
+}
+const touchUi = () => document.body.classList.contains('touch');
+/** The placement hint: click on the desktop, tap on touch (no key names there). */
+function placementHint(subject: string) {
+  placementLabel().textContent = touchUi()
+    ? subject + ' · 取付位置をタップ'
+    : subject + ' · 取付位置をクリック · Escで取消 ';
+}
+function placementSubject() {
+  if (state.branchDraft) return '枝 ' + state.branchDraft.parts.length + ' 部品';
+  if (!state.placing) throw Error('配置中の部品がありません');
+  return PARTS[state.placing].name;
+}
+function clearTouchPreview() {
+  touchTaps.reset();
+  delete $('#placement', 'div').dataset.touchPreview;
 }
 function disposeMarkers() {
   const {markers} = sceneCore();
@@ -106,6 +124,7 @@ export function cancelPlacement() {
     state.ghost = null;
   }
   disposeMarkers();
+  clearTouchPreview();
   $('#placement', 'div').hidden = true;
   $$('.partcard', 'button').forEach(b => b.classList.remove('active'));
 }
@@ -148,12 +167,13 @@ export function beginPlacement(type: PartType, branch: PartBranch | null = null,
   scene.add(state.ghost);
   state.ghost.visible = false;
   $('#placement', 'div').hidden = false;
-  placementLabel().textContent =
-    (moving && branch
+  placementHint(
+    moving && branch
       ? '付け替え ' + branch.parts.length + ' 部品'
       : branch
         ? '枝 ' + branch.parts.length + ' 部品（1組ずつ）'
-        : PARTS[type].name) + ' · 取付位置をクリック · Escで取消 ';
+        : PARTS[type].name
+  );
   $$('.partcard', 'button').forEach(b => b.classList.toggle('active', b.dataset.type === type));
   showNodes();
 }
@@ -179,7 +199,7 @@ function rejectNodePlacement(message: string) {
   state.pendingPose = null;
   if (!state.ghost) throw Error('配置中の部品がありません');
   state.ghost.visible = false;
-  placementLabel().textContent = message + ' · Escで取消 ';
+  placementLabel().textContent = touchUi() ? message : message + ' · Escで取消 ';
 }
 function posePlacement(e: PointerEvent) {
   if (!state.placing) return;
@@ -271,9 +291,7 @@ function posePlacement(e: PointerEvent) {
   shape.quaternion.copy(q);
   shape.visible = true;
   state.pendingPose = {pos, q, parent, attachment};
-  placementLabel().textContent =
-    (state.branchDraft ? '枝 ' + state.branchDraft.parts.length + ' 部品' : PARTS[state.placing].name) +
-    ' · 取付位置をクリック · Escで取消 ';
+  placementHint(placementSubject());
 }
 function place() {
   if (!state.pendingPose) return;
@@ -357,6 +375,36 @@ function place() {
   showNodes();
   notify(`${PARTS[type].name} ×${count} を取り付けました`);
 }
+/** The attach target of the shown pose for the touch taps: undefined without a pose, null without a node. */
+function placementTarget() {
+  const pose = state.pendingPose;
+  if (!pose) return undefined;
+  return pose.attachment.mode === 'node' ? pose.parent + ':' + pose.attachment.parentNode : null;
+}
+/** A tap while placing on touch: the first tap previews the ghost there, a second tap on it commits. */
+function touchPlace(e: PointerEvent) {
+  const {camera} = sceneCore();
+  camera.updateMatrixWorld();
+  const placement = $('#placement', 'div'),
+    action = touchTaps.tap(e.clientX, e.clientY, camera.matrixWorld.elements, () => {
+      posePlacement(e);
+      return placementTarget();
+    });
+  delete placement.dataset.touchPreview;
+  if (action === 'preview') {
+    placement.dataset.touchPreview = state.pendingPose?.attachment.mode ?? '';
+    placementLabel().textContent = placementSubject() + ' · もう一度タップで確定';
+  } else if (action === 'commit') {
+    place();
+    // Still placing (a single part): hide the ghost until the next preview tap.
+    if (state.placing && state.ghost) {
+      state.ghost.visible = false;
+      state.pendingPose = null;
+      clearTouchPreview();
+      placementHint(placementSubject());
+    }
+  }
+}
 function branchGhost(branch: PartBranch) {
   const group = new T.Group(),
     preview = placeBranch([], branch, {position: [0, 0, 0], rotation: [0, 0, 0]});
@@ -374,8 +422,10 @@ export function wirePlacement() {
   canvas.addEventListener('pointerdown', e => {
     state.pointerDown = {x: e.clientX, y: e.clientY, button: e.button, wasGizmo: !!gizmo.axis};
   });
+  wireTouchGizmoSize(gizmo);
+  // A finger drag rotates the camera; on touch the ghost moves by taps only (touchPlace).
   canvas.addEventListener('pointermove', e => {
-    if (!state.flight) posePlacement(e);
+    if (!state.flight && e.pointerType !== 'touch') posePlacement(e);
   });
   canvas.addEventListener('pointerup', e => {
     if (
@@ -388,6 +438,10 @@ export function wirePlacement() {
     )
       return;
     if (state.placing) {
+      if (e.pointerType === 'touch') {
+        touchPlace(e);
+        return;
+      }
       posePlacement(e);
       place();
     } else {

@@ -497,3 +497,10 @@ body.touch #flightMenu[open],body.touch #flightSystems[open]{width:min(300px,cal
 body.touch #flightSystems .flightbottom{max-height:min(270px,calc(100dvh - 160px))}
 body.touch.flying:has(#flightMenu[open]) #stageDock,body.touch.flying:has(#flightSystems[open]) #stageDock{visibility:hidden}
 @media (max-width:650px){body.touch #orbitOverlay .mapReadings{top:122px}}
+/* Touch placement (BACKLOG 8f): no key hints, a cancel button and a larger hint; the first tap previews. */
+#placementCancel{display:none}
+body.touch #placement .placementKeys{display:none}
+body.touch #placement:not([hidden]){display:flex;align-items:center;gap:10px;padding:2px 2px 2px 14px;font-size:12px;z-index:8;max-width:calc(100% - 16px);white-space:normal}
+body.touch #placement[data-touch-preview]{border-color:#ffd08a;color:#ffe2b8}
+body.touch #placementCancel{display:block;flex:none;min-height:40px;min-width:56px}
+@media(orientation:portrait){body.touch #placement{top:160px}}

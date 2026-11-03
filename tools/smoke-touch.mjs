@@ -195,6 +195,175 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
     expect(`${tag} workshop short tap still selects`, await selectedPart(), await selectedPart());
     await closePartWindows('designPartWindows');
   }
+  // Placement (8f): the first tap previews the ghost (no part added), a second tap on it places the part;
+  // the touch cancel button ends placing. Taps go to the canvas through CDP.
+  const partCount = () => page.evaluate(() => Number(document.getElementById('count')?.textContent));
+  const placement = () =>
+    page.evaluate(() => {
+      const e = document.getElementById('placement');
+      return {
+        shown: !!e && !e.hidden && e.getBoundingClientRect().width > 0,
+        preview: e?.dataset.touchPreview ?? null,
+        text: e?.firstChild?.textContent ?? ''
+      };
+    });
+  const canvasPoints = step =>
+    page.evaluate(step => {
+      const c = document.getElementById('scene').getBoundingClientRect(),
+        cx = c.left + c.width / 2,
+        cy = c.top + c.height / 2,
+        out = [];
+      for (let x = c.left + step / 2; x < c.right; x += step)
+        for (let y = c.top + step / 2; y < c.bottom; y += step)
+          if (document.elementFromPoint(x, y)?.id === 'scene') out.push([x, y]);
+      return out.sort((a, b) => Math.hypot(a[0] - cx, a[1] - cy) - Math.hypot(b[0] - cx, b[1] - cy));
+    }, step);
+  const countBefore = await partCount();
+  // In portrait the open vessel panel covers the part library: close it first, as a player would.
+  const cardCovered = await page.evaluate(() => {
+    const c = document.querySelector('#parts .partcard'),
+      b = c?.getBoundingClientRect(),
+      top = b && document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return !top || !c.contains(top);
+  });
+  if (cardCovered) {
+    await page.tap('#panelDock button[aria-controls=inspector]');
+    await page.waitForTimeout(300);
+  }
+  await page.tap('#parts .partcard');
+  await page.waitForTimeout(500);
+  const started = await placement();
+  expect(
+    `${tag} part card tap starts placing (tap hint, no keys)`,
+    started.shown && /タップ|Tap/.test(started.text) && !/Esc|クリック|Click/.test(started.text),
+    JSON.stringify(started)
+  );
+  // Points 40 px apart (beyond the commit radius), centre first, until a tap previews on an attach node.
+  let previewAt = null,
+    previewTries = 0;
+  for (const [x, y] of (await canvasPoints(40)).slice(0, 30)) {
+    previewTries++;
+    await touch('touchStart', x, y);
+    await page.waitForTimeout(60);
+    await touch('touchEnd', x, y);
+    await page.waitForTimeout(250);
+    if ((await placement()).preview === 'node') {
+      previewAt = [x, y];
+      break;
+    }
+  }
+  const previewed = await placement(),
+    countPreview = await partCount();
+  expect(
+    `${tag} first tap previews on an attach node`,
+    !!previewAt && /もう一度タップ|Tap again/.test(previewed.text),
+    JSON.stringify({previewAt, previewTries, ...previewed})
+  );
+  expect(`${tag} first tap adds no part`, countPreview === countBefore, `${countBefore} -> ${countPreview}`);
+  await shot('workshop-place-preview');
+  await checkLayout(
+    'workshop placing',
+    ['#placement', '#toolbar', '.viewactions', '#panelDock button'],
+    ['#placement']
+  );
+  if (previewAt) {
+    await touch('touchStart', previewAt[0], previewAt[1]);
+    await page.waitForTimeout(60);
+    await touch('touchEnd', previewAt[0], previewAt[1]);
+    await page.waitForTimeout(800);
+    const placed = await placement(),
+      countPlaced = await partCount();
+    expect(
+      `${tag} second tap on the preview places the part`,
+      countPlaced > countBefore && placed.preview === null,
+      `${countBefore} -> ${countPlaced} ${JSON.stringify(placed)}`
+    );
+    await shot('workshop-place-placed');
+  }
+  await page.tap('#placementCancel');
+  await page.waitForTimeout(300);
+  expect(
+    `${tag} touch cancel button ends placing`,
+    !(await placement()).shown,
+    JSON.stringify(await placement())
+  );
+  while ((await partCount()) > countBefore && (await page.isEnabled('#undo'))) {
+    await page.evaluate(() => document.getElementById('undo').click());
+    await page.waitForTimeout(400);
+  }
+  expect(`${tag} undo restores the part count`, (await partCount()) === countBefore, await partCount());
+  // Gizmo (8f): select a part, switch to translate, drag the gizmo centre with one finger: the part moves and
+  // the camera does not rotate. The camera and gizmo are read from the page's own scene module (test only).
+  const sceneModule = new URL('scene.js', page.url()).href;
+  const view = () =>
+    page.evaluate(async u => {
+      const {sceneCore, editorMarkers} = await import(u),
+        {camera, canvas} = sceneCore(),
+        {gizmo} = editorMarkers(),
+        r = canvas.getBoundingClientRect();
+      camera.updateMatrixWorld();
+      const o = gizmo.object,
+        p = o ? o.getWorldPosition(o.position.clone()).project(camera) : null;
+      return {
+        camera: camera.matrixWorld.elements.map(v => +v.toFixed(4)),
+        size: gizmo.size,
+        attached: !!o,
+        axis: gizmo.axis,
+        dragging: gizmo.dragging,
+        screen: p && [r.left + ((p.x + 1) / 2) * r.width, r.top + ((1 - p.y) / 2) * r.height]
+      };
+    }, sceneModule);
+  const partPos = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('#selection input[data-field=p]')].map(i => i.value).join(',')
+    );
+  const cameraMoved = (a, b) => a.camera.some((v, i) => Math.abs(v - b.camera[i]) > 1e-3);
+  if (designHit) {
+    await shortTap(designHit.x, designHit.y);
+    await page.tap('#toolbar button[data-mode=translate]');
+    await page.waitForTimeout(500);
+    const g0 = await view(),
+      pos0 = await partPos();
+    expect(`${tag} gizmo attached and enlarged`, g0.attached && g0.size > 1.2, `${g0.attached} ${g0.size}`);
+    if (g0.attached && g0.screen) {
+      const [gx, gy] = g0.screen;
+      await touch('touchStart', gx, gy);
+      await page.waitForTimeout(50);
+      const grabbed = await view();
+      for (let i = 1; i <= 8; i++) await touch('touchMove', gx + i * 6, gy - i * 4);
+      await page.waitForTimeout(100);
+      const during = await view();
+      await touch('touchEnd', gx + 48, gy - 32);
+      await page.waitForTimeout(600);
+      const g1 = await view(),
+        pos1 = await partPos();
+      expect(
+        `${tag} finger on the gizmo grabs a handle`,
+        grabbed.dragging,
+        `${grabbed.axis} ${grabbed.dragging}`
+      );
+      expect(`${tag} gizmo drag moves the part`, pos1 !== pos0 && pos1 !== '', `${pos0} -> ${pos1}`);
+      expect(
+        `${tag} gizmo drag does not rotate the camera`,
+        !cameraMoved(g0, during) && !cameraMoved(g0, g1),
+        cameraMoved(g0, g1)
+      );
+      await shot('workshop-gizmo');
+      // Control: the same finger drag away from the gizmo rotates the camera (the observable works).
+      const free = (await canvasPoints(20)).find(([x, y]) => Math.hypot(x - gx, y - gy) > 150);
+      if (free) {
+        await touch('touchStart', free[0], free[1]);
+        for (let i = 1; i <= 8; i++) await touch('touchMove', free[0] + i * 6, free[1]);
+        await touch('touchEnd', free[0] + 48, free[1]);
+        await page.waitForTimeout(600);
+        expect(`${tag} control: a free drag rotates the camera`, cameraMoved(g1, await view()), true);
+      }
+      await page.evaluate(() => document.getElementById('undo').click());
+      await page.waitForTimeout(400);
+    }
+    await page.tap('#toolbar button[data-mode=select]');
+    await page.waitForTimeout(300);
+  }
   await page.tap('#launch');
   await page.waitForTimeout(6000);
   await shot('flight');

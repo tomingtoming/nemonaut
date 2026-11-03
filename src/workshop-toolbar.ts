@@ -153,6 +153,8 @@ export function wireWorkshopToolbar() {
     comMarker.visible = !comMarker.visible;
     $('#com', 'button').classList.toggle('active', comMarker.visible);
   };
+  // Touch-only (hidden without body.touch): cancel placement like Esc.
+  $('#placementCancel', 'button').onclick = () => setMode('select');
   $('#undo', 'button').onclick = undo;
   $('#redo', 'button').onclick = redo;
   $$('[data-mode]', 'button').forEach(
