@@ -160,6 +160,21 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   l = await layout();
   expect(`${tag} workshop no overflow`, !l.overflow, l.overflow);
   await shot('workshop');
+  // Part cards keep their height (names readable) and no key letters show on touch (real-device report).
+  const cards = await page.evaluate(() => {
+    const card = document.querySelector('#library .partcard'),
+      name = card?.querySelector('strong')?.getBoundingClientRect(),
+      box = card?.getBoundingClientRect();
+    const toolbar = document.getElementById('toolbar');
+    const keys = (toolbar?.innerText.match(/(^|\s)[A-Z](?=\s|$)/g) ?? []).map(k => k.trim());
+    return {
+      height: Math.round(box?.height ?? 0),
+      nameInside: !!name && !!box && name.bottom <= box.bottom + 0.5 && name.height > 0,
+      keys: keys.join(',')
+    };
+  });
+  expect(`${tag} part card name visible`, cards.height >= 60 && cards.nameInside, JSON.stringify(cards));
+  expect(`${tag} no key letters in the toolbar`, cards.keys === '', JSON.stringify(cards.keys));
   const mainRatio = await pixelRatio('scene');
   expect(`${tag} main pixel ratio <= 1.5`, mainRatio !== null && mainRatio <= 1.5 + 0.01, mainRatio);
   await checkLayout(

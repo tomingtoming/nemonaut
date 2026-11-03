@@ -361,6 +361,12 @@ body.touch #scene{-webkit-touch-callout:none;user-select:none;-webkit-user-selec
 /* Touch layout (BACKLOG 8e). Everything below is scoped to body.touch, so the mouse layout is unchanged.
    Touch targets: interactive controls get at least 40-44 px in both directions. */
 body.touch button,body.touch summary{min-height:40px}
+/* Part cards keep their own height (the generic touch minimum above would otherwise outrank it). */
+body.touch #library .partcard{min-height:100px}
+/* Key letters in labels (軸対称 R, 対称 X, スナップ C) mean nothing without a keyboard. The first rule
+   keeps the desktop look: the letters render exactly as the plain text they were (no #toolbar span style). */
+#toolbar .keyhint{font:inherit;display:inline}
+body.touch #toolbar .keyhint,body.touch #toolbar kbd{display:none}
 body.touch header button,body.touch .viewactions button,body.touch #panelDock button{min-height:44px;min-width:44px}
 body.touch .stackMoves button{min-width:44px;min-height:40px}
 body.touch .stageStackRow{grid-template-columns:40px 1fr}
@@ -479,7 +485,7 @@ body.touch.flying .navpanel.touchSasOpen #sasDirections{display:grid;position:ab
   body.touch:not(.flying) #audioButton{top:152px;right:8px;width:44px;height:44px}
   body.touch .centerSidebar{max-height:calc(100dvh - 150px)}
   body.touch:not(.flying) #stageDock{top:200px;right:8px;bottom:auto;width:112px;max-height:calc(100dvh - 512px)}
-  body.touch #library,body.touch:not(.flying) #inspector{left:8px;right:8px;top:auto;bottom:112px;width:auto;height:190px}
+  body.touch #library,body.touch:not(.flying) #inspector{left:8px;right:8px;top:auto;bottom:112px;width:auto;height:200px}
   body.touch:not(.flying) #toolbar{padding:3px;gap:2px;row-gap:2px}
   body.touch:not(.flying) #toolbar button{padding:4px}
   body.touch:not(.flying) #inspector{z-index:7}
@@ -489,7 +495,7 @@ body.touch.flying .navpanel.touchSasOpen #sasDirections{display:grid;position:ab
   body.touch #categories button{flex:none}
   body.touch #library #parts{flex:1;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:96px;grid-template-rows:minmax(0,1fr);overflow-x:auto;overflow-y:hidden;padding:0 8px 6px}
   body.touch #library .partcard{min-height:0}
-  body.touch #library .partcard img{height:52px}
+  body.touch #library .partcard img{height:44px}
 }
 /* Open flight menus keep their full width on touch; the stage stack steps aside while a menu or the
    vessel panel is open over it. */

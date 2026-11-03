@@ -20,7 +20,8 @@ export function mountWorkshopSymmetry(select: HTMLSelectElement, button: HTMLEle
             ''
           );
     select.value = value;
-    button.textContent = (mode === 'mirror' ? '鏡面' : '軸対称') + ' R';
+    // The key letter sits in .keyhint, which touch devices hide.
+    button.innerHTML = `${mode === 'mirror' ? '鏡面' : '軸対称'}<span class="keyhint"> R</span>`;
   }
   const change = () => {
     if (mode === 'radial') radial = select.value;
