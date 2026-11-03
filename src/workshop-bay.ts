@@ -18,8 +18,8 @@ export function buildWorkshopBay() {
   bay.add(room, workshopDeck);
   const beamMat = mat('#25343d', 0.5, 0.5);
   const workshopGround = box(bay, [90, 0.25, 90], [0, -0.3, 0], mat('#334750', 0.3, 0.65));
-  let grid = new T.GridHelper(80, 80, '#647984', '#435963');
-  grid.position.y = -0.16;
+  workshopGround.renderOrder = -2;
+  let grid = asUnderlay(new T.GridHelper(80, 80, '#647984', '#435963'));
   bay.add(grid);
   for (const x of [-18, 18]) {
     box(room, [0.5, 22, 44], [x, 10, -3], beamMat);
@@ -59,6 +59,19 @@ export function buildWorkshopBay() {
   }
   built = {room, workshopDeck, workshopGround, grid};
 }
+/**
+ * The floor grid is drawn as an underlay: after the ground and before everything else, without writing
+ * depth, so the platform and the craft always cover it. On some phone GPUs the grid lines showed through
+ * the craft, although the ground, platform and craft occlude each other
+ * correctly; drawing order does not depend on the lines' depth.
+ */
+function asUnderlay(grid: T.GridHelper): T.GridHelper {
+  grid.position.y = -0.16;
+  grid.renderOrder = -1;
+  for (const material of Array.isArray(grid.material) ? grid.material : [grid.material])
+    material.depthWrite = false;
+  return grid;
+}
 function workshopBay() {
   if (!built) throw Error('作業場がまだ作られていません');
   return built;
@@ -84,13 +97,9 @@ export function updateWorkshop() {
       material.dispose();
     state.workshopGridSize = layout.gridSize;
     const step = Math.max(1, Math.ceil(state.workshopGridSize / 200));
-    bayParts.grid = new T.GridHelper(
-      state.workshopGridSize,
-      Math.ceil(state.workshopGridSize / step),
-      '#647984',
-      '#435963'
+    bayParts.grid = asUnderlay(
+      new T.GridHelper(state.workshopGridSize, Math.ceil(state.workshopGridSize / step), '#647984', '#435963')
     );
-    bayParts.grid.position.y = -0.16;
     bay.add(bayParts.grid);
   }
   const fit = workshopFrame(bounds, camera.fov, camera.aspect);
