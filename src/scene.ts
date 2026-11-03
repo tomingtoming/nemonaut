@@ -11,6 +11,8 @@ import {bodyUp} from './celestial.js';
 import {workshopFrame} from './workshop-layout.js';
 import {state} from './app-state.js';
 import {flightCenter} from './current-flight.js';
+import {renderQuality, type RenderQuality} from './render-quality.js';
+import {isTouchDevice} from './touch-device.js';
 export type SceneCore = {
   canvas: HTMLCanvasElement;
   viewport: HTMLElement;
@@ -35,28 +37,42 @@ export type SelectionOverlays = {highlight: T.BoxHelper; placementCopies: T.Grou
 export const objects = new Map<string, T.Object3D>();
 /** The point the camera follows in flight. */
 export const flightFocus = new T.Vector3();
-let base: {canvas: HTMLCanvasElement; renderer: T.WebGLRenderer; scene: T.Scene} | null = null,
+let base: {
+    canvas: HTMLCanvasElement;
+    renderer: T.WebGLRenderer;
+    scene: T.Scene;
+    quality: RenderQuality;
+  } | null = null,
   core: SceneCore | null = null,
   editor: EditorMarkers | null = null,
   selection: SelectionOverlays | null = null;
 /** Renderer and scene (first part of the set-up; app.ts then creates the failure visuals). */
 export function createRenderer(canvas: HTMLCanvasElement) {
-  const renderer = new T.WebGLRenderer({canvas, antialias: true, logarithmicDepthBuffer: true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const quality = renderQuality(isTouchDevice(), devicePixelRatio);
+  const renderer = new T.WebGLRenderer({canvas, antialias: quality.antialias, logarithmicDepthBuffer: true});
+  renderer.setPixelRatio(quality.pixelRatio);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = T.PCFSoftShadowMap;
+  renderer.shadowMap.type = shadowMapType(quality);
   renderer.toneMapping = T.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
   const scene = new T.Scene();
   scene.background = new T.Color('#293c49');
   scene.fog = new T.Fog('#293c49', 55, 135);
-  base = {canvas, renderer, scene};
+  base = {canvas, renderer, scene, quality};
   return base;
+}
+/** three.js shadow filter for a render quality. */
+const shadowMapType = (quality: RenderQuality): T.ShadowMapType =>
+  quality.shadowType === 'pcf' ? T.PCFShadowMap : T.PCFSoftShadowMap;
+/** Quality chosen for the main renderer (the thumbnail renderer follows it). */
+export function mainRenderQuality(): RenderQuality {
+  if (!base) throw Error('描画器がまだ作られていません');
+  return base.quality;
 }
 /** Camera, controls, environment, lights and the top-level groups. */
 export function createView(viewport: HTMLElement): SceneCore {
   if (!base) throw Error('描画器がまだ作られていません');
-  const {canvas, renderer, scene} = base;
+  const {canvas, renderer, scene, quality} = base;
   const camera = new T.PerspectiveCamera(40, 1, 0.05, 50000000);
   camera.position.set(10, 7, 12);
   camera.layers.enable(1);
@@ -74,7 +90,7 @@ export function createView(viewport: HTMLElement): SceneCore {
   const sun = new T.DirectionalLight('#fff0d8', 2.4);
   sun.position.set(12, 24, 12);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
   Object.assign(sun.shadow.camera, {left: -18, right: 18, top: 18, bottom: -18, near: 0.1, far: 100});
   sun.shadow.bias = -0.0005;
   scene.add(sun);

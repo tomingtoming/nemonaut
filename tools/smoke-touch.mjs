@@ -142,12 +142,26 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   expect(`${tag} body.touch`, l.touch, l.touch);
   expect(`${tag} center no overflow`, !l.overflow, l.overflow);
   await shot('center');
+  // Performance (8g): on touch the renderers draw at a capped pixel ratio (main 1.5, space centre 1.25).
+  const pixelRatio = id =>
+    page.evaluate(id => {
+      const c = document.getElementById(id);
+      return c && c.clientWidth ? c.width / c.clientWidth : null;
+    }, id);
+  const centerRatio = await pixelRatio('centerScene');
+  expect(
+    `${tag} space centre pixel ratio <= 1.25`,
+    centerRatio !== null && centerRatio <= 1.25 + 0.01,
+    centerRatio
+  );
   await checkLayout('center', ['.centerSidebar', '.centerFacilityCard', '#audioButton'], []);
   await page.tap('#enterVAB');
   await page.waitForTimeout(3000);
   l = await layout();
   expect(`${tag} workshop no overflow`, !l.overflow, l.overflow);
   await shot('workshop');
+  const mainRatio = await pixelRatio('scene');
+  expect(`${tag} main pixel ratio <= 1.5`, mainRatio !== null && mainRatio <= 1.5 + 0.01, mainRatio);
   await checkLayout(
     'workshop',
     [

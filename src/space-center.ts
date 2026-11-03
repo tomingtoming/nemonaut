@@ -2,6 +2,8 @@ import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {CENTER_FACILITIES} from './center-facilities.js';
+import {renderQuality} from './render-quality.js';
+import {isTouchDevice} from './touch-device.js';
 export type CenterFacilityId = keyof typeof CENTER_FACILITIES;
 const isFacilityId = (id: unknown): id is CenterFacilityId =>
   typeof id === 'string' && id in CENTER_FACILITIES;
@@ -33,12 +35,13 @@ export class SpaceCenter {
     this.facilities = new Map<string | null, T.Object3D>();
     this.canvas = canvas;
     this.onSelect = onSelect;
-    this.renderer = new T.WebGLRenderer({canvas, antialias: true});
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    const quality = renderQuality(isTouchDevice(), devicePixelRatio, 'center');
+    this.renderer = new T.WebGLRenderer({canvas, antialias: quality.antialias});
+    this.renderer.setPixelRatio(quality.pixelRatio);
     this.renderer.toneMapping = T.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.25;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = T.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = quality.shadowType === 'pcf' ? T.PCFShadowMap : T.PCFSoftShadowMap;
     this.scene = new T.Scene();
     this.scene.background = new T.Color('#98bfc7');
     this.scene.fog = new T.Fog('#98bfc7', 750, 1700);
@@ -58,7 +61,7 @@ export class SpaceCenter {
     const sun = new T.DirectionalLight('#ffe4b6', 3);
     sun.position.set(-150, 250, 150);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
     Object.assign(sun.shadow.camera, {left: -300, right: 300, top: 300, bottom: -300, near: 1, far: 700});
     sun.shadow.bias = -0.001;
     sun.shadow.normalBias = 0.2;

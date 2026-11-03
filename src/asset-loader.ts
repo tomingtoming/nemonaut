@@ -4,7 +4,7 @@
 import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {PARTS} from './catalog.js';
-import {sceneCore} from './scene.js';
+import {mainRenderQuality, sceneCore} from './scene.js';
 /** Part type (or scenery name) → its loaded model; clone it, never add it to a scene directly. */
 export const assets = new Map<string, T.Object3D>();
 /** Part type → bounds of its model. */
@@ -50,6 +50,9 @@ export async function loadAssets() {
     ts.remove(clone);
   }
   thumbRenderer.dispose();
+  // Touch (8g): give the thumbnail context back to the browser (phones allow only a few at a time); the
+  // thumbnails are data URLs by now and this renderer is never used again.
+  if (mainRenderQuality().releaseUnusedContexts) thumbRenderer.forceContextLoss();
   const shroud = await loader.loadAsync('./assets/parts/engine-shroud.glb');
   assets.set('engine-shroud', shroud.scene);
   const canopy = await loader.loadAsync('./assets/parts/parachute-open.glb');
