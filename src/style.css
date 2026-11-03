@@ -357,3 +357,143 @@ body.touch button,body.touch select,body.touch input,body.touch summary,body.tou
 #touchFlight{display:none}body.touch.flying #touchFlight{display:block}#touchFlight,#touchFlight *{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}#touchFlight .touchLeft,#touchFlight .touchRight{position:fixed;z-index:8;display:flex;gap:6px}#touchFlight .touchLeft{left:10px;bottom:128px;flex-direction:column;align-items:flex-start}#touchFlight .touchRight{right:8px;bottom:50px;flex-direction:column;align-items:flex-end}#touchFlight .touchRoll,#touchFlight .touchMain{display:flex;gap:6px}#touchFlight .touchRcs{display:grid;grid-template-columns:repeat(3,36px);gap:4px;padding:4px;background:#14232bcc;border:1px solid #546b76;border-radius:6px}#touchFlight .touchRcs[hidden]{display:none}#touchFlight .touchRcs small{grid-column:1/-1;font:9px monospace;color:#9fd5d4}#touchFlight .touchRcs button{min-width:0;height:34px;padding:0;font-size:12px}#touchFlight button{min-width:48px;height:40px;padding:0 8px;font-size:14px;background:#202c32d9;border-color:#6a7f88}#touchFlight button[data-code=KeyZ]{color:var(--orange);border-color:#845b41}#touchFlight button[data-code=Space]{background:#4f6b3cd9;border-color:#9bc27d}#touchStick{position:relative;width:112px;height:112px;border-radius:50%;background:radial-gradient(circle,#2a3a42aa 0,#14232bcc 70%);border:2px solid #7d929b;box-shadow:0 2px 10px #0007}#touchStick small{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:10px;color:#b7d5df;pointer-events:none}#touchStick .touchKnob{position:absolute;left:32px;top:32px;width:48px;height:48px;border-radius:50%;background:#ff9657cc;border:2px solid #ffd2b3;pointer-events:none}
 @media(orientation:portrait){#touchFlight .touchLeft{bottom:182px;flex-direction:row;align-items:flex-end}#touchFlight .touchLeft .touchRcs{order:2}#touchFlight .touchRight{bottom:182px}}
 body.touch #scene{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+
+/* Touch layout (BACKLOG 8e). Everything below is scoped to body.touch, so the mouse layout is unchanged.
+   Touch targets: interactive controls get at least 40-44 px in both directions. */
+body.touch button,body.touch summary{min-height:40px}
+body.touch header button,body.touch .viewactions button,body.touch #panelDock button{min-height:44px;min-width:44px}
+body.touch .stackMoves button{min-width:44px;min-height:40px}
+body.touch .stageStackRow{grid-template-columns:40px 1fr}
+body.touch #toolbar button,body.touch #mapThrottle button{min-width:44px}
+body.touch .stageStackIcons button{height:auto;min-height:40px;min-width:40px}
+body.touch .navSpeed #navigationFrame,body.touch .navSpeed #navigationAuto{min-height:40px}
+body.touch .navSpeed #navigationAuto{min-width:44px}
+body.touch #sasDirections button{min-height:44px;font-size:12px}
+body.touch .floatingWindow header{padding:2px 4px}
+body.touch .floatingWindow header button{min-width:44px;min-height:44px}
+body.touch #categories button,body.touch .mapToolbar button,body.touch #debrisList button,body.touch #trackPrimary{min-height:44px;min-width:44px}
+body.touch input[type=checkbox]{width:22px;height:22px;margin:0 6px 0 0;flex:none}
+body.touch label:has(>input[type=checkbox]){display:inline-flex;align-items:center;min-height:44px}
+body.touch #flightMenu>summary,body.touch #flightSystems>summary{display:flex;align-items:center;justify-content:center;min-height:44px;box-sizing:border-box}
+body.touch:not(.flying) .craftFiles{display:flex}
+body.touch:not(.flying) .craftFiles #examples{display:block}
+body.touch #touchFlight button{height:44px;min-width:52px}
+body.touch #touchFlight .touchRcs button{height:40px;min-width:0}
+body.touch #touchFlight .touchRcs{grid-template-columns:repeat(3,44px)}
+body.touch .floatingWindow{max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}
+body.touch:not(.inspector-closed):not(.at-center) #inspector{display:block}
+body.touch #audioButton{z-index:24}
+
+/* Compact flight console on touch: speed, throttle, navball and the four switches stay visible; the SAS
+   directions open above it from the touch-only 「SAS方向」 button (#touchSasToggle). */
+#touchSasToggle{display:none}
+body.touch.flying .navpanel{display:grid;grid-template-columns:104px 84px 128px 50px;grid-template-rows:31px 31px 26px;gap:4px 6px;width:auto;padding:5px 6px;bottom:4px;left:calc(50% - 36px);transform:translateX(-50%);border-radius:10px}
+body.touch.flying .navpanel .navSpeed{grid-column:1;grid-row:1 / 3;align-self:stretch;padding:1px}
+body.touch.flying .navpanel .navSpeed strong{font-size:17px}
+body.touch.flying .navpanel .navSpeed span{font-size:9px}
+body.touch.flying .navpanel canvas{grid-column:2;grid-row:1 / 3;width:62px;height:62px;margin:0 auto;border-width:4px}
+body.touch.flying #navPitch{grid-column:2;grid-row:3;font-size:8px;white-space:nowrap;overflow:hidden}
+body.touch.flying .navpanel .throttle{grid-column:1;grid-row:3;height:26px}
+body.touch.flying .navpanel .throttle input{height:26px}
+body.touch.flying .navpanel .navSwitches{grid-column:3;grid-row:1 / 4;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px}
+body.touch.flying .navpanel .navSwitches button,body.touch.flying .navpanel .navSwitches label{min-height:44px;font-size:10px;padding:2px;line-height:1.15}
+body.touch.flying #touchSasToggle{display:block;grid-column:4;grid-row:1 / 4;min-width:0;padding:2px;font-size:11px;line-height:1.3}
+body.touch.flying #touchSasToggle[aria-expanded=true]{border-color:#d5ec9a;color:#e1f5b2}
+body.touch.flying #sasDirections{display:none}
+body.touch.flying .navpanel.touchSasOpen{z-index:10}
+body.touch.flying .navpanel.touchSasOpen #sasDirections{display:grid;position:absolute;right:0;bottom:calc(100% + 6px);width:276px;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px;background:#2b3236f2;border:2px ridge #8b9293;border-radius:8px;box-sizing:border-box}
+
+@media (orientation:landscape) and (max-height:500px){
+  /* Landscape phone flight: left column orbit/warp then the stick; right column the menus, the stage
+     stack, then thrust and roll; the console sits between the stick and the thrust buttons. */
+  body.touch.flying .universalClock{top:4px!important;left:8px;font-size:9px;padding:2px 6px}
+  body.touch.flying .hudreadings.altimeter{top:2px;width:200px;padding:3px 8px;gap:6px}
+  body.touch.flying .altimeter strong{font-size:18px}
+  body.touch.flying .altimeter>div:last-child strong{font-size:14px}
+  body.touch #flightQuickNav{top:26px;left:8px;width:236px;max-height:96px;overflow:auto;grid-template-columns:auto 1fr auto;gap:3px 5px;padding:4px;box-sizing:border-box}
+  body.touch #flightQuickNav>b,body.touch #flightQuickNav>small{order:1;line-height:1.35}
+  body.touch.flying:has(#touchFlight .touchRcs:not([hidden])) #flightQuickNav{max-height:min(96px,calc(100dvh - 264px))}
+  body.touch #flightQuickNav button{padding:4px 6px;min-width:44px}
+  body.touch #flightQuickNav>button:not(#openOrbitMap):not(#flightPause){order:2}
+  body.touch.flying header{height:48px}
+  body.touch #flightMenu{top:58px;right:8px;width:64px}
+  body.touch.flying #panelDock{top:58px;right:78px}
+  body.touch.flying #panelDock button{min-width:60px}
+  body.touch.flying #openDocking{top:58px;right:144px;width:80px;min-height:44px}
+  body.touch.flying #audioButton{top:58px;right:230px;width:44px;height:44px}
+  body.touch.flying #stageDock{left:auto;right:8px;top:106px;bottom:auto;width:132px;max-height:calc(100dvh - 216px)}
+  body.touch #flightSystems{right:8px;bottom:8px;width:72px}
+  body.touch #touchFlight .touchLeft{left:8px;bottom:8px}
+  body.touch #touchFlight .touchRight{right:8px;bottom:8px;flex-direction:column-reverse}
+  body.touch #touchFlight .touchRoll{margin-right:78px}
+  body.touch.flying #inspector{top:106px;bottom:112px;right:8px;width:250px;z-index:9}
+  body.touch.flying:not(.inspector-closed) #stageDock{visibility:hidden}
+}
+@media (orientation:portrait) and (max-width:600px){
+  /* Portrait phone flight: console at the bottom, the stick and thrust above it, menus in a right column,
+     the vessel's panel as a sheet above the vessel. */
+  body.touch.flying .hudreadings.altimeter{top:52px;width:200px;padding:3px 8px;gap:6px}
+  body.touch.flying .altimeter strong{font-size:18px}
+  body.touch.flying .universalClock{top:104px!important;left:8px;right:auto;font-size:9px}
+  body.touch #flightMenu{top:4px;left:8px;width:64px}
+  body.touch #flightQuickNav{top:124px;left:8px;width:calc(100vw - 134px);max-width:300px;max-height:104px;grid-template-columns:auto 1fr auto;gap:3px 5px;padding:4px;box-sizing:border-box}
+  body.touch #flightQuickNav>b,body.touch #flightQuickNav>small{order:1;line-height:1.35}
+  body.touch #flightQuickNav button{padding:4px 6px;min-width:44px}
+  body.touch #flightQuickNav>button:not(#openOrbitMap):not(#flightPause){order:2}
+  body.touch.flying #panelDock{top:52px;right:8px}
+  body.touch.flying #panelDock button{min-width:64px}
+  body.touch.flying #openDocking{top:100px;right:8px;width:64px;min-height:44px}
+  body.touch.flying #audioButton{top:148px;right:8px;width:44px;height:44px}
+  body.touch.flying #stageDock{left:auto;right:8px;top:200px;bottom:auto;width:110px;max-height:calc(100dvh - 430px)}
+  body.touch.flying .navpanel{left:50%}
+  body.touch #flightSystems{right:8px;bottom:118px;width:72px}
+  body.touch #touchFlight .touchLeft{left:8px;bottom:118px;flex-direction:column;align-items:flex-start}
+  body.touch #touchFlight .touchLeft .touchRcs{order:0}
+  body.touch #touchFlight .touchRight{right:8px;bottom:118px;flex-direction:column-reverse}
+  body.touch #touchFlight .touchRoll{margin-right:78px}
+  body.touch.flying #inspector{top:100px;left:8px;right:126px;bottom:auto;width:auto;height:calc(40dvh - 100px);min-height:180px;z-index:9}
+}
+@media (orientation:landscape) and (max-height:500px){
+  /* Landscape phone workshop: the panel buttons side by side, the view actions after them, the part
+     categories in one scrolling line so the parts stay visible. */
+  body.touch:not(.flying) #panelDock{left:250px;right:auto;justify-content:flex-start;gap:6px}
+  body.touch:not(.flying) #panelDock button{min-width:56px}
+  body.touch:not(.flying) .viewtop{left:372px;right:8px}
+  body.touch:not(.flying) .viewactions button{padding:6px 7px}
+  body.touch #library .panelhead{padding:4px 10px 0}
+  body.touch:not(.flying):not(.at-center) #audioButton{top:auto;bottom:8px;right:auto;left:12px;width:44px;height:44px}
+  body.touch:not(.flying) #stageDock{top:105px;bottom:auto;right:8px;max-height:calc(100dvh - 175px)}
+  body.touch #categories{flex-wrap:nowrap;overflow-x:auto;padding:4px 8px;flex:none}
+  body.touch #categories button{flex:none}
+}
+@media (orientation:portrait) and (max-width:600px){
+  /* Portrait phone workshop: files beside the panel buttons, the view actions below, the part library as
+     a horizontally scrolling sheet above the toolbar so the craft stays in view. */
+  body.touch:not(.flying) .craftFiles{position:fixed;top:56px;right:8px;z-index:8}
+  body.touch:not(.flying) .craftFiles button{padding:4px 8px}
+  body.touch:not(.flying) #panelDock{left:8px;right:auto;top:56px;justify-content:flex-start;gap:6px}
+  body.touch:not(.flying) #panelDock button{min-width:56px}
+  body.touch:not(.flying) .viewtop{left:8px;right:8px;top:104px;justify-content:flex-start}
+  body.touch:not(.flying) .viewactions{flex-wrap:nowrap}
+  body.touch:not(.flying) .viewactions button{padding:4px 6px}
+  body.touch:not(.flying) #audioButton{top:152px;right:8px;width:44px;height:44px}
+  body.touch .centerSidebar{max-height:calc(100dvh - 150px)}
+  body.touch:not(.flying) #stageDock{top:200px;right:8px;bottom:auto;width:112px;max-height:calc(100dvh - 512px)}
+  body.touch #library,body.touch:not(.flying) #inspector{left:8px;right:8px;top:auto;bottom:112px;width:auto;height:190px}
+  body.touch:not(.flying) #toolbar{padding:3px;gap:2px;row-gap:2px}
+  body.touch:not(.flying) #toolbar button{padding:4px}
+  body.touch:not(.flying) #inspector{z-index:7}
+  body.touch #library .panelhead{display:none}
+  body.touch #library .search{margin:4px 8px}
+  body.touch #categories{flex-wrap:nowrap;overflow-x:auto;padding:4px 8px;flex:none}
+  body.touch #categories button{flex:none}
+  body.touch #library #parts{flex:1;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:96px;grid-template-rows:minmax(0,1fr);overflow-x:auto;overflow-y:hidden;padding:0 8px 6px}
+  body.touch #library .partcard{min-height:0}
+  body.touch #library .partcard img{height:52px}
+}
+/* Open flight menus keep their full width on touch; the stage stack steps aside while a menu or the
+   vessel panel is open over it. */
+body.touch #flightMenu[open],body.touch #flightSystems[open]{width:min(300px,calc(100vw - 16px))}
+body.touch #flightSystems .flightbottom{max-height:min(270px,calc(100dvh - 160px))}
+body.touch.flying:has(#flightMenu[open]) #stageDock,body.touch.flying:has(#flightSystems[open]) #stageDock{visibility:hidden}
+@media (max-width:650px){body.touch #orbitOverlay .mapReadings{top:122px}}

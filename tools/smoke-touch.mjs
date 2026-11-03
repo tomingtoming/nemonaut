@@ -69,6 +69,67 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
     await touch('touchEnd', x, y);
     await page.waitForTimeout(700);
   };
+  // Layout (8e): the key controls of a screen do not overlap each other and lie inside the viewport, and
+  // the visible buttons in its key panels are at least 40 px in both directions (touch targets).
+  const checkLayout = async (screen, keys, panels) => {
+    const r = await page.evaluate(
+      ({keys, panels}) => {
+        const shown = e => {
+          const b = e.getBoundingClientRect(),
+            cs = getComputedStyle(e);
+          return b.width > 0 && b.height > 0 && cs.visibility !== 'hidden' && !e.closest('[hidden]');
+        };
+        const boxes = keys.flatMap(k =>
+          [...document.querySelectorAll(k)]
+            .filter(shown)
+            .map((e, i) => ({k: k + (i ? '#' + i : ''), b: e.getBoundingClientRect()}))
+        );
+        const overlaps = [];
+        for (let i = 0; i < boxes.length; i++)
+          for (let j = i + 1; j < boxes.length; j++) {
+            const a = boxes[i].b,
+              c = boxes[j].b;
+            if (
+              Math.min(a.right, c.right) - Math.max(a.left, c.left) > 1 &&
+              Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 1
+            )
+              overlaps.push(boxes[i].k + ' x ' + boxes[j].k);
+          }
+        const outside = boxes
+          .filter(
+            ({b}) => b.left < -1 || b.top < -1 || b.right > innerWidth + 1 || b.bottom > innerHeight + 1
+          )
+          .map(({k}) => k);
+        const small = panels.flatMap(p =>
+          [...document.querySelectorAll(p + ' :is(button,summary)')]
+            .filter(
+              e => shown(e) && (e.getBoundingClientRect().width < 40 || e.getBoundingClientRect().height < 40)
+            )
+            .map(e => {
+              const b = e.getBoundingClientRect();
+              return `${p} "${(e.textContent ?? '').trim().slice(0, 12)}" ${Math.round(b.width)}x${Math.round(b.height)}`;
+            })
+        );
+        return {count: boxes.length, overlaps, outside, small};
+      },
+      {keys, panels}
+    );
+    expect(
+      `${tag} ${screen} key controls do not overlap (${r.count})`,
+      r.overlaps.length === 0,
+      r.overlaps.join(', ') || 0
+    );
+    expect(
+      `${tag} ${screen} key controls inside the viewport`,
+      r.outside.length === 0,
+      r.outside.join(', ') || 0
+    );
+    expect(
+      `${tag} ${screen} touch targets >= 40 px`,
+      r.small.length === 0,
+      r.small.slice(0, 8).join(', ') || 0
+    );
+  };
   const selectedPart = () => page.evaluate(() => !!document.querySelector('#selection .parttitle'));
   await page.goto(url);
   await page.waitForTimeout(7000);
@@ -81,11 +142,42 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   expect(`${tag} body.touch`, l.touch, l.touch);
   expect(`${tag} center no overflow`, !l.overflow, l.overflow);
   await shot('center');
+  await checkLayout('center', ['.centerSidebar', '.centerFacilityCard', '#audioButton'], []);
   await page.tap('#enterVAB');
   await page.waitForTimeout(3000);
   l = await layout();
   expect(`${tag} workshop no overflow`, !l.overflow, l.overflow);
   await shot('workshop');
+  await checkLayout(
+    'workshop',
+    [
+      'header nav',
+      'header>#craftName',
+      '.craftFiles',
+      '.headright',
+      '#panelDock button',
+      '.viewactions',
+      '#library',
+      '#toolbar',
+      '#stageDock',
+      '#audioButton'
+    ],
+    ['header', '#panelDock', '.viewactions', '#categories', '#toolbar', '#stageDock']
+  );
+  // ≤600 px hides the file buttons on the desktop layout; on touch they stay reachable.
+  const files = await page.evaluate(() =>
+    ['save', 'load', 'examples'].map(id => {
+      const e = document.getElementById(id),
+        b = e?.getBoundingClientRect(),
+        top = b && b.width > 0 && document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      return `${id}:${!!top && !!e?.contains(top) && b.right <= innerWidth && b.bottom <= innerHeight}`;
+    })
+  );
+  expect(
+    `${tag} save/load/examples reachable`,
+    files.every(f => f.endsWith('true')),
+    files.join(' ')
+  );
   const selectedBefore = await selectedPart();
   const designHit = await longPressPart('designPartWindows');
   expect(`${tag} workshop long press opens a design part window`, !!designHit, JSON.stringify(designHit));
@@ -116,6 +208,71 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
     const opened = await partWindows('partWindows');
     expect(`${tag} flight short tap opens no window`, opened === 0, opened);
   }
+  const flightKeys = [
+    '#universalTime',
+    '.hudreadings.altimeter',
+    '#flightQuickNav',
+    '.navpanel',
+    '#flightMenu',
+    '#flightSystems',
+    '#stageDock',
+    '#openDocking',
+    '#audioButton',
+    '#panelDock button[aria-controls=inspector]',
+    '.headright',
+    '#touchStick',
+    '#touchFlight .touchRoll',
+    '#touchFlight .touchMain'
+  ];
+  const flightPanels = [
+    '.navpanel',
+    '#stageDock',
+    '#touchFlight',
+    '#flightQuickNav',
+    '#panelDock',
+    '.headright',
+    '#flightMenu',
+    '#flightSystems'
+  ];
+  // A part selected in the workshop opens the vessel panel, which stays open in flight: it must not cover
+  // the flight controls either. Then close it for the rest of the run.
+  const inspectorToggle = '#panelDock button[aria-controls=inspector]';
+  if ((await page.getAttribute(inspectorToggle, 'aria-expanded')) !== 'true') await page.tap(inspectorToggle);
+  await page.waitForTimeout(300);
+  await checkLayout(
+    'flight vessel panel',
+    [
+      '#inspector',
+      '.navpanel',
+      '#touchStick',
+      '#touchFlight .touchRoll',
+      '#touchFlight .touchMain',
+      '#flightSystems',
+      inspectorToggle,
+      '.headright',
+      '#stageDock'
+    ],
+    []
+  );
+  await shot('flight-inspector');
+  await page.tap(inspectorToggle);
+  await page.waitForTimeout(300);
+  await checkLayout('flight', flightKeys, flightPanels);
+  // The SAS directions open above the compact console and close after a choice.
+  await page.tap('#touchSasToggle');
+  await page.waitForTimeout(300);
+  await checkLayout(
+    'flight SAS directions',
+    ['#sasDirections', '.navpanel canvas', '#touchStick'],
+    ['#sasDirections']
+  );
+  await shot('flight-sas');
+  await page.tap('#sasDirections button[data-mode=hold]');
+  await page.waitForTimeout(300);
+  const sasClosed = await page.evaluate(
+    () => getComputedStyle(document.getElementById('sasDirections')).display
+  );
+  expect(`${tag} SAS directions close after a choice`, sasClosed === 'none', sasClosed);
   // Flight controls (8b): stage, full throttle and the stick feed the keyboard's held-key path.
   const controls = await page.evaluate(() => {
     const visible = e => !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0;
@@ -189,6 +346,19 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
       };
     });
   const mapOpen = await mapState();
+  await checkLayout(
+    'orbit map',
+    [
+      '.mapToolbar',
+      '#closeOrbitMap',
+      '#mapPlanPanel',
+      '#mapOrbitPanel',
+      '.trajectoryPanel',
+      '.mapTargets',
+      '#mapThrottle'
+    ],
+    ['.mapToolbar', '#orbitOverlay .mapHeader', '#mapThrottle']
+  );
   expect(`${tag} orbit map opens by tap`, mapOpen.visible && mapOpen.km > 0, JSON.stringify(mapOpen));
   // Free canvas points (not under the toolbar or panels), nearest the canvas centre first.
   const mapPoints = await page.evaluate(() => {

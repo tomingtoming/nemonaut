@@ -112,6 +112,25 @@ export function mountTouchFlight(hud: HTMLElement, body: HTMLElement = document.
   right.append(groups.roll, groups.main);
   root.append(left, right);
   hud.append(root);
+  // The compact touch console shows the SAS directions above it on demand (hidden by CSS without
+  // body.touch); choosing a direction closes them again.
+  const nav = hud.querySelector('.navpanel');
+  if (nav) {
+    const sasToggle = document.createElement('button');
+    sasToggle.type = 'button';
+    sasToggle.id = 'touchSasToggle';
+    sasToggle.textContent = 'SAS方向';
+    sasToggle.setAttribute('aria-expanded', 'false');
+    const showSas = (open: boolean) => {
+      nav.classList.toggle('touchSasOpen', open);
+      sasToggle.setAttribute('aria-expanded', String(open));
+    };
+    sasToggle.onclick = () => showSas(!nav.classList.contains('touchSasOpen'));
+    nav.addEventListener('click', e => {
+      if (e.target instanceof Element && e.target.closest('#sasDirections button')) showSas(false);
+    });
+    nav.append(sasToggle);
+  }
   const showHeld = () => {
     root.dataset.held = [...touchKeys.held()].sort().join(' ');
   };
