@@ -34,8 +34,8 @@ export function deliveryTelemetry(
   const center = v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q));
   const distance = deliveryDistance(center, v.universalTime, site),
     speed = surfaceRelativeVelocity(center, v.vel, v.universalTime).length();
-  const probe = v.parts.find(p => p.type === 'probe'),
-    solar = v.parts.some(p => p.type === 'solar');
+  const probe = v.parts.find(p => PARTS[p.type].surfaceObservation === true),
+    solar = v.parts.some(p => (PARTS[p.type].solarPower ?? 0) > 0);
   const sources = surfaceOrigins(
     v.parts.map(p => p.id),
     launchOrigins(history)

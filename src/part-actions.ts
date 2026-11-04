@@ -67,7 +67,7 @@ export function partActions(f: PartActionFlight | null | undefined, id: string):
   if (!f || !p) return [];
   const d = PARTS[p.type];
   return [
-    ...(p.type === 'probe'
+    ...(PARTS[p.type].surfaceObservation === true
       ? [
           {
             key: 'observation',

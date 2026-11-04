@@ -1,3 +1,4 @@
+import {PARTS} from './catalog.js';
 import * as T from 'three';
 import {DELIVERY_SITE, DELIVERY_SITES, deliveryDistance, type DeliverySite} from './delivery-sites.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
@@ -52,7 +53,9 @@ export function createObservations(
   parts: readonly Pick<import('./catalog.js').Part, 'id' | 'type'>[]
 ): ObservationMap {
   return new Map<string, ObservationState>(
-    parts.filter(p => p.type === 'probe').map(p => [p.id, {enabled: false, day: 0, night: 0}])
+    parts
+      .filter(p => PARTS[p.type].surfaceObservation === true)
+      .map(p => [p.id, {enabled: false, day: 0, night: 0}])
   );
 }
 export function observationDemand(

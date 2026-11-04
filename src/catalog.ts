@@ -29,6 +29,8 @@ export type PartDefinition = {
   rcsThrust?: number;
   rcsIsp?: number;
   control?: boolean;
+  /** Onboard surface observation instrument; independent of command capability. */
+  surfaceObservation?: boolean;
   reactionTorque?: number;
   aircraftControl?: boolean;
   air?: boolean;
@@ -300,6 +302,7 @@ const BASE_PARTS = {
     mass: 90,
     size: [1.25, 0.4, 1.25],
     control: true,
+    surfaceObservation: true,
     reactionTorque: 1200,
     battery: 200,
     desc: '小型無人機のための軽量制御ユニット。'

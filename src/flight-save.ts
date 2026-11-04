@@ -316,7 +316,7 @@ export function loadFlight(
       return {status: v.status, fraction: v.fraction};
     });
   check(chutes.size === chuteIds.size);
-  const observationIds = new Set(parts.filter(p => p.type === 'probe').map(p => p.id)),
+  const observationIds = new Set(parts.filter(p => PARTS[p.type].surfaceObservation === true).map(p => p.id)),
     observations =
       value.observations === undefined
         ? createObservations(parts)

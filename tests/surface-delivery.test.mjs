@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {part} from '../dist/catalog.js';
+import {PARTS, part} from '../dist/catalog.js';
+import {partActions, setPartAction} from '../dist/part-actions.js';
+import {deliveryStation} from '../dist/delivery-station.js';
+import {createObservations} from '../dist/observation.js';
 import {loadFlight, saveFlight} from '../dist/flight-save.js';
 import {launchWorld} from '../dist/world-operations.js';
 import {worldFromFlight, flightFromWorld, validateWorld} from '../dist/world-save.js';
@@ -15,9 +18,9 @@ import {
 } from '../dist/delivery-sites.js';
 import {deliveryTelemetry, recordDeliveryAchievements} from '../dist/surface-delivery.js';
 
-function fixture() {
-  const probe = part('probe'),
-    solar = part('solar', [0, 0.3, 0], [Math.PI / 2, 0, 0], probe.id);
+function fixture(probeType = 'probe', solarType = 'solar') {
+  const probe = part(probeType),
+    solar = part(solarType, [0, 0.3, 0], [Math.PI / 2, 0, 0], probe.id);
   const world = launchWorld(worldFromFlight(null), {
     parts: [probe, solar],
     name: 'Station',
@@ -115,5 +118,46 @@ test('Practice, missing origin, transport, flyby, damage and unpowered stations 
     assert.equal(recordDeliveryAchievements(world.history, f, {practice: true}), world.history);
   } finally {
     f.dispose();
+  }
+});
+
+test('observation and solar capabilities survive different part names and saved station tracking', () => {
+  const capsule = PARTS.capsule,
+    battery = PARTS.battery,
+    probe = PARTS.probe;
+  let f, restored;
+  try {
+    PARTS.capsule = {...probe};
+    PARTS.battery = {...PARTS.solar};
+    const setup = fixture('capsule', 'battery');
+    f = setup.f;
+    const id = f.parts[0].id;
+    assert.ok(f.observations.has(id));
+    assert.ok(partActions(f, id).some(a => a.key === 'observation'));
+    assert.equal(setPartAction(f, id, 'observation', true), true);
+    assert.equal(deliveryTelemetry(f, setup.world.history).ready, true);
+    const history = recordDeliveryAchievements(setup.world.history, f);
+    restored = loadFlight(saveFlight(f));
+    assert.equal(restored.observations.get(id).enabled, true);
+    assert.equal(deliveryStation(history, [restored]).vessel, restored);
+    PARTS.capsule.surfaceObservation = false;
+    assert.equal(createObservations(f.parts).size, 0);
+    assert.equal(
+      partActions(f, id).some(a => a.key === 'observation'),
+      false
+    );
+    assert.equal(deliveryTelemetry(f, setup.world.history).ready, false);
+    assert.equal(deliveryStation(history, [restored]).vessel, null);
+    PARTS.probe = {...probe, surfaceObservation: false};
+    assert.equal(createObservations([part('probe')]).size, 0, 'name alone is not an instrument');
+    PARTS.capsule.surfaceObservation = true;
+    PARTS.battery.solarPower = 0;
+    assert.equal(deliveryTelemetry(f, setup.world.history).ready, false, 'solar generation must be positive');
+  } finally {
+    f?.dispose();
+    restored?.dispose();
+    PARTS.capsule = capsule;
+    PARTS.battery = battery;
+    PARTS.probe = probe;
   }
 });

@@ -251,7 +251,7 @@ export function mountPartWindows(
         w.transfer.select.disabled = !choices.length;
       }
       const values: string[] = [];
-      if (p.type === 'probe') {
+      if (PARTS[p.type].surfaceObservation === true) {
         const site = observationSite(f, id),
           s = observationData(f.observations.get(id), site ?? undefined),
           reason = observationStatus(f, id);

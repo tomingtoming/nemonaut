@@ -1,3 +1,4 @@
+import {PARTS} from './catalog.js';
 import {powerTotals} from './power.js';
 import * as T from 'three';
 import {DELIVERY_SITE, deliveryDistance, type DeliverySite} from './delivery-sites.js';
@@ -46,7 +47,9 @@ export function deliveryStation<R extends DeliveryRecord, V extends StationVesse
 ): DeliveryStation<R, V> | LostDeliveryStation<R> | null {
   const record = history.find(e => e.type === 'delivery' && e.siteId === site.id);
   if (!record) return null;
-  const vessel = vessels.find(v => v.parts.some(p => p.id === record.probePartId && p.type === 'probe'));
+  const vessel = vessels.find(v =>
+    v.parts.some(p => p.id === record.probePartId && PARTS[p.type].surfaceObservation === true)
+  );
   if (!vessel) return {record, vessel: null};
   const probe = vessel.parts.find(p => p.id === record.probePartId);
   if (!probe) throw Error('配達した探査コアが見つかりません');
