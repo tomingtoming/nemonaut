@@ -1,3 +1,4 @@
+import {usesAxialControls} from './command-frame.js';
 import {isParked} from './ground-rest.js';
 import {fractureVessel, copyPartState} from './fracture.js';
 import {recordFailure, type FailureEvent} from './failure-events.js';
@@ -488,11 +489,7 @@ export class Flight {
     this.deflections = new Map<string, number>();
     this.wheelMotion = new Map<string, WheelMotion>();
     this.gimbals = new Map<string, T.Vector3>();
-    this.rocketAxes =
-      parts.some(p => p.type === 'capsule') ||
-      (parts.some(p => p.type === 'probe') &&
-        parts.some(p => PARTS[p.type].thrust && !PARTS[p.type].air && !PARTS[p.type].water) &&
-        !parts.some(p => PARTS[p.type].aircraftControl));
+    this.rocketAxes = usesAxialControls(parts, PARTS);
     this.telemetry = {contacts: 0};
     this.chutes = new Map<string, ParachuteState>(
       this.parts.filter(p => PARTS[p.type].parachute).map(p => [p.id, {status: 'stowed', fraction: 0}])

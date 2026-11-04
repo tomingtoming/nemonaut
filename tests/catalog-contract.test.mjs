@@ -106,3 +106,16 @@ test('motor capability requires a wheel', () => {
     )
   );
 });
+
+test('command frames require a valid mode and a command part', () => {
+  assert.ok(
+    catalogContractErrors({bad: {...PARTS.probe, commandFrame: 'unknown'}}).some(e =>
+      e.endsWith('commandFrame')
+    )
+  );
+  assert.ok(
+    catalogContractErrors({bad: {...PARTS.engine, commandFrame: 'axial'}}).some(e =>
+      e.includes('requires control')
+    )
+  );
+});

@@ -30,6 +30,10 @@ export function catalogContractErrors(parts) {
       if (!vector(part.gimbalPivot)) fail('gimbal requires gimbalPivot');
       if (!(part.thrust > 0)) fail('gimbal requires thrust');
     }
+    if (part.commandFrame !== undefined) {
+      if (!['axial', 'forward', 'legacy-auto'].includes(part.commandFrame)) fail('commandFrame');
+      if (!part.control) fail('commandFrame requires control');
+    }
     if (part.controlAxis !== undefined) {
       if (!['auto', 'pitch', 'roll', 'yaw'].includes(part.controlAxis)) fail('controlAxis');
       for (const field of ['wing', 'chord', 'maxDeflection']) {

@@ -33,6 +33,8 @@ export type PartDefinition = {
   surfaceObservation?: boolean;
   reactionTorque?: number;
   aircraftControl?: boolean;
+  /** Assembly-local control frame; legacy-auto preserves existing probe craft until explicit frame selection. */
+  commandFrame?: 'axial' | 'forward' | 'legacy-auto';
   air?: boolean;
   water?: boolean;
   streamlinedNose?: boolean;
@@ -291,6 +293,7 @@ const BASE_PARTS = {
     mass: 620,
     size: [1.25, 1.3, 1.25],
     control: true,
+    commandFrame: 'axial',
     reactionTorque: 7000,
     battery: 1000,
     desc: '耐熱外殻と姿勢制御を備える有人カプセル。'
@@ -302,6 +305,7 @@ const BASE_PARTS = {
     mass: 90,
     size: [1.25, 0.4, 1.25],
     control: true,
+    commandFrame: 'legacy-auto',
     surfaceObservation: true,
     reactionTorque: 1200,
     battery: 200,
@@ -315,6 +319,7 @@ const BASE_PARTS = {
     mass: 510,
     size: [1.25, 2, 1.25],
     control: true,
+    commandFrame: 'forward',
     battery: 500,
     desc: '航空機・ローバー向けの広視界キャノピー。'
   },
