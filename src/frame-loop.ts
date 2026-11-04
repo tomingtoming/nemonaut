@@ -15,6 +15,7 @@ import {constrainSurfaceCamera, orbitByArrows} from './camera-up.js';
 import {physicalWarpStop} from './physics-clock.js';
 import {formatUniversalTime} from './universal-time.js';
 import {canControl} from './fleet.js';
+import {releaseBrakeForDrive} from './vessel-controls.js';
 import {PARTS} from './catalog.js';
 import {navigationVelocity} from './navigation.js';
 import {bodyState, bodyUp, referenceBody} from './celestial.js';
@@ -153,6 +154,12 @@ export function startFrameLoop(
             const dockingCommands = dockingPilot.active ? dockingPilot.step(currentFlight(), 1 / 120) : {};
             const stepped = currentFlight(),
               world = currentWorldRuntime();
+            // W/S with the brake on drives powered wheels off at once (BACKLOG 9a).
+            if (releaseBrakeForDrive(stepped, (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0))) {
+              $('#brake', 'button').classList.remove('active');
+              $('#brake', 'button').textContent = 'BRAKE OFF';
+              notify('ブレーキを解除しました');
+            }
             world.replace(stepped);
             world.step(1 / 120, {
               portForward:

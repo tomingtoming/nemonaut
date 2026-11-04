@@ -9,17 +9,20 @@ export function isFirstVisit({historyCount = 0, vesselCount = 0, designCount = 0
   return !historyCount && !vesselCount && !designCount;
 }
 // The first ignition with the throttle at 0 lights the engines without thrust, so nothing seems to happen.
-// On touch the hint names the on-screen buttons (touch-flight.ts) instead of the keys.
+// On touch the hint names the on-screen buttons (touch-flight.ts) instead of the keys. A craft without a
+// thrust part (wheels only) has no throttle to raise, so it gets no hint (BACKLOG 9a).
 export function ignitionHint({
   firstStage,
   throttle,
-  touch = false
+  touch = false,
+  thrust = true
 }: {
   firstStage: boolean;
   throttle: number;
   touch?: boolean;
+  thrust?: boolean;
 }): string {
-  if (!firstStage || throttle !== 0) return '';
+  if (!firstStage || throttle !== 0 || !thrust) return '';
   return touch ? 'スロットル0%です。「全推力」で全開、「推力0」で停止' : 'スロットル0%です。Zで全開、Xで停止';
 }
 export function renderFirstSteps(

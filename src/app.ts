@@ -1,6 +1,8 @@
 import './storage-migration.js';
 import {watchTouchDevice} from './touch-device.js';
 import {mountTouchFlight} from './touch-flight.js';
+import {mountVesselControls} from './vessel-controls-panel.js';
+import {wireHelp} from './help-dialog.js';
 import {wireTouchPartWindows} from './touch-part-windows.js';
 import {mountFailureLog} from './failure-feedback.js';
 import {FailureVisuals} from './failure-visuals.js';
@@ -103,6 +105,8 @@ wireHooks({
 // Touch devices get body.touch (touch controls and layout); a mouse keeps the desktop layout.
 watchTouchDevice();
 mountTouchFlight($('#flightHud', 'div'));
+mountVesselControls($('#flightHud', 'div'));
+wireHelp($('#help', 'button'));
 // English display rewrites text through dist/i18n/en.json; Japanese changes nothing.
 await installTranslation();
 for (const id of ['language', 'centerLanguage']) {

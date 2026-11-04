@@ -8,12 +8,7 @@ export const examples = {
     'land'
   ],
   hopper: ['Hopper / 24', '精密着陸機', '四脚・単段式 · Spaceで点火 · 姿勢と推力を手動調整', 'land'],
-  courier: [
-    'Courier / 23',
-    '観測機運搬ローバー',
-    'Spaceで起動 · W/S駆動・A/D操舵・B停止 · 次段で設置',
-    'land'
-  ],
+  courier: ['Courier / 23', '観測機運搬ローバー', 'W/S駆動・A/D操舵・B停止 · Spaceで設置', 'land'],
   'orbital-tug': [
     'Orbital Tug / 22',
     'ランデブー・ドッキング',

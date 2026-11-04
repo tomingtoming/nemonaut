@@ -420,7 +420,8 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
     '.headright',
     '#touchStick',
     '#touchFlight .touchRoll',
-    '#touchFlight .touchMain'
+    '#touchFlight .touchMain',
+    '#vesselControls'
   ];
   const flightPanels = [
     '.navpanel',
@@ -430,7 +431,8 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
     '#panelDock',
     '.headright',
     '#flightMenu',
-    '#flightSystems'
+    '#flightSystems',
+    '#vesselControls'
   ];
   // A part selected in the workshop opens the vessel panel, which stays open in flight: it must not cover
   // the flight controls either. Then close it for the rest of the run.
@@ -456,6 +458,43 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   await page.tap(inspectorToggle);
   await page.waitForTimeout(300);
   await checkLayout('flight', flightKeys, flightPanels);
+  // 9a: the controls panel lists this vessel's controls by on-screen names, no key letters; 「? 操作」 opens
+  // the full list with touch gestures.
+  const noKeys = text => !/(^|[\s/·])([A-Z]|Space|Shift|Ctrl)(?=[\s/·]|$)/m.test(text);
+  const panel = await page.evaluate(() => {
+    const e = document.getElementById('vesselControls');
+    return e
+      ? {
+          open: e.open,
+          shown: e.getBoundingClientRect().height > 0,
+          rows: e.querySelectorAll('dt').length,
+          text: e.innerText
+        }
+      : null;
+  });
+  expect(
+    `${tag} controls panel shown open with rows`,
+    !!panel && panel.open && panel.shown && panel.rows >= 3,
+    JSON.stringify(panel && {open: panel.open, shown: panel.shown, rows: panel.rows})
+  );
+  expect(
+    `${tag} controls panel has no key letters`,
+    !!panel && noKeys(panel.text),
+    JSON.stringify(panel?.text)
+  );
+  expect(`${tag} controls panel names the throttle buttons`, !!panel && /「全推力」/.test(panel.text), '');
+  await shot('flight-controls-panel');
+  await page.tap('#help');
+  await page.waitForTimeout(500);
+  const help = await page.evaluate(() => ({
+    open: document.getElementById('modal').open,
+    text: document.getElementById('modalBody').innerText
+  }));
+  expect(`${tag} help opens by tap`, help.open && /「次段」/.test(help.text), help.open);
+  expect(`${tag} help has no key letters on touch`, noKeys(help.text), '');
+  await shot('flight-help');
+  await page.tap('#modal .close');
+  await page.waitForTimeout(300);
   // The SAS directions open above the compact console and close after a choice.
   await page.tap('#touchSasToggle');
   await page.waitForTimeout(300);

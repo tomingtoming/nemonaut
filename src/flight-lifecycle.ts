@@ -10,6 +10,7 @@ import {selectVessel, canControl} from './fleet.js';
 import {PARTS} from './catalog.js';
 import {Flight} from './core.js';
 import {ignitionHint} from './first-steps.js';
+import {launchHint} from './vessel-controls.js';
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
 import {$, errorMessage, notify} from './ui-common.js';
@@ -129,7 +130,8 @@ export function startFlight(restored: Flight | null = null) {
         ? '月の高度20 km円軌道から開始。月基準の速度を表示します。'
         : state.flight.environment === 'orbit'
           ? '高度80 kmの初期円軌道から開始。無推力で周回します。'
-          : 'Spaceで始動。車輪はW/Sで前後進、A/Dで操向。'
+          : launchHint(state.flight.parts, document.body.classList.contains('touch')) ||
+            '使える操作は左の「この機体で使える操作」にあります'
   );
 }
 export function syncFlightControls() {
@@ -230,7 +232,8 @@ export function stage() {
     hint = ignitionHint({
       firstStage,
       throttle: state.flight.throttle,
-      touch: document.body.classList.contains('touch')
+      touch: document.body.classList.contains('touch'),
+      thrust: state.flight.parts.some(p => PARTS[p.type].thrust)
     });
   gameAudio().play('stage');
   updateFlightControls(document, state.flight);

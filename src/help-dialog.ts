@@ -1,0 +1,74 @@
+// 「? 操作」 (BACKLOG 9a): the full list of keys for the workshop and for flight in the #modal dialog, with
+// the touch gestures and on-screen buttons instead on a touch device. The part-dependent subset is in
+// 「この機体で使える操作」 (vessel-controls-panel.ts). Static text only; no import-time side effects.
+import {showModal} from './ui-common.js';
+
+type Rows = readonly (readonly [string, string])[];
+const WORKSHOP_KEYS: Rows = [
+  ['クリック', '部品を選ぶ / 部品カードの次に取付位置をクリックして置く'],
+  ['右ドラッグ / ホイール', '視点を回す / 拡大縮小'],
+  ['中ドラッグ', '視点を平行移動'],
+  ['部品を右クリック', '部品の設定窓（飛行中は操作窓）'],
+  ['G / E / Esc', '移動 / 回転 / 配置の取消・選択に戻る'],
+  ['X / Shift+X', '対称の数を増やす / 減らす'],
+  ['R / C', '軸対称・鏡面の切替 / スナップの切替'],
+  ['F / Delete', '機体全体を表示 / 選んだ接続枝を削除'],
+  ['Ctrl+Z / Ctrl+Y', '元に戻す / やり直す'],
+  ['矢印キー', '視点を回す']
+];
+const FLIGHT_KEYS: Rows = [
+  ['W / S · A / D', '動力付きの車輪で前後・操舵（Spaceは要らない。ブレーキは自動で解除）'],
+  ['B', 'ブレーキ'],
+  ['Space', 'エンジン始動 / 次段'],
+  ['Z / X', '全推力 / 推力0'],
+  ['Shift / Ctrl', '推力を上げる / 下げる'],
+  ['W/S · A/D · Q/E', 'ピッチ · ヨー · ロール（姿勢制御・操舵面）'],
+  ['T', 'SAS（姿勢保持）'],
+  ['R', 'RCS 入 / 切'],
+  ['I/K · J/L · U/O', 'RCSで平行移動'],
+  ['H', 'パラシュート待機'],
+  ['CapsLock', '精密操縦（姿勢操作を25%に）'],
+  ['P', '一時停止'],
+  ['M', '軌道マップ'],
+  ['F', 'カメラを機体に合わせる'],
+  ['矢印キー / 右ドラッグ', '視点を回す'],
+  ['F5 / F9', '飛行保存 / 飛行復帰']
+];
+const WORKSHOP_TOUCH: Rows = [
+  ['タップ', '部品を選ぶ'],
+  ['部品カード → タップ', '取付位置に仮置き。もう一度タップで決定、「取消」でやめる'],
+  ['1本指ドラッグ', '視点を回す'],
+  ['2本指', '拡大縮小 · 平行移動'],
+  ['長押し', '部品の設定窓'],
+  ['下のツールバー', '移動 · 回転 · 対称 · スナップ'],
+  ['↶ / ↷', '元に戻す / やり直す']
+];
+const FLIGHT_TOUCH: Rows = [
+  ['「走行」スティック', '動力付きの車輪で前後・操舵（「次段」は要らない。ブレーキは自動で解除）'],
+  ['「姿勢」スティック · ↺↻', 'ピッチ · ヨー · ロール'],
+  ['「次段」', 'エンジン始動 / 次段'],
+  ['「全推力」「推力0」', '全推力 / 推力0。細かくは推力のつまみ'],
+  ['「BRAKE」「SAS」「RCS」', 'ブレーキ · 姿勢保持 · RCS の切替'],
+  ['「SAS方向」', '順行・逆行などの向きを選ぶ'],
+  ['「RCS並進」ボタン', 'RCSで平行移動（RCSを入れると出る）'],
+  ['部品を長押し', '部品の操作窓'],
+  ['画面をドラッグ · 2本指', '視点を回す · 拡大'],
+  ['「軌道マップ」', 'ピンチで拡大、ダブルタップで中心へ'],
+  ['「Ⅱ」', '一時停止']
+];
+const grid = (rows: Rows) =>
+  '<div class="helpgrid">' + rows.map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('') + '</div>';
+
+/** Opens the controls list: flight first while flying, touch names on a touch device. */
+export function openHelp({touch, flying}: {touch: boolean; flying: boolean}): void {
+  const workshop = '<h3>組立棟</h3>' + grid(touch ? WORKSHOP_TOUCH : WORKSHOP_KEYS),
+    flight = '<h3>飛行</h3>' + grid(touch ? FLIGHT_TOUCH : FLIGHT_KEYS);
+  showModal(
+    '<h2>操作</h2><p>飛行中は左の「この機体で使える操作」に、今の機体で使える操作だけが出ます。</p>' +
+      (flying ? flight + workshop : workshop + flight)
+  );
+}
+export function wireHelp(button: HTMLElement, body: HTMLElement = document.body): void {
+  button.onclick = () =>
+    openHelp({touch: body.classList.contains('touch'), flying: body.classList.contains('flying')});
+}

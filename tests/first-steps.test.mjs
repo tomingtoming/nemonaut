@@ -25,3 +25,8 @@ test('on touch the ignition hint names the on-screen buttons, not keys', () => {
   assert.match(hint, /全推力/);
   assert.equal(ignitionHint({firstStage: true, throttle: 1, touch: true}), '');
 });
+test('a craft without a thrust part gets no throttle hint after Space', () => {
+  assert.equal(ignitionHint({firstStage: true, throttle: 0, thrust: false}), '');
+  assert.equal(ignitionHint({firstStage: true, throttle: 0, touch: true, thrust: false}), '');
+  assert.match(ignitionHint({firstStage: true, throttle: 0, thrust: true}), /Z/);
+});

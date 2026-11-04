@@ -510,3 +510,22 @@ body.touch #placement:not([hidden]){display:flex;align-items:center;gap:10px;pad
 body.touch #placement[data-touch-preview]{border-color:#ffd08a;color:#ffe2b8}
 body.touch #placementCancel{display:block;flex:none;min-height:40px;min-width:56px}
 @media(orientation:portrait){body.touch #placement{top:160px}}
+/* 「この機体で使える操作」 (BACKLOG 9a): under the quick navigation; vessel-controls-panel.ts sets its top,
+   left, width and max height between the quick navigation and the controls below it. */
+#vesselControls{position:absolute;top:228px;left:12px;width:260px;z-index:4;overflow:auto;padding:6px 10px;background:#17252be8;border:1px solid #52646a88;border-radius:7px;font-size:10px;scrollbar-width:thin}
+#vesselControls[hidden]{display:none}
+#vesselControls summary{cursor:pointer;color:#ece9e1;font-size:11px;padding:2px 0}
+#vesselControls dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:6px 0 2px}
+#vesselControls dt{color:#aabcc5}
+#vesselControls dd{margin:0;color:#ece9e1;font-family:monospace;text-align:right}
+body.touch #vesselControls{padding:2px 8px;font-size:11px}
+body.touch #vesselControls summary{min-height:40px;display:flex;align-items:center;gap:6px}
+body.touch #vesselControls summary::before{content:'▸';color:var(--orange)}
+body.touch #vesselControls[open] summary::before{content:'▾'}
+body.touch #vesselControls dl{gap:2px 8px;margin-top:0}
+body.touch #vesselControls dd{font-family:inherit;text-align:left}
+/* 「? 操作」 stays reachable on touch at every width (the help lists touch gestures there). */
+body.touch .headright #help{display:inline-block}
+#modal h3{font-size:14px;font-weight:500;margin:18px 0 0;color:#ece9e1}
+#modal .helpgrid{margin:10px 0}
+#modal{max-height:92dvh;overflow:auto}

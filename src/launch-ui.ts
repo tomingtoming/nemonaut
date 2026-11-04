@@ -8,6 +8,7 @@ import {PracticeSession, type PracticeDesign} from './practice-session.js';
 import {departureMode, historyActionLabel} from './departure-mode.js';
 import {launchWorld} from './world-operations.js';
 import {fleet} from './fleet.js';
+import {launchHint} from './vessel-controls.js';
 import {gameRecord} from './game-save.js';
 import {worldFromFlight, flightFromWorld} from './world-save.js';
 import type {LaunchSiteError} from './launch-clearance.js';
@@ -103,8 +104,14 @@ export function launchAdditional(design: PracticeDesign & {bay?: string}) {
     else {
       const departure = launchedWorld.history.at(-1);
       if (!departure) throw Error('出発の記録がありません');
+      // How this craft starts, from its parts (BACKLOG 9a); the full list is in the controls panel.
+      const hint = launchHint(currentFlight().parts, document.body.classList.contains('touch'));
       notify(
-        historyActionLabel(departure) + ' · 他の機体 ' + (fleet(currentFlight()).length - 1) + '機を保持'
+        historyActionLabel(departure) +
+          ' · 他の機体 ' +
+          (fleet(currentFlight()).length - 1) +
+          '機を保持' +
+          (hint ? ' · ' + hint : '')
       );
     }
   } catch (e) {
