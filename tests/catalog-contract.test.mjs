@@ -98,3 +98,11 @@ test('finite individual dimensions must not overflow or underflow derived volume
     assert.ok(errors.some(e => e.includes('envelope density')));
   }
 });
+
+test('motor capability requires a wheel', () => {
+  assert.ok(
+    catalogContractErrors({bad: {...PARTS.engine, poweredWheel: true}}).some(e =>
+      e.includes('poweredWheel requires wheel')
+    )
+  );
+});

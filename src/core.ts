@@ -1162,7 +1162,12 @@ export class Flight {
           );
           // Powered wheels drive whenever the brake is off, without the Space start (BACKLOG 9a);
           // without a drive input they follow the throttle only once started, as engines do.
-          if (p.type === 'wheel' && this.driveEnabled && p.driveEnabled !== false && !this.brake) {
+          if (
+            PARTS[p.type].poweredWheel === true &&
+            this.driveEnabled &&
+            p.driveEnabled !== false &&
+            !this.brake
+          ) {
             const drive = T.MathUtils.clamp(input.drive ?? (this.started ? this.throttle : 0), -1, 1);
             apply(
               forward.multiplyScalar(drive * share * 3 * Math.max(0, 1 - Math.abs(pv.dot(forward)) / 18)),

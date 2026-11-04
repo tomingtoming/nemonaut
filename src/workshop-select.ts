@@ -68,7 +68,7 @@ function renderInspector() {
     [
       [d.reactionTorque, 'reactionEnabled', 'リアクションホイール'],
       [d.steer, 'steeringEnabled', 'A/D 車輪操舵'],
-      [p.type === 'wheel', 'driveEnabled', 'W/S 車輪駆動']
+      [PARTS[p.type].poweredWheel === true, 'driveEnabled', 'W/S 車輪駆動']
     ] as const
   )
     .filter(([available]) => available)

@@ -38,6 +38,7 @@ export function catalogContractErrors(parts) {
       if (!vector(part.ac)) fail('controlAxis requires ac');
       // part-visuals.ts intentionally defaults hingeY to size[1] / 2.
     }
+    if (part.poweredWheel && !part.wheel) fail('poweredWheel requires wheel');
     if (part.retractable && !part.wheel) fail('retractable requires wheel');
     if (part.steer && !part.wheel) fail('steer requires wheel');
     if (part.rcsThrust > 0 && !(part.rcsIsp > 0)) fail('rcsThrust requires rcsIsp');

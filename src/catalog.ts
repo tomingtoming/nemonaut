@@ -44,6 +44,8 @@ export type PartDefinition = {
   maxDeflection?: number;
   hingeY?: number;
   wheel?: boolean;
+  /** Wheel motor capability, independent of the part name or vessel type. */
+  poweredWheel?: boolean;
   /** Landing gear that folds away in flight (BACKLOG 9c): G toggles it for the whole vessel. */
   retractable?: boolean;
   steer?: boolean;
@@ -492,6 +494,7 @@ const BASE_PARTS = {
     mass: 45,
     size: [0.34, 0.7, 0.7],
     wheel: true,
+    poweredWheel: true,
     steer: true,
     desc: '接地中に駆動・ブレーキ・操舵できるサスペンション輪。'
   },

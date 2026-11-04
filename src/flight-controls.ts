@@ -43,7 +43,7 @@ export function updateFlightControls(
     ['rcsEnabled', parts.some(p => PARTS[p.type].rcsThrust)],
     ['reactionEnabled', parts.some(p => PARTS[p.type].reactionTorque)],
     ['steeringEnabled', parts.some(p => PARTS[p.type].steer)],
-    ['driveEnabled', parts.some(p => p.type === 'wheel')]
+    ['driveEnabled', parts.some(p => PARTS[p.type].poweredWheel === true)]
   ] as const) {
     const input = element(root, '#' + key, 'input');
     input.checked = flight[key];

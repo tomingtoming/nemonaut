@@ -8,7 +8,7 @@ import {
   launchHint
 } from '../dist/vessel-controls.js';
 import {Flight} from '../dist/core.js';
-import {preset, part} from '../dist/catalog.js';
+import {PARTS, preset, part} from '../dist/catalog.js';
 import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
 
 const actions = rows => rows.map(r => r.action);
@@ -134,5 +134,35 @@ test('unstarted wheels ignore the throttle without a drive input; engines still 
     assert.equal(g.lastThrust, 0, 'no thrust before staging');
   } finally {
     g.dispose();
+  }
+});
+
+test('motor capability follows the definition rather than the wheel type name', () => {
+  const original = PARTS.nosegear;
+  const wheel = PARTS.wheel;
+  try {
+    PARTS.nosegear = {...wheel};
+    const craft = preset('rover').map(p => (p.type === 'wheel' ? {...p, type: 'nosegear'} : p));
+    const run = enabled => {
+      PARTS.nosegear.poweredWheel = enabled;
+      assert.equal(hasPoweredWheel(craft), enabled);
+      assert.equal(actions(vesselControls(craft)).includes('前後に走る'), enabled);
+      const f = new Flight(craft, 'land');
+      try {
+        assert.equal(releaseBrakeForDrive(f, 1), enabled);
+        f.brake = false;
+        for (let i = 0; i < 360; i++) f.step(1 / 120, {drive: 1});
+        return surfaceSpeed(f);
+      } finally {
+        f.dispose();
+      }
+    };
+    assert.ok(run(true) > 0.5, 'motor on a different part type drives');
+    assert.ok(run(false) < 0.05, 'same geometry without the motor does not drive');
+    PARTS.wheel = {...wheel, poweredWheel: false};
+    assert.equal(hasPoweredWheel(preset('rover')), false, 'the old type name does not imply a motor');
+  } finally {
+    PARTS.nosegear = original;
+    PARTS.wheel = wheel;
   }
 });

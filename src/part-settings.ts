@@ -27,7 +27,7 @@ export function partSettings(p: SettablePart): PartSettingRow[] {
     [d.controlAxis, 'controlRoll', 'ロール'],
     [d.reactionTorque, 'reactionEnabled', 'リアクションホイール'],
     [d.steer, 'steeringEnabled', '車輪操舵'],
-    [p.type === 'wheel', 'driveEnabled', '車輪駆動']
+    [PARTS[p.type].poweredWheel === true, 'driveEnabled', '車輪駆動']
   ];
   const rows: PartSettingRow[] = toggles
     .filter(([yes]) => yes)

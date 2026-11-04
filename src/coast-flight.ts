@@ -211,7 +211,10 @@ function throttleBlocksCoast(v: CoastVessel, active: CoastVessel): boolean {
   if (v.throttle === 0) return false;
   // Keep the pilot's cutoff requirement. Only inert, uncontrolled debris may
   // retain an inherited throttle setting; wheels and marine drives need physics.
-  if (v === active || v.parts.some(p => PARTS[p.type].control || p.type === 'wheel' || PARTS[p.type].water))
+  if (
+    v === active ||
+    v.parts.some(p => PARTS[p.type].control || PARTS[p.type].poweredWheel === true || PARTS[p.type].water)
+  )
     return true;
   // Sample on a copy, with sea-level air as a conservative jet bound. A jet
   // currently in vacuum must not become powered unnoticed on atmospheric entry.

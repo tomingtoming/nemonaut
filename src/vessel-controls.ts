@@ -13,9 +13,9 @@ export interface ControlRow {
 }
 type VesselParts = readonly Pick<Part, 'type' | 'stage' | 'driveEnabled'>[];
 
-/** A wheel that drives (the drive wheel type, its own drive switch not off). */
+/** A wheel with a motor capability and its own drive switch not off. */
 export function hasPoweredWheel(parts: VesselParts): boolean {
-  return parts.some(p => p.type === 'wheel' && p.driveEnabled !== false);
+  return parts.some(p => PARTS[p.type].poweredWheel === true && p.driveEnabled !== false);
 }
 /** Whether a part acts when its stage runs (engine, separation, parachute). */
 const staged = (p: Pick<Part, 'type'>) => {
@@ -59,7 +59,9 @@ export function vesselControls(
     rows: ControlRow[] = [],
     powered = hasPoweredWheel(parts),
     // The touch stick is captioned 走行 whenever a drive wheel is fitted (touch-flight.ts).
-    stick = parts.some(p => p.type === 'wheel') ? '「走行」スティック' : '「姿勢」スティック';
+    stick = parts.some(p => PARTS[p.type].poweredWheel === true)
+      ? '「走行」スティック'
+      : '「姿勢」スティック';
   if (powered) {
     rows.push({action: '前後に走る', how: touch ? stick + 'を上下' : 'W / S'});
     if (has(d => d.steer)) rows.push({action: '曲がる', how: touch ? stick + 'を左右' : 'A / D'});
