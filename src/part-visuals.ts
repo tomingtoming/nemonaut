@@ -9,6 +9,8 @@ import {disposeWreckVisual} from './failure-visuals.js';
 import {state} from './app-state.js';
 import {sceneCore, editorMarkers, objects, partObject} from './scene.js';
 import {assetModel} from './asset-loader.js';
+import {engineMaxThrust} from './resources.js';
+import {screwRotor, screwSpinStep, screwSpinTarget} from './screw-spin.js';
 export function cloneModel(type: string) {
   const model = assetModel(type).clone(true);
   model.traverse(m => {
@@ -54,6 +56,10 @@ export function makePartVisual(p: FlightPart) {
     o.userData.steeringVisual = steering;
     o.userData.rollingVisual = rolling;
   } else o.add(visual);
+  if (PARTS[p.type].water && PARTS[p.type].thrust) {
+    const rotor = screwRotor(visual);
+    if (rotor) o.userData.rotor = rotor;
+  }
   if (PARTS[p.type].rcsThrust) {
     o.userData.rcsPlumes = RCS_NOZZLES.map(n => {
       const plume = new T.Mesh(
@@ -72,6 +78,22 @@ export function makePartVisual(p: FlightPart) {
   o.position.fromArray(p.p);
   o.rotation.set(...p.r);
   return o;
+}
+/**
+ * Turns a screw's rotor at the rate of the thrust it gives in flight (throttle × submersion × active), on the
+ * flight's own clock: a paused flight stands still, and a long frame does not jump the rotor ahead.
+ */
+export function updateScrewVisual(o: T.Object3D | undefined, f: Flight, p: FlightPart) {
+  const rotor = o?.userData.rotor;
+  if (!o || !(rotor instanceof T.Group)) return;
+  const last = o.userData.rotorTime,
+    dt = typeof last === 'number' ? Math.min(0.1, Math.max(0, f.universalTime - last)) : 0,
+    speed = typeof o.userData.rotorSpeed === 'number' ? o.userData.rotorSpeed : 0,
+    thrust = f.crashed ? 0 : f.engineThrust.get(p.id) || 0,
+    next = screwSpinStep(speed, screwSpinTarget(thrust, engineMaxThrust(p), PARTS[p.type].size[0] / 2), dt);
+  o.userData.rotorTime = f.universalTime;
+  o.userData.rotorSpeed = next;
+  rotor.rotation.y = (rotor.rotation.y + next * dt) % (2 * Math.PI);
 }
 export function updateRCSVisual(o: T.Object3D | undefined, f: Flight) {
   if (!o?.userData.rcsPlumes) return;

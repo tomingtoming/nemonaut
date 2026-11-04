@@ -11,7 +11,7 @@ import type {Flight, FlightPart} from './core.js';
 import {bodyUp} from './celestial.js';
 import {sceneCore} from './scene.js';
 import {assets} from './asset-loader.js';
-import {cloneModel, makePartVisual, updateRCSVisual} from './part-visuals.js';
+import {cloneModel, makePartVisual, updateRCSVisual, updateScrewVisual} from './part-visuals.js';
 export const parachuteVisuals = new Map();
 export const debrisVisuals = new Map<Flight, T.Group>();
 export const exhaust: {id: string; mesh: ReturnType<typeof createEnginePlume>}[] = [];
@@ -72,6 +72,7 @@ export function updateDebrisVisuals(root: Flight, now: number) {
       updateRCSVisual(o, f);
       const cp = f.parts.find(p => p.id === id);
       if (cp) syncCargoVisual(o, cp, PARTS[cp.type]);
+      if (cp) updateScrewVisual(o, f, cp);
       if (o.userData.debrisFlame) {
         updateEnginePlume(o.userData.debrisFlame, f.engineThrust.get(id) || 0, f.crashed, now);
       }

@@ -869,12 +869,15 @@ export function preset(kind: string): Part[] {
     if (kind === 'sub') {
       add('ballast', [-0.65, 0.3, -0.3], r, 1);
       add('ballast', [0.65, 0.3, -0.3], r, 1);
+      // A rudder behind the screw, low enough to stay in the water when surfaced (BACKLOG 9b): A/D turn.
+      add('rudder', [0, -0.25, -2.65], [Math.PI / 2, Math.PI / 2, 0], 1);
     }
   }
   if (kind === 'sub')
     for (const p of a) {
       if (p.type === 'cockpit') p.p = [0, 0, 0.3];
-      if (p.type === 'truss') p.p = [0, 1.2, 0];
+      // The buoyant frame sits a little aft to trim the rudder's weight at the stern when submerged.
+      if (p.type === 'truss') p.p = [0, 1.2, -0.15];
       if (p.type === 'propeller') p.p = [0, 0.1, -2.1];
       if (p.type === 'ballast') p.p = [Math.sign(p.p[0]) * 1.3, 0.2, 0];
     }
@@ -905,7 +908,8 @@ export function preset(kind: string): Part[] {
             ballast: 'ballastLarge',
             propeller: 'propellerLarge'
           };
-    a = preset(base);
+    // The large submarine turns with its gimballed screw; the small one's rudder has no large mapping.
+    a = preset(base).filter(p => p.type in mapping);
     for (const p of a) {
       p.type = mapping[p.type];
       p.p = [p.p[0] * s, p.p[1] * s, p.p[2] * s];

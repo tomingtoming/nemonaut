@@ -15,7 +15,7 @@ import {
 } from './observation.js';
 import {createBodyAerodynamics, bodyDrag, type BodyAerodynamics} from './body-drag.js';
 import {separationName} from './separation-name.js';
-import {displacedVolume} from './buoyancy.js';
+import {displacedVolume, mediumDensity, submergedFraction, WATER_DENSITY} from './buoyancy.js';
 import {engineMedium} from './engine-medium.js';
 import {angularMomentum, angularVelocity} from './angular-momentum.js';
 import {transferFuel} from './fuel-transfer.js';
@@ -54,6 +54,7 @@ import {
   aeroPoint,
   aeroAnalysis,
   surfaceForce,
+  surfaceForceScale,
   controlDeflection,
   type AeroPart,
   type MassPart,
@@ -958,7 +959,36 @@ export class Flight {
       contacts = 0,
       wheelImpactSpeed = 0;
     this.lastThrust = 0;
-    const wheelCount = this.parts.filter(p => PARTS[p.type].wheel).length;
+    // Every surface feels water for the part of it that is submerged (BACKLOG 9b): fins, rudders and wings
+    // alike, with the flow relative to the water at rest on the surface.
+    const surfaceSubmersion = (p: FlightPart, point: T.Vector3) =>
+      water ? submergedFraction(altitude(point), extentY(p, this.q)) : 0;
+    const wheelCount = this.parts.filter(p => PARTS[p.type].wheel).length,
+      surfaces = this.parts.filter(p => PARTS[p.type].wing),
+      submergedSurfaces = surfaces.filter(
+        p => surfaceSubmersion(p, aeroPoint(p).applyQuaternion(this.q).add(this.pos)) > 0
+      ).length,
+      // Surfaces sharing the stability limit: those in water when any is, otherwise all of them.
+      surfaceShare = submergedSurfaces || surfaces.length;
+    // Craft inertia in the world frame, read once per step from the solver for the surface force limit.
+    let principal: {inertia: T.Vector3; toPrincipal: T.Quaternion} | null = null;
+    const inverseEffectiveMass = (point: T.Vector3, direction: T.Vector3): number => {
+      if (!principal) {
+        const i = this.body.principalInertia(),
+          f = this.body.principalInertiaLocalFrame();
+        principal = {
+          inertia: new T.Vector3(i.x, i.y, i.z),
+          toPrincipal: this.q
+            .clone()
+            .multiply(new T.Quaternion(f.x, f.y, f.z, f.w))
+            .invert()
+        };
+      }
+      const w = point.clone().sub(com).cross(direction).applyQuaternion(principal.toPrincipal),
+        inertia = principal.inertia,
+        turn = (a: number, b: number) => (b > 1e-9 ? (a * a) / b : 0);
+      return 1 / mass + turn(w.x, inertia.x) + turn(w.y, inertia.y) + turn(w.z, inertia.z);
+    };
     for (const p of this.parts) {
       const d = PARTS[p.type],
         orientation = this.q.clone().multiply(partRotation(p)),
@@ -1029,7 +1059,19 @@ export class Flight {
         this.deflections.set(p.id, angle);
         const point = aeroPoint(p).applyQuaternion(this.q).add(this.pos),
           velocity = relativeVelocity.clone().add(relativeOmega.clone().cross(point.clone().sub(com))),
-          aero = surfaceForce(p, orientation, velocity, density, angle);
+          medium = mediumDensity(density, surfaceSubmersion(p, point)),
+          aero = surfaceForce(p, orientation, velocity, medium, angle);
+        if (aero.force.lengthSq() > 0)
+          aero.force.multiplyScalar(
+            surfaceForceScale(
+              medium,
+              velocity.length(),
+              d.wing,
+              inverseEffectiveMass(point, new T.Vector3(0, 0, 1).applyQuaternion(orientation)),
+              dt,
+              surfaceShare
+            )
+          );
         apply(aero.force, point);
         if (!this.failureDynamics && p.parent && aero.force.length() > d.wing * (d.breakPressure ?? 60000)) {
           failedParts.add(p.id);
@@ -1042,9 +1084,11 @@ export class Flight {
         for (const u of [-0.32, 0.32]) {
           const point = new T.Vector3(0, d.size[1] * u, 0).applyQuaternion(orientation).add(wp),
             velocity = relativeVelocity.clone().add(relativeOmega.clone().cross(point.clone().sub(com))),
-            depth = Math.max(0.12, extentY(p, this.q) * 1.2),
-            sub = T.MathUtils.clamp((depth / 2 - altitude(point)) / depth, 0, 1);
-          apply(localUp(point).multiplyScalar(gravity(point).length() * 1000 * volume * 0.5 * sub), point);
+            sub = submergedFraction(altitude(point), extentY(p, this.q));
+          apply(
+            localUp(point).multiplyScalar(gravity(point).length() * WATER_DENSITY * volume * 0.5 * sub),
+            point
+          );
           apply(velocity.multiplyScalar(-sub * volume * 500), point);
         }
       }

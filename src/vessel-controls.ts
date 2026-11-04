@@ -80,7 +80,7 @@ export function vesselControls(
       how: touch ? '「次段」ボタン' : 'Space'
     });
   const rcs = has(d => d.rcsThrust);
-  if (has(d => d.reactionTorque || d.controlAxis) || rcs) {
+  if (has(d => d.reactionTorque || d.controlAxis || d.gimbal) || rcs) {
     rows.push({
       action: powered ? '向きを変える（走行と共通）' : '向きを変える',
       how: touch ? stick + '・↺↻' : 'W/S · A/D · Q/E'

@@ -60,7 +60,7 @@ export const examples = {
   plane: ['Swift / 03', 'ジェット機', '独立操舵面 · 前輪1＋主脚2', 'runway'],
   rover: ['Nomad / 04', 'ローバー', '前輪操舵 · 4輪駆動', 'land'],
   boat: ['Tern / 05', '双胴艇', 'フロート · スクリュー', 'water'],
-  sub: ['Nautilus / 06', '潜水艇', '注排水タンク · 水中推進', 'water']
+  sub: ['Nautilus / 06', '潜水艇', '注排水タンク · 水中推進 · ラダー', 'water']
 };
 Object.assign(examples, {
   'transport-cargo': [

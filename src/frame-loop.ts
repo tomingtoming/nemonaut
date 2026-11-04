@@ -24,7 +24,7 @@ import {$, errorMessage, notify} from './ui-common.js';
 import {currentFlight, currentWorldRuntime, vesselCenter, flightCenter} from './current-flight.js';
 import {sceneCore, selectionOverlays, objects, flightFocus, setCameraUp} from './scene.js';
 import {assets} from './asset-loader.js';
-import {updateRCSVisual} from './part-visuals.js';
+import {updateRCSVisual, updateScrewVisual} from './part-visuals.js';
 import {updateWorldGeometry, planetMaterial, patchMaterial} from './flight-world.js';
 import {updateFlightChallenges} from './exploration-ui.js';
 import {updatePlacementCopies} from './workshop-place.js';
@@ -221,6 +221,7 @@ export function startFrameLoop(
       for (const p of state.flight.parts) {
         const o = objects.get(p.id);
         updateRCSVisual(o, state.flight);
+        updateScrewVisual(o, state.flight, p);
         if (o) syncCargoVisual(o, p, PARTS[p.type]);
         if (o?.userData.hinge) o.userData.hinge.rotation.x = state.flight.deflections.get(p.id) || 0;
         if (o?.userData.gimbal) {

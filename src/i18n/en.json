@@ -1324,7 +1324,7 @@
  "水色": "light blue",
  "水色：タンク · 橙：エンジン · 緑：接続": "Light blue: tank · Orange: engine · Green: connection",
  "注排水で質量を変え、浮上・潜航を調整する。": "Floods and drains to change mass and adjust surfacing and diving.",
- "注排水タンク · 水中推進": "Ballast tanks · underwater propulsion",
+ "注排水タンク · 水中推進 · ラダー": "Ballast tanks · underwater propulsion · rudder",
  "浮力中心": "Center of buoyancy",
  "浮力中心 · 全没時": "Center of buoyancy · fully submerged",
  "浮力中心 − 重心（高さ）": "Center of buoyancy − center of mass (height)",

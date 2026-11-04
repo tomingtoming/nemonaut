@@ -12,6 +12,24 @@ export interface BuoyancyBalance {
   mass: number;
   displacement: number;
 }
+/** Water density (kg/m³) of buoyancy and of submerged lifting surfaces. Water is at rest on the surface. */
+export const WATER_DENSITY = 1000;
+/**
+ * Submerged fraction of a part sampled at a point `altitude` (m) above the water surface, where
+ * `verticalExtent` is the part's half extent along the local vertical. A linear ramp over the
+ * part's height (at least 12 cm); the buoyancy samples in Flight use the same ramp.
+ */
+export function submergedFraction(altitude: number, verticalExtent: number): number {
+  const depth = Math.max(0.12, verticalExtent * 1.2);
+  return Math.max(0, Math.min(1, (depth / 2 - altitude) / depth));
+}
+/**
+ * Density of the fluid around a surface part that is `submerged` (0..1) in water: air and water
+ * blended by the submerged fraction (BACKLOG 9b). Exactly the air density when not submerged.
+ */
+export function mediumDensity(airDensity: number, submerged: number): number {
+  return submerged > 0 ? airDensity + (WATER_DENSITY - airDensity) * Math.min(1, submerged) : airDensity;
+}
 export function displacedVolume(p: Pick<AeroPart, 'type'>): number {
   const d = PARTS[p.type];
   return d.volume || d.size[0] * d.size[1] * d.size[2] * 0.18;
@@ -32,5 +50,5 @@ export function buoyancyBalance(parts: Iterable<BuoyantPart>, ballast = 0): Buoy
   }
   center.divideScalar(volume || 1);
   com.divideScalar(mass || 1);
-  return {center, com, volume, mass, displacement: volume * 1000};
+  return {center, com, volume, mass, displacement: volume * WATER_DENSITY};
 }

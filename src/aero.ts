@@ -98,7 +98,9 @@ export function surfaceForce(
     a = Math.abs(alpha),
     stall = (15 * Math.PI) / 180;
   const cl =
-    a <= stall ? 4.5 * alpha : Math.sign(alpha) * 1.18 * Math.cos(Math.min(Math.PI / 2, (a - stall) * 1.4));
+    a <= stall
+      ? SURFACE_LIFT_SLOPE * alpha
+      : Math.sign(alpha) * 1.18 * Math.cos(Math.min(Math.PI / 2, (a - stall) * 1.4));
   const cd = 0.022 + 0.065 * cl * cl + 1.2 * Math.sin(alpha) ** 2;
   const direction = flow.clone().normalize();
   const lift = normal.clone().addScaledVector(direction, -normal.dot(direction)).normalize();
@@ -110,6 +112,32 @@ export function surfaceForce(
     cl,
     stalled: a > stall
   };
+}
+/** Lift slope per radian of the surfaces below the stall (cl = 4.5·alpha in surfaceForce). */
+export const SURFACE_LIFT_SLOPE = 4.5;
+/**
+ * Factor (0..1] on the force of one of `surfaces` lifting surfaces for a physics step of `dt` (s), so
+ * that the step stays stable when the fluid is dense (BACKLOG 9b). Near zero angle of attack the force
+ * of a surface with `area` (m²) at `speed` (m/s) through a fluid of `density` changes with the flow
+ * across it like a damper of about density·speed·area·(lift slope / 2 + flat-plate drag 1.2) N per
+ * m/s. An explicit step overshoots such a damper once dt·k/m exceeds 1, where 1/m is the craft's
+ * `inverseEffectiveMass` (1/m + (r×n)·I⁻¹(r×n)) at the surface across its plane: the cross flow would
+ * reverse within one step and the craft would flutter with growing speed. Real fluid forces cannot
+ * reverse the flow within a step, so the force is scaled down to the critically damped step, shared
+ * among all surfaces. Ordinary surfaces in air and in water stay far below this (factor exactly 1);
+ * it acts on light parts with large surfaces moving fast through water, such as a broken-off wing.
+ */
+export function surfaceForceScale(
+  density: number,
+  speed: number,
+  area: number,
+  inverseEffectiveMass: number,
+  dt: number,
+  surfaces = 1
+): number {
+  const stiffness = density * speed * area * (SURFACE_LIFT_SLOPE / 2 + 1.2),
+    ratio = dt * inverseEffectiveMass * stiffness * Math.max(1, surfaces);
+  return ratio > 1 ? 1 / ratio : 1;
 }
 export function controlAxes(p: ControlPart): ControlAxes {
   const axis = PARTS[p.type].controlAxis;
