@@ -81,7 +81,7 @@ export function installLargeParts(parts: Record<string, ScalablePart>): void {
             : d.thrust
               ? `推力 ${(d.thrust / 1000).toFixed(0)} kN。${d.water ? '水中専用・可動推進器で操向。' : '大気中専用。接続した燃料胴体から供給。'}`
               : d.wheel
-                ? '大型航空機用。接地・自由転動・制動。前脚のみA/D操向。'
+                ? '大型航空機用。接地・自由転動・制動。前脚のみA/D操向。飛行中は格納可能。'
                 : '大型機の独立した組立部品。接続・保存・質量計算に対応。';
     if (id === 'propellerLarge') {
       d.gimbal = 25;

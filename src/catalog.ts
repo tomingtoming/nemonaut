@@ -44,6 +44,8 @@ export type PartDefinition = {
   maxDeflection?: number;
   hingeY?: number;
   wheel?: boolean;
+  /** Landing gear that folds away in flight (BACKLOG 9c): G toggles it for the whole vessel. */
+  retractable?: boolean;
   steer?: boolean;
   parachute?: number;
   solarPower?: number;
@@ -467,9 +469,10 @@ const BASE_PARTS = {
     mass: 35,
     size: [0.34, 0.7, 0.7],
     wheel: true,
+    retractable: true,
     steer: true,
     model: 'wheel',
-    desc: '前輪1輪の操向脚。地上のA/D入力で操向。'
+    desc: '前輪1輪の操向脚。地上のA/D入力で操向。飛行中は格納可能。'
   },
   maingear: {
     name: '主脚',
@@ -478,8 +481,9 @@ const BASE_PARTS = {
     mass: 45,
     size: [0.34, 0.7, 0.7],
     wheel: true,
+    retractable: true,
     model: 'wheel',
-    desc: '航空機の自由転動する主脚。ブレーキ付き。'
+    desc: '航空機の自由転動する主脚。ブレーキ付き。飛行中は格納可能。'
   },
   wheel: {
     name: '駆動輪',

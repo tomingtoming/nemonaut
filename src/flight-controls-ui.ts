@@ -12,6 +12,8 @@ import {state} from './app-state.js';
 import {$, blurActive, notify} from './ui-common.js';
 import {stage} from './flight-lifecycle.js';
 import {updateNavigation, updateTransferGuide} from './flight-hud.js';
+import {setGear} from './landing-gear.js';
+import {updateFlightControls} from './flight-controls.js';
 export function wireFlightControls() {
   for (const key of ['reactionEnabled', 'steeringEnabled', 'driveEnabled', 'rcsEnabled'] as const)
     $('#' + key, 'input').onchange = () => {
@@ -94,6 +96,14 @@ export function wireFlightControls() {
     state.flight.brake = !state.flight.brake;
     $('#brake', 'button').classList.toggle('active', state.flight.brake);
     $('#brake', 'button').textContent = 'BRAKE ' + (state.flight.brake ? 'ON' : 'OFF');
+  };
+  // Landing gear up / down (BACKLOG 9c): G and the touch 「ギア」 button press this button.
+  $('#gear', 'button').onclick = () => {
+    const f = state.flight;
+    if (!f || !canControl(f)) return;
+    if (setGear(f, !f.gearDeployed) === 'refused') notify('接地中はギアを格納できません');
+    updateFlightControls(document, f);
+    $('#gear', 'button').blur();
   };
   $('#precisionControl', 'button').onclick = () => {
     const button = $('#precisionControl', 'button'),

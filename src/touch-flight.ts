@@ -6,6 +6,7 @@
 // are display:none unless body.touch (style.css), so a mouse never reaches them; the periodic sync and the
 // release handlers do nothing while nothing is held and body.touch is off.
 import {state} from './app-state.js';
+import {hasRetractableGear} from './landing-gear.js';
 
 /** The stick deflection as a vector in the unit disc; x to the right, y up (screen y points down). */
 export function stickVector(dx: number, dy: number, radius: number): {x: number; y: number} {
@@ -71,6 +72,8 @@ const BUTTONS: readonly (readonly [
   ['KeyZ', '全推力', 'スロットル全開', 'main'],
   ['KeyX', '推力0', 'スロットル停止', 'main'],
   ['Space', '次段', '点火 / 次段', 'main'],
+  // Landing gear (BACKLOG 9c): shown only on a vessel with retractable gear; the label follows the gear.
+  ['KeyG', 'ギア上げ', 'ランディングギアの出し入れ', 'main'],
   ['KeyU', '上へ', 'RCS 上へ並進', 'rcs'],
   ['KeyI', '前へ', 'RCS 前へ並進', 'rcs'],
   ['KeyO', '下へ', 'RCS 下へ並進', 'rcs'],
@@ -154,6 +157,8 @@ export function mountTouchFlight(hud: HTMLElement, body: HTMLElement = document.
       button.addEventListener(type, releasePointer);
     groups[group].append(button);
   }
+  const gearButton = groups.main.querySelector('[data-code="KeyG"]');
+  if (gearButton instanceof HTMLButtonElement) gearButton.hidden = true;
   let stickPointer: number | null = null;
   const moveStick = (e: PointerEvent) => {
     const box = stick.getBoundingClientRect(),
@@ -213,6 +218,11 @@ export function mountTouchFlight(hud: HTMLElement, body: HTMLElement = document.
     const rover = flight.parts.some(p => p.type === 'wheel');
     caption.textContent = rover ? '走行' : '姿勢';
     stick.setAttribute('aria-label', rover ? '走行スティック' : '姿勢スティック');
+    if (gearButton instanceof HTMLButtonElement) {
+      gearButton.hidden = !hasRetractableGear(flight.parts);
+      gearButton.textContent = flight.gearDeployed ? 'ギア上げ' : 'ギア下げ';
+      gearButton.classList.toggle('touchGearUp', !flight.gearDeployed);
+    }
   }, 100);
   return touchKeys;
 }

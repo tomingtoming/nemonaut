@@ -532,6 +532,14 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   });
   expect(`${tag} touch flight controls shown`, controls.pad && controls.stick, JSON.stringify(controls));
   expect(`${tag} #stage still reachable`, controls.stageReachable, controls.stageReachable);
+  // The gear button (BACKLOG 9c) exists only for craft with retractable gear: none on the rocket here.
+  const gearShown = await page.evaluate(() =>
+    ['#touchFlight button[data-code=KeyG]', '#gear'].map(s => {
+      const e = document.querySelector(s);
+      return !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0;
+    })
+  );
+  expect(`${tag} no gear button without landing gear`, !gearShown.some(Boolean), JSON.stringify(gearShown));
   await page.tap('#touchFlight button[data-code=Space]');
   await page.waitForTimeout(1500);
   const toast = await page.evaluate(() => document.getElementById('toast')?.textContent ?? '');

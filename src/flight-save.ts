@@ -78,6 +78,8 @@ export interface SavedFlight {
   maneuver?: ManeuverNodeRecord | null;
   transferGuide?: TransferGuide | null;
   state: SavedFlightState;
+  /** Landing gear down (BACKLOG 9c); saves written before it load with the gear down. */
+  gearDeployed?: boolean;
   rcsEnabled?: boolean;
   fuel: [string, number][];
   charge?: [string, number][];
@@ -190,6 +192,7 @@ export function saveFlight(f: Flight, meta: SavedFlightMeta = {}): SavedFlight {
     maneuver: f.maneuver || null,
     transferGuide: f.transferGuide || null,
     state,
+    gearDeployed: f.gearDeployed,
     rcsEnabled: f.rcsEnabled,
     fuel: [...f.fuel],
     charge: [...f.charge],
@@ -256,6 +259,7 @@ export function loadFlight(
   check(Object.hasOwn(SAS_MODES, value.sasMode));
   check(value.navigationAuto === undefined || typeof value.navigationAuto === 'boolean');
   check(value.navigationFrame === undefined || ['orbit', 'surface'].includes(value.navigationFrame));
+  check(value.gearDeployed === undefined || typeof value.gearDeployed === 'boolean');
   check(value.state && typeof value.state === 'object');
   for (const k of flags) check(typeof value.state[k] === 'boolean');
   for (const k of numberKeys) {
@@ -438,6 +442,7 @@ export function loadFlight(
   f.landed = s.landed;
   f.sas = s.sas;
   f.brake = s.brake;
+  f.gearDeployed = value.gearDeployed ?? true;
   f.reactionEnabled = s.reactionEnabled;
   f.steeringEnabled = s.steeringEnabled;
   f.driveEnabled = s.driveEnabled;

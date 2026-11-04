@@ -109,6 +109,7 @@ function rebuilt(source: Flight, parts: FlightPart[], sources: readonly Flight[]
   out.ballast = source.ballast;
   out.trim = source.trim;
   out.brake = source.brake;
+  out.gearDeployed = source.gearDeployed;
   out.reactionEnabled = source.reactionEnabled;
   out.steeringEnabled = source.steeringEnabled;
   out.driveEnabled = source.driveEnabled;

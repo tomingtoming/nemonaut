@@ -31,7 +31,8 @@ export function wireKeyboard() {
       $('#modal', 'dialog').open
     )
       return;
-    if (state.flight && e.code === 'KeyF') {
+    // Flight frames the camera with V; F is kept free for the flaps (BACKLOG 9d), G is the gear (9c).
+    if (state.flight && e.code === 'KeyV') {
       e.preventDefault();
       if (!e.repeat) frame();
       return;
@@ -69,6 +70,7 @@ export function wireKeyboard() {
       if (e.code === 'KeyH') state.flight.armParachutes();
       if (e.code === 'Space') stage();
       if (e.code === 'KeyB') $('#brake', 'button').click();
+      if (e.code === 'KeyG') $('#gear', 'button').click();
       if (e.code === 'KeyT') $('#sas', 'button').click();
       if (e.code === 'KeyX' || e.code === 'KeyZ') {
         state.launchPilot = null;

@@ -169,6 +169,7 @@ export function mountKspLayout(): void {
   switches.append(
     element(document, '#sas', 'button'),
     element(document, '#brake', 'button'),
+    element(document, '#gear', 'button'),
     element(document, '#precisionControl', 'button'),
     closest(element(document, '#rcsEnabled', 'input'), 'label', 'label')
   );

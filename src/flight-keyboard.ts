@@ -20,6 +20,8 @@ const flightKeys = new Set([
   'KeyB',
   'KeyT',
   'KeyF',
+  'KeyG',
+  'KeyV',
   'CapsLock',
   'ShiftLeft',
   'ShiftRight',

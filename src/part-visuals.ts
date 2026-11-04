@@ -11,6 +11,7 @@ import {sceneCore, editorMarkers, objects, partObject} from './scene.js';
 import {assetModel} from './asset-loader.js';
 import {engineMaxThrust} from './resources.js';
 import {screwRotor, screwSpinStep, screwSpinTarget} from './screw-spin.js';
+import {gearFold, gearTravel, isRetractable} from './landing-gear.js';
 export function cloneModel(type: string) {
   const model = assetModel(type).clone(true);
   model.traverse(m => {
@@ -52,7 +53,19 @@ export function makePartVisual(p: FlightPart) {
       rolling = new T.Group();
     rolling.add(visual);
     steering.add(rolling);
-    o.add(steering);
+    if (isRetractable(p.type)) {
+      // Retractable gear (BACKLOG 9c) folds about a pivot: the top of the wheel, or the strut's top once
+      // rebuildCraft has mounted a strut. The inner group carries the wheel and the strut back to place.
+      const fold = new T.Group(),
+        inner = new T.Group();
+      fold.position.y = PARTS[p.type].size[1] / 2;
+      inner.position.y = -fold.position.y;
+      inner.add(steering);
+      fold.add(inner);
+      o.add(fold);
+      o.userData.gearFold = fold;
+      o.userData.gearInner = inner;
+    } else o.add(steering);
     o.userData.steeringVisual = steering;
     o.userData.rollingVisual = rolling;
   } else o.add(visual);
@@ -95,6 +108,27 @@ export function updateScrewVisual(o: T.Object3D | undefined, f: Flight, p: Fligh
   o.userData.rotorSpeed = next;
   rotor.rotation.y = (rotor.rotation.y + next * dt) % (2 * Math.PI);
 }
+/**
+ * Folds a retractable gear visual toward the vessel's gear state over GEAR_TRAVEL_TIME on the flight's own
+ * clock (a paused flight holds the pose); a visual seen for the first time takes the state at once.
+ */
+export function updateGearVisual(o: T.Object3D | undefined, f: Flight) {
+  const fold = o?.userData.gearFold;
+  if (!o || !(fold instanceof T.Group)) return;
+  const last = o.userData.gearTime,
+    position = o.userData.gearPosition,
+    next =
+      typeof last === 'number' && typeof position === 'number'
+        ? gearTravel(position, f.gearDeployed, Math.min(0.1, Math.max(0, f.universalTime - last)))
+        : f.gearDeployed
+          ? 1
+          : 0,
+    pose = gearFold(next);
+  o.userData.gearTime = f.universalTime;
+  o.userData.gearPosition = next;
+  fold.rotation.x = pose.angle;
+  fold.scale.setScalar(pose.scale);
+}
 export function updateRCSVisual(o: T.Object3D | undefined, f: Flight) {
   if (!o?.userData.rcsPlumes) return;
   const jets = f.rcsJets.filter(j => j.id === o.userData.partId);
@@ -131,10 +165,18 @@ export function rebuildCraft() {
       mount.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), delta.clone().normalize());
       mount.scale.set(0.12, delta.length(), 0.12);
       craftRoot.add(mount);
+      const fold = wheel.userData.gearFold,
+        inner = wheel.userData.gearInner;
+      if (fold instanceof T.Group && inner instanceof T.Group) {
+        // Fold about the strut's top, in the wheel's own axes.
+        fold.position.copy(delta).applyQuaternion(wheel.quaternion.clone().invert());
+        inner.position.copy(fold.position).negate();
+      }
       wheel.updateMatrixWorld();
       const world = mount.matrixWorld.clone();
       craftRoot.updateMatrixWorld(true);
-      wheel.attach(mount);
+      const holder = wheel.userData.gearInner;
+      (holder instanceof T.Group ? holder : wheel).attach(mount);
     }
   }
 }

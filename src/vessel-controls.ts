@@ -4,6 +4,7 @@
 // rows and a rocket with a ballast tank gets the ballast row. Keys on a keyboard, on-screen names on touch
 // (touch-flight.ts). Pure: no DOM, no import-time side effects.
 import {PARTS, type Part} from './catalog.js';
+import {hasRetractableGear} from './landing-gear.js';
 
 /** One row of the panel: what it does and how (keys, or the on-screen control on touch). */
 export interface ControlRow {
@@ -65,6 +66,8 @@ export function vesselControls(
   } else if (has(d => d.wheel && d.steer))
     rows.push({action: '地上で曲がる', how: touch ? stick + 'を左右' : 'A / D'});
   if (has(d => d.wheel)) rows.push({action: 'ブレーキ', how: touch ? '「BRAKE」ボタン' : 'B'});
+  if (hasRetractableGear(parts))
+    rows.push({action: 'ギアの出し入れ', how: touch ? '「ギア上げ / 下げ」ボタン' : 'G'});
   const air = has(d => d.thrust && !d.water),
     water = has(d => d.thrust && d.water);
   if (air || water) {
@@ -100,7 +103,7 @@ export function vesselControls(
     {action: '軌道マップ', how: touch ? '「軌道マップ」ボタン' : 'M'},
     touch
       ? {action: '視点を動かす', how: '画面をドラッグ・2本指で拡大'}
-      : {action: 'カメラを機体に合わせる', how: 'F'}
+      : {action: 'カメラを機体に合わせる', how: 'V'}
   );
   return rows;
 }

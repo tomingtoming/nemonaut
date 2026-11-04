@@ -1,6 +1,7 @@
 import {PARTS} from './catalog.js';
 import {canControl, type ControllableVessel} from './fleet.js';
 import {element} from './dom.js';
+import {hasRetractableGear} from './landing-gear.js';
 
 const commands = [
   ['stage', 'button'],
@@ -9,6 +10,7 @@ const commands = [
   ['trim', 'input'],
   ['sas', 'button'],
   ['brake', 'button'],
+  ['gear', 'button'],
   ['sasMode', 'select'],
   ['reactionEnabled', 'input'],
   ['steeringEnabled', 'input'],
@@ -27,6 +29,7 @@ export interface FlightControlsVessel extends ControllableVessel {
   reactionEnabled: boolean;
   steeringEnabled: boolean;
   driveEnabled: boolean;
+  gearDeployed: boolean;
 }
 export function updateFlightControls(
   root: ParentNode,
@@ -50,4 +53,9 @@ export function updateFlightControls(
     label.hidden = !available;
   }
   element(root, '#ballastControl', 'label').hidden = !parts.some(p => PARTS[p.type].ballast);
+  // The gear switch (BACKLOG 9c) shows only on a vessel with retractable gear, lit while the gear is down.
+  const gear = element(root, '#gear', 'button');
+  gear.hidden = !hasRetractableGear(parts);
+  gear.className = flight.gearDeployed ? 'active' : '';
+  gear.textContent = flight.gearDeployed ? 'GEAR DOWN' : 'GEAR UP';
 }

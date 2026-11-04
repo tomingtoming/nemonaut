@@ -529,3 +529,8 @@ body.touch .headright #help{display:inline-block}
 #modal h3{font-size:14px;font-weight:500;margin:18px 0 0;color:#ece9e1}
 #modal .helpgrid{margin:10px 0}
 #modal{max-height:92dvh;overflow:auto}
+/* Landing gear switch (BACKLOG 9c): a fifth row in the flight switches when the vessel has gear; on touch the
+   「ギア」 button beside 「次段」 stands in for it (touch-flight.ts). */
+.flying .navpanel .navSwitches{grid-auto-rows:minmax(0,1fr)}
+body.touch.flying #gear{display:none}
+#touchFlight button.touchGearUp{color:var(--orange)}

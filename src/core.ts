@@ -14,6 +14,7 @@ import {
   type ObservationMap
 } from './observation.js';
 import {createBodyAerodynamics, bodyDrag, type BodyAerodynamics} from './body-drag.js';
+import {gearRetracted} from './landing-gear.js';
 import {separationName} from './separation-name.js';
 import {displacedVolume, mediumDensity, submergedFraction, WATER_DENSITY} from './buoyancy.js';
 import {engineMedium} from './engine-medium.js';
@@ -380,6 +381,8 @@ export class Flight {
   declare failureEvents: FailureEvent[];
   declare floor: number;
   declare fuel: FuelMap;
+  /** Landing gear down (BACKLOG 9c): one switch for the vessel's retractable gear, deployed at launch. */
+  declare gearDeployed: boolean;
   declare gimbals: Map<string, T.Vector3>;
   declare ground: import('./physics.js').Collider | undefined;
   declare holdQ: T.Quaternion;
@@ -465,6 +468,7 @@ export class Flight {
     this.portTranslationEnabled = false;
     this.navigationTarget = null;
     this.brake = true;
+    this.gearDeployed = true;
     this.time = 0;
     this.universalTime = universalTime;
     this.stage = -1;
@@ -586,7 +590,10 @@ export class Flight {
     }
   }
   buildColliders(): void {
-    this.bodyAerodynamics = createBodyAerodynamics(this.parts);
+    // Retracted gear is inside the body: no drag of its own (BACKLOG 9c).
+    this.bodyAerodynamics = createBodyAerodynamics(
+      this.parts.filter(p => !gearRetracted(p, this.gearDeployed))
+    );
     for (const group of this.colliderGroups?.values() || [])
       for (const {collider} of group) this.world.removeCollider(collider, true);
     this.colliders.clear();
@@ -596,7 +603,8 @@ export class Flight {
         this.world,
         this.body,
         p,
-        partMass(p, this.fuel, this.ballast, this.thermal)
+        partMass(p, this.fuel, this.ballast, this.thermal),
+        {retracted: gearRetracted(p, this.gearDeployed)}
       );
       this.colliderGroups.set(p.id, group);
       this.colliders.set(p.id, group[0].collider);
@@ -708,6 +716,7 @@ export class Flight {
         child.ballast = this.ballast;
         child.trim = this.trim;
         child.brake = this.brake;
+        child.gearDeployed = this.gearDeployed;
         child.sas = branch.some(p => PARTS[p.type].control) && this.sas;
         child.holdQ = this.q.clone();
         for (const key of ['reactionEnabled', 'driveEnabled', 'steeringEnabled', 'rcsEnabled'] as const)
@@ -963,7 +972,9 @@ export class Flight {
     // alike, with the flow relative to the water at rest on the surface.
     const surfaceSubmersion = (p: FlightPart, point: T.Vector3) =>
       water ? submergedFraction(altitude(point), extentY(p, this.q)) : 0;
-    const wheelCount = this.parts.filter(p => PARTS[p.type].wheel).length,
+    // Retracted gear neither touches the ground nor shares the load (BACKLOG 9c).
+    const onWheels = (p: FlightPart) => !!PARTS[p.type].wheel && !gearRetracted(p, this.gearDeployed),
+      wheelCount = this.parts.filter(onWheels).length,
       surfaces = this.parts.filter(p => PARTS[p.type].wing),
       submergedSurfaces = surfaces.filter(
         p => surfaceSubmersion(p, aeroPoint(p).applyQuaternion(this.q).add(this.pos)) > 0
@@ -1092,7 +1103,7 @@ export class Flight {
           apply(velocity.multiplyScalar(-sub * volume * 500), point);
         }
       }
-      if (d.wheel && !water) {
+      if (onWheels(p) && !water) {
         const radius = d.size[1] / 2,
           steer =
             d.steer && this.steeringEnabled && p.steeringEnabled !== false

@@ -20,6 +20,8 @@ const cuboid = (half: readonly number[]) => {
   const [x, y, z] = half;
   return RAPIER.ColliderDesc.cuboid(x, y, z);
 };
+/** Radius of a retracted gear's collider as a fraction of the wheel diameter (BACKLOG 9c). */
+const RETRACTED_RADIUS = 0.05;
 interface ColliderPiece {
   shape: import('./physics.js').ColliderDesc;
   offset: T.Vector3;
@@ -30,7 +32,8 @@ export function createPartColliders(
   world: import('./physics.js').World,
   body: import('./physics.js').RigidBody,
   part: ColliderPart,
-  mass: number
+  mass: number,
+  {retracted = false}: {retracted?: boolean} = {}
 ): PartCollider[] {
   const d = PARTS[part.type],
     rotation = partRotation(part),
@@ -66,8 +69,10 @@ export function createPartColliders(
   } else
     pieces = [
       {
+        // Retracted gear keeps its mass at the same centre (statistics and the solver share it) but shrinks to
+        // a small ball with body friction, so a gear-up landing scrapes instead of rolling.
         shape: d.wheel
-          ? RAPIER.ColliderDesc.ball(d.size[1] / 2)
+          ? RAPIER.ColliderDesc.ball(retracted ? d.size[1] * RETRACTED_RADIUS : d.size[1] / 2)
           : cuboid(d.size.map(n => Math.max(0.02, n / 2))),
         offset: new T.Vector3(),
         weight: 1
@@ -80,7 +85,7 @@ export function createPartColliders(
         .setTranslation(...offset.applyQuaternion(rotation).add(center).toArray())
         .setRotation(rotation.clone().multiply(localRotation || new T.Quaternion()))
         .setMass(mass * weight)
-        .setFriction(d.wheel ? 0.015 : 0.35)
+        .setFriction(d.wheel && !retracted ? 0.015 : 0.35)
         .setRestitution(0),
       body
     )
