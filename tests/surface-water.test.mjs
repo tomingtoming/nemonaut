@@ -5,7 +5,7 @@ import {WATER_DENSITY, mediumDensity, submergedFraction} from '../dist/buoyancy.
 import {surfaceForce, surfaceForceScale} from '../dist/aero.js';
 import {Flight} from '../dist/core.js';
 import {preset, part} from '../dist/catalog.js';
-import {bodyUp, referenceBody} from '../dist/celestial.js';
+import {bodyAltitude, bodyUp, referenceBody} from '../dist/celestial.js';
 import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
 import {vesselControls} from '../dist/vessel-controls.js';
 
@@ -168,7 +168,135 @@ test('a plane coming down on the water does not blow up', () => {
 test('the controls panel offers turning for a rudder and for a gimballed screw', () => {
   const turn = parts => vesselControls(parts).some(r => r.action.startsWith('向きを変える'));
   assert.ok(turn(preset('sub')));
-  assert.ok(!turn(preset('sub').filter(p => p.type !== 'rudder')));
+  assert.ok(!turn(preset('sub').filter(p => !['rudder', 'elevator'].includes(p.type))));
   assert.ok(turn(preset('sub-large')), 'Leviathan steers with its gimballed screw');
-  assert.ok(!turn(preset('boat')), 'the Tern has no way to turn yet');
+  assert.ok(turn(preset('boat')), 'the Tern steers with its rudder');
+  assert.ok(!turn(preset('boat').filter(p => p.type !== 'rudder')));
+});
+
+const pitch = f => {
+  const up = bodyUp(f.pos, f.universalTime),
+    fw = new T.Vector3(0, 0, 1).applyQuaternion(f.q);
+  return (Math.asin(T.MathUtils.clamp(fw.dot(up), -1, 1)) * 180) / Math.PI;
+};
+const depth = f => -bodyAltitude(f.pos, f.universalTime);
+/** Cruise for 15 s on the surface, then steer for 8 s: the heading change in degrees. */
+const ternTurn = (parts, yaw) => {
+  const f = new Flight(parts, 'water');
+  try {
+    run(f, 5);
+    f.stageNext();
+    f.throttle = 1;
+    run(f, 15);
+    assert.ok(waterSpeed(f) > 5, String(waterSpeed(f)));
+    const start = heading(f);
+    for (let i = 0; i < 8 * 120; i++) {
+      f.step(1 / 120, {yaw});
+      const upright = new T.Vector3(0, 1, 0).applyQuaternion(f.q).dot(bodyUp(f.pos, f.universalTime));
+      assert.ok(upright > Math.cos((10 * Math.PI) / 180), 'the catamaran stays level in the turn');
+    }
+    assert.ok(Math.abs(bodyAltitude(f.pos, f.universalTime)) < 1, 'still floating');
+    assert.equal(f.crashed, false);
+    return heading(f, start);
+  } finally {
+    f.dispose();
+  }
+};
+test('the Tern turns with its rudder on the surface: D and A opposite, straight without input', () => {
+  const right = ternTurn(preset('boat'), 1),
+    left = ternTurn(preset('boat'), -1);
+  assert.ok(Math.abs(right) > 45, String(right));
+  assert.ok(Math.abs(left) > 45, String(left));
+  assert.equal(Math.sign(left), -Math.sign(right));
+  assert.ok(Math.abs(ternTurn(preset('boat'), 0)) < 2);
+  assert.ok(
+    Math.abs(
+      ternTurn(
+        preset('boat').filter(p => p.type !== 'rudder'),
+        1
+      )
+    ) < 2,
+    'the rudder turns it'
+  );
+});
+/** Nautilus with the ballast set, 20 s to settle, then 20 s at full throttle. */
+const nautilusUnderway = (parts, ballast, sas = true) => {
+  const f = new Flight(parts, 'water');
+  f.sas = sas;
+  f.ballast = ballast;
+  run(f, 20);
+  f.stageNext();
+  f.throttle = 1;
+  run(f, 20);
+  return f;
+};
+const maxPitch = (f, seconds, input = {}) => {
+  let most = 0;
+  for (let i = 0; i < seconds * 120; i++) {
+    f.step(1 / 120, input);
+    most = Math.max(most, Math.abs(pitch(f)));
+  }
+  return most;
+};
+test('flooded at full throttle the Nautilus planes hold the pitch instead of porpoising', () => {
+  const planes = nautilusUnderway(preset('sub'), 1);
+  try {
+    const most = maxPitch(planes, 40);
+    assert.ok(most < 10, String(most));
+    assert.ok(depth(planes) > 0.3, 'still submerged');
+    assert.equal(planes.crashed, false);
+  } finally {
+    planes.dispose();
+  }
+  // Without SAS the planes still damp it to a steady bow-up run (the screw sits below the centre of mass).
+  const hands = nautilusUnderway(preset('sub'), 1, false);
+  try {
+    assert.ok(maxPitch(hands, 40) < 25);
+  } finally {
+    hands.dispose();
+  }
+  // Without the planes the same run porpoises past 45° (the report before the planes).
+  const bare = nautilusUnderway(
+    preset('sub').filter(p => p.type !== 'elevator'),
+    1
+  );
+  try {
+    assert.ok(maxPitch(bare, 40) > 45);
+  } finally {
+    bare.dispose();
+  }
+});
+test('underwater W dives and S climbs the flooded Nautilus', () => {
+  for (const [input, sign] of [
+    [{pitch: 1}, -1],
+    [{pitch: -1}, 1]
+  ]) {
+    const f = nautilusUnderway(preset('sub'), 1);
+    try {
+      const before = depth(f);
+      for (let i = 0; i < 3 * 120; i++) f.step(1 / 120, input);
+      assert.ok(sign * pitch(f) > 20, String(pitch(f)));
+      run(f, 4);
+      const change = depth(f) - before;
+      if (sign < 0) assert.ok(change > 3, 'W goes deeper: ' + change);
+      else assert.ok(change < -1, 'S comes up: ' + change);
+      assert.equal(f.crashed, false);
+    } finally {
+      f.dispose();
+    }
+  }
+});
+test('the Nautilus planes keep it level at neutral buoyancy and surfaced, with the surfaced speed of before', () => {
+  for (const [ballast, slowest] of [
+    [0.7, 2],
+    [0, 2.5]
+  ]) {
+    const f = nautilusUnderway(preset('sub'), ballast);
+    try {
+      assert.ok(maxPitch(f, 20) < 5);
+      assert.ok(waterSpeed(f) > slowest, ballast + ': ' + waterSpeed(f));
+    } finally {
+      f.dispose();
+    }
+  }
 });

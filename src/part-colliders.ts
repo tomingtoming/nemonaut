@@ -3,6 +3,7 @@ import * as T from 'three';
 import RAPIER from './physics.js';
 import {PARTS} from './catalog.js';
 import {partCenter, partRotation, type AeroPart} from './aero.js';
+import {foldedWheelRadius} from './landing-gear.js';
 
 // Box centers are relative to the part's mass center, in local part axes.
 // Volume-weighted geometry must preserve that center: statistics and free-flight
@@ -20,8 +21,6 @@ const cuboid = (half: readonly number[]) => {
   const [x, y, z] = half;
   return RAPIER.ColliderDesc.cuboid(x, y, z);
 };
-/** Radius of a retracted gear's collider as a fraction of the wheel diameter (BACKLOG 9c). */
-const RETRACTED_RADIUS = 0.05;
 interface ColliderPiece {
   shape: import('./physics.js').ColliderDesc;
   offset: T.Vector3;
@@ -33,11 +32,13 @@ export function createPartColliders(
   body: import('./physics.js').RigidBody,
   part: ColliderPart,
   mass: number,
-  {retracted = false}: {retracted?: boolean} = {}
+  {folded}: {folded?: T.Vector3} = {}
 ): PartCollider[] {
   const d = PARTS[part.type],
     rotation = partRotation(part),
-    center = partCenter(part);
+    // Folded gear (BACKLOG 9c): its mass centre and collider move with the folded visual (landing-gear.ts).
+    retracted = folded !== undefined,
+    center = folded ?? partCenter(part);
   const boxes = hasCargoBay(d) ? cargoCollisionBoxes(d, part.cargoOpen) : d.collisionBoxes;
   let pieces: ColliderPiece[];
   if (boxes) {
@@ -69,10 +70,10 @@ export function createPartColliders(
   } else
     pieces = [
       {
-        // Retracted gear keeps its mass at the same centre (statistics and the solver share it) but shrinks to
-        // a small ball with body friction, so a gear-up landing scrapes instead of rolling.
+        // A folded wheel is a ball the size of its shrunken visual, with body friction: where the gear folds
+        // into the body the belly meets the ground first; where it folds outside, it scrapes instead of rolling.
         shape: d.wheel
-          ? RAPIER.ColliderDesc.ball(retracted ? d.size[1] * RETRACTED_RADIUS : d.size[1] / 2)
+          ? RAPIER.ColliderDesc.ball(retracted ? foldedWheelRadius(part.type) : d.size[1] / 2)
           : cuboid(d.size.map(n => Math.max(0.02, n / 2))),
         offset: new T.Vector3(),
         weight: 1

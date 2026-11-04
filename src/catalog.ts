@@ -870,11 +870,22 @@ export function preset(kind: string): Part[] {
     add('truss', [0, 0.8, -0.5]);
     if (kind === 'boat') for (const x of [-1, 1]) add('pontoon', [x, 0.3, 0], r, 1);
     add('propeller', [0, -0.15, -1.7], r, 1);
+    // A rudder in the screw's wash, deep enough to stay in the water at the waterline (BACKLOG 9b): A/D turn.
+    if (kind === 'boat') add('rudder', [0, -0.3, -2.2], [Math.PI / 2, Math.PI / 2, 0], 1);
     if (kind === 'sub') {
       add('ballast', [-0.65, 0.3, -0.3], r, 1);
       add('ballast', [0.65, 0.3, -0.3], r, 1);
       // A rudder behind the screw, low enough to stay in the water when surfaced (BACKLOG 9b): A/D turn.
       add('rudder', [0, -0.25, -2.65], [Math.PI / 2, Math.PI / 2, 0], 1);
+      // Bow and stern planes (BACKLOG 9b): W/S and SAS hold the pitch, also when fully flooded. Equal arms
+      // fore and aft keep the trim and cancel their drag moments while the hull rises or sinks.
+      for (const [z, parent] of [
+        [1.6, 0],
+        [-1.6, 1]
+      ]) {
+        add('elevator', [0.95, -0.15, z], r, parent);
+        add('elevator', [-0.95, -0.15, z], [Math.PI / 2, Math.PI, 0], parent);
+      }
     }
   }
   if (kind === 'sub')
@@ -882,7 +893,8 @@ export function preset(kind: string): Part[] {
       if (p.type === 'cockpit') p.p = [0, 0, 0.3];
       // The buoyant frame sits a little aft to trim the rudder's weight at the stern when submerged.
       if (p.type === 'truss') p.p = [0, 1.2, -0.15];
-      if (p.type === 'propeller') p.p = [0, 0.1, -2.1];
+      // The screw sits a little lower so that it keeps its surfaced thrust while the planes hold the hull level.
+      if (p.type === 'propeller') p.p = [0, 0, -2.1];
       if (p.type === 'ballast') p.p = [Math.sign(p.p[0]) * 1.3, 0.2, 0];
     }
   if (['plane', 'boat', 'sub'].includes(kind)) {

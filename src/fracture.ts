@@ -83,7 +83,8 @@ export type FractureStatistics = (
   parts: readonly Part[],
   fuel: FuelMap,
   ballast: number,
-  thermal: import('./thermal.js').ThermalMap
+  thermal: import('./thermal.js').ThermalMap,
+  gearDeployed: boolean
 ) => FractureStats;
 
 export function fractureComponents(
@@ -137,7 +138,7 @@ export function fractureVessel(
   components.sort((a, b) => priority(b) - priority(a) || b.parts.length - a.parts.length);
   const before = {
     ...f,
-    stats: statistics(f.parts, f.fuel, f.ballast, f.thermal),
+    stats: statistics(f.parts, f.fuel, f.ballast, f.thermal, f.gearDeployed),
     pos: f.pos.clone(),
     vel: f.vel.clone(),
     q: f.q.clone(),
@@ -193,7 +194,7 @@ export function fractureVessel(
       v.steeringEnabled = false;
       for (const id of v.fuel.keys()) v.fuel.set(id, 0);
     }
-    v.stats = statistics(v.parts, v.fuel, v.ballast, v.thermal);
+    v.stats = statistics(v.parts, v.fuel, v.ballast, v.thermal, v.gearDeployed);
     v.pos.copy(before.pos);
     v.q.copy(before.q);
     v.omega.copy(before.omega);

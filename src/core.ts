@@ -14,7 +14,7 @@ import {
   type ObservationMap
 } from './observation.js';
 import {createBodyAerodynamics, bodyDrag, type BodyAerodynamics} from './body-drag.js';
-import {gearRetracted} from './landing-gear.js';
+import {foldedGearCenter, gearMassCenter, gearRetracted} from './landing-gear.js';
 import {separationName} from './separation-name.js';
 import {displacedVolume, mediumDensity, submergedFraction, WATER_DENSITY} from './buoyancy.js';
 import {engineMedium} from './engine-medium.js';
@@ -109,7 +109,9 @@ export interface CraftRecord<A extends FlightPart[] = FlightPart[]> {
   parts?: A;
 }
 /** The part fields statistics reads. */
-export type StatisticsPart = AeroPart & MassPart & Pick<ResourcePart, 'thrustLimit'>;
+export type StatisticsPart = AeroPart &
+  MassPart &
+  Pick<ResourcePart, 'thrustLimit'> & {parent?: string | null};
 /** Mass, propulsion and aerodynamic summary of a set of parts (statistics). */
 export interface FlightStats {
   mass: number;
@@ -312,7 +314,8 @@ export function statistics(
   parts: readonly StatisticsPart[],
   fuelRatio: FuelMap | number = 1,
   ballast = 0,
-  thermal: ReadonlyMap<string, {ablator?: number}> | null = null
+  thermal: ReadonlyMap<string, {ablator?: number}> | null = null,
+  gearDeployed = true
 ): FlightStats {
   let mass = 0,
     dry = 0,
@@ -335,7 +338,8 @@ export function statistics(
     fuel += d.fuel || 0;
     thrust += engineMaxThrust(p);
     weightedIsp += engineMaxThrust(p) * (d.isp || 0);
-    com.addScaledVector(partCenter(p), m);
+    // Folded gear carries its mass up into the body (landing-gear.ts), as its collider does.
+    com.addScaledVector(gearMassCenter(p, parts, gearDeployed), m);
   }
   com.divideScalar(mass || 1);
   const isp = weightedIsp / (thrust || 1);
@@ -589,6 +593,10 @@ export class Flight {
       if (fuel) this.fuel.set(p.id, fuel * Math.max(0, Math.min(1, value)));
     }
   }
+  /** The statistics of this vessel's parts and state, the gear position included. */
+  vesselStats(): FlightStats {
+    return statistics(this.parts, this.fuel, this.ballast, this.thermal, this.gearDeployed);
+  }
   buildColliders(): void {
     // Retracted gear is inside the body: no drag of its own (BACKLOG 9c).
     this.bodyAerodynamics = createBodyAerodynamics(
@@ -604,7 +612,7 @@ export class Flight {
         this.body,
         p,
         partMass(p, this.fuel, this.ballast, this.thermal),
-        {retracted: gearRetracted(p, this.gearDeployed)}
+        {folded: gearRetracted(p, this.gearDeployed) ? foldedGearCenter(p, this.parts) : undefined}
       );
       this.colliderGroups.set(p.id, group);
       this.colliders.set(p.id, group[0].collider);
@@ -621,12 +629,12 @@ export class Flight {
   }
 
   transferFuel(from: string, to: string, amount: number): number {
-    const before = statistics(this.parts, this.fuel, this.ballast, this.thermal);
+    const before = this.vesselStats();
     this.updateColliderMasses();
     const momentum = angularMomentum(this.body, this.q, this.omega),
       moved = transferFuel(this, from, to, amount);
     if (!moved) return 0;
-    this.stats = statistics(this.parts, this.fuel, this.ballast, this.thermal);
+    this.stats = this.vesselStats();
     // In free flight internal redistribution must not teleport the world-space COM.
     if (!this.landed) this.pos.add(before.com.clone().sub(this.stats.com).applyQuaternion(this.q));
     this.updateColliderMasses();
@@ -686,7 +694,7 @@ export class Flight {
     for (const p of roots) for (const id of descendants(this.parts, p.id)) remove.add(id);
     if (remove.size) {
       this.transferGuide = null;
-      const before = statistics(this.parts, this.fuel, this.ballast, this.thermal),
+      const before = this.vesselStats(),
         originalVelocity = this.vel.clone(),
         oldCOM = before.com.clone().applyQuaternion(this.q);
       const children: Flight[] = [];
@@ -728,7 +736,7 @@ export class Flight {
         child.gimbals = copyPartState(this.gimbals, ids);
         child.wheelMotion = copyPartState(this.wheelMotion, ids);
         child.observations = copyPartState(this.observations, ids);
-        child.stats = statistics(branch, child.fuel, child.ballast, child.thermal);
+        child.stats = child.vesselStats();
         child.vel
           .copy(originalVelocity)
           .add(this.omega.clone().cross(child.stats.com.clone().applyQuaternion(this.q).sub(oldCOM)));
@@ -751,7 +759,7 @@ export class Flight {
       }
       this.networks = fuelNetworks(this.parts);
       this.buildColliders();
-      const remaining = statistics(this.parts, this.fuel, this.ballast, this.thermal);
+      const remaining = this.vesselStats();
       this.vel
         .copy(originalVelocity)
         .add(this.omega.clone().cross(remaining.com.clone().applyQuaternion(this.q).sub(oldCOM)));
@@ -773,7 +781,7 @@ export class Flight {
         );
       }
     }
-    this.stats = statistics(this.parts, this.fuel, this.ballast, this.thermal);
+    this.stats = this.vesselStats();
     return remove;
   }
   step(dt: number, input: FlightInput = {}): number {
@@ -812,9 +820,7 @@ export class Flight {
     const altitude = (p: T.Vector3) => bodyAltitude(p, startTime, reference),
       localUp = (p: T.Vector3) => bodyUp(p, startTime, reference),
       gravity = (p: T.Vector3) => bodyGravity(p, startTime, reference),
-      startCOM = this.pos
-        .clone()
-        .add(statistics(this.parts, this.fuel, this.ballast, this.thermal).com.applyQuaternion(this.q)),
+      startCOM = this.pos.clone().add(this.vesselStats().com.applyQuaternion(this.q)),
       spin = surfaceAngularVelocity(reference),
       relativeOmega = this.omega.clone().sub(spin),
       relativeVelocity = surfaceRelativeVelocity(startCOM, this.vel, startTime, reference),
@@ -861,7 +867,7 @@ export class Flight {
     this.body.setLinvel(freeFlight ? {x: 0, y: 0, z: 0} : relativeVelocity, true);
     this.body.setAngvel(freeFlight ? this.omega : relativeOmega, true);
     this.updateColliderMasses();
-    const st = statistics(this.parts, this.fuel, this.ballast, this.thermal);
+    const st = this.vesselStats();
     this.stats = st;
     const mass = st.mass,
       com = st.com.clone().applyQuaternion(this.q).add(this.pos),

@@ -12,7 +12,9 @@ export function currentWorldRuntime(): WorldRuntime {
   return state.worldRuntime;
 }
 export function vesselCenter(f: Flight) {
-  return statistics(f.parts, f.fuel, f.ballast, f.thermal).com.applyQuaternion(f.q).add(f.pos);
+  return statistics(f.parts, f.fuel, f.ballast, f.thermal, f.gearDeployed)
+    .com.applyQuaternion(f.q)
+    .add(f.pos);
 }
 export function flightCenter() {
   return vesselCenter(currentFlight());

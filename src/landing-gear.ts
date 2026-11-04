@@ -1,11 +1,14 @@
 // Landing gear deploy / retract (BACKLOG 9c). Which parts fold away is a part property (`retractable` in the
 // catalog: the aircraft nose and main gear and their large variants), never the craft type; the switch is one
 // flag per vessel (Flight.gearDeployed, deployed at launch). Retracted gear has no wheel contact or suspension
-// (core.ts), no drag (it leaves the body-drag boxes, body-drag.ts) and only a small collider at its centre
-// (part-colliders.ts); deployed gear keeps the drag the body-drag model already gave it. Retracting is refused
-// while the vessel touches the ground. No DOM, no import-time side effects.
+// (core.ts) and no drag (it leaves the body-drag boxes, body-drag.ts); its mass and a small collider move to the
+// folded wheel, where the visual puts it (foldedGearCenter): inside the fuselage on a craft whose gear hangs from
+// a strut, so a gear-up landing rests on the belly. Statistics and the solver share that mass centre. Deployed
+// gear keeps the drag the body-drag model already gave it. Retracting is refused while the vessel touches the
+// ground. No DOM, no import-time side effects.
 import * as T from 'three';
-import {PARTS} from './catalog.js';
+import {PARTS, type PartVector} from './catalog.js';
+import {partCenter, partRotation} from './aero.js';
 import {angularMomentum, angularVelocity} from './angular-momentum.js';
 
 /** Seconds for the gear visual to fold or unfold completely. */
@@ -56,22 +59,29 @@ export interface GearVessel extends GearGroundVessel {
   body: Parameters<typeof angularMomentum>[0];
   q: T.Quaternion;
   omega: T.Vector3;
+  pos: T.Vector3;
+  stats: {com: T.Vector3};
   buildColliders(): void;
+  vesselStats(): {com: T.Vector3};
 }
 /** What a gear command did: nothing to move, no change, refused on the ground, or moved. */
 export type GearResult = 'none' | 'unchanged' | 'refused' | 'deployed' | 'retracted';
 /**
  * Puts the vessel's gear down (deployed true) or up. Retracting on the ground is refused (the craft would
  * drop onto its belly). A change rebuilds the colliders and the body drag, keeping the angular momentum as
- * the cargo door does (part-actions.ts).
+ * the cargo door does (part-actions.ts); the folded gear's mass moves inside, so the craft shifts against
+ * it and its centre of mass stays where it was in space, as a fuel transfer does (core.ts).
  */
 export function setGear(v: GearVessel, deployed: boolean): GearResult {
   if (!hasRetractableGear(v.parts)) return 'none';
   if (v.gearDeployed === deployed) return 'unchanged';
   if (!deployed && gearOnGround(v)) return 'refused';
-  const momentum = angularMomentum(v.body, v.q, v.omega);
+  const momentum = angularMomentum(v.body, v.q, v.omega),
+    before = v.vesselStats().com;
   v.gearDeployed = deployed;
   v.buildColliders();
+  v.stats = v.vesselStats();
+  v.pos.add(before.sub(v.stats.com).applyQuaternion(v.q));
   v.omega.copy(angularVelocity(v.body, v.q, momentum));
   return deployed ? 'deployed' : 'retracted';
 }
@@ -88,4 +98,67 @@ export function gearFold(position: number): {angle: number; scale: number} {
     // Ease in and out so the leg starts and stops gently.
     eased = p * p * (3 - 2 * p);
   return {angle: (1 - eased) * (Math.PI / 2), scale: 0.35 + 0.65 * eased};
+}
+
+/** The part fields the folded gear position reads (a catalog Part satisfies it). */
+export interface GearPart {
+  id: string;
+  type: string;
+  p: PartVector;
+  r: PartVector;
+  parent?: string | null;
+}
+/**
+ * The top of the strut a wheel hangs from, in the craft frame: just under its parent's centre line, straight
+ * above the wheel's fore-aft station. Null when the wheel has no parent or the strut would be too short or too
+ * long to draw (the workshop and flight visuals then show no strut, part-visuals.ts).
+ */
+export function gearStrutTop(
+  part: Pick<GearPart, 'p'>,
+  parent: Pick<GearPart, 'p'> | undefined
+): T.Vector3 | null {
+  if (!parent) return null;
+  const top = new T.Vector3(parent.p[0], parent.p[1] - 0.25, part.p[2]),
+    length = top.distanceTo(new T.Vector3(...part.p));
+  return length > 0.2 && length < 3 ? top : null;
+}
+/** The fold pivot of a gear visual in the part's own axes: the strut's top, or else the top of the wheel. */
+export function gearFoldPivot(part: GearPart, parent: Pick<GearPart, 'p'> | undefined): T.Vector3 {
+  const top = gearStrutTop(part, parent);
+  return top
+    ? top.sub(new T.Vector3(...part.p)).applyQuaternion(partRotation(part).invert())
+    : new T.Vector3(0, PARTS[part.type].size[1] / 2, 0);
+}
+/** Where a part-frame point of the gear goes when the gear is fully up (gearFold(0) about gearFoldPivot). */
+function foldedPoint(local: T.Vector3, pivot: T.Vector3): T.Vector3 {
+  const {angle, scale} = gearFold(0);
+  return local
+    .clone()
+    .sub(pivot)
+    .multiplyScalar(scale)
+    .applyAxisAngle(new T.Vector3(1, 0, 0), angle)
+    .add(pivot);
+}
+/**
+ * The mass centre of a folded gear part in the craft frame: where the visual draws the folded wheel. The
+ * parent is looked up in the vessel's parts; a gear whose parent left (staging, fracture) folds about its
+ * own wheel top.
+ */
+export function foldedGearCenter(part: GearPart, parts: readonly GearPart[]): T.Vector3 {
+  const parent = parts.find(p => p.id === part.parent),
+    rotation = partRotation(part),
+    local = partCenter(part)
+      .sub(new T.Vector3(...part.p))
+      .applyQuaternion(rotation.clone().invert());
+  return foldedPoint(local, gearFoldPivot(part, parent))
+    .applyQuaternion(rotation)
+    .add(new T.Vector3(...part.p));
+}
+/** The radius of a folded wheel's collider: the wheel shrunk as its visual is. */
+export function foldedWheelRadius(type: string): number {
+  return (PARTS[type].size[1] / 2) * gearFold(0).scale;
+}
+/** A part's mass centre in the craft frame with the vessel's gear up or down (statistics and colliders). */
+export function gearMassCenter(part: GearPart, parts: readonly GearPart[], deployed: boolean): T.Vector3 {
+  return gearRetracted(part, deployed) ? foldedGearCenter(part, parts) : partCenter(part);
 }

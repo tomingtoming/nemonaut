@@ -11,7 +11,7 @@ import {sceneCore, editorMarkers, objects, partObject} from './scene.js';
 import {assetModel} from './asset-loader.js';
 import {engineMaxThrust} from './resources.js';
 import {screwRotor, screwSpinStep, screwSpinTarget} from './screw-spin.js';
-import {gearFold, gearTravel, isRetractable} from './landing-gear.js';
+import {gearFold, gearFoldPivot, gearStrutTop, gearTravel, isRetractable} from './landing-gear.js';
 export function cloneModel(type: string) {
   const model = assetModel(type).clone(true);
   model.traverse(m => {
@@ -157,10 +157,10 @@ export function rebuildCraft() {
     if (!parent) continue;
     const wheel = partObject(p.id),
       from = new T.Vector3(...p.p),
-      to = new T.Vector3(parent.p[0], parent.p[1] - 0.25, p.p[2]),
-      delta = to.clone().sub(from);
-    if (delta.length() > 0.2 && delta.length() < 3) {
-      const mount = cloneModel('truss');
+      to = gearStrutTop(p, parent);
+    if (to) {
+      const delta = to.clone().sub(from),
+        mount = cloneModel('truss');
       mount.position.copy(from).add(to).multiplyScalar(0.5);
       mount.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), delta.clone().normalize());
       mount.scale.set(0.12, delta.length(), 0.12);
@@ -168,8 +168,8 @@ export function rebuildCraft() {
       const fold = wheel.userData.gearFold,
         inner = wheel.userData.gearInner;
       if (fold instanceof T.Group && inner instanceof T.Group) {
-        // Fold about the strut's top, in the wheel's own axes.
-        fold.position.copy(delta).applyQuaternion(wheel.quaternion.clone().invert());
+        // Fold about the strut's top, in the wheel's own axes: where the physics puts the folded mass.
+        fold.position.copy(gearFoldPivot(p, parent));
         inner.position.copy(fold.position).negate();
       }
       wheel.updateMatrixWorld();

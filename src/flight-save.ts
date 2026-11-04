@@ -470,7 +470,7 @@ export function loadFlight(
   f.wheelMotion = wheelMotion;
   f.chutes = chutes;
   f.buildColliders();
-  f.stats = statistics(f.parts, f.fuel, f.ballast, f.thermal);
+  f.stats = statistics(f.parts, f.fuel, f.ballast, f.thermal, f.gearDeployed);
   f.orbit = bodyOrbitState(
     f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
     f.vel,

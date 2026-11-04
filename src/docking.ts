@@ -141,7 +141,7 @@ function rebuilt(source: Flight, parts: FlightPart[], sources: readonly Flight[]
   out.observations = merged(v => v.observations);
   out.active = new Set(sources.flatMap(v => [...v.active]).filter(id => ids.has(id)));
   out.networks = fuelNetworks(out.parts);
-  out.stats = statistics(out.parts, out.fuel, out.ballast, out.thermal);
+  out.stats = statistics(out.parts, out.fuel, out.ballast, out.thermal, out.gearDeployed);
   out.buildColliders();
   return out;
 }

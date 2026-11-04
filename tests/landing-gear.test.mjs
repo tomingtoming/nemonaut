@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {Flight} from '../dist/core.js';
+import {ShapeType} from '../dist/physics.js';
+import {bodyUp} from '../dist/celestial.js';
+import {angularMomentum} from '../dist/angular-momentum.js';
 import {preset, PARTS} from '../dist/catalog.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 import {
@@ -11,7 +14,8 @@ import {
   gearOnGround,
   setGear,
   gearTravel,
-  gearFold
+  gearFold,
+  foldedGearCenter
 } from '../dist/landing-gear.js';
 import {vesselControls} from '../dist/vessel-controls.js';
 
@@ -101,50 +105,185 @@ test('on the runway the gear cannot be retracted; saves keep the flag (old saves
   }
 });
 
-test('retracting in the air removes the gear drag and shrinks its collider at the same mass centre', () => {
+// The lowest point of a collider, in world y (body pose) or in the craft frame (no pose).
+function colliderBottom(collider, position = new T.Vector3(), rotation = new T.Quaternion()) {
+  const center = new T.Vector3()
+    .copy(collider.translationWrtParent())
+    .applyQuaternion(rotation)
+    .add(position);
+  if (collider.shapeType() === ShapeType.Ball) return center.y - collider.radius();
+  const h = collider.halfExtents(),
+    q = new T.Quaternion().copy(collider.rotationWrtParent()).premultiply(rotation);
+  let low = Infinity;
+  for (const x of [-1, 1])
+    for (const y of [-1, 1])
+      for (const z of [-1, 1])
+        low = Math.min(low, center.y + new T.Vector3(x * h.x, y * h.y, z * h.z).applyQuaternion(q).y);
+  return low;
+}
+const isGear = (f, id) => isRetractable(f.parts.find(p => p.id === id).type);
+/** The lowest world point of the gear colliders and of the rest of the craft, above the ground's top face. */
+function rideHeights(f) {
+  const position = new T.Vector3().copy(f.body.translation()),
+    rotation = new T.Quaternion().copy(f.body.rotation()),
+    ground = f.world.ground.translation.y + 1,
+    low = {gear: Infinity, body: Infinity};
+  for (const [id, group] of f.colliderGroups)
+    for (const {collider} of group) {
+      const key = isGear(f, id) ? 'gear' : 'body';
+      low[key] = Math.min(low[key], colliderBottom(collider, position, rotation) - ground);
+    }
+  return low;
+}
+
+test('retracting in the air removes the gear drag and folds its mass and collider into the fuselage', () => {
   const f = new Flight(preset('plane'), 'drop');
   try {
     f.step(1 / 120, {});
+    f.omega.set(0.01, 0.02, 0.03);
     const forward = new T.Vector3(0, 0, 1),
-      gearIds = f.parts.filter(p => isRetractable(p.type)).map(p => p.id),
+      gear = f.parts.filter(p => isRetractable(p.type)),
       drag = f.bodyAerodynamics.dragArea(forward),
-      com = new T.Vector3().copy(f.body.localCom()),
-      ball = f.colliders.get(gearIds[0]);
-    assert.ok(Math.abs(ball.radius() - 0.35) < 1e-6);
+      down = f.vesselStats().com,
+      center = f.pos.clone().add(down.clone().applyQuaternion(f.q)),
+      mass = f.body.mass(),
+      momentum = angularMomentum(f.body, f.q, f.omega);
+    assert.ok(Math.abs(f.colliders.get(gear[0].id).radius() - 0.35) < 1e-6);
+    assert.ok(new T.Vector3().copy(f.body.localCom()).distanceTo(down) < 1e-5);
     assert.equal(setGear(f, false), 'retracted');
-    const folded = f.colliders.get(gearIds[0]);
-    assert.ok(folded.radius() < 0.05, 'small ball once folded');
-    assert.ok(Math.abs(folded.friction() - 0.35) < 1e-6, 'scrapes, does not roll');
-    assert.ok(new T.Vector3().copy(f.body.localCom()).distanceTo(com) < 1e-5, 'mass centre unchanged');
+    const up = f.vesselStats().com,
+      inside = new T.Quaternion().copy(f.body.rotation()),
+      origin = new T.Vector3().copy(f.body.translation());
+    for (const p of gear) {
+      const folded = f.colliders.get(p.id),
+        at = foldedGearCenter(p, f.parts);
+      assert.ok(
+        Math.abs(folded.radius() - 0.35 * gearFold(0).scale) < 1e-6,
+        'the wheel shrunk as its visual'
+      );
+      assert.ok(Math.abs(folded.friction() - 0.35) < 1e-6, 'scrapes, does not roll');
+      assert.ok(new T.Vector3().copy(folded.translationWrtParent()).distanceTo(at) < 1e-5);
+      assert.ok(at.y > 1, `${p.type} folds up into the body: ${at.toArray()}`);
+      // The folded wheel's centre and its lowest point lie inside the fuselage or cockpit box.
+      const world = at.clone().applyQuaternion(inside).add(origin),
+        reach = new T.Vector3(0, -folded.radius(), 0).applyQuaternion(inside);
+      assert.ok(
+        [...f.colliderGroups].some(
+          ([id, group]) =>
+            !isGear(f, id) &&
+            group.some(
+              ({collider}) =>
+                collider.containsPoint(world) && collider.containsPoint(world.clone().add(reach))
+            )
+        ),
+        p.type + ' is inside the body'
+      );
+    }
+    // Statistics and the solver share the new mass centre; the craft shifts so it stays put in space.
+    assert.ok(new T.Vector3().copy(f.body.localCom()).distanceTo(up) < 1e-5, 'localCom follows statistics');
+    assert.ok(Math.abs(f.body.mass() - mass) < 0.01);
+    assert.ok(up.y - down.y > 0.02 && up.y - down.y < 0.04, `the centre of mass rises ${up.y - down.y} m`);
+    assert.ok(f.stats.com.distanceTo(up) < 1e-9);
+    assert.ok(
+      f.pos.clone().add(up.clone().applyQuaternion(f.q)).distanceTo(center) < 1e-6,
+      'no jump in space'
+    );
+    assert.ok(angularMomentum(f.body, f.q, f.omega).distanceTo(momentum) < 0.01, 'angular momentum kept');
     const less = f.bodyAerodynamics.dragArea(forward);
     // Three gear legs of 0.34 m × 0.7 m frontal box at Cd 0.4 in the body-drag model: ~0.095 m² each.
     assert.ok(drag - less > 0.2 && drag - less < 0.3, `gear CdA ${drag - less}`);
     assert.equal(setGear(f, true), 'deployed');
     assert.ok(Math.abs(f.bodyAerodynamics.dragArea(forward) - drag) < 1e-9);
-    assert.ok(Math.abs(f.colliders.get(gearIds[0]).radius() - 0.35) < 1e-6);
+    assert.ok(Math.abs(f.colliders.get(gear[0].id).radius() - 0.35) < 1e-6);
+    assert.ok(f.vesselStats().com.distanceTo(down) < 1e-9, 'back to the gear-down mass centre');
+    assert.ok(new T.Vector3().copy(f.body.localCom()).distanceTo(down) < 1e-5);
+    assert.ok(f.pos.clone().add(down.clone().applyQuaternion(f.q)).distanceTo(center) < 1e-6);
+    // A gear-up save restores the same mass centre.
+    setGear(f, false);
+    const restored = loadFlight(saveFlight(f));
+    try {
+      assert.ok(restored.stats.com.distanceTo(up) < 1e-9);
+      assert.ok(new T.Vector3().copy(restored.body.localCom()).distanceTo(up) < 1e-5);
+    } finally {
+      restored.dispose();
+    }
   } finally {
     f.dispose();
   }
 });
 
-test('retracted gear has no wheel contact: forced up on the runway the plane settles onto its gear bays', () => {
+test('gear up on the runway, Swift settles on its belly: fuselage on the ground, folded wheels clear', () => {
   const down = new Flight(preset('plane'), 'runway'),
     up = new Flight(preset('plane'), 'runway');
   try {
     up.gearDeployed = false;
     up.buildColliders();
-    for (let i = 0; i < 240; i++) {
+    up.stats = up.vesselStats();
+    for (let i = 0; i < 360; i++) {
       down.step(1 / 120, {});
       up.step(1 / 120, {});
     }
     assert.ok(down.telemetry.contacts > 0);
     assert.equal(up.telemetry.contacts, 0, 'no suspension contact for folded gear');
-    const height = f => f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)).y;
-    assert.ok(height(down) - height(up) > 0.25, 'drops below the wheel height without the suspension');
+    // Expected from the parts: the fuselage box (tank, 1.25 m across) rests on its flat bottom face.
+    const tank = up.parts.find(p => p.type === 'tank'),
+      belly = Math.min(
+        ...[...up.colliderGroups]
+          .filter(([id]) => !isGear(up, id))
+          .flatMap(([, group]) => group.map(({collider}) => colliderBottom(collider)))
+      );
+    assert.ok(Math.abs(tank.p[1] - belly - 0.625) < 1e-6, `fuselage half height ${tank.p[1] - belly}`);
+    const tankHeight = f =>
+      new T.Vector3(...tank.p)
+        .applyQuaternion(new T.Quaternion().copy(f.body.rotation()))
+        .add(new T.Vector3().copy(f.body.translation())).y -
+      (f.world.ground.translation.y + 1);
+    const gearUp = rideHeights(up),
+      gearDown = rideHeights(down);
+    assert.ok(Math.abs(gearUp.body) < 0.02, `belly on the ground: ${gearUp.body} m`);
+    assert.ok(Math.abs(tankHeight(up) - (tank.p[1] - belly)) < 0.02, `ride height ${tankHeight(up)} m`);
+    assert.ok(gearUp.gear > 0.2, `folded wheels ${gearUp.gear} m above the ground`);
+    assert.ok(gearDown.gear < 0.15 && gearDown.body > 0.5, 'gear down stands on its wheels');
+    assert.ok(tankHeight(down) - tankHeight(up) > 0.6, 'well below the wheel height');
     assert.equal(up.crashed, false);
   } finally {
     down.dispose();
     up.dispose();
+  }
+});
+
+test('a gear-up landing slides on the belly to a stop; a hard one breaks the cockpit', () => {
+  const land = (sink, forward) => {
+    const f = new Flight(preset('plane'), 'runway');
+    f.gearDeployed = false;
+    f.buildColliders();
+    f.stats = f.vesselStats();
+    // From the gear-down height the belly first drops ~0.74 m: about 3.8 m/s more at the touchdown.
+    const up = bodyUp(f.pos, f.universalTime);
+    f.vel.addScaledVector(up, -sink).addScaledVector(new T.Vector3(0, 0, 1).applyQuaternion(f.q), forward);
+    f.sas = false;
+    return f;
+  };
+  const gentle = land(2, 50),
+    hard = land(12, 50);
+  try {
+    let t = 0;
+    for (; t < 30 && !(gentle.landed && gentle.telemetry.surfaceSpeed < 0.05); t += 1 / 120)
+      gentle.step(1 / 120, {});
+    assert.equal(gentle.crashed, false);
+    assert.equal(gentle.failureEvents.length, 0, 'nothing breaks');
+    assert.equal(gentle.landed, true);
+    // Body friction (0.35 on the 0.3 runway) stops 50 m/s in some 15 s, not at once and not rolling on.
+    assert.ok(t > 8 && t < 25, `stopped after ${t} s`);
+    assert.ok(Math.abs(rideHeights(gentle).body) < 0.02);
+    for (let i = 0; i < 240 && !hard.crashed; i++) hard.step(1 / 120, {});
+    assert.ok(
+      hard.failureEvents.some(e => e.cause === 'impact'),
+      'a 12 m/s belly impact still breaks parts'
+    );
+  } finally {
+    gentle.dispose();
+    hard.dispose();
   }
 });
 

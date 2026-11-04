@@ -59,8 +59,8 @@ export const examples = {
   orbiter: ['Surveyor / 02', '宇宙探査機', '無人コア · ソーラーパネル', 'land'],
   plane: ['Swift / 03', 'ジェット機', '独立操舵面 · 前輪1＋主脚2', 'runway'],
   rover: ['Nomad / 04', 'ローバー', '前輪操舵 · 4輪駆動', 'land'],
-  boat: ['Tern / 05', '双胴艇', 'フロート · スクリュー', 'water'],
-  sub: ['Nautilus / 06', '潜水艇', '注排水タンク · 水中推進 · ラダー', 'water']
+  boat: ['Tern / 05', '双胴艇', 'フロート · スクリュー · ラダー', 'water'],
+  sub: ['Nautilus / 06', '潜水艇', '注排水タンク · 水中推進 · ラダー · 前後のエレベーター', 'water']
 };
 Object.assign(examples, {
   'transport-cargo': [
