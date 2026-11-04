@@ -87,3 +87,14 @@ test('duplicate full model codes are rejected', () => {
 test('zero pivot coordinates and implicit surface hinge remain valid', () => {
   assert.deepEqual(catalogContractErrors({screw: PARTS.propellerLarge, elevator: PARTS.elevator}), []);
 });
+
+test('finite individual dimensions must not overflow or underflow derived volume and density', () => {
+  for (const size of [
+    [1e200, 1e200, 1e200],
+    [1e-200, 1e-200, 1e-200]
+  ]) {
+    const errors = catalogContractErrors({extreme: {...PARTS.engine, size}});
+    assert.ok(errors.some(e => e.includes('envelope volume')));
+    assert.ok(errors.some(e => e.includes('envelope density')));
+  }
+});

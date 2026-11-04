@@ -13,6 +13,13 @@ export function catalogContractErrors(parts) {
     codes.set(part.code, id);
     if (!Number.isFinite(part.mass) || part.mass <= 0) fail('mass');
     if (!vector(part.size) || part.size.some(n => n <= 0)) fail('size');
+    else {
+      // An envelope measure, NOT material density (wings, tanks and bays are hollow).
+      const envelopeVolume = part.size.reduce((a, b) => a * b, 1);
+      const envelopeDensity = part.mass / envelopeVolume;
+      if (!(envelopeVolume > 0) || !Number.isFinite(envelopeVolume)) fail('envelope volume');
+      if (!(envelopeDensity > 0) || !Number.isFinite(envelopeDensity)) fail('envelope density');
+    }
     for (const [field, value] of Object.entries(part)) {
       if (typeof value === 'number' && !Number.isFinite(value)) fail(`${field} finite`);
     }
