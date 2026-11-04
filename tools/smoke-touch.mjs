@@ -461,6 +461,14 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   // 9a: the controls panel lists this vessel's controls by on-screen names, no key letters; 「? 操作」 opens
   // the full list with touch gestures.
   const noKeys = text => !/(^|[\s/·])([A-Z]|Space|Shift|Ctrl)(?=[\s/·]|$)/m.test(text);
+  // On touch it starts collapsed; a tap on its title opens it.
+  const startsCollapsed = await page.evaluate(() => {
+    const e = document.getElementById('vesselControls');
+    return !!e && !e.hidden && !e.open;
+  });
+  expect(`${tag} controls panel starts collapsed on touch`, startsCollapsed, startsCollapsed);
+  await page.tap('#vesselControls summary');
+  await page.waitForTimeout(300);
   const panel = await page.evaluate(() => {
     const e = document.getElementById('vesselControls');
     return e

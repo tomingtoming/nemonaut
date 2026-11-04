@@ -1,24 +1,26 @@
 // 「この機体で使える操作」 (BACKLOG 9a): a small collapsible box in the flight HUD under the quick navigation,
 // listing the controls derived from the piloted vessel's parts (vessel-controls.ts) — key names with a
-// keyboard, on-screen names on touch. Open at launch unless the viewer collapsed it before (remembered per
-// browser). A periodic check re-renders it when the vessel changes (staging, switching, docking) and keeps it
+// keyboard, on-screen names on touch. At launch it opens on a desktop and starts collapsed on touch, where
+// the screen is small; once the viewer opens or collapses it, that choice is remembered per
+// browser. A periodic check re-renders it when the vessel changes (staging, switching, docking) and keeps it
 // between the quick navigation and the controls below it. No import-time side effects; app.ts mounts it.
 import {state} from './app-state.js';
 import {storageKey} from './app-id.js';
 import {vesselControls} from './vessel-controls.js';
 
 const COLLAPSED_KEY = storageKey('vesselControlsCollapsed');
-const readCollapsed = (): boolean => {
+/** The viewer's last choice: true collapsed, false open, null none yet. */
+const readCollapsed = (): boolean | null => {
   try {
-    return globalThis.localStorage?.getItem(COLLAPSED_KEY) === '1';
+    const value = globalThis.localStorage?.getItem(COLLAPSED_KEY);
+    return value === '1' ? true : value === '0' ? false : null;
   } catch {
-    return false;
+    return null;
   }
 };
 const writeCollapsed = (collapsed: boolean): void => {
   try {
-    if (collapsed) globalThis.localStorage?.setItem(COLLAPSED_KEY, '1');
-    else globalThis.localStorage?.removeItem(COLLAPSED_KEY);
+    globalThis.localStorage?.setItem(COLLAPSED_KEY, collapsed ? '1' : '0');
   } catch {}
 };
 // Controls the box must stay above (when they are on the same side of the screen).
@@ -75,10 +77,10 @@ export function mountVesselControls(hud: HTMLElement, body: HTMLElement = docume
         f.parts.map(p => p.type + p.stage + (p.driveEnabled ?? '')).join()
       ].join('|');
     if (!flying) {
-      // A new flight opens the box unless the viewer collapsed it before.
+      // A new flight: the viewer's last choice, else open on a desktop and collapsed on touch.
       flying = true;
       box.hidden = false;
-      box.open = !readCollapsed();
+      box.open = !(readCollapsed() ?? touch);
     }
     if (key !== shown) {
       shown = key;
