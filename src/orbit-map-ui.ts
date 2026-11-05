@@ -292,7 +292,9 @@ function updateOrbitPlan(o: import('./celestial.js').OrbitState) {
   if (node) {
     const remaining = new T.Vector3(...node.remaining).length(),
       dt = node.time - fl.time,
-      forward = new T.Vector3(0, fl.rocketAxes ? 1 : 0, fl.rocketAxes ? 0 : 1).applyQuaternion(fl.q),
+      forward = new T.Vector3(0, fl.rocketAxes ? 1 : 0, fl.rocketAxes ? 0 : 1)
+        .applyQuaternion(fl.instrumentRotation)
+        .applyQuaternion(fl.q),
       direction = maneuverDirection(node);
     if (!direction) throw Error('噴射方向が分かりません');
     const angle = (forward.angleTo(direction) * 180) / Math.PI;

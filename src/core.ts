@@ -1,4 +1,4 @@
-import {usesAxialControls} from './command-frame.js';
+import {instrumentRotation, usesAxialControls} from './command-frame.js';
 import {isParked} from './ground-rest.js';
 import {fractureVessel, copyPartState} from './fracture.js';
 import {recordFailure, type FailureEvent} from './failure-events.js';
@@ -126,6 +126,7 @@ export interface FlightStats {
 }
 /** Pilot input for one step; omitted axes are zero. */
 export interface FlightInput {
+  assemblyAttitude?: {pitch?: number; yaw?: number; roll?: number};
   pitch?: number;
   yaw?: number;
   roll?: number;
@@ -216,6 +217,14 @@ export function validateCraft<A extends FlightPart[] = FlightPart[]>(
       p.stage > 9
     )
       throw Error('部品データが不正です。');
+    if (
+      p.referenceDirection !== undefined &&
+      (!PARTS[p.type].commandFrame ||
+        !Number.isInteger(p.referenceDirection) ||
+        p.referenceDirection < 0 ||
+        p.referenceDirection > 3)
+    )
+      throw Error('操縦基準が不正です');
     for (const key of [
       'cargoOpen',
       'reactionEnabled',
@@ -411,6 +420,9 @@ export class Flight {
   declare rcsEnabled: boolean;
   declare rcsJets: RcsJet[];
   declare reactionEnabled: boolean;
+  get instrumentRotation() {
+    return instrumentRotation(this.parts, this.rocketAxes, PARTS);
+  }
   declare rocketAxes: boolean;
   declare sas: boolean;
   declare sasMode: string;
@@ -881,7 +893,21 @@ export class Flight {
       this.body.addForceAtPoint(f, point.clone().sub(origin), true);
     };
     const commands = attitudeCommands(input, this.rocketAxes);
-    const steering = new T.Vector3(commands.pitch, commands.yaw, commands.roll);
+    const controlRotation = this.instrumentRotation;
+    const steering = new T.Vector3(commands.pitch, commands.yaw, commands.roll).applyQuaternion(
+      controlRotation
+    );
+    // Aircraft guidance already works in assembly coordinates. Only replace axes it owns.
+    const guided = input.assemblyAttitude;
+    if (guided) {
+      const scale = input.precision ? 0.25 : 1;
+      if (guided.pitch !== undefined) steering.x = guided.pitch * scale;
+      if (guided.yaw !== undefined) steering.y = guided.yaw * scale;
+      if (guided.roll !== undefined) steering.z = guided.roll * scale;
+    }
+    commands.pitch = steering.x;
+    commands.yaw = steering.y;
+    commands.roll = steering.z;
     const manual = steering.lengthSq() > 0.0001;
     if (!this.holdQ || !this.sas || (manual && (this.rocketAxes || this.sasMode !== 'hold')))
       this.holdQ = this.q.clone();
@@ -904,7 +930,9 @@ export class Flight {
         forward =
           this.sasMode === 'dock' && guide
             ? new T.Vector3(0, 1, 0).applyQuaternion(partRotation(guide.own.part))
-            : new T.Vector3(0, this.rocketAxes ? 1 : 0, this.rocketAxes ? 0 : 1);
+            : new T.Vector3(0, this.rocketAxes ? 1 : 0, this.rocketAxes ? 0 : 1).applyQuaternion(
+                controlRotation
+              );
       if (target) {
         const held = attitudeTarget(this.q, forward, target);
         if (held) this.holdQ = held;

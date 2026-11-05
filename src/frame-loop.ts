@@ -163,13 +163,18 @@ export function startFrameLoop(
             }
             world.replace(stepped);
             world.step(1 / 120, {
-              ...manualTranslation(keys, stepped.rocketAxes, Number($('#portPower', 'select').value) / 100),
+              ...manualTranslation(
+                keys,
+                stepped.rocketAxes,
+                Number($('#portPower', 'select').value) / 100,
+                stepped.instrumentRotation
+              ),
               precision: $('#precisionControl', 'button').getAttribute('aria-pressed') === 'true',
               drive: (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0),
               pitch: (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0),
               yaw: (keys.has('KeyA') ? 1 : 0) - (keys.has('KeyD') ? 1 : 0),
               roll: (keys.has('KeyQ') ? 1 : 0) - (keys.has('KeyE') ? 1 : 0),
-              ...autopilotCommands,
+              assemblyAttitude: autopilotCommands,
               ...dockingCommands
             });
             updateFlightChallenges();

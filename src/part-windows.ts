@@ -1,3 +1,5 @@
+import {selectReference} from './command-frame.js';
+import {referenceSelect} from './reference-select.js';
 import {cargoReleaseAllowed} from './cargo-access.js';
 import {observationStatus, observationData, observationSite} from './observation.js';
 import {portWindowState, operatePort, guideFromPort, setPortTranslation} from './port-window.js';
@@ -37,6 +39,7 @@ export interface PartWindowTransfer {
   signature?: string;
 }
 export interface PartWindow extends FloatingWindow {
+  reference?: HTMLSelectElement;
   port?: PartWindowPort;
   engine?: {status: HTMLOutputElement; button: HTMLButtonElement};
   decouple?: HTMLButtonElement;
@@ -91,6 +94,10 @@ export function mountPartWindows(
       if (!p) {
         close(id);
         continue;
+      }
+      if (w.reference) {
+        w.reference.value = String(p.referenceDirection ?? -1);
+        w.reference.disabled = !canControl(f);
       }
       const d = PARTS[p.type];
       for (const a of partActions(f, id).filter(a => a.key !== 'engine')) {
@@ -297,6 +304,13 @@ export function mountPartWindows(
         onClose: () => close(id)
       });
     windows.set(id, w);
+    if (d.commandFrame)
+      w.reference = referenceSelect(w.content, value => {
+        if (getFlight() !== f || !canControl(f)) return;
+        beforeAction();
+        selectReference(f.parts, id, value, PARTS);
+        update();
+      });
     w.element.onpointerenter = () => highlight(id);
     w.element.onpointerleave = () => highlight(null);
     for (const a of partActions(f, id).filter(a => a.key !== 'engine')) {

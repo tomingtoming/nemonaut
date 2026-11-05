@@ -1,3 +1,4 @@
+import {referenceSelect} from './reference-select.js';
 import {PARTS} from './catalog.js';
 import {partSettings, type SettablePart} from './part-settings.js';
 import {symmetryTargets} from './symmetry.js';
@@ -9,6 +10,7 @@ export interface DesignPartWindowRow {
   value: HTMLSpanElement;
 }
 export interface DesignPartWindow extends FloatingWindow {
+  reference?: HTMLSelectElement;
   rows: Map<string, DesignPartWindowRow>;
   link: HTMLInputElement;
 }
@@ -47,6 +49,7 @@ export function mountDesignPartWindows(
         close(id);
         continue;
       }
+      if (w.reference) w.reference.value = String(p.referenceDirection ?? -1);
       const group = symmetryTargets(parts, id),
         targets = symmetryTargets(parts, id, w.link.checked);
       closest(w.link, 'label', 'label').hidden = group.length < 2;
@@ -87,6 +90,11 @@ export function mountDesignPartWindows(
       {rows: new Map<string, DesignPartWindowRow>(), link: document.createElement('input')}
     );
     windows.set(id, w);
+    if (PARTS[p.type].commandFrame)
+      w.reference = referenceSelect(w.content, value => {
+        change(id, 'referenceDirection', value, false);
+        update();
+      });
     w.element.onpointerenter = () => highlight(id);
     w.element.onpointerleave = () => highlight(null);
     const link = document.createElement('label');
@@ -124,7 +132,7 @@ export function mountDesignPartWindows(
         update();
       };
     }
-    if (!w.rows.size) {
+    if (!w.rows.size && !w.reference) {
       const text = document.createElement('output');
       text.textContent = '設定なし';
       w.content.append(text);

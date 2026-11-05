@@ -1,3 +1,4 @@
+import {Vector3, type Quaternion} from 'three';
 // Scale manual attitude commands only; wheel steering/drive and translation
 // consume the original input, and SAS retains its full actuator authority.
 export function attitudeCommands(
@@ -13,16 +14,23 @@ export function attitudeCommands(
 }
 
 /** I/K moves forward, L/J right, U/O up. A docking port resolves its own local axes in physics. */
-export function manualTranslation(keys: ReadonlySet<string>, axial: boolean, portPower: number) {
+export function manualTranslation(
+  keys: ReadonlySet<string>,
+  axial: boolean,
+  portPower: number,
+  rotation?: Quaternion
+) {
   const forward = Number(keys.has('KeyI')) - Number(keys.has('KeyK'));
   const right = Number(keys.has('KeyL')) - Number(keys.has('KeyJ'));
   const up = Number(keys.has('KeyU')) - Number(keys.has('KeyO'));
+  const body = new Vector3(right, axial ? forward : up, axial ? -up : forward);
+  if (rotation) body.applyQuaternion(rotation);
   return {
     portForward: forward * portPower,
     portRight: right * portPower,
     portUp: up * portPower,
-    translateX: right,
-    translateY: axial ? forward : up,
-    translateZ: axial ? -up : forward
+    translateX: body.x,
+    translateY: body.y,
+    translateZ: body.z
   };
 }

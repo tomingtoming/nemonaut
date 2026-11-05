@@ -92,6 +92,7 @@ export interface Part {
   r: PartVector;
   parent: string | null;
   stage: number;
+  referenceDirection?: number;
   reactionEnabled?: boolean;
   steeringEnabled?: boolean;
   fuelEnabled?: boolean;

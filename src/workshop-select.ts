@@ -2,6 +2,7 @@
 // modes with the transform gizmo, the inspector with pose, stage and equipment settings (linked across a
 // symmetry group), deleting a branch. app.ts calls wireSelection at the original place. Calls up into app.ts
 // through app-hooks. No import-time side effects.
+import {selectReference} from './command-frame.js';
 import {PARTS, nodes} from './catalog.js';
 import {descendants} from './core.js';
 import {occupiedNodes, nodeAvailable, nodeConnection} from './attachment-nodes.js';
@@ -161,7 +162,11 @@ export function applySetting(
   if (state.flight || state.atCenter) return;
   try {
     if (id === null) throw Error('部品が選択されていません');
-    const next = editSymmetrySetting(state.parts, id, key, value, linked);
+    const next =
+      key === 'referenceDirection'
+        ? structuredClone(state.parts)
+        : editSymmetrySetting(state.parts, id, key, value, linked);
+    if (key === 'referenceDirection') selectReference(next, id, Number(value), PARTS);
     checkpoint();
     state.parts = next;
     if (key === 'cargoOpen')

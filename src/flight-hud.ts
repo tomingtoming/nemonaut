@@ -165,6 +165,7 @@ export function updateNavigation() {
             (Math.acos(
               T.MathUtils.clamp(
                 new T.Vector3(0, fl.rocketAxes ? 1 : 0, fl.rocketAxes ? 0 : 1)
+                  .applyQuaternion(fl.instrumentRotation)
                   .applyQuaternion(fl.q)
                   .dot(relative.braking),
                 -1,
@@ -185,7 +186,7 @@ export function updateNavigation() {
   $('#clearTarget', 'button').hidden = !relative;
   const nav = drawNavball(
     $('#navball', 'canvas'),
-    fl.q,
+    fl.q.clone().multiply(fl.instrumentRotation),
     fl.rocketAxes,
     flightCenter(),
     fl.vel,

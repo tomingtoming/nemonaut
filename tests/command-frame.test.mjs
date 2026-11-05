@@ -1,3 +1,6 @@
+import {Vector3} from 'three';
+import {manualTranslation} from '../dist/flight-input.js';
+import {selectReference} from '../dist/command-frame.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PARTS, part, preset} from '../dist/catalog.js';
@@ -86,4 +89,33 @@ test('automatic frame requires a declared independent engine, not missing medium
     false
   );
   assert.equal(usesAxialControls(parts, {...PARTS, engine: {...PARTS.engine, thrustMedium: 'air'}}), false);
+});
+
+test('mounted instrument turns the nose, manual RCS and flight save together', () => {
+  const craft = preset('rocket');
+  const pod = craft.find(p => p.type === 'capsule');
+  pod.r = [0, 0, -Math.PI / 2];
+  const f = new Flight(craft, 'orbit');
+  let restored;
+  const nose = vessel => new Vector3(0, 1, 0).applyQuaternion(vessel.instrumentRotation);
+  try {
+    assert.ok(nose(f).distanceTo(new Vector3(1, 0, 0)) < 1e-8);
+    selectReference(f.parts, pod.id, 1, PARTS);
+    assert.ok(nose(f).distanceTo(new Vector3(-1, 0, 0)) < 1e-8);
+    selectReference(f.parts, pod.id, 2, PARTS);
+    const input = manualTranslation(new Set(['KeyI']), true, 0.25, f.instrumentRotation);
+    assert.ok(
+      new Vector3(input.translateX, input.translateY, input.translateZ).distanceTo(new Vector3(0, -1, 0)) <
+        1e-8
+    );
+    assert.equal(input.portForward, 0.25);
+    f.sas = false;
+    f.step(1 / 120, {roll: 1});
+    assert.ok(f.telemetry.commands.yaw < -0.99);
+    restored = loadFlight(saveFlight(f));
+    assert.ok(nose(restored).distanceTo(nose(f)) < 1e-8);
+  } finally {
+    f.dispose();
+    restored?.dispose();
+  }
 });
