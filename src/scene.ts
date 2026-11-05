@@ -1,3 +1,4 @@
+import {overWater} from './surface-frame.js';
 // 3D scene core (BACKLOG 7c, moved from app.ts): renderer, scene, camera, orbit controls, lights, the
 // top-level groups, the editor markers and overlays, the registry of part objects and the camera framing.
 // No import-time scene creation: app.ts calls the create* functions at the places where these objects were
@@ -7,7 +8,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {TransformControls} from 'three/addons/controls/TransformControls.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {flightFrameOffset, setOrbitUp} from './camera-up.js';
-import {bodyUp} from './celestial.js';
+import {bodyAltitude, bodyUp} from './celestial.js';
 import {workshopFrame} from './workshop-layout.js';
 import {state} from './app-state.js';
 import {flightCenter} from './current-flight.js';
@@ -220,14 +221,17 @@ export function frame() {
     return;
   }
   flightFocus.copy(flightCenter());
+  const water =
+    overWater(flightFocus, state.flight.universalTime) &&
+    bodyAltitude(flightFocus, state.flight.universalTime) <= fit.distance;
   controls.target.copy(fit.target);
   camera.position
     .copy(fit.target)
     .add(
       flightFrameOffset(
-        fit.distance * (state.flight.environment === 'water' ? 1 : 1.5),
+        fit.distance * (water ? 1 : 1.5),
         bodyUp(flightCenter(), state.flight.universalTime),
-        state.flight.environment === 'water'
+        water
       )
     );
   controls.update();

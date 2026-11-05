@@ -29,14 +29,16 @@ function pair() {
   b.vel.set(0, 0, 0);
   return [a, b, a.parts[1].id, b.parts[1].id];
 }
-test('Different solid-ground departure modes share a docking world; water remains separate', () => {
+test('Docking uses port geometry across land, runway and sea departures', () => {
   const [a, b, ai, bi] = pair();
   b.environment = 'land';
   assert.equal(dockingStatus(a, ai, b, bi).ready, true);
   b.environment = 'runway';
   assert.equal(dockingStatus(a, ai, b, bi).ready, true);
   b.environment = 'water';
-  assert.equal(dockingStatus(a, ai, b, bi).ready, false);
+  assert.equal(dockingStatus(a, ai, b, bi).ready, true);
+  b.pos.x += 1;
+  assert.match(dockingStatus(a, ai, b, bi).reason, /離れ/);
   a.dispose();
   b.dispose();
 });
@@ -105,6 +107,7 @@ test('Equal opposite linear and spin momenta cancel without inventing merged mot
 });
 test('Docking reroots incoming parts without moving them and conserves momentum and resources', () => {
   const [a, b, ai, bi] = pair();
+  b.environment = 'water';
   a.detached = [b];
   a.vel.set(0.03, 0, 0.02);
   b.vel.set(-0.02, 0, 0.01);

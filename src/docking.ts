@@ -38,8 +38,6 @@ export function dockingStatus(a: Flight, aId: string, b: Flight, bId: string): D
   const invalid = (reason: string) => ({ready: false, reason});
   if (a === b) return invalid('同じ機体です');
   if (a.crashed || b.crashed) return invalid('損傷した機体です');
-  if ((a.environment === 'water') !== (b.environment === 'water'))
-    return invalid('海面と地上の環境は結合できません');
   if (a.ballast !== b.ballast && [...a.parts, ...b.parts].some(p => PARTS[p.type].ballast))
     return invalid('結合前に両機のバラスト設定を合わせてください');
   const pa = portPose(a, aId),

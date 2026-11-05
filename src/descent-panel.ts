@@ -1,3 +1,4 @@
+import {overWater} from './surface-frame.js';
 import {canControl} from './fleet.js';
 import {PARTS} from './catalog.js';
 import {floatingWindow, type FloatingWindow} from './floating-window.js';
@@ -10,7 +11,6 @@ export interface DescentPanelFlight extends DescentVessel {
   sas: boolean;
   sasMode: string;
   throttle: number;
-  environment?: string;
   orbit?: {bodyId: string; altitude: number; energy: number} | null;
 }
 export interface DescentPanel {
@@ -103,7 +103,7 @@ export function mountDescentPanel(
     const f = getFlight(),
       ground =
         f?.orbit?.bodyId === 'planet' &&
-        f.environment !== 'water' &&
+        !overWater(f.pos, f.universalTime) &&
         f.parts.some(p => PARTS[p.type].landingLeg) &&
         f.orbit.altitude < 10000;
     panel.hidden =

@@ -343,3 +343,24 @@ test('only wheels on the dry side support a rover straddling the coast', () => {
     }
   }
 });
+
+test('a submerged rocket ignites under water and climbs through the surface', () => {
+  const f = new Flight(preset('hopper'), 'water');
+  try {
+    const up = bodyUp(f.pos, 0);
+    f.pos.addScaledVector(up, -15);
+    const fuel = () => [...f.fuel.values()].reduce((sum, kg) => sum + kg, 0);
+    const before = fuel();
+    f.stageNext();
+    f.throttle = 1;
+    f.step(1 / 120);
+    assert.ok(bodyAltitude(f.pos, f.universalTime) < -10 && f.lastThrust > 0);
+    for (let i = 0; i < 1200 && bodyAltitude(f.pos, f.universalTime) < 5; i++) f.step(1 / 120);
+    assert.ok(bodyAltitude(f.pos, f.universalTime) >= 5);
+    assert.ok(fuel() < before);
+    assert.equal(f.crashed, false);
+    assert.equal(f.telemetry.groundContact, false);
+  } finally {
+    f.dispose();
+  }
+});
