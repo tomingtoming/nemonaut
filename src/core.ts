@@ -1,4 +1,4 @@
-import {instrumentRotation, usesAxialControls} from './command-frame.js';
+import {instrumentForward, instrumentRotation, usesAxialControls} from './command-frame.js';
 import {isParked} from './ground-rest.js';
 import {fractureVessel, copyPartState} from './fracture.js';
 import {recordFailure, type FailureEvent} from './failure-events.js';
@@ -938,9 +938,7 @@ export class Flight {
         forward =
           this.sasMode === 'dock' && guide
             ? new T.Vector3(0, 1, 0).applyQuaternion(partRotation(guide.own.part))
-            : new T.Vector3(0, this.rocketAxes ? 1 : 0, this.rocketAxes ? 0 : 1).applyQuaternion(
-                controlRotation
-              );
+            : instrumentForward(this.rocketAxes, controlRotation);
       if (target) {
         const held = attitudeTarget(this.q, forward, target);
         if (held) this.holdQ = held;

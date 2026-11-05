@@ -12,6 +12,10 @@ export function usesAxialControls(parts: readonly {type: string}[], catalog: Par
   );
 }
 
+export function instrumentForward(axial: boolean, rotation: Quaternion): Vector3 {
+  return new Vector3(0, axial ? 1 : 0, axial ? 0 : 1).applyQuaternion(rotation);
+}
+
 export const referenceDirections = ['正面', '逆向き', '右向き', '左向き'];
 export function selectReference(parts: Part[], id: string, direction: number, catalog: PartCatalog) {
   const part = parts.find(p => p.id === id);

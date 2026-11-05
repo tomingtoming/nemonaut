@@ -3,6 +3,7 @@
 // inputs and the fixed maneuver node. app.ts calls the mount and wire functions at their original places.
 // Calls up into app.ts through app-hooks. No import-time side effects.
 import * as T from 'three';
+import {instrumentForward} from './command-frame.js';
 import {mountFiniteBurn} from './finite-burn-panel.js';
 import {deorbitPlan} from './deorbit-plan.js';
 import {mountMapThrottle, maneuverCountdown} from './map-throttle.js';
@@ -292,9 +293,7 @@ function updateOrbitPlan(o: import('./celestial.js').OrbitState) {
   if (node) {
     const remaining = new T.Vector3(...node.remaining).length(),
       dt = node.time - fl.time,
-      forward = new T.Vector3(0, fl.rocketAxes ? 1 : 0, fl.rocketAxes ? 0 : 1)
-        .applyQuaternion(fl.instrumentRotation)
-        .applyQuaternion(fl.q),
+      forward = instrumentForward(fl.rocketAxes, fl.instrumentRotation).applyQuaternion(fl.q),
       direction = maneuverDirection(node);
     if (!direction) throw Error('噴射方向が分かりません');
     const angle = (forward.angleTo(direction) * 180) / Math.PI;

@@ -4,6 +4,7 @@
 // mountWarpGuard and wireFlightHud at their original places (each handler of wireFlightHud is the only one of
 // its element and event). Calls up into app.ts through app-hooks. No import-time side effects.
 import * as T from 'three';
+import {instrumentForward} from './command-frame.js';
 import {updateSasDirections} from './ksp-layout.js';
 import {frameTrackedVessel} from './camera-up.js';
 import {setTarget, resolveTargets, relativeState} from './relative-navigation.js';
@@ -164,8 +165,7 @@ export function updateNavigation() {
           (
             (Math.acos(
               T.MathUtils.clamp(
-                new T.Vector3(0, fl.rocketAxes ? 1 : 0, fl.rocketAxes ? 0 : 1)
-                  .applyQuaternion(fl.instrumentRotation)
+                instrumentForward(fl.rocketAxes, fl.instrumentRotation)
                   .applyQuaternion(fl.q)
                   .dot(relative.braking),
                 -1,
