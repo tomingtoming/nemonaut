@@ -101,3 +101,19 @@ test('launch readiness compares the combined engine axis with the gravity-turn a
     }
   }
 });
+
+test('forward-control launcher can start orbital insertion with a vertical rocket stage', () => {
+  const parts = preset('launcher');
+  for (const p of parts) if (PARTS[p.type].commandFrame) p.type = 'cockpit';
+  const f = new Flight(parts, 'land'),
+    s = new AscentSession();
+  try {
+    assert.equal(f.rocketAxes, false);
+    s.start(f, {altitude: 120000});
+    s.step(f, 1 / 120);
+    assert.equal(s.owner, f);
+    assert.ok(f.started && f.throttle > 0);
+  } finally {
+    f.dispose();
+  }
+});

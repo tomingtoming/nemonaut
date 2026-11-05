@@ -1,3 +1,4 @@
+import {PARTS} from './catalog.js';
 import {partCenter, type AeroPart} from './aero.js';
 import {referenceBody, bodyAltitude} from './celestial.js';
 import {atmosphere} from './planet.js';
@@ -11,6 +12,10 @@ export interface EngineMedium {
   density: number;
   submersion: number;
 }
+export function hasVacuumEngine(parts: readonly {type: string}[]): boolean {
+  return parts.some(p => PARTS[p.type].thrustMedium === 'independent');
+}
+
 // Match the reference body and vessel altitude used by the flight solver.
 export function engineMedium(f: MediumFlight, p: AeroPart, time: number = f.universalTime): EngineMedium {
   const body = referenceBody(f.pos, time),

@@ -13,7 +13,6 @@ export function ascentReadiness(f) {
   if (
     !f ||
     f.crashed ||
-    !f.rocketAxes ||
     !f.parts.some(p => PARTS[p.type].control) ||
     referenceBody(f.pos, f.universalTime).id !== 'planet'
   )

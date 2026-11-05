@@ -1,3 +1,4 @@
+import {hasVacuumEngine} from './engine-medium.js';
 import {AscentSession, type AscentFlight, type AscentSettings} from './orbital-ascent-controller.js';
 import {orbitalAscentSettings} from './orbital-ascent-settings.js';
 import {floatingWindow, type FloatingWindow} from './floating-window.js';
@@ -6,9 +7,8 @@ import {preserveManualControlEdit, type ManualControl} from './manual-control-ed
 import {element} from './dom.js';
 
 export interface OrbitalAscentFlight extends AscentFlight {
-  rocketAxes?: unknown;
   orbitalAscentSettings?: AscentSettings | null;
-  parts: {id: string}[];
+  parts: {id: string; type: string}[];
 }
 type ControlTarget = EventTarget & ManualControl & {closest?(selectors: string): Element | null};
 // The fields the capture listener reads: an optional string value, boolean checked and closest().
@@ -139,7 +139,7 @@ export function mountOrbitalAscent(
       bound = f;
       message = '待機';
     }
-    button.hidden = !f || atCenter || !f.rocketAxes;
+    button.hidden = !f || atCenter || !hasVacuumEngine(f.parts);
     if (button.hidden || !f) {
       close();
       return;

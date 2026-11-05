@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {bodyUp, relativeMotion, MOON, type OrbitState} from './celestial.js';
-import {PARTS} from './catalog.js';
+import {hasVacuumEngine} from './engine-medium.js';
 import {canControl} from './fleet.js';
 import {instrumentForward} from './command-frame.js';
 import {attitudeTarget} from './navigation.js';
@@ -18,13 +18,9 @@ export interface AscentAttitudeFlight extends DescentVessel {
   holdQ?: T.Quaternion | null;
 }
 
-export function hasLunarAscentEngine(f: Pick<DescentVessel, 'parts'>): boolean {
-  return f.parts.some(p => PARTS[p.type].thrustMedium === 'independent');
-}
-
 // Commands only a SAS target. The installed actuators must rotate the craft.
 export function setAscentAttitude(f: AscentAttitudeFlight, pitch: number): T.Vector3 {
-  if (!Number.isFinite(pitch) || pitch < 0 || pitch > 90 || !canControl(f) || !hasLunarAscentEngine(f))
+  if (!Number.isFinite(pitch) || pitch < 0 || pitch > 90 || !canControl(f) || !hasVacuumEngine(f.parts))
     throw Error('離陸姿勢を指定できません');
   const pos = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
     up = bodyUp(pos, f.universalTime);

@@ -1,9 +1,5 @@
-import {
-  hasLunarAscentEngine,
-  setAscentAttitude,
-  lunarOrbitReached,
-  type AscentAttitudeFlight
-} from './lunar-ascent.js';
+import {hasVacuumEngine} from './engine-medium.js';
+import {setAscentAttitude, lunarOrbitReached, type AscentAttitudeFlight} from './lunar-ascent.js';
 import {descentTelemetry, type DescentVessel} from './descent.js';
 import {canControl} from './fleet.js';
 import {element, elements} from './dom.js';
@@ -61,7 +57,7 @@ export function mountAscentPanel(
   function update() {
     const f = getFlight(),
       o = f?.orbit;
-    panel.hidden = !f || o?.bodyId !== 'moon' || !hasLunarAscentEngine(f);
+    panel.hidden = !f || o?.bodyId !== 'moon' || !hasVacuumEngine(f.parts);
     if (panel.hidden || !f || !o) return;
     if (vessel !== f) {
       vessel = f;
