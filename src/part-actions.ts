@@ -197,16 +197,18 @@ export function engineState(f: PartActionFlight | null | undefined, id: string):
         ? 'スロットル待ち'
         : (p.thrustLimit ?? 1) === 0
           ? '推力上限 0%'
-          : d.thrustMedium === 'air' && medium.density <= 0
-            ? '大気なし'
-            : d.thrustMedium === 'water' && medium.submersion <= 0
-              ? '水中でのみ作動'
-              : usesTankPropellant(p) && fuel <= 0
-                ? '燃料供給なし'
-                : (f.engineThrust.get(id) || 0) > 0
-                  ? d.thrustMedium === 'water'
-                    ? '推進中'
-                    : '燃焼中'
-                  : '推力待ち';
+          : d.thrustMedium === 'air' && medium.submersion >= 1
+            ? '吸気口が水没'
+            : d.thrustMedium === 'air' && medium.density <= 0
+              ? '大気なし'
+              : d.thrustMedium === 'water' && medium.submersion <= 0
+                ? '水中でのみ作動'
+                : usesTankPropellant(p) && fuel <= 0
+                  ? '燃料供給なし'
+                  : (f.engineThrust.get(id) || 0) > 0
+                    ? d.thrustMedium === 'water'
+                      ? '推進中'
+                      : '燃焼中'
+                    : '推力待ち';
   return {active, status, enabled: canControl(f) && (!failed || active)};
 }

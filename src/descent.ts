@@ -2,7 +2,8 @@ import * as T from 'three';
 import {PARTS} from './catalog.js';
 import {bodyOrbitState, MOON, type CelestialBodyId} from './celestial.js';
 import {partCenter, partRotation, type AeroPart} from './aero.js';
-import {engineBurn, type FuelNetworks, type EngineSet} from './resources.js';
+import {engineBurn, type FuelNetworks, type ResourcePart, type EngineSet} from './resources.js';
+import {engineSubmersion} from './engine-medium.js';
 import {atmosphere} from './planet.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
 
@@ -17,7 +18,7 @@ export interface DescentVessel {
   universalTime: number;
   stats: {com: T.Vector3; mass: number};
   parts: readonly (AeroPart & {id: string})[];
-  networks: Pick<FuelNetworks, 'groups'>;
+  networks: Pick<FuelNetworks<ResourcePart & AeroPart>, 'groups'>;
   fuel: ReadonlyMap<string, number>;
   started: boolean;
   active: EngineSet;
@@ -54,7 +55,8 @@ export function availableEngineForce(v: DescentVessel, density: number, pressure
       1,
       density,
       0.001,
-      pressure
+      pressure,
+      p => 1 - engineSubmersion(v, p)
     ),
     force = new T.Vector3();
   let totalThrust = 0;

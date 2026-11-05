@@ -20,11 +20,20 @@ export function hasVacuumEngine(parts: readonly {type: string}[]): boolean {
 export function engineMedium(f: MediumFlight, p: AeroPart, time: number = f.universalTime): EngineMedium {
   const body = referenceBody(f.pos, time),
     height = bodyAltitude(f.pos, time, body);
-  const point = partCenter(p).applyQuaternion(f.q).add(f.pos);
   return {
     density: body.id === 'planet' ? atmosphere(height).density : 0,
-    submersion: overWater(point, time, body)
-      ? Math.max(0, Math.min(1, (0.1 - bodyAltitude(point, time, body)) / 0.25))
-      : 0
+    submersion: engineSubmersion(f, p, time, body)
   };
+}
+
+export function engineSubmersion(
+  f: MediumFlight,
+  p: AeroPart,
+  time = f.universalTime,
+  body = referenceBody(f.pos, time)
+): number {
+  const point = partCenter(p).applyQuaternion(f.q).add(f.pos);
+  return overWater(point, time, body)
+    ? Math.max(0, Math.min(1, (0.1 - bodyAltitude(point, time, body)) / 0.25))
+    : 0;
 }

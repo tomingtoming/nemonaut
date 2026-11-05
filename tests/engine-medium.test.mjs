@@ -10,6 +10,9 @@ import {
 } from '../dist/surface-frame.js';
 import {Flight} from '../dist/core.js';
 import {preset, PARTS} from '../dist/catalog.js';
+import {availableEngineForce} from '../dist/descent.js';
+import {engineIsp, engineMaxThrust} from '../dist/resources.js';
+import {atmosphere} from '../dist/planet.js';
 import {engineMedium} from '../dist/engine-medium.js';
 import {engineState, setPartAction} from '../dist/part-actions.js';
 import {partCenter} from '../dist/aero.js';
@@ -115,6 +118,36 @@ test('sea geography follows the rotating planet and propeller position regardles
           false
         );
       }
+    } finally {
+      f.dispose();
+    }
+  }
+});
+
+test('jet intake exposure scales actual thrust, fuel use and predicted force together', () => {
+  for (const [height, exposure] of [
+    [1, 1],
+    [-0.025, 0.5],
+    [-1, 0]
+  ]) {
+    const f = new Flight(preset('plane'), 'runway');
+    try {
+      const jet = f.parts.find(p => PARTS[p.type].thrustMedium === 'air');
+      setPartAction(f, jet.id, 'engine', true);
+      f.throttle = 1;
+      const point = new Vector3(0, PRIMARY.radius + height, 0).applyQuaternion(
+        launchSiteOrientation('water')
+      );
+      f.pos.copy(fixedToInertial(point, f.universalTime)).sub(partCenter(jet).applyQuaternion(f.q));
+      const air = atmosphere(f.pos.length() - PRIMARY.radius);
+      const thrust = ((engineMaxThrust(jet) * air.density) / 1.225) * exposure;
+      const totalFuel = () => [...f.fuel.values()].reduce((a, b) => a + b, 0);
+      const before = totalFuel();
+      assert.ok(Math.abs(availableEngineForce(f, air.density, air.pressure).length() - thrust) < 0.01);
+      if (!exposure) assert.equal(engineState(f, jet.id).status, '吸気口が水没');
+      f.step(1 / 120);
+      assert.ok(Math.abs(f.engineThrust.get(jet.id) - thrust) < 0.01);
+      assert.ok(Math.abs(before - totalFuel() - thrust / (120 * engineIsp(jet, air.pressure) * 9.81)) < 1e-7);
     } finally {
       f.dispose();
     }

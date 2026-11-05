@@ -98,14 +98,15 @@ export function fuelNetworks<P extends ResourcePart = Part>(parts: readonly P[])
   }
   return {groups: [...groups.values()], network};
 }
-export function engineBurn(
-  networks: Pick<FuelNetworks, 'groups'>,
+export function engineBurn<P extends ResourcePart>(
+  networks: Pick<FuelNetworks<P>, 'groups'>,
   fuel: FuelMap,
   active: EngineSet,
   throttle: number,
   density: number,
   dt: number,
-  pressure = (density / 1.225) * 101325
+  pressure = (density / 1.225) * 101325,
+  intakeExposure?: (engine: P) => number
 ): Map<string, number> {
   const thrust = new Map<string, number>();
   for (const g of networks.groups) {
@@ -115,7 +116,7 @@ export function engineBurn(
           engineMaxThrust(p) *
           throttle *
           (PARTS[p.type].oxidizerSource === 'atmosphere'
-            ? density / 1.225
+            ? (density / 1.225) * (intakeExposure?.(p) ?? 1)
             : engineIsp(p, pressure) / vacuumIsp(p))
       ),
       need = engines.reduce((s, p, i) => s + (requested[i] * dt) / (engineIsp(p, pressure) * 9.81), 0),

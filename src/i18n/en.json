@@ -870,6 +870,7 @@
  "大気と交差": "Intersects atmosphere",
  "大気と交差：抗力によって予測が変わります": "Intersects atmosphere: drag will change the prediction",
  "大気なし": "No atmosphere",
+ "吸気口が水没": "Intake submerged",
  "大気に入るため打切り（抗力は未予測）": "Stopped on atmosphere entry (drag not predicted)",
  "大気や重力圏を横切らない周回軌道が必要です": "An orbit that does not cross an atmosphere or gravity sphere is required",
  "大気・地表への接近": "Approach to atmosphere or surface",

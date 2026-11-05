@@ -18,7 +18,7 @@ import {createBodyAerodynamics, bodyDrag, type BodyAerodynamics} from './body-dr
 import {foldedGearCenter, gearMassCenter, gearRetracted} from './landing-gear.js';
 import {separationName} from './separation-name.js';
 import {displacedVolume, mediumDensity, submergedFraction, WATER_DENSITY} from './buoyancy.js';
-import {engineMedium} from './engine-medium.js';
+import {engineSubmersion} from './engine-medium.js';
 import {angularMomentum, angularVelocity} from './angular-momentum.js';
 import {transferFuel} from './fuel-transfer.js';
 import {advanceWorldPhysics} from './world-physics.js';
@@ -1010,7 +1010,8 @@ export class Flight {
       this.throttle,
       density,
       dt,
-      air.pressure
+      air.pressure,
+      p => 1 - engineSubmersion(this, p, startTime)
     );
     const wheelContacts: WheelContact[] = [];
     let stallCount = 0,
@@ -1082,7 +1083,7 @@ export class Flight {
         let f =
           d.thrustMedium === 'water' ? engineMaxThrust(p) * this.throttle : this.engineThrust.get(p.id) || 0;
         if (d.thrustMedium === 'water') {
-          f *= engineMedium(this, p, startTime).submersion;
+          f *= engineSubmersion(this, p, startTime);
           this.engineThrust.set(p.id, f);
         }
         const g = this.gimbals.get(p.id),
