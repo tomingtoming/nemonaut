@@ -1,5 +1,5 @@
 import {PARTS} from './catalog.js';
-import {createFuel, fuelNetworks, type ResourcePart} from './resources.js';
+import {createFuel, usesTankPropellant, fuelNetworks, type ResourcePart} from './resources.js';
 /** One stage's engines and the propellant currently connected to them (kg). */
 export interface StageFuelLevel {
   engines: string[];
@@ -21,7 +21,7 @@ export function stageFuelLevels(
   const networks = fuelNetworks(parts),
     levels = new Map<number, {tanks: Map<string, ResourcePart>; engines: string[]; unfed: number}>();
   for (const p of parts) {
-    if (!PARTS[p.type].thrust || PARTS[p.type].thrustMedium === 'water') continue;
+    if (!usesTankPropellant(p)) continue;
     let level = levels.get(p.stage);
     if (!level) {
       level = {tanks: new Map<string, ResourcePart>(), engines: [], unfed: 0};

@@ -11,7 +11,7 @@ import {renderStagingPanel} from './staging-panel.js';
 import {powerTotals} from './power.js';
 import {PARTS} from './catalog.js';
 import {statistics} from './core.js';
-import {fuelNetworks, stagePerformance} from './resources.js';
+import {usesTankPropellant, fuelNetworks, stagePerformance} from './resources.js';
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
 import {$, errorMessage, notify} from './ui-common.js';
@@ -141,7 +141,7 @@ export function designStatistics() {
         )
     )
     .flatMap(g => g.engines);
-  if (engines.some(p => PARTS[p.type].thrustMedium !== 'water') && (state.flight || !unfed.length))
+  if (engines.some(usesTankPropellant) && (state.flight || !unfed.length))
     warnings.push([
       !unfed.length,
       unfed.length

@@ -140,3 +140,16 @@ test('unknown body drag shapes fail before flight', () => {
     )
   );
 });
+
+test('each supported propulsion model declares a compatible oxidizer source', () => {
+  for (const [part, source] of [
+    [PARTS.jet, undefined],
+    [PARTS.engine, 'atmosphere'],
+    [PARTS.propeller, 'onboard'],
+    [PARTS.tank, 'none']
+  ]) {
+    assert.ok(
+      catalogContractErrors({bad: {...part, oxidizerSource: source}}).some(e => e.includes('oxidizerSource'))
+    );
+  }
+});

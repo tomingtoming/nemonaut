@@ -1,6 +1,6 @@
 import {angularMomentum, angularVelocity} from './angular-momentum.js';
 import {engineMedium, type MediumFlight} from './engine-medium.js';
-import {fuelNetworks, type FuelNetworks} from './resources.js';
+import {usesTankPropellant, fuelNetworks, type FuelNetworks} from './resources.js';
 import {partSettings, type SettablePart, type PartToggleKey} from './part-settings.js';
 import {PARTS} from './catalog.js';
 import {canControl} from './fleet.js';
@@ -201,7 +201,7 @@ export function engineState(f: PartActionFlight | null | undefined, id: string):
             ? '大気なし'
             : d.thrustMedium === 'water' && medium.submersion <= 0
               ? '水中でのみ作動'
-              : d.thrustMedium !== 'water' && fuel <= 0
+              : usesTankPropellant(p) && fuel <= 0
                 ? '燃料供給なし'
                 : (f.engineThrust.get(id) || 0) > 0
                   ? d.thrustMedium === 'water'

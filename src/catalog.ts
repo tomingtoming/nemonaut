@@ -14,6 +14,7 @@ export type PartDefinition = {
   thrust?: number;
   /** Medium required for thrust; independent engines carry their reaction mass. */
   thrustMedium?: 'independent' | 'air' | 'water';
+  oxidizerSource?: 'onboard' | 'atmosphere' | 'none';
   isp?: number;
   ispSeaLevel?: number;
   gimbal?: number;
@@ -172,6 +173,7 @@ const BASE_PARTS = {
     mass: 70,
     thrust: 12000,
     thrustMedium: 'independent',
+    oxidizerSource: 'onboard',
     isp: 310,
     ispSeaLevel: 285,
     size: [0.625, 0.8, 0.625],
@@ -186,6 +188,7 @@ const BASE_PARTS = {
     mass: 35,
     thrust: 6000,
     thrustMedium: 'independent',
+    oxidizerSource: 'onboard',
     isp: 350,
     ispSeaLevel: 100,
     size: [0.625, 1, 0.625],
@@ -200,6 +203,7 @@ const BASE_PARTS = {
     mass: 500,
     thrust: 90000,
     thrustMedium: 'independent',
+    oxidizerSource: 'onboard',
     isp: 320,
     ispSeaLevel: 290,
     size: [1.25, 1.4, 1.25],
@@ -214,6 +218,7 @@ const BASE_PARTS = {
     mass: 280,
     thrust: 60000,
     thrustMedium: 'independent',
+    oxidizerSource: 'onboard',
     isp: 360,
     ispSeaLevel: 110,
     size: [1.25, 1.8, 1.25],
@@ -228,6 +233,7 @@ const BASE_PARTS = {
     mass: 2300,
     thrust: 650000,
     thrustMedium: 'independent',
+    oxidizerSource: 'onboard',
     isp: 320,
     ispSeaLevel: 285,
     size: [2.5, 2.4, 2.5],
@@ -242,6 +248,7 @@ const BASE_PARTS = {
     mass: 1200,
     thrust: 250000,
     thrustMedium: 'independent',
+    oxidizerSource: 'onboard',
     isp: 365,
     ispSeaLevel: 120,
     size: [2.5, 3, 2.5],
@@ -357,6 +364,7 @@ const BASE_PARTS = {
     mass: 270,
     thrust: 45000,
     thrustMedium: 'independent',
+    oxidizerSource: 'onboard',
     isp: 300,
     size: [1.25, 1.2, 1.25],
     gimbal: 6,
@@ -370,6 +378,7 @@ const BASE_PARTS = {
     mass: 230,
     thrust: 18000,
     thrustMedium: 'air',
+    oxidizerSource: 'atmosphere',
     isp: 1800,
     size: [1.25, 1.2, 1.25],
     desc: '大気中専用。高度とともに推力が低下する。'
@@ -381,6 +390,7 @@ const BASE_PARTS = {
     mass: 60,
     thrust: 6000,
     thrustMedium: 'water',
+    oxidizerSource: 'none',
     isp: 3000,
     size: [0.8, 0.5, 0.8],
     desc: '水中専用推進器。船・潜水艇の推進に。'

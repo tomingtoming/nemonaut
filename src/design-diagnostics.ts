@@ -3,6 +3,7 @@ import {PARTS, type PartDefinition, type Part} from './catalog.js';
 import {partCenter, partMass, partRotation} from './aero.js';
 import {
   createFuel,
+  usesTankPropellant,
   fuelNetworks,
   engineBurn,
   type ResourcePart,
@@ -166,10 +167,7 @@ export function stageThrustDiagnostics(
         if (d.thrustMedium === 'water') reasons.push('water');
         if (!active.has(p.id)) reasons.push('not-ignited');
         if (d.thrustMedium === 'air' && density <= 0) reasons.push('atmosphere');
-        if (
-          d.thrustMedium !== 'water' &&
-          !networks.network.get(p.id)?.tanks.some(t => (fuel.get(t.id) || 0) > 0)
-        )
+        if (usesTankPropellant(p) && !networks.network.get(p.id)?.tanks.some(t => (fuel.get(t.id) || 0) > 0))
           reasons.push('fuel');
         return {id: p.id, reasons};
       });

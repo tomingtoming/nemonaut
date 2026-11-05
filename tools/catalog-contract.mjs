@@ -34,6 +34,11 @@ export function catalogContractErrors(parts) {
     if (part.thrust > 0) {
       if (!['independent', 'air', 'water'].includes(part.thrustMedium)) fail('thrustMedium');
     } else if (part.thrustMedium !== undefined) fail('thrustMedium requires thrust');
+    // Supported engine models. Additional combinations need a force and consumption model first.
+    if (part.thrust > 0) {
+      const source = {independent: 'onboard', air: 'atmosphere', water: 'none'}[part.thrustMedium];
+      if (!source || source !== part.oxidizerSource) fail('oxidizerSource');
+    } else if (part.oxidizerSource !== undefined) fail('oxidizerSource requires thrust');
     if (part.bodyDragShape !== undefined && part.bodyDragShape !== 'disc-y') fail('bodyDragShape');
     if (part.commandFrame !== undefined) {
       if (!['axial', 'forward', 'legacy-auto'].includes(part.commandFrame)) fail('commandFrame');
