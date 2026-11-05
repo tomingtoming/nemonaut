@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {Vector3} from 'three';
 import {Flight} from '../dist/core.js';
 import {preset, PARTS} from '../dist/catalog.js';
 import {AscentPrototype} from '../tools/ascent-prototype.mjs';
@@ -60,6 +61,29 @@ test('invalid targets and exhausted stages cannot be reported as requested orbit
     assert.equal(pilot.phase, '燃料切れ');
     assert.equal(f.throttle, 0);
     assert.match(pilot.completionMessage, /未達/);
+  } finally {
+    f.dispose();
+  }
+});
+
+test('guidance follows the surviving thrust axis and cuts throttle when active engines cancel', () => {
+  const parts = preset('hopper'),
+    engine = parts.find(p => PARTS[p.type].thrust && p.stage === 0),
+    reverse = {...structuredClone(engine), id: 'opposed', r: [0, 0, Math.PI / 2]};
+  engine.r = [0, 0, -Math.PI / 2];
+  parts.push(reverse);
+  const f = new Flight(parts, 'land'),
+    pilot = new AscentPrototype();
+  try {
+    f.stageNext();
+    f.active.delete(reverse.id);
+    pilot.update(f);
+    assert.ok(new Vector3(1, 0, 0).applyQuaternion(f.holdQ).y > 0.999);
+    f.active.add(reverse.id);
+    pilot.update(f);
+    assert.ok(pilot.done);
+    assert.equal(f.throttle, 0);
+    assert.match(pilot.completionMessage, /合計推力/);
   } finally {
     f.dispose();
   }

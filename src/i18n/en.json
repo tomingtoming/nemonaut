@@ -1364,6 +1364,8 @@
  "点火待機": "Waiting to ignite",
  "点火段 ": "Ignition stage ",
  "点火段の燃料が不足しています": "Not enough fuel in the ignited stage",
+ "推力不足": "Insufficient thrust",
+ "点火段の合計推力がゼロです": "The active stage has zero net thrust",
  "点火段へ燃料が届かないか、上向きの推力がありません": "Fuel does not reach the ignited stage, or there is no upward thrust",
  "点火段・推進剤を確認してください": "Check the ignited stage and propellant",
  "点火段・推進剤を確認してください。Spaceで点火、スロットルは手動です。": "Check the ignited stage and propellant. Ignite with Space; throttle is manual.",

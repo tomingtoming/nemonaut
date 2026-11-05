@@ -1,9 +1,8 @@
 import {ascentPlane, orbitInclination} from './ascent-plane.mjs';
-import {engineMaxThrust} from '../dist/resources.js';
+import {availableEngineForce} from '../dist/descent.js';
 import * as T from 'three';
 import {PARTS} from '../dist/catalog.js';
-import {localUp, orbitState, radial} from '../dist/planet.js';
-const Y = new T.Vector3(0, 1, 0);
+import {atmosphere, localUp, orbitState, radial} from '../dist/planet.js';
 // Independent target-altitude experiment, not connected to the product UI.
 // Commands only the existing actuators. Based on this repository's demonstration pilot.
 // Optional demonstration pilot: commands the same throttle, staging and attitude actuators as the player.
@@ -31,6 +30,7 @@ export class AscentPrototype {
       f.throttle = 0;
       return;
     }
+    const previousStage = f.stage;
     if (!f.started) f.stageNext();
     const active = [...f.active].filter(id => f.parts.some(p => p.id === id));
     if (
@@ -58,8 +58,20 @@ export class AscentPrototype {
     this.plane ??= ascentPlane(up, this.inclination);
     const tangent = this.plane.clone().cross(up).normalize(),
       r = radial(com);
-    const thrust = f.parts.filter(p => f.active.has(p.id)).reduce((s, p) => s + engineMaxThrust(p), 0),
-      a = thrust / f.stats.mass;
+    const air = atmosphere(o.altitude),
+      force = availableEngineForce(f, air.density, air.pressure),
+      a = force.length() / f.stats.mass;
+    if (!a) {
+      f.throttle = 0;
+      // An empty or dry stage can be followed by another ignition on the next update.
+      if (f.stage === previousStage) {
+        this.done = true;
+        this.phase = '推力不足';
+        this.completionMessage = '点火段の合計推力がゼロです';
+        this.message = this.completionMessage;
+      }
+      return;
+    }
     const lateral =
       o.altitude < 35000
         ? T.MathUtils.clamp(-f.vel.dot(this.plane) / 60 - r.dot(this.plane) / 3600, -3, 3) *
@@ -88,7 +100,7 @@ export class AscentPrototype {
       f.throttle = T.MathUtils.clamp(command.length() / Math.max(a, 0.01), 0, 1);
       this.phase = '軌道投入';
     }
-    f.holdQ = new T.Quaternion().setFromUnitVectors(Y, command.normalize());
+    f.holdQ = new T.Quaternion().setFromUnitVectors(force.normalize(), command.normalize());
     f.sas = true;
     f.sasMode = 'hold';
     this.actualInclination = orbitInclination(r, f.vel);
