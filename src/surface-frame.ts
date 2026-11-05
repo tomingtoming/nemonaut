@@ -49,6 +49,19 @@ export function inertialToFixed(
     .sub(bodyState(body, time).position)
     .applyQuaternion(surfaceOrientation(time, body).invert());
 }
+// Initial coastal basin: the nearest shore is 2 km south of the launch pad.
+const seaCenter = new T.Vector3(-Math.sin(12000 / PRIMARY.radius), Math.cos(12000 / PRIMARY.radius), 0);
+const seaEdgeCosine = Math.cos(10000 / PRIMARY.radius);
+export function overWater(
+  point: T.Vector3,
+  time: number,
+  body: SurfaceBody = referenceBody(point, time)
+): boolean {
+  if (body.id !== 'planet') return false;
+  const fixed = inertialToFixed(point, time, body);
+  return fixed.dot(seaCenter) > seaEdgeCosine * fixed.length();
+}
+
 // Rigidly co-rotating sea/ground/atmosphere. Wind is not assumed. A point
 // above the surface uses its own radius, not the radius of the point below.
 export function surfaceVelocity(

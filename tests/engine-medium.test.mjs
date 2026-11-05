@@ -1,5 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {Vector3} from 'three';
+import {PRIMARY, MOON} from '../dist/celestial.js';
+import {
+  fixedToInertial,
+  launchSiteOrientation,
+  overWater,
+  PRIMARY_ROTATION_PERIOD
+} from '../dist/surface-frame.js';
 import {Flight} from '../dist/core.js';
 import {preset, PARTS} from '../dist/catalog.js';
 import {engineMedium} from '../dist/engine-medium.js';
@@ -51,7 +59,10 @@ test('Propeller readout follows actual immersion force and clears when stopped',
       [0.2, 0]
     ]) {
       f.q.identity();
-      f.pos.set(0, height - partCenter(p).y, 0);
+      const seaPoint = new Vector3(0, PRIMARY.radius + height, 0).applyQuaternion(
+        launchSiteOrientation('water')
+      );
+      f.pos.copy(fixedToInertial(seaPoint, f.universalTime)).sub(partCenter(p));
       f.vel.set(0, 0, 0);
       const expected = engineMedium(f, p).submersion;
       assert.ok(Math.abs(expected - fraction) < 0.001);
@@ -81,5 +92,31 @@ test('Propeller readout follows actual immersion force and clears when stopped',
     assert.equal(engineState(f2, p.id).status, '水中でのみ作動');
   } finally {
     f2.dispose();
+  }
+});
+
+test('sea geography follows the rotating planet and propeller position regardless of departure', () => {
+  for (const time of [0, PRIMARY_ROTATION_PERIOD / 4]) {
+    const f = new Flight(preset('boat'), 'land', time);
+    try {
+      const p = f.parts.find(p => PARTS[p.type].thrustMedium === 'water');
+      for (const [site, wet] of [
+        ['land', false],
+        ['runway', false],
+        ['water', true]
+      ]) {
+        const fixed = new Vector3(0, PRIMARY.radius - 1, 0).applyQuaternion(launchSiteOrientation(site));
+        const point = fixedToInertial(fixed, time);
+        assert.equal(overWater(point, time), wet);
+        f.pos.copy(point).sub(partCenter(p).applyQuaternion(f.q));
+        assert.equal(engineMedium(f, p).submersion, wet ? 1 : 0);
+        assert.equal(
+          overWater(fixedToInertial(fixed.clone().normalize().multiplyScalar(MOON.radius), time, MOON), time),
+          false
+        );
+      }
+    } finally {
+      f.dispose();
+    }
   }
 });
