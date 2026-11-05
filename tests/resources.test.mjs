@@ -97,7 +97,10 @@ import {stageFuelLevels} from '../dist/stage-fuel.js';
 test('Explicit thrust media preserve every engine burn and fuel gauge without legacy flags', () => {
   for (const [type, definition] of Object.entries(PARTS).filter(([, d]) => d.thrust > 0)) {
     const saved = PARTS[type];
-    const {air, water, ...withoutFlags} = saved;
+    // Frozen pre-migration families: the expected calculation must not read thrustMedium.
+    const air = ['jet', 'jetLarge', 'transportJet'].includes(type);
+    const water = ['propeller', 'propellerLarge'].includes(type);
+    const withoutFlags = {...saved};
     const parts = [
       {id: 'supply', type: 'tank', stage: 0},
       {id: 'motor', type, parent: 'supply', stage: 0}

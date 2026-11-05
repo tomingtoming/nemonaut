@@ -37,8 +37,6 @@ export type PartDefinition = {
   aircraftControl?: boolean;
   /** Assembly-local control frame; legacy-auto preserves existing probe craft until explicit frame selection. */
   commandFrame?: 'axial' | 'forward' | 'legacy-auto';
-  air?: boolean;
-  water?: boolean;
   streamlinedNose?: boolean;
   rootWing?: boolean;
   wing?: number;
@@ -361,7 +359,6 @@ const BASE_PARTS = {
     thrust: 18000,
     thrustMedium: 'air',
     isp: 1800,
-    air: true,
     size: [1.25, 1.2, 1.25],
     desc: '大気中専用。高度とともに推力が低下する。'
   },
@@ -373,7 +370,6 @@ const BASE_PARTS = {
     thrust: 6000,
     thrustMedium: 'water',
     isp: 3000,
-    water: true,
     size: [0.8, 0.5, 0.8],
     desc: '水中専用推進器。船・潜水艇の推進に。'
   },

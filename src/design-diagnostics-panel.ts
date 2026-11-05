@@ -169,7 +169,7 @@ export function mountDesignDiagnostics(
       const p = document.createElement('p');
       p.textContent = !result.referenceId
         ? '制御部品を追加すると段ごとの推力配置を確認できます。'
-        : parts.some(p => PARTS[p.type].thrust && !PARTS[p.type].water)
+        : parts.some(p => PARTS[p.type].thrust && PARTS[p.type].thrustMedium !== 'water')
           ? 'この条件で有効なエンジン推力がありません。点火段・燃料・大気条件を確認してください。ジェットは真空で推力を出せません。'
           : 'ロケット・ジェットエンジンは搭載されていません。車輪・スクリューはこの推力配置診断の対象外です。';
       rows.append(p);

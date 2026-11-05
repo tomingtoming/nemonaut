@@ -32,7 +32,7 @@ export function updateDebrisVisuals(root: Flight, now: number) {
       group = new T.Group();
       for (const p of f.parts) {
         const o = makePartVisual(p);
-        if (PARTS[p.type].thrust && !PARTS[p.type].water) {
+        if (PARTS[p.type].thrust && PARTS[p.type].thrustMedium !== 'water') {
           const flame = createEnginePlume(PARTS[p.type], !!o.userData.gimbal);
           const target = o.userData.gimbal || o;
           target.add(flame);

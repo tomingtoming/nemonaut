@@ -3,7 +3,7 @@ import * as T from 'three';
 export interface EnginePlumeDefinition {
   size: readonly number[];
   thrust?: number;
-  air?: boolean;
+  thrustMedium?: 'independent' | 'air' | 'water';
   gimbalPivot?: readonly number[];
 }
 function gimbalPivotY(d: EnginePlumeDefinition): number {
@@ -15,7 +15,7 @@ export function createEnginePlume(
   gimballed = false
 ): T.Mesh<T.ConeGeometry, T.MeshBasicMaterial> {
   const diameter = definition.size[0] / 1.25,
-    length = (definition.air ? 2 : 2.8) * diameter,
+    length = (definition.thrustMedium === 'air' ? 2 : 2.8) * diameter,
     geometry = new T.ConeGeometry(0.32 * diameter, length, 20, 4);
   geometry.rotateZ(Math.PI);
   geometry.translate(0, -length / 2, 0);
@@ -23,8 +23,8 @@ export function createEnginePlume(
     colors: number[] = [];
   for (let i = 0; i < position.count; i++) {
     const t = Math.min(1, Math.max(0, -position.getY(i) / length)),
-      color = new T.Color(definition.air ? '#e5fbff' : '#fff5cf').lerp(
-        new T.Color(definition.air ? '#399dff' : '#ff7524'),
+      color = new T.Color(definition.thrustMedium === 'air' ? '#e5fbff' : '#fff5cf').lerp(
+        new T.Color(definition.thrustMedium === 'air' ? '#399dff' : '#ff7524'),
         t
       );
     colors.push(color.r, color.g, color.b);

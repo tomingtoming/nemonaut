@@ -7,7 +7,7 @@ import {saveFlight, loadFlight} from '../dist/flight-save.js';
 test('modular six-engine transport retains independent wings, gear and a connected fuel network', () => {
   const craft = preset('transport');
   assert.deepEqual(validateCraft({version: 1, parts: craft}), craft);
-  assert.equal(craft.filter(p => PARTS[p.type].air).length, 6);
+  assert.equal(craft.filter(p => PARTS[p.type].thrustMedium === 'air').length, 6);
   assert.equal(craft.filter(p => PARTS[p.type].wheel).length, 32);
   assert.equal(craft.filter(p => PARTS[p.type].steer).length, 4);
   assert.equal(craft.filter(p => p.type === 'transportFuselage').length, 3);
@@ -33,7 +33,7 @@ test('six-engine transport taxis, takes off and preserves all engines and wheels
       assert.ok(f.orbit.altitude > 400);
       assert.ok(f.orbit.vertical > 5);
       assert.equal(f.telemetry.contacts, 0);
-      const engines = f.parts.filter(p => PARTS[p.type].air);
+      const engines = f.parts.filter(p => PARTS[p.type].thrustMedium === 'air');
       assert.ok(engines.every(p => f.engineThrust.get(p.id) > 0));
       assert.ok(f.fuelRatio < 0.99 && f.fuelRatio > 0.8);
       const count = f.parts.length,

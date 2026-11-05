@@ -175,7 +175,11 @@ export class ManeuverSession {
     }
     this.offAxis = 0;
     const engines = f.parts.filter(
-      p => f.active.has(p.id) && PARTS[p.type].thrust && !PARTS[p.type].air && !PARTS[p.type].water
+      p =>
+        f.active.has(p.id) &&
+        PARTS[p.type].thrust &&
+        PARTS[p.type].thrustMedium !== 'air' &&
+        PARTS[p.type].thrustMedium !== 'water'
     );
     if (!engines.some(p => f.networks.network.get(p.id)?.tanks.some(t => (f.fuel.get(t.id) || 0) > 0))) {
       this.stop('failed', '燃料切れ · 噴射未達');

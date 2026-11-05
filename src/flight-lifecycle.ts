@@ -109,7 +109,7 @@ export function startFlight(restored: Flight | null = null) {
   $('#warpStatus', 'small').textContent = '通常速度 · 1倍';
   showCoastBlocker(null);
   for (const p of state.parts) {
-    if (PARTS[p.type].thrust && !PARTS[p.type].water) {
+    if (PARTS[p.type].thrust && PARTS[p.type].thrustMedium !== 'water') {
       const object = partObject(p.id),
         flame = createEnginePlume(PARTS[p.type], !!object.userData.gimbal);
       const target = object.userData.gimbal || object;

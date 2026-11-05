@@ -69,7 +69,7 @@ export function makePartVisual(p: FlightPart) {
     o.userData.steeringVisual = steering;
     o.userData.rollingVisual = rolling;
   } else o.add(visual);
-  if (PARTS[p.type].water && PARTS[p.type].thrust) {
+  if (PARTS[p.type].thrustMedium === 'water' && PARTS[p.type].thrust) {
     const rotor = screwRotor(visual);
     if (rotor) o.userData.rotor = rotor;
   }

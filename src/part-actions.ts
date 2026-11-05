@@ -197,14 +197,14 @@ export function engineState(f: PartActionFlight | null | undefined, id: string):
         ? 'スロットル待ち'
         : (p.thrustLimit ?? 1) === 0
           ? '推力上限 0%'
-          : d.air && medium.density <= 0
+          : d.thrustMedium === 'air' && medium.density <= 0
             ? '大気なし'
-            : d.water && medium.submersion <= 0
+            : d.thrustMedium === 'water' && medium.submersion <= 0
               ? '水中でのみ作動'
-              : !d.water && fuel <= 0
+              : d.thrustMedium !== 'water' && fuel <= 0
                 ? '燃料供給なし'
                 : (f.engineThrust.get(id) || 0) > 0
-                  ? d.water
+                  ? d.thrustMedium === 'water'
                     ? '推進中'
                     : '燃焼中'
                   : '推力待ち';

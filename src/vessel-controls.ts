@@ -70,8 +70,8 @@ export function vesselControls(
   if (has(d => d.wheel)) rows.push({action: 'ブレーキ', how: touch ? '「BRAKE」ボタン' : 'B'});
   if (hasRetractableGear(parts))
     rows.push({action: 'ギアの出し入れ', how: touch ? '「ギア上げ / 下げ」ボタン' : 'G'});
-  const air = has(d => d.thrust && !d.water),
-    water = has(d => d.thrust && d.water);
+  const air = has(d => d.thrust && d.thrustMedium !== 'water'),
+    water = has(d => d.thrust && d.thrustMedium === 'water');
   if (air || water) {
     rows.push(
       {action: '全推力 / 停止', how: touch ? '「全推力」「推力0」ボタン' : 'Z / X'},

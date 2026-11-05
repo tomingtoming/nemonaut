@@ -141,7 +141,7 @@ export function designStatistics() {
         )
     )
     .flatMap(g => g.engines);
-  if (engines.some(p => !PARTS[p.type].water) && (state.flight || !unfed.length))
+  if (engines.some(p => PARTS[p.type].thrustMedium !== 'water') && (state.flight || !unfed.length))
     warnings.push([
       !unfed.length,
       unfed.length

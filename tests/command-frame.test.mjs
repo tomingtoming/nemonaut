@@ -24,7 +24,11 @@ test('existing presets retain their assembly control frame', () => {
     const previous =
       parts.some(p => p.type === 'capsule') ||
       (parts.some(p => p.type === 'probe') &&
-        parts.some(p => PARTS[p.type].thrust && !PARTS[p.type].air && !PARTS[p.type].water) &&
+        parts.some(
+          p =>
+            PARTS[p.type].thrust &&
+            !['jet', 'jetLarge', 'transportJet', 'propeller', 'propellerLarge'].includes(p.type)
+        ) &&
         !parts.some(p => PARTS[p.type].aircraftControl));
     assert.equal(usesAxialControls(parts, PARTS), previous, kind);
   }

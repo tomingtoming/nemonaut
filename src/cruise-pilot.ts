@@ -144,7 +144,9 @@ export function cruisePropulsion(f: CruiseFlight): string | null {
     !fuelNetworks(f.parts).groups.some(
       g =>
         g.tanks.some(p => (f.fuel.get(p.id) || 0) > 0) &&
-        g.engines.some(p => PARTS[p.type].air && f.active.has(p.id) && engineMaxThrust(p) > 0)
+        g.engines.some(
+          p => PARTS[p.type].thrustMedium === 'air' && f.active.has(p.id) && engineMaxThrust(p) > 0
+        )
     )
   )
     return '点火済みの航空エンジンと燃料供給が必要';

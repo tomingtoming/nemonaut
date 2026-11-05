@@ -23,7 +23,7 @@ test('cargo transport keeps belly hatch, aligned internal payload and two fuel t
   assert.equal(nodeConnection(craft, ring).parentNode, 6);
   assert.equal(statistics(craft).fuel, 90000);
   assert.equal(statistics(preset('transport')).fuel, 135000);
-  assert.equal(craft.filter(p => PARTS[p.type].air).length, 6);
+  assert.equal(craft.filter(p => PARTS[p.type].thrustMedium === 'air').length, 6);
   assert.equal(craft.filter(p => PARTS[p.type].wheel).length, 32);
   assert.equal(examples['transport-cargo'][3], 'runway');
   assert.ok(exampleGroups.find(g => g.id === 'vehicle').keys.includes('transport-cargo'));
@@ -51,7 +51,9 @@ for (const [label, unloaded, open] of [
       assert.ok(f.orbit.vertical > 5);
       assert.equal(f.telemetry.contacts, 0);
       assert.equal(f.parts.length, unloaded ? 67 : 72);
-      assert.ok(f.parts.filter(p => PARTS[p.type].air).every(p => f.engineThrust.get(p.id) > 0));
+      assert.ok(
+        f.parts.filter(p => PARTS[p.type].thrustMedium === 'air').every(p => f.engineThrust.get(p.id) > 0)
+      );
       const pos = f.pos.clone(),
         fuel = f.fuelRatio,
         com = f.stats.com.clone();

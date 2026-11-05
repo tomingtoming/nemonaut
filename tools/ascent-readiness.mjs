@@ -39,7 +39,10 @@ export function ascentReadiness(f) {
     while (!copy.active.size && copy.stage < last) copy.stageNext();
     if (!copy.parts.some(p => PARTS[p.type].control)) return '点火までの段分離で制御装置を失います';
     const engines = copy.parts.filter(p => copy.active.has(p.id) && PARTS[p.type].thrust);
-    if (!engines.length || engines.some(p => PARTS[p.type].air || PARTS[p.type].water))
+    if (
+      !engines.length ||
+      engines.some(p => PARTS[p.type].thrustMedium === 'air' || PARTS[p.type].thrustMedium === 'water')
+    )
       return 'ロケットエンジンの点火段が必要';
     const air = atmosphere(bodyAltitude(copy.pos, copy.universalTime));
     const thrust = engineBurn(copy.networks, copy.fuel, copy.active, 1, air.density, 0.01, air.pressure);

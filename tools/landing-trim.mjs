@@ -41,7 +41,7 @@ export function trimForces(f, {speed, alpha, pitchCommand, density = 1.225, grav
   for (const group of fuelNetworks(f.parts).groups) {
     if (!group.tanks.some(p => (f.fuel.get(p.id) || 0) > 0)) continue;
     for (const p of group.engines) {
-      if (!PARTS[p.type].air || !f.active.has(p.id)) continue;
+      if (PARTS[p.type].thrustMedium !== 'air' || !f.active.has(p.id)) continue;
       const engine = new T.Vector3(0, 1, 0)
         .applyQuaternion(partRotation(p))
         .multiplyScalar((engineMaxThrust(p) * density) / 1.225);

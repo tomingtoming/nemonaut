@@ -10,7 +10,7 @@ test('Jet reports absent atmosphere on planetary and lunar orbits without consum
   for (const env of ['orbit', 'moon-orbit']) {
     const f = new Flight(preset('plane'), env);
     try {
-      const p = f.parts.find(p => PARTS[p.type].air),
+      const p = f.parts.find(p => PARTS[p.type].thrustMedium === 'air'),
         fuel = [...f.fuel];
       setPartAction(f, p.id, 'engine', true);
       f.throttle = 1;
@@ -26,7 +26,7 @@ test('Jet reports absent atmosphere on planetary and lunar orbits without consum
   }
   const f = new Flight(preset('plane'), 'runway');
   try {
-    const p = f.parts.find(p => PARTS[p.type].air);
+    const p = f.parts.find(p => PARTS[p.type].thrustMedium === 'air');
     setPartAction(f, p.id, 'engine', true);
     f.throttle = 0.3;
     f.step(1 / 120);
@@ -40,7 +40,7 @@ test('Propeller readout follows actual immersion force and clears when stopped',
   const f = new Flight(preset('boat'), 'water');
   let loaded;
   try {
-    const p = f.parts.find(p => PARTS[p.type].water);
+    const p = f.parts.find(p => PARTS[p.type].thrustMedium === 'water');
     f.sas = false;
     f.omega.set(0, 0, 0);
     setPartAction(f, p.id, 'engine', true);
@@ -73,7 +73,7 @@ test('Propeller readout follows actual immersion force and clears when stopped',
   }
   const f2 = new Flight(preset('boat'), 'orbit');
   try {
-    const p = f2.parts.find(p => PARTS[p.type].water);
+    const p = f2.parts.find(p => PARTS[p.type].thrustMedium === 'water');
     setPartAction(f2, p.id, 'engine', true);
     f2.throttle = 1;
     f2.step(1 / 120);

@@ -34,6 +34,7 @@ export interface ScalablePart {
   mass?: number;
   fuel?: number;
   thrust?: number;
+  thrustMedium?: 'independent' | 'air' | 'water';
   battery?: number;
   volume?: number;
   ballast?: number;
@@ -42,7 +43,6 @@ export interface ScalablePart {
   chord?: number;
   hingeY?: number;
   wing?: number;
-  water?: boolean;
   wheel?: boolean;
   gimbal?: number;
   gimbalPivot?: number[];
@@ -79,7 +79,7 @@ export function installLargeParts(parts: Record<string, ScalablePart>): void {
           : d.volume
             ? `長さ ${d.size[1]} m・排水容積 ${d.volume.toFixed(1)} m³。組み合わせて船体を構成。`
             : d.thrust
-              ? `推力 ${(d.thrust / 1000).toFixed(0)} kN。${d.water ? '水中専用・可動推進器で操向。' : '大気中専用。接続した燃料胴体から供給。'}`
+              ? `推力 ${(d.thrust / 1000).toFixed(0)} kN。${d.thrustMedium === 'water' ? '水中専用・可動推進器で操向。' : '大気中専用。接続した燃料胴体から供給。'}`
               : d.wheel
                 ? '大型航空機用。接地・自由転動・制動。前脚のみA/D操向。飛行中は格納可能。'
                 : '大型機の独立した組立部品。接続・保存・質量計算に対応。';

@@ -32,7 +32,7 @@ for (const [id, part] of Object.entries(PARTS)) {
       nozzle.name = original;
     });
   }
-  if (part.water && part.thrust) {
+  if (part.thrustMedium === 'water' && part.thrust) {
     test(`${id}: actual screw export yields a rotor with the catalog radius`, async () => {
       const scene = await model(id, part);
       const rotor = screwRotor(scene);

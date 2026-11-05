@@ -30,10 +30,9 @@ export function catalogContractErrors(parts) {
       if (!vector(part.gimbalPivot)) fail('gimbal requires gimbalPivot');
       if (!(part.thrust > 0)) fail('gimbal requires thrust');
     }
+    if ('air' in part || 'water' in part) fail('thrustMedium replaces legacy flags');
     if (part.thrust > 0) {
       if (!['independent', 'air', 'water'].includes(part.thrustMedium)) fail('thrustMedium');
-      if (!!part.air !== (part.thrustMedium === 'air') || !!part.water !== (part.thrustMedium === 'water'))
-        fail('thrustMedium legacy flags disagree');
     } else if (part.thrustMedium !== undefined) fail('thrustMedium requires thrust');
     if (part.commandFrame !== undefined) {
       if (!['axial', 'forward', 'legacy-auto'].includes(part.commandFrame)) fail('commandFrame');

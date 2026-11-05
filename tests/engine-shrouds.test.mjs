@@ -9,7 +9,9 @@ import {Flight} from '../dist/core.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 
 test('covers all seven rocket engines only at an occupied axial bottom socket', () => {
-  for (const type of Object.keys(PARTS).filter(t => PARTS[t].thrust && !PARTS[t].air && !PARTS[t].water)) {
+  for (const type of Object.keys(PARTS).filter(
+    t => PARTS[t].thrust && PARTS[t].thrustMedium !== 'air' && PARTS[t].thrustMedium !== 'water'
+  )) {
     const e = part(type),
       d = PARTS[type],
       s = part('decoupler', [0, -d.size[1] / 2 - 0.11, 0], [0, 0, 0], e.id);

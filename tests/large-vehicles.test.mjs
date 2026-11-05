@@ -43,7 +43,8 @@ test('large twin jet departs normally with both engines and restores airborne st
       assert.ok(f.orbit.vertical > 5);
       assert.equal(f.telemetry.contacts, 0);
       assert.equal(f.crashed, false);
-      for (const e of f.parts.filter(p => PARTS[p.type].air)) assert.ok(f.engineThrust.get(e.id) > 0);
+      for (const e of f.parts.filter(p => PARTS[p.type].thrustMedium === 'air'))
+        assert.ok(f.engineThrust.get(e.id) > 0);
       assert.ok(f.fuelRatio < 1);
       const old = f,
         restored = loadFlight(saveFlight(f));

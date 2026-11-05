@@ -120,7 +120,7 @@ test('command frames require a valid mode and a command part', () => {
   );
 });
 
-test('all thrust definitions require an explicit medium consistent with transitional flags', () => {
+test('all thrust definitions require an explicit medium without retired flags', () => {
   for (const patch of [{thrustMedium: undefined}, {thrustMedium: 'vacuum'}, {air: true}, {water: true}]) {
     assert.ok(
       catalogContractErrors({bad: {...PARTS.engine, ...patch}}).some(e => e.includes('thrustMedium'))

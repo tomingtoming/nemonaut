@@ -163,10 +163,13 @@ export function stageThrustDiagnostics(
       .map((p): EngineState => {
         const d = PARTS[p.type],
           reasons: EngineBlockReason[] = [];
-        if (d.water) reasons.push('water');
+        if (d.thrustMedium === 'water') reasons.push('water');
         if (!active.has(p.id)) reasons.push('not-ignited');
-        if (d.air && density <= 0) reasons.push('atmosphere');
-        if (!d.water && !networks.network.get(p.id)?.tanks.some(t => (fuel.get(t.id) || 0) > 0))
+        if (d.thrustMedium === 'air' && density <= 0) reasons.push('atmosphere');
+        if (
+          d.thrustMedium !== 'water' &&
+          !networks.network.get(p.id)?.tanks.some(t => (fuel.get(t.id) || 0) > 0)
+        )
           reasons.push('fuel');
         return {id: p.id, reasons};
       });
