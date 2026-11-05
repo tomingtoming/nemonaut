@@ -75,13 +75,17 @@ export function descentTelemetry(v: DescentVessel): DescentTelemetry {
       air.pressure
     ),
     force = new T.Vector3();
+  let totalThrust = 0;
   for (const p of v.parts) {
     const thrust = burns.get(p.id) || 0;
+    totalThrust += thrust;
     if (thrust) force.addScaledVector(new T.Vector3(0, 1, 0).applyQuaternion(partRotation(p)), thrust);
   }
   const velocity = surfaceRelativeVelocity(com, v.vel, v.universalTime, o.body),
     speed = velocity.length();
-  const thrust = force.length(),
+  // A half-turn can leave a numerical residue when opposed engines cancel.
+  const magnitude = force.length(),
+    thrust = magnitude > totalThrust * 1e-12 ? magnitude : 0,
     acceleration = thrust / v.stats.mass,
     netAcceleration = acceleration - o.gravity,
     vertical = velocity.dot(up),
@@ -89,7 +93,7 @@ export function descentTelemetry(v: DescentVessel): DescentTelemetry {
     fall = Math.max(0, -vertical);
   const brakingDistance = netAcceleration > 0 ? speed ** 2 / (2 * netAcceleration) : Infinity,
     verticalBrakingDistance = netAcceleration > 0 ? (fall * fall) / (2 * netAcceleration) : Infinity;
-  const tilt = force.lengthSq() ? (force.normalize().applyQuaternion(v.q).angleTo(up) * 180) / Math.PI : null;
+  const tilt = thrust ? (force.normalize().applyQuaternion(v.q).angleTo(up) * 180) / Math.PI : null;
   return {
     body: o.bodyId,
     energy: o.energy,

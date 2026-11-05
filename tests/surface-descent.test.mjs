@@ -53,3 +53,27 @@ test('hover estimate arrests a stationary surface hop without altitude automatio
     f.dispose();
   }
 });
+
+test('opposed engines have no braking axis until their thrust differs', () => {
+  const parts = preset('hopper'),
+    engine = parts.find(p => p.type === 'engine'),
+    reverse = structuredClone(engine);
+  reverse.id = 'opposed-engine';
+  reverse.r = [Math.PI, 0, 0];
+  parts.push(reverse);
+  const f = new Flight(parts, 'land', 0);
+  try {
+    f.stageNext();
+    assert.ok(f.active.has(reverse.id) && f.active.has(engine.id));
+    const cancelled = descentTelemetry(f);
+    assert.equal(cancelled.thrust, 0);
+    assert.equal(cancelled.tilt, null);
+    assert.equal(cancelled.hoverThrottle, Infinity);
+    f.active.delete(reverse.id);
+    const single = descentTelemetry(f);
+    assert.ok(single.thrust > 1000);
+    assert.ok(single.tilt !== null);
+  } finally {
+    f.dispose();
+  }
+});
