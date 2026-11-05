@@ -1,3 +1,5 @@
+import {PARTS} from './catalog.js';
+import {canControl, type ControllableVessel} from './fleet.js';
 import {ManeuverSession, type ManeuverFlight, type ManeuverNode} from './maneuver-controller.js';
 import {maneuverWarpBudget} from './maneuver-warp.js';
 import {floatingWindow, type FloatingWindow} from './floating-window.js';
@@ -5,9 +7,7 @@ import {acceptsFlightKey} from './flight-keyboard.js';
 import {preserveManualControlEdit, type ManualControl} from './manual-control-edit.js';
 import {element} from './dom.js';
 
-export interface ManeuverPanelFlight extends ManeuverFlight {
-  rocketAxes?: unknown;
-}
+export interface ManeuverPanelFlight extends ManeuverFlight, ControllableVessel {}
 interface ManeuverWindow {
   panel: FloatingWindow;
   power: HTMLSelectElement;
@@ -79,7 +79,8 @@ export function mountManeuverPanel(
       message = '待機';
       if (ui) configure(ui);
     }
-    button.hidden = !f || atCenter || !f.rocketAxes;
+    button.hidden =
+      !f || atCenter || !canControl(f) || !f.parts.some(p => PARTS[p.type].thrustMedium === 'independent');
     if (button.hidden || !f) {
       close();
       return;

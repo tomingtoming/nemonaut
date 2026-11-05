@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {Flight} from '../dist/core.js';
-import {preset} from '../dist/catalog.js';
+import {preset, part} from '../dist/catalog.js';
 import {maneuverPreview} from '../dist/maneuver.js';
 import {createManeuverNode, validateManeuverNode} from '../dist/maneuver-node.js';
 import {ManeuverSession} from '../tools/maneuver-session.mjs';
@@ -11,8 +11,8 @@ import {WorldRuntime} from '../dist/world-runtime.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 
 // A plan fixed for "now": its epoch is already past when the automatic burn starts.
-function vessel(onAlignment, dv = 20) {
-  const f = new Flight(preset('rocket'), 'orbit');
+function vessel(onAlignment, dv = 20, craft = preset('rocket')) {
+  const f = new Flight(craft, 'orbit');
   f.stageNext();
   const p = maneuverPreview(
     f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
@@ -109,6 +109,32 @@ test('automatic burn aligns the engine even when the command pod looks sideways'
     assert.ok(lit);
     assert.equal(session.state, 'complete', session.message);
     assert.equal(pod.referenceDirection, 2);
+  } finally {
+    f.dispose();
+  }
+});
+
+test('forward controls allow automatic burns with aligned rocket propulsion but reject a tilted engine', () => {
+  const craft = preset('rocket');
+  craft[0].type = 'probe';
+  craft.push(part('cockpit', [0, 2, 0], [Math.PI / 2, Math.PI, 0], craft[0].id));
+  const f = vessel(true, 5, craft),
+    session = new ManeuverSession(),
+    runtime = new WorldRuntime(f);
+  try {
+    assert.equal(f.rocketAxes, false);
+    const engine = f.parts.find(p => p.type === 'engine');
+    engine.r[0] = Math.PI / 2;
+    assert.throws(() => session.start(f), /推力軸/);
+    assert.equal(f.throttle, 0);
+    engine.r[0] = 0;
+    session.start(f, {throttle: 0.1});
+    for (let i = 0; i < 240 * 120 && session.owner; i++) {
+      session.step(f, 1 / 120);
+      runtime.replace(f);
+      runtime.step(1 / 120, {});
+    }
+    assert.equal(session.state, 'complete', session.message);
   } finally {
     f.dispose();
   }

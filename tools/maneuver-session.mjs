@@ -35,7 +35,7 @@ export class ManeuverSession {
   }
   start(f, settings = {}) {
     if (this.owner) throw Error('実行中の噴射を停止してください');
-    if (!f || !canControl(f) || !f.rocketAxes) throw Error('制御可能なロケットが必要です');
+    if (!f || !canControl(f)) throw Error('操縦可能な機体が必要です');
     if (f.throttle !== 0) throw Error('スロットルを0にしてください');
     const orbit = bodyOrbitState(
       f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
