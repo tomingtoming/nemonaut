@@ -750,13 +750,7 @@ export function mountFlightMap(
       focusHits.push({x, y, radius: Math.max(12, r), focus: b.id === 'moon' ? 'moon' : 'planet'});
       if (x + r < 0 || y + r < 0 || x - r > w || y - r > h) continue;
       if (bodyRenderer && r >= 3) {
-        ctx.drawImage(
-          bodyRenderer.image(b, yaw, pitch, time, getFlight()?.environment === 'water'),
-          x - r,
-          y - r,
-          r * 2,
-          r * 2
-        );
+        ctx.drawImage(bodyRenderer.image(b, yaw, pitch, time), x - r, y - r, r * 2, r * 2);
       } else {
         const g = ctx.createRadialGradient(x - r * 0.4, y - r * 0.4, 0, x, y, Math.max(1, r));
         g.addColorStop(0, b.id === 'moon' ? '#c2c1b8' : '#628c83');

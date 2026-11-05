@@ -1,3 +1,4 @@
+import {overWater} from './surface-frame.js';
 import {manualTranslation} from './flight-input.js';
 // The per-frame loop (BACKLOG 7c, moved from app.ts unchanged): audio, failure captions, the space center
 // render, throttle keys, time warp and coasting, physics stepping with the autopilots and docking, part and
@@ -320,23 +321,18 @@ export function startFrameLoop(
     }
     controls.update();
     if (state.flight) {
-      const viewed = state.trackedDebris || state.flight,
-        body = referenceBody(controls.target, state.flight.universalTime);
-      if (viewed.environment !== 'water' || body.id !== 'planet')
+      const body = referenceBody(controls.target, state.flight.universalTime);
+      if (!overWater(camera.position, state.flight.universalTime, body))
         constrainSurfaceCamera(controls, bodyState(body, state.flight.universalTime).position, body.radius);
     }
     if (!state.flight) updatePlacementCopies();
     if (state.flight) updateWorldGeometry();
     if (state.flight)
       scene.fog =
-        state.flightScenery?.update(
-          camera,
-          state.flight.universalTime,
-          sun,
-          ambient,
-          [planetMaterial, patchMaterial],
-          state.flight.environment === 'water'
-        ) || null;
+        state.flightScenery?.update(camera, state.flight.universalTime, sun, ambient, [
+          planetMaterial,
+          patchMaterial
+        ]) || null;
     if (highlight.visible) highlight.update();
     if (partHover.visible) {
       craftRoot.updateWorldMatrix(true, true);

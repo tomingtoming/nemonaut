@@ -33,13 +33,12 @@ export function disposeWorld() {
   });
   testWorld.clear();
 }
-export function buildTestWorld(environment: string, time: number) {
+export function buildTestWorld(time: number) {
   const {testWorld} = sceneCore();
   disposeWorld();
   groundFacilities = new T.Group();
   testWorld.add(groundFacilities);
-  const color = environment === 'water' ? '#164c64' : '#627569';
-  planetMaterial = surfaceMaterial(environment === 'water');
+  planetMaterial = surfaceMaterial();
   const globe = new T.Mesh(new T.SphereGeometry(PLANET.radius, 256, 128), planetMaterial);
   globe.layers.set(1);
   globe.position.copy(center);
@@ -57,31 +56,29 @@ export function buildTestWorld(environment: string, time: number) {
     positions.setY(i, Math.sqrt(PLANET.radius ** 2 - x * x - z * z) - PLANET.radius + 0.01);
   }
   geometry.computeVertexNormals();
-  patchMaterial = surfaceMaterial(environment === 'water');
+  patchMaterial = surfaceMaterial();
   surfacePatch = new T.Mesh(geometry, patchMaterial);
   state.flightScenery = new FlightScenery(testWorld);
   surfacePatch.receiveShadow = true;
   testWorld.add(surfacePatch);
-  if (environment !== 'water') {
-    addLaunchpad(groundFacilities, assets.get('launchpad'));
-    addSurveyMarkers(groundFacilities, assets);
-    const runwaySite = new T.Group();
-    runwaySite.quaternion.copy(launchSiteOrientation('runway'));
-    runwaySite.position.set(0, PLANET.radius, 0).applyQuaternion(runwaySite.quaternion);
-    groundFacilities.add(runwaySite);
-    const runwayGeometry = new T.PlaneGeometry(RUNWAY.width, RUNWAY.length, 1, 80);
-    runwayGeometry.rotateX(-Math.PI / 2);
-    runwayGeometry.translate(0, 0, RUNWAY.center);
-    const rp = runwayGeometry.attributes.position;
-    for (let i = 0; i < rp.count; i++)
-      rp.setY(i, 0.025 - (rp.getX(i) ** 2 + rp.getZ(i) ** 2) / (2 * PLANET.radius));
-    runwayGeometry.computeVertexNormals();
-    const runway = new T.Mesh(runwayGeometry, mat('#3a4245'));
-    runway.receiveShadow = true;
-    runwaySite.add(runway);
-    for (let z = -40; z < 1400; z += 22)
-      box(runwaySite, [0.25, 0.01, 8], [0, 0.035 - (z * z) / (2 * PLANET.radius), z], mat('#d8d7bd'));
-  }
+  addLaunchpad(groundFacilities, assets.get('launchpad'));
+  addSurveyMarkers(groundFacilities, assets);
+  const runwaySite = new T.Group();
+  runwaySite.quaternion.copy(launchSiteOrientation('runway'));
+  runwaySite.position.set(0, PLANET.radius, 0).applyQuaternion(runwaySite.quaternion);
+  groundFacilities.add(runwaySite);
+  const runwayGeometry = new T.PlaneGeometry(RUNWAY.width, RUNWAY.length, 1, 80);
+  runwayGeometry.rotateX(-Math.PI / 2);
+  runwayGeometry.translate(0, 0, RUNWAY.center);
+  const rp = runwayGeometry.attributes.position;
+  for (let i = 0; i < rp.count; i++)
+    rp.setY(i, 0.025 - (rp.getX(i) ** 2 + rp.getZ(i) ** 2) / (2 * PLANET.radius));
+  runwayGeometry.computeVertexNormals();
+  const runway = new T.Mesh(runwayGeometry, mat('#3a4245'));
+  runway.receiveShadow = true;
+  runwaySite.add(runway);
+  for (let z = -40; z < 1400; z += 22)
+    box(runwaySite, [0.25, 0.01, 8], [0, 0.035 - (z * z) / (2 * PLANET.radius), z], mat('#d8d7bd'));
 }
 export function updateWorldGeometry() {
   const fl = currentFlight(),

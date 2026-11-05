@@ -73,7 +73,7 @@ export function startFlight(restored: Flight | null = null) {
   physicsClock.reset();
   state.trackedDebris = null;
   debrisVisuals.clear();
-  buildTestWorld(state.flight.environment, state.flight.universalTime);
+  buildTestWorld(state.flight.universalTime);
   parachuteVisuals.clear();
   state.chuteFramed = false;
   for (const p of state.flight.parts)

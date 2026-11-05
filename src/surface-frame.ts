@@ -50,8 +50,12 @@ export function inertialToFixed(
     .applyQuaternion(surfaceOrientation(time, body).invert());
 }
 // Initial coastal basin: the nearest shore is 2 km south of the launch pad.
-const seaCenter = new T.Vector3(-Math.sin(12000 / PRIMARY.radius), Math.cos(12000 / PRIMARY.radius), 0);
-const seaRadius = 10000;
+export const seaCenter = new T.Vector3(
+  -Math.sin(12000 / PRIMARY.radius),
+  Math.cos(12000 / PRIMARY.radius),
+  0
+);
+export const seaRadius = 10000;
 const seaEdgeCosine = Math.cos(seaRadius / PRIMARY.radius);
 export function overWater(
   point: T.Vector3,

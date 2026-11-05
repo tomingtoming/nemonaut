@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {PLANET, center} from './planet.js';
 import {SUN_DIRECTION, inEclipse} from './power.js';
-import {surfaceOrientation} from './surface-frame.js';
+import {overWater, seaCenter, seaRadius, surfaceOrientation} from './surface-frame.js';
 
 const noise = `
 float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
@@ -9,23 +9,24 @@ float noise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
  return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
 float terrain(vec3 p){return .55*noise(p)+.27*noise(p*2.03)+.12*noise(p*4.07)+.06*noise(p*8.11);}
 `;
-// Surface colour only: physics remains the existing smooth sphere. No painted
-// oceans in land mode, or visual mountains that falsely promise collisions.
-export function surfaceMaterial(water = false) {
+export function surfaceMaterial() {
   const material = new T.MeshStandardMaterial({
     color: 0xffffff,
-    roughness: water ? 0.38 : 1,
-    metalness: water ? 0.12 : 0,
+    roughness: 1,
     envMapIntensity: 0.15,
-    side: water ? T.DoubleSide : T.FrontSide
+    side: T.DoubleSide
   });
   const rotation = {value: new T.Matrix3()},
     time = {value: 0};
   material.userData.rotation = rotation;
   material.userData.time = time;
   material.onBeforeCompile = shader => {
-    shader.uniforms.surfaceRotation = rotation;
-    shader.uniforms.surfaceTime = time;
+    Object.assign(shader.uniforms, {
+      surfaceRotation: rotation,
+      surfaceTime: time,
+      seaCenter: {value: seaCenter},
+      seaChord: {value: 2 * Math.sin(seaRadius / (2 * PLANET.radius))}
+    });
     shader.vertexShader =
       'varying vec3 terrainWorld;\n' +
       shader.vertexShader.replace(
@@ -33,75 +34,49 @@ export function surfaceMaterial(water = false) {
         '#include <project_vertex>\nterrainWorld=(modelMatrix*vec4(transformed,1.)).xyz;'
       );
     shader.fragmentShader =
-      'varying vec3 terrainWorld; uniform mat3 surfaceRotation; uniform float surfaceTime;\n' +
+      'varying vec3 terrainWorld; uniform mat3 surfaceRotation; uniform float surfaceTime; uniform vec3 seaCenter; uniform float seaChord;\n' +
       noise +
       shader.fragmentShader;
-    const colors = water
-      ? 'vec3 base=mix(vec3(.014,.07,.12),vec3(.035,.20,.26),n);'
-      : 'vec3 base=mix(vec3(.095,.145,.07),vec3(.38,.32,.18),smoothstep(.35,.72,n));base=mix(base,vec3(.63,.67,.63),smoothstep(.83,.97,abs(p.x)));';
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <color_fragment>',
-      `#include <color_fragment>
-   vec3 p=normalize(surfaceRotation*(terrainWorld-vec3(0.,-${PLANET.radius.toFixed(1)},0.)));
-   float n=terrain(p*32.);${colors}
-   float detail=terrain(p*1800.);diffuseColor.rgb*=base*(.78+.44*detail);`
-    );
-    if (!water) {
-      // Body-fixed metre coordinates: detail stays on the terrain as the camera
-      // moves and the planet rotates. Fade subpixel grains to avoid distant shimmer.
-      shader.fragmentShader = shader.fragmentShader.replace(
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
-    vec3 groundCoord=surfaceRotation*(terrainWorld-vec3(0.,-${PLANET.radius.toFixed(1)},0.));
-    float footprint=max(length(dFdx(groundCoord)),length(dFdy(groundCoord)));
-    float patchFade=1.-smoothstep(3.,14.,footprint);
-    float grainFade=1.-smoothstep(.12,.7,footprint);
-    float patches=noise(groundCoord*.11);
-    float grains=noise(groundCoord*1.7);
-    float mottling=mix(.72,1.22,smoothstep(.23,.77,patches));
-    diffuseColor.rgb*=mix(1.,mottling,patchFade)*mix(1.,.82+.36*grains,grainFade);
-   `
-      );
-    }
-    if (water) {
-      shader.vertexShader =
-        'varying vec2 waterCoord; uniform mat3 surfaceRotation;\n' +
-        shader.vertexShader.replace(
-          'terrainWorld=(modelMatrix*vec4(transformed,1.)).xyz;',
-          'terrainWorld=(modelMatrix*vec4(transformed,1.)).xyz;waterCoord=(surfaceRotation*(terrainWorld-vec3(0.,-600000.,0.))).zx;'
-        );
-      shader.fragmentShader = 'varying vec2 waterCoord;\n' + shader.fragmentShader;
-      // Metre-scale shading gives motion cues without moving the physical sea level.
-      shader.fragmentShader = shader.fragmentShader.replace(
+      vec3 coords=surfaceRotation*(terrainWorld-vec3(0.,-${PLANET.radius.toFixed(1)},0.));
+      vec3 p=normalize(coords);
+      float shore=length(p-seaCenter)-seaChord;
+      float edge=max(fwidth(shore),1e-8);
+      float wet=1.-smoothstep(-edge,edge,shore);
+      float n=terrain(p*32.);
+      vec3 land=mix(vec3(.095,.145,.07),vec3(.38,.32,.18),smoothstep(.35,.72,n));
+      land=mix(land,vec3(.63,.67,.63),smoothstep(.83,.97,abs(p.x)));
+      float footprint=max(length(dFdx(coords)),length(dFdy(coords)));
+      land*=mix(1.,mix(.72,1.22,smoothstep(.23,.77,noise(coords*.11))),1.-smoothstep(3.,14.,footprint));
+      land*=mix(1.,.82+.36*noise(coords*1.7),1.-smoothstep(.12,.7,footprint));
+      vec2 uv=coords.zx;
+      float closeWater=1.-smoothstep(300.,1800.,length(vViewPosition));
+      float a=dot(uv,vec2(.8,.35))-surfaceTime*1.3,b=dot(uv,vec2(-1.2,.9))+surfaceTime*1.7;
+      vec3 water=mix(vec3(.014,.07,.12),vec3(.035,.20,.26),n)*(1.+.45*sin(a)*sin(b)*closeWater);
+      diffuseColor.rgb*=mix(land,water,wet)*(.78+.44*terrain(p*1800.));
+    `
+      )
+      .replace(
+        '#include <roughnessmap_fragment>',
+        '#include <roughnessmap_fragment>\nroughnessFactor=mix(roughnessFactor,.38,wet);'
+      )
+      .replace(
+        '#include <metalnessmap_fragment>',
+        '#include <metalnessmap_fragment>\nmetalnessFactor=mix(metalnessFactor,.12,wet);'
+      )
+      .replace(
         '#include <normal_fragment_begin>',
         `#include <normal_fragment_begin>
-    vec2 waterUV=waterCoord;
-    float nearWater=1.-smoothstep(300.,1800.,length(vViewPosition));
-    float wave=.075*sin(dot(waterUV,vec2(.8,.35))-surfaceTime*1.3)
-              +.04*sin(dot(waterUV,vec2(-1.2,.9))+surfaceTime*1.7)
-              +.018*sin(dot(waterUV,vec2(2.6,1.7))-surfaceTime*2.1);
-    vec3 dx=dFdx(-vViewPosition),dy=dFdy(-vViewPosition);
-    vec3 rx=cross(dy,normal),ry=cross(normal,dx);float det=dot(dx,rx);
-    normal=normalize(abs(det)*normal-sign(det)*(dFdx(wave)*rx+dFdy(wave)*ry)*nearWater);
-   `
+      float wave=.075*sin(a)+.04*sin(b)+.018*sin(dot(uv,vec2(2.6,1.7))-surfaceTime*2.1);
+      vec3 dx=dFdx(-vViewPosition),dy=dFdy(-vViewPosition);
+      vec3 rx=cross(dy,normal),ry=cross(normal,dx);float det=dot(dx,rx);
+      normal=normalize(normal-sign(det)*(dFdx(wave)*rx+dFdy(wave)*ry)/max(abs(det),1e-10)*closeWater*wet);
+    `
       );
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <roughnessmap_fragment>',
-        `#include <roughnessmap_fragment>
-    roughnessFactor=.35;
-   `
-      );
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <color_fragment>',
-        `#include <color_fragment>
-    float ripple=sin(dot(waterCoord,vec2(.8,.35))-surfaceTime*1.3)*sin(dot(waterCoord,vec2(-1.2,.9))+surfaceTime*1.7);
-    float closeWater=1.-smoothstep(300.,1800.,length(vViewPosition));
-    diffuseColor.rgb*=1.+.45*ripple*closeWater;
-   `
-      );
-    }
   };
-  material.customProgramCacheKey = () => (water ? 'water-surface-v2' : 'land-surface-v1');
   return material;
 }
 
@@ -230,13 +205,12 @@ export class FlightScenery {
     time: number,
     light: T.Light,
     ambient: T.Light,
-    materials: Iterable<T.Material | null | undefined>,
-    water = false
+    materials: Iterable<T.Material | null | undefined>
   ): T.FogExp2 | null {
     const radial = camera.position.clone().sub(center),
       alt = radial.length() - PLANET.radius,
       up = radial.normalize();
-    const depth = water ? Math.max(0, -alt) : 0;
+    const depth = alt < 0 && overWater(camera.position, time) ? -alt : 0;
     this.uniforms.waterDepth.value = depth;
     this.shell.visible = depth === 0;
     const day = T.MathUtils.smoothstep(up.dot(SUN_DIRECTION), -0.16, 0.18),

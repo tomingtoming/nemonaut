@@ -10,7 +10,7 @@ export function mapViewVector(x: number, y: number, z: number, yaw: number, pitc
     zz = -Math.sin(pitch) * y + Math.cos(pitch) * z;
   return new T.Vector3(Math.cos(yaw) * x - Math.sin(yaw) * zz, yy, Math.sin(yaw) * x + Math.cos(yaw) * zz);
 }
-export type MapBodyKind = 'moon' | 'water' | 'land';
+export type MapBodyKind = 'moon' | 'planet';
 export interface MapBodyImage {
   canvas: HTMLCanvasElement;
   key: string | null;
@@ -33,11 +33,10 @@ export class MapBodies {
     const r = PLANET.radius;
     this.camera = new T.OrthographicCamera(-r, r, r, -r, r * 0.1, r * 6);
     this.materials = {
-      land: surfaceMaterial(false),
-      water: surfaceMaterial(true),
+      planet: surfaceMaterial(),
       moon: new T.MeshStandardMaterial({color: 0x999b9e, roughness: 1})
     };
-    this.mesh = new T.Mesh(new T.SphereGeometry(r, 96, 64), this.materials.land);
+    this.mesh = new T.Mesh(new T.SphereGeometry(r, 96, 64), this.materials.planet);
     this.mesh.position.copy(center);
     this.scene.add(this.mesh);
     const sun = new T.DirectionalLight(0xfff0d8, 2.4);
@@ -50,10 +49,9 @@ export class MapBodies {
     body: Pick<import('./celestial.js').CelestialBody, 'id'>,
     yaw: number,
     pitch: number,
-    time: number,
-    water = false
+    time: number
   ): HTMLCanvasElement {
-    const kind: MapBodyKind = body.id === 'moon' ? 'moon' : water ? 'water' : 'land',
+    const kind: MapBodyKind = body.id,
       tick = Math.floor(time / 10),
       key = [yaw, pitch, tick, kind].join(':');
     let entry = this.cache.get(kind);
