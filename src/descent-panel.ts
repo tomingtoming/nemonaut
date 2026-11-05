@@ -1,3 +1,4 @@
+import {canControl} from './fleet.js';
 import {PARTS} from './catalog.js';
 import {floatingWindow, type FloatingWindow} from './floating-window.js';
 import {descentTelemetry, descentGuidance, type DescentVessel} from './descent.js';
@@ -10,7 +11,6 @@ export interface DescentPanelFlight extends DescentVessel {
   sasMode: string;
   throttle: number;
   environment?: string;
-  rocketAxes: boolean;
   orbit?: {bodyId: string; altitude: number; energy: number} | null;
 }
 export interface DescentPanel {
@@ -26,7 +26,7 @@ export function mountDescentPanel(
   panel.id = 'descentPanel';
   panel.hidden = true;
   panel.innerHTML =
-    '<strong>月面降下・接地計器</strong><p class="descentStatus" role="status"></p><p class="descentNumbers"></p><div><button class="descentRetro">SAS逆行で減速</button><button class="descentUp">SAS天頂で脚を下へ</button></div><div><button class="descentFull">全開</button><button class="descentHover">静止推力の目安へ</button><button class="descentLess">−0.5%</button><button class="descentMore">＋0.5%</button><button class="descentStop">噴射停止</button></div><small>月周回から逆行に整列し、点火して水平速度を減らします。低速になったら天頂へ。脚の対地距離と鉛直速度を見てスロットルを調整し、最後は1 m/s未満で接地、噴射停止。減速距離は推力を速度の反対へ向けた一定重力の目安です。静止推力は天頂を向いた場合の値で、自動高度保持ではありません。</small>';
+    '<strong>月面降下・接地計器</strong><p class="descentStatus" role="status"></p><p class="descentNumbers"></p><div><button class="descentRetro">SAS逆行へ</button><button class="descentUp">SAS天頂へ</button></div><div><button class="descentFull">全開</button><button class="descentHover">静止推力の目安へ</button><button class="descentLess">−0.5%</button><button class="descentMore">＋0.5%</button><button class="descentStop">噴射停止</button></div><small>月周回から逆行に整列し、点火して水平速度を減らします。低速になったら天頂へ。脚の対地距離と鉛直速度を見てスロットルを調整し、最後は1 m/s未満で接地、噴射停止。減速距離は推力を速度の反対へ向けた一定重力の目安です。静止推力は天頂を向いた場合の値で、自動高度保持ではありません。</small>';
   const basicHelp = element(panel, 'small', 'small');
   const expeditionHelp = document.createElement('details');
   expeditionHelp.className = 'flightHelp';
@@ -40,7 +40,7 @@ export function mountDescentPanel(
   ] as const)
     element(panel, '.descent' + name, 'button').onclick = () => {
       const f = getFlight();
-      if (f && !f.crashed) {
+      if (f && canControl(f)) {
         f.sas = true;
         f.sasMode = mode;
         changed();
@@ -49,7 +49,7 @@ export function mountDescentPanel(
   for (const name of ['Full', 'Hover', 'Less', 'More', 'Stop'])
     element(panel, '.descent' + name, 'button').onclick = () => {
       const f = getFlight();
-      if (!f || f.crashed) return;
+      if (!f || !canControl(f)) return;
       const d = descentTelemetry(f);
       f.throttle =
         name === 'Stop'
@@ -104,7 +104,6 @@ export function mountDescentPanel(
       ground =
         f?.orbit?.bodyId === 'planet' &&
         f.environment !== 'water' &&
-        f.rocketAxes &&
         f.parts.some(p => PARTS[p.type].landingLeg) &&
         f.orbit.altitude < 10000;
     panel.hidden =
@@ -118,9 +117,10 @@ export function mountDescentPanel(
     expeditionHelp.hidden = ground;
     (basicHelp.closest('details') || basicHelp).hidden = ground;
     const d = descentTelemetry(f);
-    for (const button of panel.querySelectorAll('button')) button.disabled = f.crashed;
+    const controllable = canControl(f);
+    for (const button of panel.querySelectorAll('button')) button.disabled = !controllable;
     element(panel, '.descentHover', 'button').disabled =
-      f.crashed || !Number.isFinite(d.hoverThrottle) || d.hoverThrottle > 1;
+      !controllable || !Number.isFinite(d.hoverThrottle) || d.hoverThrottle > 1;
     element(panel, '.descentStatus', 'p').textContent = descentGuidance(d, f.throttle);
     const distance = (n: number) => (Number.isFinite(n) ? n.toFixed(0) + ' m' : '算出不可');
     element(panel, '.descentNumbers', 'p').textContent =
