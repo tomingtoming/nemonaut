@@ -423,7 +423,16 @@ export class Flight {
   get instrumentRotation() {
     return instrumentRotation(this.parts, this.rocketAxes, PARTS);
   }
-  declare rocketAxes: boolean;
+  // Staging and fracture replace the part list on the surviving Flight instance.
+  private axisParts?: FlightPart[];
+  private axialControls = false;
+  get rocketAxes(): boolean {
+    if (this.axisParts !== this.parts) {
+      this.axialControls = usesAxialControls(this.parts, PARTS);
+      this.axisParts = this.parts;
+    }
+    return this.axialControls;
+  }
   declare sas: boolean;
   declare sasMode: string;
   declare separationCount: number;
@@ -501,7 +510,6 @@ export class Flight {
     this.deflections = new Map<string, number>();
     this.wheelMotion = new Map<string, WheelMotion>();
     this.gimbals = new Map<string, T.Vector3>();
-    this.rocketAxes = usesAxialControls(parts, PARTS);
     this.telemetry = {contacts: 0};
     this.chutes = new Map<string, ParachuteState>(
       this.parts.filter(p => PARTS[p.type].parachute).map(p => [p.id, {status: 'stowed', fraction: 0}])

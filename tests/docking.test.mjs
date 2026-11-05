@@ -294,3 +294,23 @@ test('Corrupt mission provenance is rejected; older docked designs still load', 
   const old = loadFlight(saved);
   old.dispose();
 });
+
+test('docking uses the active probe reference and undocking restores both world frames', () => {
+  const [a, b, ai, bi] = pair();
+  a.parts[0].referenceDirection = 2;
+  b.parts[0].referenceDirection = 1;
+  const frame = f => f.q.clone().multiply(f.instrumentRotation);
+  const own = frame(a),
+    target = frame(b);
+  a.detached = [b];
+  let flight = a;
+  try {
+    flight = dockVessels(flight, b, ai, bi);
+    assert.ok(frame(flight).angleTo(own) < 1e-6);
+    flight = undockVessel(flight, ai);
+    assert.ok(frame(flight).angleTo(own) < 1e-6);
+    assert.ok(frame(flight.detached[0]).angleTo(target) < 1e-6);
+  } finally {
+    flight.dispose();
+  }
+});

@@ -119,3 +119,26 @@ test('mounted instrument turns the nose, manual RCS and flight save together', (
     restored?.dispose();
   }
 });
+
+test('a retained probe changes to its own axes immediately when the axial pod separates', () => {
+  const probe = part('probe'),
+    ring = part('decoupler', [0, -1, 0], [0, 0, 0], probe.id),
+    pod = part('capsule', [0, -2, 0], [0, 0, 0], ring.id);
+  const f = new Flight([probe, ring, pod], 'orbit');
+  let restored;
+  try {
+    assert.equal(f.rocketAxes, true);
+    f.separateRoots([ring]);
+    assert.equal(f.rocketAxes, false);
+    assert.equal(f.detached[0].rocketAxes, true);
+    f.sas = false;
+    f.step(1 / 120, {roll: 1});
+    assert.equal(f.telemetry.commands.roll, 1);
+    assert.equal(f.telemetry.commands.yaw, 0);
+    restored = loadFlight(saveFlight(f));
+    assert.equal(restored.rocketAxes, f.rocketAxes);
+  } finally {
+    f.dispose();
+    restored?.dispose();
+  }
+});
