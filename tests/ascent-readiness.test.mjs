@@ -81,3 +81,23 @@ test('Atlas at 60 percent cannot lift immediately even though burning on the pad
     f.dispose();
   }
 });
+
+test('launch readiness compares the combined engine axis with the gravity-turn axis', () => {
+  for (const symmetric of [false, true]) {
+    const parts = preset('launcher');
+    const first = Math.min(...parts.filter(p => PARTS[p.type].thrust).map(p => p.stage));
+    for (const p of parts.filter(p => PARTS[p.type].thrust && p.stage === first)) {
+      p.r = [0, 0, Math.PI / 8];
+      if (symmetric) parts.push({...structuredClone(p), id: p.id + '-mirror', r: [0, 0, -Math.PI / 8]});
+    }
+    const f = new Flight(parts, 'land');
+    try {
+      const before = saveFlight(f);
+      if (symmetric) assert.equal(ascentReadiness(f), null);
+      else assert.match(ascentReadiness(f), /推力軸/);
+      assert.deepEqual(saveFlight(f), before);
+    } finally {
+      f.dispose();
+    }
+  }
+});

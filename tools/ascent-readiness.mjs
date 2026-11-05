@@ -46,15 +46,19 @@ export function ascentReadiness(f) {
       return 'ロケットエンジンの点火段が必要';
     const air = atmosphere(bodyAltitude(copy.pos, copy.universalTime));
     const thrust = engineBurn(copy.networks, copy.fuel, copy.active, 1, air.density, 0.01, air.pressure);
-    let vertical = 0;
+    const force = new T.Vector3();
     const up = bodyUp(copy.pos, copy.universalTime);
     for (const p of engines) {
-      const direction = new T.Vector3(0, 1, 0).applyQuaternion(partRotation(p)).applyQuaternion(copy.q);
-      vertical += (thrust.get(p.id) || 0) * direction.dot(up);
+      const direction = new T.Vector3(0, 1, 0).applyQuaternion(partRotation(p));
+      force.addScaledVector(direction, thrust.get(p.id) || 0);
     }
+    const vertical = force.clone().applyQuaternion(copy.q).dot(up);
     if (vertical <= 0) return '点火段へ燃料が届かないか、上向きの推力がありません';
     if (vertical <= copy.stats.mass * bodyGravity(copy.pos, copy.universalTime).length())
       return '地上での推力が重量を下回っています';
+    // The gravity turn aims assembly +Y; compare the combined force, so symmetric cant is allowed.
+    if (force.angleTo(new T.Vector3(0, 1, 0)) > 0.01)
+      return '主エンジンの推力軸を機体の上方向へ揃えてください';
     const reaction =
       copy.reactionEnabled &&
       copy.parts.some(p => PARTS[p.type].reactionTorque && p.reactionEnabled !== false) &&
