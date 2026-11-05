@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {part} from '../dist/catalog.js';
+import {PARTS, part} from '../dist/catalog.js';
 import {createBodyAerodynamics, bodyDrag, MIN_BODY_DRAG_FORCE} from '../dist/body-drag.js';
 const y = new T.Vector3(0, 1, 0),
   near = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} != ${b}`);
@@ -70,4 +70,24 @@ test('scaled nose geometry inherits front drag treatment without streamlining it
   for (const direction of [forward, backward, side])
     near(large.dragArea(direction), base.dragArea(direction) * 4.8 ** 2);
   assert.ok(large.dragArea(forward) < large.dragArea(backward));
+});
+
+test('disc drag follows shape capability independently of name and thermal protection', () => {
+  const savedTank = PARTS.tank,
+    savedShield = PARTS.heatShield;
+  try {
+    PARTS.tank = {...savedShield, heatShield: false};
+    const alias = createBodyAerodynamics([part('tank')]);
+    near(alias.dragArea(y), Math.PI * 1.1);
+    near(alias.dragArea(new T.Vector3(1, 0, 0)), 2 * 0.28 * 0.4);
+    for (const direction of [y, y.clone().negate(), new T.Vector3(1, 2, 3).normalize()])
+      assert.ok(alias.dragArea(direction) <= alias.maxCdArea);
+    PARTS.heatShield = {...savedShield, bodyDragShape: undefined};
+    const box = createBodyAerodynamics([part('heatShield')]);
+    near(box.dragArea(y), 4 * 0.4);
+    assert.ok(box.maxCdArea < alias.maxCdArea);
+  } finally {
+    PARTS.tank = savedTank;
+    PARTS.heatShield = savedShield;
+  }
 });

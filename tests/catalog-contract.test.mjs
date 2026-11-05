@@ -132,3 +132,11 @@ test('all thrust definitions require an explicit medium without retired flags', 
     )
   );
 });
+
+test('unknown body drag shapes fail before flight', () => {
+  assert.ok(
+    catalogContractErrors({bad: {...PARTS.tank, bodyDragShape: 'sphere'}}).some(e =>
+      e.includes('bodyDragShape')
+    )
+  );
+});

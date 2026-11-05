@@ -20,6 +20,8 @@ export type PartDefinition = {
   battery?: number;
   landingLeg?: boolean;
   heatShield?: boolean;
+  /** Body drag approximation: circular faces normal to local Y, independent of thermal protection. */
+  bodyDragShape?: 'disc-y';
   shieldRadius?: number;
   shieldNormal?: number[];
   ablator?: number;
@@ -264,6 +266,7 @@ const BASE_PARTS = {
     mass: 70,
     size: [2, 0.28, 2],
     heatShield: true,
+    bodyDragShape: 'disc-y',
     shieldRadius: 1,
     shieldNormal: [0, -1, 0],
     ablator: 40,

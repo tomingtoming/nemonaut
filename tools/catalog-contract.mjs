@@ -34,6 +34,7 @@ export function catalogContractErrors(parts) {
     if (part.thrust > 0) {
       if (!['independent', 'air', 'water'].includes(part.thrustMedium)) fail('thrustMedium');
     } else if (part.thrustMedium !== undefined) fail('thrustMedium requires thrust');
+    if (part.bodyDragShape !== undefined && part.bodyDragShape !== 'disc-y') fail('bodyDragShape');
     if (part.commandFrame !== undefined) {
       if (!['axial', 'forward', 'legacy-auto'].includes(part.commandFrame)) fail('commandFrame');
       if (!part.control) fail('commandFrame requires control');

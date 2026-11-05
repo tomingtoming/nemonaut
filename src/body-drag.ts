@@ -87,7 +87,7 @@ export function createBodyAerodynamics(parts: BodyDragPart[]): BodyAerodynamics 
       sum +
       4 *
         (b.half.x * b.half.y + b.half.y * b.half.z + b.half.z * b.half.x) *
-        (b.type === 'heatShield' ? 1.1 : 0.4),
+        (PARTS[b.type].bodyDragShape === 'disc-y' ? 1.1 : 0.4),
     0
   );
   return {
@@ -119,9 +119,9 @@ export function createBodyAerodynamics(parts: BodyDragPart[]): BodyAerodynamics 
               if (!boxes.some(other => other !== box && hitBox(start, wind, other) !== null)) exposed++;
             }
           // Shield disc uses its circular face area. Other dimensions are box bounds.
-          const round = box.type === 'heatShield' && axis === 1 ? Math.PI / 4 : 1;
+          const round = PARTS[box.type].bodyDragShape === 'disc-y' && axis === 1 ? Math.PI / 4 : 1;
           const cd =
-            box.type === 'heatShield' && axis === 1
+            PARTS[box.type].bodyDragShape === 'disc-y' && axis === 1
               ? 1.1
               : PARTS[box.type].streamlinedNose && axis === 1 && sign > 0
                 ? 0.15
