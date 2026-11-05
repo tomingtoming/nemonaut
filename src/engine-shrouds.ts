@@ -33,7 +33,7 @@ export function engineShrouds(parts: readonly Part[]): EngineShroudSpec[] {
     const bottom = new T.Vector3(...p.p).addScaledVector(down, d.size[1] / 2);
     for (const support of linksOf(p.id)) {
       const s = PARTS[support.type];
-      if (!(s.decoupler || s.fuel || support.type.startsWith('adapter'))) continue;
+      if (!s.shroudSupport) continue;
       const sq = new T.Quaternion().setFromEuler(new T.Euler(...support.r));
       const matched = [1, -1].some(sign => {
         const normal = new T.Vector3(0, sign, 0).applyQuaternion(sq);

@@ -94,3 +94,35 @@ test('Blender cover is a hollow sleeve and visibility follows live connectivity 
   assert.equal(cover.visible, true);
   assert.equal(o.children.length, 1);
 });
+
+test('support capability preserves existing mounts and accepts new structural parts', () => {
+  const engine = part('engine');
+  function fits(type) {
+    const y = -(PARTS.engine.size[1] + PARTS[type].size[1]) / 2;
+    return engineShrouds([engine, part(type, [0, y, 0], [0, 0, 0], engine.id)]).length === 1;
+  }
+  const expected = [
+    'tankSmall',
+    'tankLarge',
+    'adapterSmall',
+    'adapterLarge',
+    'decouplerSmall',
+    'decouplerLarge',
+    'tank',
+    'decoupler',
+    'transportFuselage',
+    'fuselageLarge'
+  ];
+  assert.deepEqual(Object.keys(PARTS).filter(fits).sort(), expected.sort());
+  const truss = PARTS.truss,
+    adapter = PARTS.adapterSmall;
+  try {
+    PARTS.truss = {...truss, shroudSupport: true};
+    PARTS.adapterSmall = {...adapter, shroudSupport: false};
+    assert.ok(fits('truss'));
+    assert.equal(fits('adapterSmall'), false);
+  } finally {
+    PARTS.truss = truss;
+    PARTS.adapterSmall = adapter;
+  }
+});

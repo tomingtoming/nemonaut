@@ -9,6 +9,7 @@ export type PartDefinition = {
   size: number[];
   desc: string;
   fuel?: number;
+  shroudSupport?: boolean;
   decoupler?: boolean;
   thrust?: number;
   /** Medium required for thrust; independent engines carry their reaction mass. */
@@ -106,6 +107,7 @@ export interface Part {
 // The literal table keeps its keys for PartType; PARTS is its string-keyed view (the same object).
 const BASE_PARTS = {
   tankSmall: {
+    shroudSupport: true,
     name: '小型タンク',
     code: 'FT-225',
     cat: '燃料',
@@ -115,6 +117,7 @@ const BASE_PARTS = {
     desc: '直径0.625 m・推進剤225 kg。接続したエンジンへ供給。'
   },
   tankLarge: {
+    shroudSupport: true,
     name: '大型タンク',
     code: 'FT-14400',
     cat: '燃料',
@@ -124,6 +127,7 @@ const BASE_PARTS = {
     desc: '直径2.5 m・推進剤14400 kg。接続したエンジンへ供給。'
   },
   adapterSmall: {
+    shroudSupport: true,
     name: '異径アダプター 0.625–1.25',
     code: 'AD-125',
     cat: '構造',
@@ -132,6 +136,7 @@ const BASE_PARTS = {
     desc: '上面0.625 m／下面1.25 m。燃料は通過。回転して逆向きにも接続可能。'
   },
   adapterLarge: {
+    shroudSupport: true,
     name: '異径アダプター 1.25–2.5',
     code: 'AD-250',
     cat: '構造',
@@ -140,6 +145,7 @@ const BASE_PARTS = {
     desc: '上面1.25 m／下面2.5 m。燃料は通過。回転して逆向きにも接続可能。'
   },
   decouplerSmall: {
+    shroudSupport: true,
     name: '分離リング 0.625 m',
     code: 'DC-62',
     cat: '構造',
@@ -149,6 +155,7 @@ const BASE_PARTS = {
     desc: '直径0.625 m。ステージで接続枝を分離。燃料通過なし。'
   },
   decouplerLarge: {
+    shroudSupport: true,
     name: '分離リング 2.5 m',
     code: 'DC-250',
     cat: '構造',
@@ -333,6 +340,7 @@ const BASE_PARTS = {
     desc: '航空機・ローバー向けの広視界キャノピー。'
   },
   tank: {
+    shroudSupport: true,
     name: '中型タンク',
     code: 'FT-200',
     cat: '燃料',
@@ -386,6 +394,7 @@ const BASE_PARTS = {
     desc: '機首を覆う軽量の整流コーン。'
   },
   decoupler: {
+    shroudSupport: true,
     name: '分離リング',
     code: 'DC-12',
     cat: '構造',
