@@ -1,3 +1,4 @@
+import {manualTranslation} from './flight-input.js';
 // The per-frame loop (BACKLOG 7c, moved from app.ts unchanged): audio, failure captions, the space center
 // render, throttle keys, time warp and coasting, physics stepping with the autopilots and docking, part and
 // parachute visuals, debris, camera follow, the HUD and its 250 ms refresh, pause and rendering.
@@ -162,25 +163,7 @@ export function startFrameLoop(
             }
             world.replace(stepped);
             world.step(1 / 120, {
-              portForward:
-                (((keys.has('KeyI') ? 1 : 0) - (keys.has('KeyK') ? 1 : 0)) *
-                  Number($('#portPower', 'select').value)) /
-                100,
-              portRight:
-                (((keys.has('KeyL') ? 1 : 0) - (keys.has('KeyJ') ? 1 : 0)) *
-                  Number($('#portPower', 'select').value)) /
-                100,
-              portUp:
-                (((keys.has('KeyU') ? 1 : 0) - (keys.has('KeyO') ? 1 : 0)) *
-                  Number($('#portPower', 'select').value)) /
-                100,
-              translateX: (keys.has('KeyL') ? 1 : 0) - (keys.has('KeyJ') ? 1 : 0),
-              translateY:
-                (keys.has(stepped.rocketAxes ? 'KeyI' : 'KeyU') ? 1 : 0) -
-                (keys.has(stepped.rocketAxes ? 'KeyK' : 'KeyO') ? 1 : 0),
-              translateZ:
-                (keys.has(stepped.rocketAxes ? 'KeyO' : 'KeyI') ? 1 : 0) -
-                (keys.has(stepped.rocketAxes ? 'KeyU' : 'KeyK') ? 1 : 0),
+              ...manualTranslation(keys, stepped.rocketAxes, Number($('#portPower', 'select').value) / 100),
               precision: $('#precisionControl', 'button').getAttribute('aria-pressed') === 'true',
               drive: (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0),
               pitch: (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0),
