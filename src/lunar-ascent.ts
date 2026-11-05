@@ -1,11 +1,14 @@
 import * as T from 'three';
 import {bodyUp, relativeMotion, MOON, type OrbitState} from './celestial.js';
+import {PARTS} from './catalog.js';
+import {canControl} from './fleet.js';
+import {instrumentForward} from './command-frame.js';
 import {attitudeTarget} from './navigation.js';
 import {availableEngineForce, type DescentVessel} from './descent.js';
 export interface AscentAttitudeFlight extends DescentVessel {
   instrumentRotation: T.Quaternion;
   crashed?: boolean;
-  rocketAxes?: unknown;
+  rocketAxes: boolean;
   pos: T.Vector3;
   vel: T.Vector3;
   q: T.Quaternion;
@@ -15,9 +18,13 @@ export interface AscentAttitudeFlight extends DescentVessel {
   holdQ?: T.Quaternion | null;
 }
 
+export function hasLunarAscentEngine(f: Pick<DescentVessel, 'parts'>): boolean {
+  return f.parts.some(p => PARTS[p.type].thrustMedium === 'independent');
+}
+
 // Commands only a SAS target. The installed actuators must rotate the craft.
 export function setAscentAttitude(f: AscentAttitudeFlight, pitch: number): T.Vector3 {
-  if (!Number.isFinite(pitch) || pitch < 0 || pitch > 90 || f.crashed || !f.rocketAxes)
+  if (!Number.isFinite(pitch) || pitch < 0 || pitch > 90 || !canControl(f) || !hasLunarAscentEngine(f))
     throw Error('離陸姿勢を指定できません');
   const pos = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
     up = bodyUp(pos, f.universalTime);
@@ -32,9 +39,7 @@ export function setAscentAttitude(f: AscentAttitudeFlight, pitch: number): T.Vec
     target = horizontal.multiplyScalar(Math.cos(radians)).addScaledVector(up, Math.sin(radians));
   const force = availableEngineForce(f, 0, 0);
   // With no burn available, align the selected instrument for pre-ignition pointing.
-  const axis = force.lengthSq()
-    ? force.normalize()
-    : new T.Vector3(0, 1, 0).applyQuaternion(f.instrumentRotation);
+  const axis = force.lengthSq() ? force.normalize() : instrumentForward(f.rocketAxes, f.instrumentRotation);
   f.sas = true;
   f.sasMode = 'hold';
   f.holdQ = attitudeTarget(f.q, axis, target);

@@ -69,6 +69,26 @@ test('lunar alignment uses the selected reference before ignition and the mounte
   }
 });
 
+test('cockpit lander aligns its selected nose before ignition and requires vacuum propulsion', () => {
+  const parts = preset('moonlander');
+  const command = parts.find(p => PARTS[p.type].commandFrame);
+  command.type = 'cockpit';
+  command.r = [Math.PI / 2, Math.PI, 0];
+  const f = new Flight(parts, 'moon-surface', 0);
+  try {
+    assert.equal(f.rocketAxes, false);
+    const before = setAscentAttitude(f, 45);
+    assert.ok(new T.Vector3(0, 0, 1).applyQuaternion(f.holdQ).distanceTo(before) < 1e-8);
+    f.stageNext();
+    const after = setAscentAttitude(f, 45);
+    assert.ok(new T.Vector3(0, 1, 0).applyQuaternion(f.holdQ).distanceTo(after) < 1e-8);
+    for (const p of f.parts) if (PARTS[p.type].thrust) p.type = 'jet';
+    assert.throws(() => setAscentAttitude(f, 45), /離陸姿勢/);
+  } finally {
+    f.dispose();
+  }
+});
+
 test('Actual lunar surface launch returns to a closed orbit with full and post-landing fuel', () => {
   for (const ratio of [1, 0.43]) {
     const f = new Flight(preset('moonlander'), 'moon-surface', ratio === 1 ? 0 : 40000);
