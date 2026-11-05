@@ -862,7 +862,7 @@ export function preset(kind: string): Part[] {
   }
   if (kind === 'courier') {
     add('probe', [0, 1.6, -1.345]);
-    add('solar', [0, 2, -1.345], [-Math.PI / 2, 0, 0]);
+    add('solar', [0, 1.6 + PARTS.probe.size[1] / 2 + PARTS.solar.size[2] / 2, -1.345], [-Math.PI / 2, 0, 0]);
     const sep = add('decoupler', [0, 1.6, -0.61], [Math.PI / 2, 0, 0], 0, 1);
     const chassis = add('truss', [0, 0.9, 0], [0, 0, 0], sep);
     add('truss', [0, 0.9, 1], [0, 0, 0], chassis);
@@ -884,7 +884,7 @@ export function preset(kind: string): Part[] {
         const i = add('wheel', [x, 0.4, z], [0, 0, 0]);
         if (z < 0.5) a[i].steeringEnabled = false;
       }
-    add('solar', [0, 2, 0.3], [-Math.PI / 2, 0, 0], 2);
+    add('solar', [0, 1.6 + PARTS.probe.size[1] / 2 + PARTS.solar.size[2] / 2, 0.3], [-Math.PI / 2, 0, 0], 2);
   }
   if (kind === 'boat' || kind === 'sub') {
     const r: PartVector = [Math.PI / 2, 0, 0];
