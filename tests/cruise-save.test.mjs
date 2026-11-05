@@ -2,7 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
-import {CruisePilot, cruiseSettings, cruiseReadiness, cruiseTargetReadiness} from '../dist/cruise-pilot.js';
+import {
+  CruisePilot,
+  cruiseAuthority,
+  cruisePropulsion,
+  cruiseSettings,
+  cruiseReadiness,
+  cruiseTargetReadiness
+} from '../dist/cruise-pilot.js';
 import {selectVessel} from '../dist/fleet.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 import {bodyUp} from '../dist/celestial.js';
@@ -134,6 +141,26 @@ test('cruise rejects unsupported aircraft and out-of-range targets', () => {
     assert.match(cruiseReadiness(f), /昇降舵/);
     for (const patch of [{heading: 360}, {speed: 10}, {altitude: 0}, {vertical: 11}, {mode: 'bad'}])
       assert.throws(() => cruiseSettings({speed: 100, altitude: 1000, heading: 90, ...patch}));
+  } finally {
+    f.dispose();
+  }
+});
+
+test('an uncrewed twin jet needs working surfaces and net forward thrust', () => {
+  const craft = preset('plane-large');
+  craft.find(p => p.type === 'cockpitLarge').type = 'probe';
+  const f = new Flight(craft, 'runway');
+  try {
+    f.stageNext();
+    assert.equal(cruiseAuthority(f), null);
+    assert.equal(cruisePropulsion(f), null);
+    const engines = f.parts.filter(p => p.type === 'jetLarge');
+    engines[0].r = [-Math.PI / 2, 0, 0];
+    assert.match(cruisePropulsion(f), /前方/);
+    engines[0].thrustLimit = 0.5;
+    assert.equal(cruisePropulsion(f), null);
+    for (const p of f.parts) p.controlEnabled = false;
+    assert.match(cruiseAuthority(f), /昇降舵/);
   } finally {
     f.dispose();
   }

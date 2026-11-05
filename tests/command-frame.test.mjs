@@ -32,7 +32,7 @@ test('existing presets retain their assembly control frame', () => {
             PARTS[p.type].thrust &&
             !['jet', 'jetLarge', 'transportJet', 'propeller', 'propellerLarge'].includes(p.type)
         ) &&
-        !parts.some(p => PARTS[p.type].aircraftControl));
+        !parts.some(p => ['cockpit', 'cockpitLarge', 'transportCockpit', 'marineCabin'].includes(p.type)));
     assert.equal(usesAxialControls(parts, PARTS), previous, kind);
   }
 });

@@ -6,6 +6,7 @@ import {
   cruiseSettings,
   cruiseTargetReadiness,
   cruiseAuthority,
+  hasCruiseHardware,
   cruisePropulsion,
   type CruiseFlight,
   type CruiseSettings,
@@ -447,7 +448,7 @@ export function mountCruisePanel(
     )
       stop('機体切替 · 待機');
     runwaySelection.bind(f);
-    button.hidden = !f || atCenter || f.rocketAxes;
+    button.hidden = !f || atCenter || !hasCruiseHardware(f);
     if (button.hidden || !f) {
       close();
       return;
@@ -569,7 +570,7 @@ export function mountCruisePanel(
       stop('機体切替 · 待機');
       return;
     }
-    if (f.crashed || !f.parts.some(p => PARTS[p.type].aircraftControl)) {
+    if (!hasCruiseHardware(f)) {
       stop('異常停止');
       return;
     }

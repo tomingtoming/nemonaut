@@ -6,7 +6,7 @@ import {compassFrame, compassHeading} from './navigation.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
 import {atmosphere} from './planet.js';
 import {PARTS} from './catalog.js';
-import {controlDeflection, type ControlPart} from './aero.js';
+import {partRotation, controlDeflection, type ControlPart} from './aero.js';
 import {fuelNetworks, engineMaxThrust, type ResourcePart, type EngineSet} from './resources.js';
 const clamp = T.MathUtils.clamp,
   rad = Math.PI / 180;
@@ -110,9 +110,11 @@ export function cruiseTargetReadiness(
         (Number.isFinite(minimum) ? Math.ceil(minimum) + ' m/s以上' : '大気・翼面積を確認')
     : null;
 }
+export function hasCruiseHardware(f: CruiseFlight): boolean {
+  return !f.crashed && !f.rocketAxes && f.parts.some(p => PARTS[p.type].control) && f.stats.aero.weight > 0;
+}
 export function cruiseAuthority(f: CruiseFlight | null | undefined): string | null {
-  if (!f || f.crashed || f.rocketAxes || !f.parts.some(p => PARTS[p.type].aircraftControl))
-    return '航空機の制御装置が必要';
+  if (!f || !hasCruiseHardware(f)) return '前方操縦・指令部品・揚力を生む翼が必要';
   if (
     !['pitch', 'roll'].every(name =>
       f.parts.some(
@@ -140,16 +142,19 @@ export function cruiseReadiness(f: CruiseFlight): string | null {
   return cruisePropulsion(f);
 }
 export function cruisePropulsion(f: CruiseFlight): string | null {
-  if (
-    !fuelNetworks(f.parts).groups.some(
-      g =>
-        g.tanks.some(p => (f.fuel.get(p.id) || 0) > 0) &&
-        g.engines.some(
-          p => PARTS[p.type].thrustMedium === 'air' && f.active.has(p.id) && engineMaxThrust(p) > 0
-        )
-    )
-  )
-    return '点火済みの航空エンジンと燃料供給が必要';
+  let thrust = 0,
+    forward = 0;
+  for (const group of fuelNetworks(f.parts).groups) {
+    if (!group.tanks.some(t => (f.fuel.get(t.id) || 0) > 0)) continue;
+    for (const p of group.engines) {
+      if (PARTS[p.type].thrustMedium !== 'air' || !f.active.has(p.id)) continue;
+      const force = engineMaxThrust(p);
+      thrust += force;
+      forward += force * new T.Vector3(0, 1, 0).applyQuaternion(partRotation(p)).z;
+    }
+  }
+  if (!thrust) return '点火済みの航空エンジンと燃料供給が必要';
+  if (forward <= thrust * 1e-8) return '機体の前方へ推力を出すエンジン配置が必要';
   return null;
 }
 export class CruisePilot {

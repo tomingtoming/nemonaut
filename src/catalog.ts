@@ -38,7 +38,6 @@ export type PartDefinition = {
   /** Onboard surface observation instrument; independent of command capability. */
   surfaceObservation?: boolean;
   reactionTorque?: number;
-  aircraftControl?: boolean;
   /** Assembly-local control frame; legacy-auto preserves existing probe craft until explicit frame selection. */
   commandFrame?: 'axial' | 'forward' | 'legacy-auto';
   streamlinedNose?: boolean;
@@ -336,7 +335,6 @@ const BASE_PARTS = {
     desc: '小型無人機のための軽量制御ユニット。'
   },
   cockpit: {
-    aircraftControl: true,
     name: 'コックピット',
     code: 'FC-2',
     cat: '指令',
