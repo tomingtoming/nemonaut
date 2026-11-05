@@ -1,7 +1,7 @@
 import {PARTS} from './catalog.js';
 import {partCenter, type AeroPart} from './aero.js';
 import {referenceBody} from './celestial.js';
-import {surfaceRelativeVelocity, surfaceAngularVelocity} from './surface-frame.js';
+import {overWater, surfaceRelativeVelocity, surfaceAngularVelocity} from './surface-frame.js';
 /** The vessel fields isParked reads (a Flight satisfies it). */
 export interface ParkedVessel {
   pos: import('three').Vector3;
@@ -31,5 +31,11 @@ export function isParked(v: ParkedVessel): boolean | undefined {
     (r, p) => Math.max(r, partCenter(p).distanceTo(v.stats.com) + Math.hypot(...PARTS[p.type].size) / 2),
     0
   );
-  return contact && v.environment !== 'water' && speed < 0.1 && spin < 0.02 && speed + spin * radius < 0.2;
+  return (
+    contact &&
+    !overWater(v.pos, v.universalTime, body) &&
+    speed < 0.1 &&
+    spin < 0.02 &&
+    speed + spin * radius < 0.2
+  );
 }

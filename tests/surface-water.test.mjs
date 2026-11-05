@@ -5,8 +5,8 @@ import {WATER_DENSITY, mediumDensity, submergedFraction} from '../dist/buoyancy.
 import {surfaceForce, surfaceForceScale} from '../dist/aero.js';
 import {Flight} from '../dist/core.js';
 import {preset, part} from '../dist/catalog.js';
-import {bodyAltitude, bodyUp, referenceBody} from '../dist/celestial.js';
-import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
+import {PRIMARY, bodyAltitude, bodyUp, referenceBody} from '../dist/celestial.js';
+import {fixedToInertial, overWater, surfaceVelocity, surfaceRelativeVelocity} from '../dist/surface-frame.js';
 import {vesselControls} from '../dist/vessel-controls.js';
 
 const AIR = 1.225;
@@ -295,6 +295,49 @@ test('the Nautilus planes keep it level at neutral buoyancy and surfaced, with t
     try {
       assert.ok(maxPitch(f, 20) < 5);
       assert.ok(waterSpeed(f) > slowest, ballast + ': ' + waterSpeed(f));
+    } finally {
+      f.dispose();
+    }
+  }
+});
+
+test('a buoyant hull from a runway departure crosses the shoreline and floats without ground support', () => {
+  const f = new Flight(preset('boat'), 'runway');
+  try {
+    const latitude = -1980 / PRIMARY.radius;
+    const normal = new T.Vector3(Math.sin(latitude), Math.cos(latitude), 0);
+    f.pos.copy(fixedToInertial(normal.clone().multiplyScalar(PRIMARY.radius + 8)));
+    const south = new T.Vector3(-Math.cos(latitude), Math.sin(latitude), 0);
+    f.q.setFromUnitVectors(new T.Vector3(0, 0, 1), south);
+    f.vel.copy(surfaceVelocity(f.pos, 0)).addScaledVector(south, 30).addScaledVector(normal, -1.5);
+    assert.equal(overWater(f.pos, 0), false);
+    run(f, 10);
+    assert.ok(overWater(f.pos, f.universalTime));
+    assert.equal(f.crashed, false);
+    assert.equal(f.telemetry.groundContact, false);
+    assert.ok(waterSpeed(f) < 8);
+    assert.ok(Math.abs(bodyAltitude(f.pos, f.universalTime)) < 3);
+  } finally {
+    f.dispose();
+  }
+});
+
+test('only wheels on the dry side support a rover straddling the coast', () => {
+  for (const [northOfShore, wheels] of [
+    [-6, 0],
+    [0, 2],
+    [6, 4]
+  ]) {
+    const f = new Flight(preset('rover'), 'land');
+    try {
+      const latitude = (northOfShore - 2000) / PRIMARY.radius;
+      f.q.setFromAxisAngle(new T.Vector3(0, 0, 1), -latitude);
+      const fixed = new T.Vector3(0, PRIMARY.radius + f.pos.y - 0.13, 0).applyQuaternion(f.q);
+      f.pos.copy(fixedToInertial(fixed));
+      f.vel.copy(surfaceVelocity(f.pos, 0));
+      f.step(1 / 120);
+      assert.equal(f.telemetry.contacts, wheels);
+      assert.equal(f.telemetry.groundContact, wheels > 0);
     } finally {
       f.dispose();
     }

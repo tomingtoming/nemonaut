@@ -25,6 +25,8 @@ import {advanceWorldPhysics} from './world-physics.js';
 import {fleet, canControl} from './fleet.js';
 import {
   launchSiteOrientation,
+  overWater,
+  shoreline,
   frozenSurfaceState,
   surfaceAngularVelocity,
   surfaceOrientation,
@@ -527,10 +529,9 @@ export class Flight {
     this.world.integrationParameters.lengthUnit = 100;
     this.world.integrationParameters.normalizedAllowedLinearError = 0.005 / 100;
     this.world.integrationParameters.normalizedPredictionDistance = 0.02 / 100;
-    if (environment !== 'water')
-      this.ground = this.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(2000, 1, 2000).setTranslation(0, -1, 0).setFriction(0.3)
-      );
+    this.ground = this.world.createCollider(
+      RAPIER.ColliderDesc.cuboid(2000, 1, 2000).setTranslation(0, -1, 0).setFriction(0.3)
+    );
     this.body = this.world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(this.pos.x, this.pos.y, this.pos.z)
@@ -840,18 +841,15 @@ export class Flight {
       startCOM = this.pos.clone().add(this.vesselStats().com.applyQuaternion(this.q)),
       spin = surfaceAngularVelocity(reference),
       relativeOmega = this.omega.clone().sub(spin),
-      relativeVelocity = surfaceRelativeVelocity(startCOM, this.vel, startTime, reference),
-      water = this.environment === 'water' && reference.id === 'planet';
+      relativeVelocity = surfaceRelativeVelocity(startCOM, this.vel, startTime, reference);
     // Floating local physics origin: the solver never sees planet-scale coordinates.
     const normal = localUp(this.pos),
       height = altitude(this.pos),
-      freeFlight =
-        height >
-        this.parts.reduce(
-          (m, p) => Math.max(m, new T.Vector3(...p.p).length() + Math.max(...PARTS[p.type].size)),
-          0
-        ) +
-          25;
+      craftRadius = this.parts.reduce(
+        (m, p) => Math.max(m, new T.Vector3(...p.p).length() + Math.max(...PARTS[p.type].size)),
+        0
+      ),
+      freeFlight = height > craftRadius + 25;
     // Large length units also enlarge internal contact tolerances. Use metre-scale
     // contact at low speed, keeping headroom above the solver's velocity limit.
     const solverScale = freeFlight ? 100 : Math.max(1, relativeVelocity.length() / 100);
@@ -869,15 +867,29 @@ export class Flight {
     this.world.gravity = freeFlight
       ? {x: 0, y: 0, z: 0}
       : gravity(startCOM).add(rotatingFrameCorrection(startCOM, relativeVelocity, startTime, reference));
+    const coast = !freeFlight && reference.id === 'planet' ? shoreline(this.pos, startTime) : null;
+    const nearShore = !!coast && Math.abs(coast.distance) <= craftRadius;
+    const waterAt = (point: T.Vector3) =>
+      nearShore ? overWater(point, startTime, reference) : !!coast && coast.distance < 0;
     if (this.ground) {
-      this.ground.setEnabled(!freeFlight);
-      this.ground.setTranslation(
-        this.pos
+      const enabled = !freeFlight && (!coast || coast.distance >= -craftRadius);
+      this.ground.setEnabled(enabled);
+      if (enabled) {
+        const center = this.pos
           .clone()
           .sub(origin)
-          .addScaledVector(normal, -height - 1)
-      );
-      this.ground.setRotation(new T.Quaternion().setFromUnitVectors(up, normal));
+          .addScaledVector(normal, -height - 1);
+        const rotation = new T.Quaternion().setFromUnitVectors(up, normal);
+        if (coast && coast.distance < craftRadius) {
+          // Put the near edge of the 4 km ground box at the coastline.
+          center.addScaledVector(coast.inland, 2000 - coast.distance);
+          rotation.setFromRotationMatrix(
+            new T.Matrix4().makeBasis(coast.inland, normal, coast.inland.clone().cross(normal))
+          );
+        }
+        this.ground.setTranslation(center);
+        this.ground.setRotation(rotation);
+      }
     }
     this.body.setTranslation(this.pos.clone().sub(origin), true);
     this.body.setRotation(this.q, true);
@@ -1008,7 +1020,7 @@ export class Flight {
     // Every surface feels water for the part of it that is submerged (BACKLOG 9b): fins, rudders and wings
     // alike, with the flow relative to the water at rest on the surface.
     const surfaceSubmersion = (p: FlightPart, point: T.Vector3) =>
-      water ? submergedFraction(altitude(point), extentY(p, this.q)) : 0;
+      waterAt(point) ? submergedFraction(altitude(point), extentY(p, this.q)) : 0;
     // Retracted gear neither touches the ground nor shares the load (BACKLOG 9c).
     const onWheels = (p: FlightPart) => !!PARTS[p.type].wheel && !gearRetracted(p, this.gearDeployed),
       wheelCount = this.parts.filter(onWheels).length,
@@ -1128,12 +1140,13 @@ export class Flight {
         }
         if (density > 1e-8 && aero.stalled && velocity.length() > 5) stallCount++;
       }
-      if (water) {
+      if (coast && coast.distance <= craftRadius) {
         const volume = displacedVolume(p);
         for (const u of [-0.32, 0.32]) {
           const point = new T.Vector3(0, d.size[1] * u, 0).applyQuaternion(orientation).add(wp),
             velocity = relativeVelocity.clone().add(relativeOmega.clone().cross(point.clone().sub(com))),
-            sub = submergedFraction(altitude(point), extentY(p, this.q));
+            sub = surfaceSubmersion(p, point);
+          if (!sub) continue;
           apply(
             localUp(point).multiplyScalar(gravity(point).length() * WATER_DENSITY * volume * 0.5 * sub),
             point
@@ -1141,7 +1154,7 @@ export class Flight {
           apply(velocity.multiplyScalar(-sub * volume * 500), point);
         }
       }
-      if (onWheels(p) && !water) {
+      if (onWheels(p) && !waterAt(wp)) {
         const radius = d.size[1] / 2,
           steer =
             d.steer && this.steeringEnabled && p.steeringEnabled !== false
@@ -1338,10 +1351,21 @@ export class Flight {
     );
     this.telemetry.atmosphere = air;
     this.telemetry.surfaceSpeed = endRelativeVelocity.length();
+    const ground = this.ground,
+      supported =
+        !freeFlight &&
+        ground &&
+        [...this.colliderGroups.values()].flat().some(({collider: c}) => {
+          let contact = false;
+          this.world.contactPair(c, ground, m => {
+            for (let i = 0; i < m.numContacts(); i++) if (m.contactImpulse(i) > 0) contact = true;
+          });
+          return contact;
+        });
     // Suspension may absorb a hard touchdown over several solver steps.
     // Measure incoming contact-point speed before spring/solver impulses too.
     if (
-      !water &&
+      (!coast || coast.distance > craftRadius || supported || contacts > 0) &&
       !freeFlight &&
       (wheelImpactSpeed < -9 || (impactSpeed < -9 && endRelativeVelocity.dot(normal) > impactSpeed * 0.4))
     ) {
@@ -1386,19 +1410,11 @@ export class Flight {
               Math.abs(normal.x * axes[4] + normal.y * axes[5] + normal.z * axes[6]) * d.size[1] +
               Math.abs(normal.x * axes[8] + normal.y * axes[9] + normal.z * axes[10]) * d.size[2]) /
             2;
-        return bodyAltitude(point, this.universalTime, reference) - extent < 0.1;
+        return (
+          !overWater(point, this.universalTime, reference) &&
+          bodyAltitude(point, this.universalTime, reference) - extent < 0.1
+        );
       });
-    const ground = this.ground,
-      supported =
-        !freeFlight &&
-        ground &&
-        [...this.colliderGroups.values()].flat().some(({collider: c}) => {
-          let contact = false;
-          this.world.contactPair(c, ground, m => {
-            for (let i = 0; i < m.numContacts(); i++) if (m.contactImpulse(i) > 0) contact = true;
-          });
-          return contact;
-        });
     this.telemetry.groundContact = touching || supported || contacts > 0;
     this.landedTime =
       (touching || supported || contacts > 0) && endRelativeVelocity.length() < 0.8 && this.lastThrust === 0

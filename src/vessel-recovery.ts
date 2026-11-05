@@ -1,4 +1,4 @@
-import {surfaceRelativeVelocity, surfaceAngularVelocity} from './surface-frame.js';
+import {overWater, surfaceRelativeVelocity, surfaceAngularVelocity} from './surface-frame.js';
 import * as T from 'three';
 import {loadFlight, saveFlight, type SavedFlight} from './flight-save.js';
 import {fleet, canControl} from './fleet.js';
@@ -40,7 +40,6 @@ export function recoveryStatus(v: RecoveryVessel): RecoveryStatus {
       v.omega.clone().sub(surfaceAngularVelocity(motion.body)).length() < 0.15 &&
       v.throttle === 0;
   const afloat =
-    v.environment === 'water' &&
     motion.body.id === 'planet' &&
     v.parts.some(p => {
       const center = partCenter(p).applyQuaternion(v.q).add(v.pos),
@@ -56,7 +55,10 @@ export function recoveryStatus(v: RecoveryVessel): RecoveryStatus {
           sum + (Math.abs(new T.Vector3(...axis).applyQuaternion(q).dot(normal)) * size[i]) / 2,
         0
       );
-      return Math.abs(bodyAltitude(center, v.universalTime)) <= extent + 0.1;
+      return (
+        overWater(center, v.universalTime, motion.body) &&
+        Math.abs(bodyAltitude(center, v.universalTime)) <= extent + 0.1
+      );
     });
   const recoverable = !v.crashed && quiet && v.time > 0.5 && (v.landed || afloat);
   return {
@@ -66,7 +68,7 @@ export function recoveryStatus(v: RecoveryVessel): RecoveryStatus {
     reason: v.crashed
       ? '機体損傷'
       : recoverable
-        ? v.environment === 'water'
+        ? afloat
           ? '着水・静止'
           : '着地・静止'
         : '飛行中または移動中'

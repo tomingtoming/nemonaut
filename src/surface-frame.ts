@@ -51,7 +51,8 @@ export function inertialToFixed(
 }
 // Initial coastal basin: the nearest shore is 2 km south of the launch pad.
 const seaCenter = new T.Vector3(-Math.sin(12000 / PRIMARY.radius), Math.cos(12000 / PRIMARY.radius), 0);
-const seaEdgeCosine = Math.cos(10000 / PRIMARY.radius);
+const seaRadius = 10000;
+const seaEdgeCosine = Math.cos(seaRadius / PRIMARY.radius);
 export function overWater(
   point: T.Vector3,
   time: number,
@@ -60,6 +61,19 @@ export function overWater(
   if (body.id !== 'planet') return false;
   const fixed = inertialToFixed(point, time, body);
   return fixed.dot(seaCenter) > seaEdgeCosine * fixed.length();
+}
+
+// Local tangent to the basin edge; positive distances and the direction point onto land.
+export function shoreline(point: T.Vector3, time: number) {
+  const up = inertialToFixed(point, time, PRIMARY).normalize();
+  const distance = up.angleTo(seaCenter) * PRIMARY.radius - seaRadius;
+  const inland = up
+    .clone()
+    .multiplyScalar(up.dot(seaCenter))
+    .sub(seaCenter)
+    .normalize()
+    .applyQuaternion(surfaceOrientation(time));
+  return {distance, inland};
 }
 
 // Rigidly co-rotating sea/ground/atmosphere. Wind is not assumed. A point
