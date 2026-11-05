@@ -46,6 +46,27 @@ export interface DescentTelemetry {
   crashed: boolean | undefined;
   legs: number;
 }
+export function availableEngineForce(v: DescentVessel, density: number, pressure: number): T.Vector3 {
+  const burns = engineBurn(
+      v.networks,
+      new Map<string, number>(v.fuel),
+      v.started ? v.active : new Set(),
+      1,
+      density,
+      0.001,
+      pressure
+    ),
+    force = new T.Vector3();
+  let totalThrust = 0;
+  for (const p of v.parts) {
+    const thrust = burns.get(p.id) || 0;
+    totalThrust += thrust;
+    if (thrust) force.addScaledVector(new T.Vector3(0, 1, 0).applyQuaternion(partRotation(p)), thrust);
+  }
+  // A half-turn can leave a numerical residue when opposed engines cancel.
+  return force.length() > totalThrust * 1e-12 ? force : force.set(0, 0, 0);
+}
+
 export function descentTelemetry(v: DescentVessel): DescentTelemetry {
   const com = v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)),
     o = bodyOrbitState(com, v.vel, v.universalTime),
@@ -65,27 +86,10 @@ export function descentTelemetry(v: DescentVessel): DescentTelemetry {
         }
   }
   const air = o.bodyId === 'planet' ? atmosphere(o.altitude) : {density: 0, pressure: 0};
-  const burns = engineBurn(
-      v.networks,
-      new Map<string, number>(v.fuel),
-      v.started ? v.active : new Set(),
-      1,
-      air.density,
-      0.001,
-      air.pressure
-    ),
-    force = new T.Vector3();
-  let totalThrust = 0;
-  for (const p of v.parts) {
-    const thrust = burns.get(p.id) || 0;
-    totalThrust += thrust;
-    if (thrust) force.addScaledVector(new T.Vector3(0, 1, 0).applyQuaternion(partRotation(p)), thrust);
-  }
+  const force = availableEngineForce(v, air.density, air.pressure);
   const velocity = surfaceRelativeVelocity(com, v.vel, v.universalTime, o.body),
     speed = velocity.length();
-  // A half-turn can leave a numerical residue when opposed engines cancel.
-  const magnitude = force.length(),
-    thrust = magnitude > totalThrust * 1e-12 ? magnitude : 0,
+  const thrust = force.length(),
     acceleration = thrust / v.stats.mass,
     netAcceleration = acceleration - o.gravity,
     vertical = velocity.dot(up),

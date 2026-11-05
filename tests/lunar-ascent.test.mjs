@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {Flight, statistics} from '../dist/core.js';
-import {preset} from '../dist/catalog.js';
+import {preset, PARTS} from '../dist/catalog.js';
 import {setAscentAttitude, lunarOrbitReached} from '../dist/lunar-ascent.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 import {descentTelemetry} from '../dist/descent.js';
@@ -44,6 +44,27 @@ test('Ascent orientation changes only the SAS target and survives save/restore',
     assert.throws(() => setAscentAttitude(f, 91));
   } finally {
     restored?.dispose();
+    f.dispose();
+  }
+});
+
+test('lunar alignment uses the selected reference before ignition and the mounted engine after ignition', () => {
+  const parts = preset('moonlander');
+  for (const p of parts) {
+    if (PARTS[p.type].commandFrame) p.referenceDirection = 1;
+    if (PARTS[p.type].thrust) p.r = [0, 0, -Math.PI / 2];
+  }
+  const f = new Flight(parts, 'moon-surface', 0);
+  try {
+    const before = setAscentAttitude(f, 45);
+    assert.ok(new T.Vector3(0, -1, 0).applyQuaternion(f.holdQ).distanceTo(before) < 1e-8);
+    f.stageNext();
+    const fuel = [...f.fuel];
+    const after = setAscentAttitude(f, 45);
+    assert.ok(new T.Vector3(1, 0, 0).applyQuaternion(f.holdQ).distanceTo(after) < 1e-8);
+    assert.deepEqual([...f.fuel], fuel);
+    assert.equal(f.throttle, 0);
+  } finally {
     f.dispose();
   }
 });

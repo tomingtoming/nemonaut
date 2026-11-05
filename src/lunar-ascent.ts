@@ -1,13 +1,14 @@
 import * as T from 'three';
 import {bodyUp, relativeMotion, MOON, type OrbitState} from './celestial.js';
 import {attitudeTarget} from './navigation.js';
-export interface AscentAttitudeFlight {
+import {availableEngineForce, type DescentVessel} from './descent.js';
+export interface AscentAttitudeFlight extends DescentVessel {
+  instrumentRotation: T.Quaternion;
   crashed?: boolean;
   rocketAxes?: unknown;
   pos: T.Vector3;
   vel: T.Vector3;
   q: T.Quaternion;
-  stats: {com: T.Vector3};
   universalTime: number;
   sas: boolean;
   sasMode: string;
@@ -29,9 +30,14 @@ export function setAscentAttitude(f: AscentAttitudeFlight, pitch: number): T.Vec
   horizontal.normalize();
   const radians = (pitch * Math.PI) / 180,
     target = horizontal.multiplyScalar(Math.cos(radians)).addScaledVector(up, Math.sin(radians));
+  const force = availableEngineForce(f, 0, 0);
+  // With no burn available, align the selected instrument for pre-ignition pointing.
+  const axis = force.lengthSq()
+    ? force.normalize()
+    : new T.Vector3(0, 1, 0).applyQuaternion(f.instrumentRotation);
   f.sas = true;
   f.sasMode = 'hold';
-  f.holdQ = attitudeTarget(f.q, new T.Vector3(0, 1, 0), target);
+  f.holdQ = attitudeTarget(f.q, axis, target);
   return target;
 }
 
