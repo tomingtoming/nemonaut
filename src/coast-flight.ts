@@ -213,7 +213,10 @@ function throttleBlocksCoast(v: CoastVessel, active: CoastVessel): boolean {
   // retain an inherited throttle setting; wheels and marine drives need physics.
   if (
     v === active ||
-    v.parts.some(p => PARTS[p.type].control || PARTS[p.type].poweredWheel === true || PARTS[p.type].water)
+    v.parts.some(
+      p =>
+        PARTS[p.type].control || PARTS[p.type].poweredWheel === true || PARTS[p.type].thrustMedium === 'water'
+    )
   )
     return true;
   // Sample on a copy, with sea-level air as a conservative jet bound. A jet

@@ -21,7 +21,7 @@ export function stageFuelLevels(
   const networks = fuelNetworks(parts),
     levels = new Map<number, {tanks: Map<string, ResourcePart>; engines: string[]; unfed: number}>();
   for (const p of parts) {
-    if (!PARTS[p.type].thrust || PARTS[p.type].water) continue;
+    if (!PARTS[p.type].thrust || PARTS[p.type].thrustMedium === 'water') continue;
     let level = levels.get(p.stage);
     if (!level) {
       level = {tanks: new Map<string, ResourcePart>(), engines: [], unfed: 0};

@@ -1031,10 +1031,11 @@ export class Flight {
         this.started &&
         d.thrust &&
         this.active.has(p.id) &&
-        (d.water || (this.engineThrust.get(p.id) ?? 0) > 0)
+        (d.thrustMedium === 'water' || (this.engineThrust.get(p.id) ?? 0) > 0)
       ) {
-        let f = d.water ? engineMaxThrust(p) * this.throttle : this.engineThrust.get(p.id) || 0;
-        if (d.water) {
+        let f =
+          d.thrustMedium === 'water' ? engineMaxThrust(p) * this.throttle : this.engineThrust.get(p.id) || 0;
+        if (d.thrustMedium === 'water') {
           f *= engineMedium(this, p, startTime).submersion;
           this.engineThrust.set(p.id, f);
         }

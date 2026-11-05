@@ -88,7 +88,7 @@ export function fuelNetworks<P extends ResourcePart = Part>(parts: readonly P[])
     }
     group.parts.push(p);
     if (PARTS[p.type].fuel && p.fuelEnabled !== false) group.tanks.push(p);
-    if (PARTS[p.type].thrust && !PARTS[p.type].water) group.engines.push(p);
+    if (PARTS[p.type].thrust && PARTS[p.type].thrustMedium !== 'water') group.engines.push(p);
     network.set(p.id, group);
   }
   return {groups: [...groups.values()], network};
@@ -109,7 +109,7 @@ export function engineBurn(
         p =>
           engineMaxThrust(p) *
           throttle *
-          (PARTS[p.type].air ? density / 1.225 : engineIsp(p, pressure) / vacuumIsp(p))
+          (PARTS[p.type].thrustMedium === 'air' ? density / 1.225 : engineIsp(p, pressure) / vacuumIsp(p))
       ),
       need = engines.reduce((s, p, i) => s + (requested[i] * dt) / (engineIsp(p, pressure) * 9.81), 0),
       available = g.tanks.reduce((s, p) => s + (fuel.get(p.id) || 0), 0),
@@ -147,7 +147,8 @@ export function stagePerformance(
     }
     remaining = remaining.filter(p => !removed.has(p.id));
     for (const p of remaining)
-      if (p.stage === stage && PARTS[p.type].thrust && !PARTS[p.type].water) active.add(p.id);
+      if (p.stage === stage && PARTS[p.type].thrust && PARTS[p.type].thrustMedium !== 'water')
+        active.add(p.id);
     const networks = fuelNetworks(remaining),
       burning = networks.groups.filter(
         g =>
