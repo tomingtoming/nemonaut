@@ -2,6 +2,7 @@ import * as T from 'three';
 import {transferBurnTiming} from '../dist/timed-rendezvous.js';
 import {canControl} from '../dist/fleet.js';
 import {PARTS} from '../dist/catalog.js';
+import {attitudeTarget} from '../dist/navigation.js';
 import {bodyOrbitState} from '../dist/celestial.js';
 import {terminalBurnDuration} from '../dist/maneuver-thrust-profile.js';
 import {captureBurnEstimate} from '../dist/lunar-capture.js';
@@ -144,11 +145,16 @@ export class ManeuverSession {
       return;
     }
     f.sas = true;
-    f.sasMode = 'maneuver';
+    // captureBurnEstimate validated the stage's thrust along assembly +Y.
+    // The pilot may have chosen a different forward direction on the command part.
+    const thrustAxis = new T.Vector3(0, 1, 0),
+      direction = maneuverDirection(this.node);
+    f.sasMode = 'hold';
+    f.holdQ = attitudeTarget(f.q, thrustAxis, direction);
     f.navigationAuto = false;
     f.navigationFrame = 'orbit';
     this.node.stopAtTarget = true;
-    const angle = new T.Vector3(0, 1, 0).applyQuaternion(f.q).angleTo(maneuverDirection(this.node));
+    const angle = thrustAxis.applyQuaternion(f.q).angleTo(direction);
     const aligned = angle < (2 * Math.PI) / 180 && f.omega.length() < 0.03;
     this.stable = aligned ? this.stable + dt : 0;
     f.throttle = 0;

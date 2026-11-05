@@ -83,3 +83,33 @@ test('the mark is exclusive with thrust contracts and survives save and load', (
     f.dispose();
   }
 });
+
+test('automatic burn aligns the engine even when the command pod looks sideways', () => {
+  const f = vessel(true),
+    session = new ManeuverSession();
+  const pod = f.parts.find(p => p.type === 'capsule');
+  pod.referenceDirection = 2;
+  const runtime = new WorldRuntime(f);
+  try {
+    session.start(f, {throttle: 0.1});
+    let lit = false;
+    for (let i = 0; i < 240 * 120 && session.owner; i++) {
+      session.step(f, 1 / 120);
+      if (!lit && f.throttle > 0) {
+        const remaining = new T.Vector3(...f.maneuver.remaining).normalize();
+        const thrustAxis = new T.Vector3(0, 1, 0).applyQuaternion(f.q);
+        const nose = new T.Vector3(0, 1, 0).applyQuaternion(f.instrumentRotation).applyQuaternion(f.q);
+        assert.ok(thrustAxis.angleTo(remaining) < (2 * Math.PI) / 180);
+        assert.ok(Math.abs(nose.dot(remaining)) < 0.04);
+        lit = true;
+      }
+      runtime.replace(f);
+      runtime.step(1 / 120, {});
+    }
+    assert.ok(lit);
+    assert.equal(session.state, 'complete', session.message);
+    assert.equal(pod.referenceDirection, 2);
+  } finally {
+    f.dispose();
+  }
+});
