@@ -34,8 +34,7 @@ export function maneuverBurnAvailable(
       network = flight.networks.network.get(p.id);
     return (
       d.thrust &&
-      !d.air &&
-      !d.water &&
+      d.thrustMedium === 'independent' &&
       flight.active.has(p.id) &&
       network?.tanks.some(t => (flight.fuel.get(t.id) || 0) > 0)
     );

@@ -536,7 +536,7 @@ export class Flight {
     }
     if (environment === 'transfer') {
       const engines = parts.filter(
-          p => PARTS[p.type].thrust && !PARTS[p.type].air && !PARTS[p.type].water && p.stage === 0
+          p => PARTS[p.type].thrust && PARTS[p.type].thrustMedium === 'independent' && p.stage === 0
         ),
         thrust = engines.reduce((s, p) => s + engineMaxThrust(p), 0),
         isp = thrust / engines.reduce((s, p) => s + engineMaxThrust(p) / vacuumIsp(p), 0);

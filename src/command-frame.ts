@@ -10,7 +10,7 @@ export function usesAxialControls(parts: readonly {type: string}[], catalog: Par
   return (
     definitions.some(d => d.commandFrame === 'axial') ||
     (definitions.some(d => d.commandFrame === 'legacy-auto') &&
-      definitions.some(d => d.thrust && !d.air && !d.water) &&
+      definitions.some(d => d.thrust && d.thrustMedium === 'independent') &&
       !definitions.some(d => d.commandFrame === 'forward'))
   );
 }

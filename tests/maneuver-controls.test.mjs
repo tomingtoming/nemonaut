@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';
-import {preset} from '../dist/catalog.js';
+import {PARTS, preset} from '../dist/catalog.js';
 import {maneuverBurnAvailable, recoveryGuidance} from '../dist/maneuver-controls.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 
@@ -93,5 +93,29 @@ test('Completed plans and plans belonging to another body cannot restart a guide
     } finally {
       f.dispose();
     }
+  }
+});
+
+test('guided burns require declared medium independence even when legacy flags are absent', () => {
+  const f = new Flight(preset('lunar-return'), 'moon-orbit');
+  const originals = new Map();
+  try {
+    f.step(1 / 120);
+    f.maneuver = {returnPlan: {}, complete: false};
+    f.stageNext();
+    assert.equal(maneuverBurnAvailable(f, 'returnPlan'), true);
+    for (const p of f.parts) {
+      if (!PARTS[p.type].thrust || originals.has(p.type)) continue;
+      originals.set(p.type, PARTS[p.type]);
+      PARTS[p.type] = {...PARTS[p.type], thrustMedium: undefined};
+    }
+    assert.equal(maneuverBurnAvailable(f, 'returnPlan'), false);
+    for (const [type, original] of originals) PARTS[type] = {...original, thrustMedium: 'water'};
+    assert.equal(maneuverBurnAvailable(f, 'returnPlan'), false);
+    for (const [type, original] of originals) PARTS[type] = original;
+    assert.equal(maneuverBurnAvailable(f, 'returnPlan'), true);
+  } finally {
+    for (const [type, original] of originals) PARTS[type] = original;
+    f.dispose();
   }
 });

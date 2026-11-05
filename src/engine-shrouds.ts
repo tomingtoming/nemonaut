@@ -27,7 +27,7 @@ export function engineShrouds(parts: readonly Part[]): EngineShroudSpec[] {
   const result: EngineShroudSpec[] = [];
   for (const p of parts) {
     const d = PARTS[p.type];
-    if (!d.thrust || d.air || d.water) continue;
+    if (!d.thrust || d.thrustMedium !== 'independent') continue;
     const q = new T.Quaternion().setFromEuler(new T.Euler(...p.r)),
       down = new T.Vector3(0, -1, 0).applyQuaternion(q);
     const bottom = new T.Vector3(...p.p).addScaledVector(down, d.size[1] / 2);

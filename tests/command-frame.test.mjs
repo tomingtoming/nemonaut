@@ -73,3 +73,13 @@ test('renamed axial controller reaches Flight and survives saved restoration', (
     PARTS.cockpit = original;
   }
 });
+
+test('automatic frame requires a declared independent engine, not missing medium flags', () => {
+  const parts = [{type: 'probe'}, {type: 'engine'}];
+  assert.equal(usesAxialControls(parts, PARTS), true);
+  assert.equal(
+    usesAxialControls(parts, {...PARTS, engine: {...PARTS.engine, thrustMedium: undefined}}),
+    false
+  );
+  assert.equal(usesAxialControls(parts, {...PARTS, engine: {...PARTS.engine, thrustMedium: 'air'}}), false);
+});

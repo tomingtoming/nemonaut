@@ -59,8 +59,7 @@ export function captureBurnEstimate(vessel: BurnEstimateVessel, deltaV: number):
       vessel.started &&
       vessel.active.has(p.id) &&
       PARTS[p.type].thrust &&
-      !PARTS[p.type].air &&
-      !PARTS[p.type].water
+      PARTS[p.type].thrustMedium === 'independent'
   );
   if (!engines.length) throw Error('点火済みのロケットエンジンが必要です（スロットルは0）');
   if (!vessel.rocketAxes) throw Error('月周回案内は主推力が機体の上方向のロケットに対応しています');

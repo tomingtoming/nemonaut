@@ -90,7 +90,7 @@ export function finiteBurnPreview(
     active = new Set(
       vessel.parts
         .filter(
-          p => vessel.active.has(p.id) && PARTS[p.type].thrust && !PARTS[p.type].air && !PARTS[p.type].water
+          p => vessel.active.has(p.id) && PARTS[p.type].thrust && PARTS[p.type].thrustMedium === 'independent'
         )
         .map(p => p.id)
     ),
