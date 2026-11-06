@@ -7,7 +7,7 @@ import {examples, exampleGroups} from './examples.js';
 import {mountWorkshopSymmetry, type WorkshopSymmetry} from './workshop-symmetry.js';
 import {updateDepartureButton} from './departure-mode.js';
 import {PARTS, CATEGORIES, preset, type PartType} from './catalog.js';
-import {validateCraft, type CraftRecord} from './core.js';
+import {loadCraft, saveCraft, type SavedCraftInput} from './craft-save.js';
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
 import {$, $$, dataValue, notify, errorMessage, showModal} from './ui-common.js';
@@ -26,10 +26,10 @@ function isPartType(type: string): type is PartType {
   return Object.hasOwn(PARTS, type);
 }
 function craftData() {
-  return {version: 1, name: $('#craftName', 'input').value, parts: structuredClone(state.parts)};
+  return saveCraft(state.parts, $('#craftName', 'input').value);
 }
-export function loadData(data: CraftRecord & {name?: unknown}) {
-  const loaded = validateCraft(data);
+export function loadData(data: SavedCraftInput) {
+  const loaded = loadCraft(data);
   checkpoint();
   state.parts = loaded;
   $('#craftName', 'input').value = typeof data.name === 'string' ? data.name.slice(0, 80) : 'Untitled';

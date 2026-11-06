@@ -3,7 +3,7 @@
 // app-hooks. No import-time side effects.
 import {storageKey} from './app-id.js';
 import {DESIGN_LIBRARY_KEY, readDesignLibrary, appendDesign, designForLaunch} from './design-library.js';
-import {validateCraft} from './core.js';
+import {loadCraft} from './craft-save.js';
 import {updateDepartureButton} from './departure-mode.js';
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
@@ -21,7 +21,7 @@ export function loadDesigns(): import('./design-library.js').DesignLibrary {
     {version: 1, designs: []},
     {
       name: typeof old.name === 'string' ? old.name : '以前の保存',
-      parts: validateCraft(old),
+      parts: loadCraft(old),
       bay: 'vab',
       environment: 'land'
     },
