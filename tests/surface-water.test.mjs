@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {WATER_DENSITY, mediumDensity, submergedFraction} from '../dist/buoyancy.js';
-import {surfaceForce, surfaceForceScale} from '../dist/aero.js';
+import {surfaceForce, surfaceForceScale, partCenter} from '../dist/aero.js';
 import {Flight} from '../dist/core.js';
-import {preset, part} from '../dist/catalog.js';
+import {preset, part, PARTS} from '../dist/catalog.js';
 import {PRIMARY, bodyAltitude, bodyUp, referenceBody} from '../dist/celestial.js';
 import {fixedToInertial, overWater, surfaceVelocity, surfaceRelativeVelocity} from '../dist/surface-frame.js';
 import {vesselControls} from '../dist/vessel-controls.js';
@@ -306,7 +306,7 @@ test('a buoyant hull from a runway departure crosses the shoreline and floats wi
   try {
     const latitude = -1980 / PRIMARY.radius;
     const normal = new T.Vector3(Math.sin(latitude), Math.cos(latitude), 0);
-    f.pos.copy(fixedToInertial(normal.clone().multiplyScalar(PRIMARY.radius + 8)));
+    f.pos.copy(fixedToInertial(normal.clone().multiplyScalar(PRIMARY.radius + 3)));
     const south = new T.Vector3(-Math.cos(latitude), Math.sin(latitude), 0);
     f.q.setFromUnitVectors(new T.Vector3(0, 0, 1), south);
     f.vel.copy(surfaceVelocity(f.pos, 0)).addScaledVector(south, 30).addScaledVector(normal, -1.5);
@@ -362,5 +362,54 @@ test('a submerged rocket ignites under water and climbs through the surface', ()
     assert.equal(f.telemetry.groundContact, false);
   } finally {
     f.dispose();
+  }
+});
+
+test('a floatplane survives initial gentle sea contact but records a hard downward water entry', () => {
+  for (const descent of [2, 35]) {
+    const parts = preset('plane').filter(p => !['nosegear', 'maingear'].includes(p.type));
+    for (const x of [-1.4, 1.4]) {
+      const float = part('pontoon', [x, -0.3, 0], [Math.PI / 2, 0, 0]);
+      float.parent = parts[1].id;
+      parts.push(float);
+    }
+    const f = new Flight(parts, 'water');
+    try {
+      const up = bodyUp(f.pos, 0);
+      f.pos.addScaledVector(up, 2);
+      f.vel.copy(surfaceVelocity(f.pos, 0)).addScaledVector(up, -descent);
+      f.sas = false;
+      let touchedWater = false;
+      for (let i = 0; i < 120 && !f.failureEvents?.length; i++) {
+        f.step(1 / 120);
+        touchedWater ||= f.parts
+          .filter(p => p.type === 'pontoon')
+          .some(p => {
+            const point = partCenter(p).applyQuaternion(f.q).add(f.pos),
+              normal = bodyUp(point, f.universalTime).applyQuaternion(
+                f.q
+                  .clone()
+                  .multiply(new T.Quaternion().setFromEuler(new T.Euler(...p.r)))
+                  .invert()
+              ),
+              size = PARTS[p.type].size,
+              extent =
+                (Math.abs(normal.x) * size[0] + Math.abs(normal.y) * size[1] + Math.abs(normal.z) * size[2]) /
+                2;
+            return bodyAltitude(point, f.universalTime) < extent;
+          });
+      }
+      const impacts = (f.failureEvents || []).filter(e => e.cause === 'impact');
+      if (descent === 2) {
+        assert.ok(touchedWater, 'the gentle case must actually reach the sea');
+        assert.equal(f.failureEvents?.length || 0, 0, JSON.stringify(f.failureEvents));
+        assert.equal(f.telemetry.groundContact, false);
+      } else {
+        assert.ok(impacts.length > 0, JSON.stringify(f.failureEvents));
+        assert.ok(impacts.some(e => e.speed > 9));
+      }
+    } finally {
+      f.dispose();
+    }
   }
 });

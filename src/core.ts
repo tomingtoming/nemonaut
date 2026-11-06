@@ -871,6 +871,25 @@ export class Flight {
     const nearShore = !!coast && Math.abs(coast.distance) <= craftRadius;
     const waterAt = (point: T.Vector3) =>
       nearShore ? overWater(point, startTime, reference) : !!coast && coast.distance < 0;
+    const waterClearance = (p: FlightPart, time: number) => {
+      const point = partCenter(p).applyQuaternion(this.q).add(this.pos),
+        radial = bodyUp(point, time, reference),
+        level = new T.Quaternion().setFromUnitVectors(radial, up).multiply(this.q);
+      return bodyAltitude(point, time, reference) - extentY(p, level);
+    };
+    // Track entry before water forces slow the body. Already submerged parts
+    // must not register another impact when diving or launching underwater.
+    const waterEntries =
+      this.failureDynamics || !coast || coast.distance > craftRadius
+        ? []
+        : this.parts.flatMap(p => {
+            const point = partCenter(p).applyQuaternion(this.q).add(this.pos),
+              velocity = relativeVelocity
+                .clone()
+                .add(relativeOmega.clone().cross(point.clone().sub(startCOM))),
+              speed = -velocity.dot(localUp(point));
+            return speed > 9 && waterAt(point) && waterClearance(p, startTime) > 0 ? [{p, speed}] : [];
+          });
     if (this.ground) {
       const enabled = !freeFlight && (!coast || coast.distance >= -craftRadius);
       this.ground.setEnabled(enabled);
@@ -1344,6 +1363,14 @@ export class Flight {
       this.vel,
       this.universalTime
     );
+    for (const {p, speed} of waterEntries) {
+      const point = partCenter(p).applyQuaternion(this.q).add(this.pos);
+      if (overWater(point, this.universalTime, reference) && waterClearance(p, this.universalTime) <= 0) {
+        failedParts.add(p.id);
+        recordFailure(this, p, 'impact', {speed, position: point});
+        this.crashed = true;
+      }
+    }
     const endRelativeVelocity = surfaceRelativeVelocity(
       this.pos.clone().add(st.com.clone().applyQuaternion(this.q)),
       this.vel,
