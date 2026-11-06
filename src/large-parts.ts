@@ -1,7 +1,7 @@
 // Explicit catalog sizes, not a per-vessel visual scale. Existing craft stay unchanged.
 export const LARGE_VARIANTS = {
   transportCockpit: {base: 'cockpit', scale: 4.8, factor: 25, name: '輸送機コックピット', code: 'TC-6'},
-  transportFuselage: {base: 'tank', scale: 4.8, factor: 25, name: '輸送機燃料胴体', code: 'TF-45000'},
+  transportFuselage: {base: 'tank', scale: 4.8, factor: 25, name: '輸送機燃料胴体', code: 'AF-45000'},
   transportTail: {base: 'nose', scale: 4.8, factor: 25, name: '輸送機テールコーン', code: 'TT-6'},
   transportWingRoot: {base: 'wing', scale: 7, factor: 49, name: '大型内翼区画', code: 'WI-14'},
   enginePylon: {base: 'truss', scale: 1.5, factor: 4, name: 'エンジンパイロン', code: 'PY-15'},

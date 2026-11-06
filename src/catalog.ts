@@ -320,7 +320,7 @@ const BASE_PARTS = {
   },
   rcs: {
     name: 'RCSブロック',
-    code: 'RC-6',
+    code: 'RCS-6',
     cat: '推進',
     mass: 16,
     monoprop: 12,
@@ -369,7 +369,7 @@ const BASE_PARTS = {
     stackDiameters: [1.25, 1.25],
     shroudSupport: true,
     name: '中型タンク',
-    code: 'FT-200',
+    code: 'FT-1800',
     cat: '燃料',
     mass: 150,
     fuel: 1800,
@@ -561,7 +561,7 @@ const BASE_PARTS = {
   },
   parachute: {
     name: '回収パラシュート',
-    code: 'RC-14',
+    code: 'PC-14',
     cat: '装備',
     mass: 80,
     size: [0.8, 0.4, 0.8],
