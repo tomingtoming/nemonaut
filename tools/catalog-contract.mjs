@@ -26,6 +26,11 @@ export function catalogContractErrors(parts) {
     for (const field of ['gimbalPivot', 'ac', 'massCenter', 'shieldNormal']) {
       if (part[field] !== undefined && !vector(part[field])) fail(field);
     }
+    if (
+      part.waterResistance !== undefined &&
+      (!vector(part.waterResistance) || part.waterResistance.some(n => n < 0))
+    )
+      fail('waterResistance');
     if (part.gimbal !== undefined && part.gimbal > 0) {
       if (!vector(part.gimbalPivot)) fail('gimbal requires gimbalPivot');
       if (!(part.thrust > 0)) fail('gimbal requires thrust');

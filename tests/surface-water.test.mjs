@@ -421,7 +421,7 @@ test('a floatplane survives initial gentle sea contact but records a hard downwa
 });
 
 test('fore and aft floats keep a runway-departure aircraft upright for 30 seconds after splashdown', () => {
-  for (const forwardSpeed of [0, 5]) {
+  for (const forwardSpeed of [0, 5, 10]) {
     const parts = preset('plane').filter(p => !['nosegear', 'maingear'].includes(p.type));
     for (const x of [-1.4, 1.4])
       for (const z of [-1.2, 2]) {
@@ -445,7 +445,10 @@ test('fore and aft floats keep a runway-departure aircraft upright for 30 second
       const tilt = new T.Vector3(0, 1, 0).applyQuaternion(f.q).angleTo(bodyUp(f.pos, f.universalTime));
       assert.ok(tilt < (3 * Math.PI) / 180, 'floats should keep the aircraft upright without SAS');
       assert.ok(Math.abs(bodyAltitude(f.pos, f.universalTime)) < 1);
-      assert.ok(waterSpeed(f) < 0.2, 'the aircraft should settle on the water');
+      assert.ok(
+        waterSpeed(f) < Math.max(0.2, forwardSpeed * 0.1),
+        'water resistance should remove most of the forward speed'
+      );
     } finally {
       f.dispose();
     }

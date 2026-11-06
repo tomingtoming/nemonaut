@@ -8,6 +8,9 @@ test('assembled catalog satisfies authoring contracts', () => {
 });
 
 const mutations = [
+  ['waterResistance', p => (p.waterResistance = [1, -1, 1])],
+  ['waterResistance', p => (p.waterResistance = [1, NaN, 1])],
+  ['waterResistance', p => (p.waterResistance = [1, 1])],
   ['mass', p => (p.mass = 0)],
   ['size', p => (p.size = [1, -1, 1])],
   ['size', p => (p.size = [1, 1])],

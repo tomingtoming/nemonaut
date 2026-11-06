@@ -59,6 +59,8 @@ export type PartDefinition = {
   parachute?: number;
   solarPower?: number;
   volume?: number;
+  /** Dimensionless resistance multipliers along the part's local X/Y/Z axes. */
+  waterResistance?: PartVector;
   ballast?: number;
   attachmentNodes?: readonly AttachmentNode[];
   cargoBay?: {wall: number};
@@ -560,6 +562,7 @@ const BASE_PARTS = {
     mass: 85,
     size: [1, 3, 0.8],
     volume: 1.9,
+    waterResistance: [1, 0.1, 1],
     desc: '水密の浮体。水没体積に応じた浮力を生む。'
   },
   ballast: {

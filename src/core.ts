@@ -17,7 +17,13 @@ import {
 import {createBodyAerodynamics, bodyDrag, type BodyAerodynamics} from './body-drag.js';
 import {foldedGearCenter, gearMassCenter, gearRetracted} from './landing-gear.js';
 import {separationName} from './separation-name.js';
-import {displacedVolume, mediumDensity, submergedFraction, WATER_DENSITY} from './buoyancy.js';
+import {
+  displacedVolume,
+  mediumDensity,
+  submergedFraction,
+  waterResistance,
+  WATER_DENSITY
+} from './buoyancy.js';
 import {engineSubmersion} from './engine-medium.js';
 import {angularMomentum, angularVelocity} from './angular-momentum.js';
 import {transferFuel} from './fuel-transfer.js';
@@ -1171,7 +1177,7 @@ export class Flight {
             localUp(point).multiplyScalar(gravity(point).length() * WATER_DENSITY * volume * 0.5 * sub),
             point
           );
-          apply(velocity.multiplyScalar(-sub * volume * 500), point);
+          apply(waterResistance(p, orientation, velocity, sub), point);
         }
       }
       if (onWheels(p) && !waterAt(wp)) {

@@ -1,9 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {buoyancyBalance, displacedVolume} from '../dist/buoyancy.js';
+import {buoyancyBalance, displacedVolume, waterResistance} from '../dist/buoyancy.js';
 import {preset} from '../dist/catalog.js';
 import {statistics} from '../dist/core.js';
+test('hull water resistance follows part rotation, dissipates energy and vanishes out of water', () => {
+  for (const type of ['pontoon', 'hullLarge']) {
+    const p = {type},
+      q = new T.Quaternion().setFromAxisAngle(new T.Vector3(1, 0, 0), Math.PI / 2);
+    const forward = new T.Vector3(0, 0, 10),
+      sideways = new T.Vector3(10, 0, 0);
+    const drag = waterResistance(p, q, forward, 1),
+      sideDrag = waterResistance(p, q, sideways, 1);
+    assert.ok(Math.abs(drag.length() / sideDrag.length() - 0.1) < 1e-10);
+    assert.ok(drag.dot(forward) < 0);
+    assert.deepEqual(forward.toArray(), [0, 0, 10]);
+    assert.equal(waterResistance(p, q, forward, 0).length(), 0);
+    const rotatedVelocity = new T.Vector3(2, 3, 4).applyQuaternion(q);
+    const rotatedForce = waterResistance(p, new T.Quaternion(), new T.Vector3(2, 3, 4), 0.5).applyQuaternion(
+      q
+    );
+    assert.ok(waterResistance(p, q, rotatedVelocity, 0.5).distanceTo(rotatedForce) < 1e-8);
+  }
+});
 test('Design buoyancy tracks ballast mass without changing volume or the design', () => {
   const parts = preset('sub'),
     before = structuredClone(parts),

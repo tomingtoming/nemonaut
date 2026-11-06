@@ -34,6 +34,21 @@ export function displacedVolume(p: Pick<AeroPart, 'type'>): number {
   const d = PARTS[p.type];
   return d.volume || d.size[0] * d.size[1] * d.size[2] * 0.18;
 }
+/** Per-sample water damping, expressed in world coordinates. */
+export function waterResistance(
+  p: Pick<AeroPart, 'type'>,
+  orientation: T.Quaternion,
+  velocity: T.Vector3,
+  submersion: number
+): T.Vector3 {
+  const force = velocity.clone(),
+    factors = PARTS[p.type].waterResistance;
+  if (factors) {
+    force.applyQuaternion(orientation.clone().invert());
+    force.multiply(new T.Vector3(...factors)).applyQuaternion(orientation);
+  }
+  return force.multiplyScalar(-submersion * displacedVolume(p) * 500);
+}
 export function buoyancyBalance(parts: Iterable<BuoyantPart>, ballast = 0): BuoyancyBalance {
   const center = new T.Vector3(),
     com = new T.Vector3();
