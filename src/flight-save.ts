@@ -1,4 +1,5 @@
 import {saveKind, isSaveKind} from './app-id.js';
+import {SAVED_PART_FRAME, convertSavedPartFrame} from './part-save-frame.js';
 import {validateFailureEvents, type FailureEvent} from './failure-events.js';
 import {orbitalAscentSettings} from './orbital-ascent-settings.js';
 import {runwayEnd} from './runway-selection.js';
@@ -51,6 +52,8 @@ export type SavedFlightMeta = Record<string, unknown>;
 export interface SavedFlight {
   kind: string;
   version: number;
+  /** Missing in legacy saves: authored datum. Applies only to parts[].p. */
+  partFrame?: string;
   vesselId?: string;
   physicsModel?: string;
   physicsMigration?: PhysicsMigrationSummary | null;
@@ -165,6 +168,7 @@ export function saveFlight(f: Flight, meta: SavedFlightMeta = {}): SavedFlight {
   return structuredClone({
     kind: saveKind('flight'),
     version: 1,
+    partFrame: SAVED_PART_FRAME,
     vesselId: f.vesselId,
     physicsModel: PHYSICS_MODEL,
     physicsMigration: f.physicsMigration ?? null,
@@ -173,7 +177,7 @@ export function saveFlight(f: Flight, meta: SavedFlightMeta = {}): SavedFlight {
     separationCount: f.separationCount,
     failureEvents: f.failureEvents ?? [],
     failureDynamics: f.failureDynamics === true,
-    parts: structuredClone(f.parts),
+    parts: convertSavedPartFrame(f.parts, 'encode'),
     environment: f.environment,
     pos: f.pos.toArray(),
     vel: f.vel.toArray(),
@@ -217,6 +221,7 @@ export function loadFlight(
 ): Flight {
   check(depth <= 32);
   check(isSaveKind(value?.kind, 'flight') && value.version === 1);
+  check(value.partFrame === undefined || value.partFrame === SAVED_PART_FRAME);
   check(value.physicsModel === undefined || value.physicsModel === PHYSICS_MODEL);
   {
     const migration = value.physicsMigration;
@@ -227,7 +232,10 @@ export function loadFlight(
         )
       );
   }
-  const parts = validateCraft({version: 1, parts: value.parts}),
+  const parts = validateCraft({
+      version: 1,
+      parts: value.partFrame === SAVED_PART_FRAME ? convertSavedPartFrame(value.parts, 'decode') : value.parts
+    }),
     byId = new Map<string, FlightPart>(parts.map(p => [p.id, p]));
   check(parts.filter(p => !p.parent).length === 1);
   const vesselId = value.vesselId === undefined ? 'legacy:' + parts[0].id : value.vesselId;
