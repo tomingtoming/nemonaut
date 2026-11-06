@@ -70,7 +70,6 @@ test('catalog rejects malformed diameters and ambiguous node ordering', () => {
     {stackDiameters: [0, 1]},
     {stackDiameters: [1, Infinity]},
     {stackDiameters: [1]},
-    {rootWing: true},
     {attachmentNodes: [[0, 0, 0, 0, 1, 0]]}
   ]) {
     assert.ok(

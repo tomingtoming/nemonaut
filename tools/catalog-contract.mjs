@@ -25,7 +25,7 @@ export function catalogContractErrors(parts) {
     for (const [field, value] of Object.entries(part)) {
       if (typeof value === 'number' && !Number.isFinite(value)) fail(`${field} finite`);
     }
-    for (const field of ['gimbalPivot', 'hingePivot', 'ac', 'massCenter', 'shieldNormal']) {
+    for (const field of ['gimbalPivot', 'hingePivot', 'mirrorRotation', 'ac', 'massCenter', 'shieldNormal']) {
       if (part[field] !== undefined && !vector(part[field])) fail(field);
     }
     if (
@@ -80,8 +80,16 @@ export function catalogContractErrors(parts) {
       )
         fail('stackDiameters');
       // This initial contract describes the two standard axial nodes only.
-      if (part.rootWing || part.attachmentNodes) fail('stackDiameters requires standard axial nodes');
+      if (part.attachmentNodes) fail('stackDiameters requires standard axial nodes');
     }
+    if ('rootWing' in part) fail('rootWing is retired');
+    if (
+      part.placementNode !== undefined &&
+      (!Number.isInteger(part.placementNode) ||
+        part.placementNode < 0 ||
+        !part.attachmentNodes?.[part.placementNode])
+    )
+      fail('placementNode requires a declared node');
     if (part.surfaceMount !== undefined) {
       const n = part.surfaceMount;
       if (
@@ -104,7 +112,7 @@ export function catalogContractErrors(parts) {
         )
       )
         fail('stackRectangles');
-      if (part.stackDiameters || part.rootWing || part.attachmentNodes)
+      if (part.stackDiameters || part.attachmentNodes)
         fail('stackRectangles requires unambiguous standard axial nodes');
     }
   }

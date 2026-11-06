@@ -1,4 +1,4 @@
-import {PARTS} from './catalog.js';
+import {PARTS, nodes, nodeAxis, type PartType} from './catalog.js';
 import * as T from 'three';
 
 // One transform source for the visible placement ghosts and committed parts.
@@ -34,8 +34,8 @@ export function symmetryPlacementPoses(
       q.setFromRotationMatrix(
         new T.Matrix4().makeRotationFromQuaternion(q).premultiply(reflect).multiply(reflect)
       );
-      if (PARTS[type]?.rootWing)
-        q.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), Math.PI));
+      const mirror = PARTS[type]?.mirrorRotation;
+      if (mirror) q.multiply(new T.Quaternion().setFromEuler(new T.Euler(...mirror)));
     } else if (i) {
       const axis = bay === 'vab' ? new T.Vector3(0, 1, 0) : new T.Vector3(0, 0, 1),
         turn = new T.Quaternion().setFromAxisAngle(axis, (i * 2 * Math.PI) / count);
@@ -44,4 +44,16 @@ export function symmetryPlacementPoses(
     }
     return {pos, q};
   });
+}
+
+/** Orient a declared attachment node; otherwise inherit the parent's orientation. */
+export function nodePlacementRotation(type: PartType, normal: T.Vector3, parent: T.Quaternion): T.Quaternion {
+  const index = PARTS[type].placementNode;
+  if (index === undefined) return parent.clone();
+  const node = nodes(type)[index];
+  if (!node) throw Error('優先接続点がありません');
+  return new T.Quaternion().setFromUnitVectors(
+    new T.Vector3(...nodeAxis(node)).normalize(),
+    normal.clone().normalize().negate()
+  );
 }

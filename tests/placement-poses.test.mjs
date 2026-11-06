@@ -53,11 +53,16 @@ test('declared surface mounts preserve every existing part pose for oblique and 
     ]) {
       const normal = new T.Vector3(...values).normalize();
       const oldQ = new T.Quaternion().setFromUnitVectors(
-        new T.Vector3(...(d.rootWing ? [1, 0, 0] : [0, 1, 0])),
+        new T.Vector3(
+          ...(['wing', 'fin', 'wingLarge', 'transportWing', 'transportWingRoot'].includes(type)
+            ? [1, 0, 0]
+            : [0, 1, 0])
+        ),
         normal
       );
       const oldPos = point.clone();
-      if (!d.rootWing) oldPos.addScaledVector(normal, d.size[1] / 2);
+      if (!['wing', 'fin', 'wingLarge', 'transportWing', 'transportWingRoot'].includes(type))
+        oldPos.addScaledVector(normal, d.size[1] / 2);
       const pose = surfacePlacementPose(type, point, normal);
       assert.ok(pose.pos.distanceTo(oldPos) < 1e-9, type);
       assert.ok(pose.q.angleTo(oldQ) < 1e-7, type);

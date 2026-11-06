@@ -18,7 +18,14 @@ test('Blender exports preserve assembly dimensions, origins and finite mesh data
     for (let axis = 0; axis < 3; axis++)
       assert.ok(Math.abs(size.getComponent(axis) - part.size[axis]) < 0.002, `${id}: dimension ${axis}`);
     assert.ok(Math.abs(center.y) < 0.002 && Math.abs(center.z) < 0.002, `${id}: centered Y/Z`);
-    assert.ok(Math.abs(part.rootWing ? bounds.min.x : center.x) < 0.002, `${id}: attachment origin`);
+    assert.ok(
+      Math.abs(
+        ['wing', 'fin', 'wingLarge', 'transportWing', 'transportWingRoot'].includes(id)
+          ? bounds.min.x
+          : center.x
+      ) < 0.002,
+      `${id}: attachment origin`
+    );
     let triangles = 0;
     gltf.scene.traverse(o => {
       if (!o.isMesh) return;

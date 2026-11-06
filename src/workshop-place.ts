@@ -8,7 +8,7 @@ import {PARTS, nodes, nodePoint, nodeAxis, type PartType, type PartAttachment} f
 import type {FlightPart} from './core.js';
 import {occupiedNodes, nodeAvailable, assertNodeAttachments, bindMatchingNode} from './attachment-nodes.js';
 import {placementSymmetryFrame} from './symmetry.js';
-import {symmetryPlacementPoses, surfacePlacementPose} from './placement-poses.js';
+import {symmetryPlacementPoses, surfacePlacementPose, nodePlacementRotation} from './placement-poses.js';
 import {placeBranch, moveBranch, type PartBranch} from './assembly-branch.js';
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
@@ -248,8 +248,7 @@ function posePlacement(e: PointerEvent) {
       internal = state.branchDraft ? occupiedNodes(state.branchDraft.parts) : new Map();
     let ownNode = -1,
       score = -Infinity;
-    if (PARTS[state.placing].rootWing) q.setFromUnitVectors(new T.Vector3(1, 0, 0), best.normal);
-    else q.copy(hit.root.quaternion);
+    q.copy(nodePlacementRotation(state.placing, best.normal, hit.root.quaternion));
     for (const [index, n] of nodes(state.placing).entries()) {
       if (state.branchDraft && !nodeAvailable(internal, state.branchDraft.rootId, index)) continue;
       const normal = new T.Vector3(...nodeAxis(n)).applyQuaternion(q),

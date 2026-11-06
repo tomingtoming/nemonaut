@@ -41,7 +41,10 @@ export type PartDefinition = {
   /** Assembly-local control frame; legacy-auto preserves existing probe craft until explicit frame selection. */
   commandFrame?: 'axial' | 'forward' | 'legacy-auto';
   streamlinedNose?: boolean;
-  rootWing?: boolean;
+  /** Node whose outward normal is aligned opposite the target during initial placement. */
+  placementNode?: number;
+  /** Local Euler rotation after mirror reflection, independent of the part datum. */
+  mirrorRotation?: PartVector;
   wing?: number;
   ac?: number[];
   massCenter?: number[];
@@ -456,7 +459,8 @@ const BASE_PARTS = {
       [2, 0, 0, 1, 0, 0]
     ],
     surfaceMount: [0, 0, 0, -1, 0, 0],
-    rootWing: true,
+    placementNode: 0,
+    mirrorRotation: [0, Math.PI, 0],
     name: '主翼・固定翼',
     code: 'SW-2',
     cat: '空力',
@@ -474,7 +478,8 @@ const BASE_PARTS = {
       [2, 0, 0, 1, 0, 0]
     ],
     surfaceMount: [0, 0, 0, -1, 0, 0],
-    rootWing: true,
+    placementNode: 0,
+    mirrorRotation: [0, Math.PI, 0],
     name: '可動ロケットフィン',
     code: 'RF-2',
     cat: '空力',
