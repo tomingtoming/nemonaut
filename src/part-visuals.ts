@@ -1,6 +1,7 @@
 // Part visuals (BACKLOG 7c, moved from app.ts): a part's 3D object (model, hinge, gimbal, wheel, RCS plumes,
 // cargo) and the rebuild of the craft's objects under craftRoot. No import-time side effects.
 import * as T from 'three';
+import {makeSurfaceHinge} from './surface-hinge.js';
 import {PARTS} from './catalog.js';
 import type {FlightPart, Flight} from './core.js';
 import {RCS_NOZZLES} from './rcs.js';
@@ -28,10 +29,7 @@ export function makePartVisual(p: FlightPart) {
   o.userData.partId = p.id;
   const visual = cloneModel(p.type);
   if (PARTS[p.type].controlAxis) {
-    const hinge = new T.Group();
-    hinge.position.y = PARTS[p.type].hingeY ?? PARTS[p.type].size[1] / 2;
-    visual.position.y = -hinge.position.y;
-    hinge.add(visual);
+    const hinge = makeSurfaceHinge(visual, PARTS[p.type]);
     o.add(hinge);
     o.userData.hinge = hinge;
   } else if (PARTS[p.type].gimbal) {

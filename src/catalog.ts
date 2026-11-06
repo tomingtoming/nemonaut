@@ -49,7 +49,8 @@ export type PartDefinition = {
   model?: string;
   controlAxis?: PartControlAxis;
   maxDeflection?: number;
-  hingeY?: number;
+  /** Local control-surface pivot; defaults to the upper Y face. */
+  hingePivot?: number[];
   wheel?: boolean;
   /** Wheel motor capability, independent of the part name or vessel type. */
   poweredWheel?: boolean;
@@ -486,7 +487,7 @@ const BASE_PARTS = {
     chord: 1.1,
     controlAxis: 'auto',
     maxDeflection: 18,
-    hingeY: 0.13,
+    hingePivot: [0, 0.13, 0],
     desc: '全遊動フィン。配置に合わせてピッチ・ヨー・ロールへ混合。気流が必要。'
   },
   stabilizer: {

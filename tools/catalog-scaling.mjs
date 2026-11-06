@@ -19,12 +19,11 @@ export function scalingErrors(parts, variants, overrides = {}) {
       continue;
     }
     const expected = {};
-    for (const field of ['size', 'ac', 'massCenter']) {
+    for (const field of ['size', 'ac', 'massCenter', 'hingePivot']) {
       if (base[field] !== undefined) expected[field] = base[field].map(v => v * s);
     }
     for (const [field, power] of [
       ['chord', 1],
-      ['hingeY', 1],
       ['wing', 2],
       ['volume', 3],
       ['ballast', 3]

@@ -25,7 +25,7 @@ export function catalogContractErrors(parts) {
     for (const [field, value] of Object.entries(part)) {
       if (typeof value === 'number' && !Number.isFinite(value)) fail(`${field} finite`);
     }
-    for (const field of ['gimbalPivot', 'ac', 'massCenter', 'shieldNormal']) {
+    for (const field of ['gimbalPivot', 'hingePivot', 'ac', 'massCenter', 'shieldNormal']) {
       if (part[field] !== undefined && !vector(part[field])) fail(field);
     }
     if (
@@ -57,8 +57,10 @@ export function catalogContractErrors(parts) {
         if (!(part[field] > 0)) fail(`controlAxis requires ${field}`);
       }
       if (!vector(part.ac)) fail('controlAxis requires ac');
-      // part-visuals.ts intentionally defaults hingeY to size[1] / 2.
+      // surface-hinge.ts defaults the pivot to [0, size[1] / 2, 0].
     }
+    if ('hingeY' in part) fail('hingePivot replaces hingeY');
+    if (part.hingePivot !== undefined && !part.controlAxis) fail('hingePivot requires controlAxis');
     if (part.poweredWheel && !part.wheel) fail('poweredWheel requires wheel');
     if (part.retractable && !part.wheel) fail('retractable requires wheel');
     if (part.steer && !part.wheel) fail('steer requires wheel');
