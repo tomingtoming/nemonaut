@@ -6,7 +6,13 @@ import {surfaceForce, surfaceForceScale, partCenter} from '../dist/aero.js';
 import {Flight} from '../dist/core.js';
 import {preset, part, PARTS} from '../dist/catalog.js';
 import {PRIMARY, bodyAltitude, bodyUp, referenceBody} from '../dist/celestial.js';
-import {fixedToInertial, overWater, surfaceVelocity, surfaceRelativeVelocity} from '../dist/surface-frame.js';
+import {
+  fixedToInertial,
+  launchSiteOrientation,
+  overWater,
+  surfaceVelocity,
+  surfaceRelativeVelocity
+} from '../dist/surface-frame.js';
 import {vesselControls} from '../dist/vessel-controls.js';
 
 const AIR = 1.225;
@@ -408,6 +414,38 @@ test('a floatplane survives initial gentle sea contact but records a hard downwa
         assert.ok(impacts.length > 0, JSON.stringify(f.failureEvents));
         assert.ok(impacts.some(e => e.speed > 9));
       }
+    } finally {
+      f.dispose();
+    }
+  }
+});
+
+test('fore and aft floats keep a runway-departure aircraft upright for 30 seconds after splashdown', () => {
+  for (const forwardSpeed of [0, 5]) {
+    const parts = preset('plane').filter(p => !['nosegear', 'maingear'].includes(p.type));
+    for (const x of [-1.4, 1.4])
+      for (const z of [-1.2, 2]) {
+        const float = part('pontoon', [x, -0.3, z], [Math.PI / 2, 0, 0]);
+        float.parent = parts[1].id;
+        parts.push(float);
+      }
+    const f = new Flight(parts, 'runway');
+    try {
+      f.q.copy(launchSiteOrientation('water'));
+      f.pos.copy(fixedToInertial(new T.Vector3(0, PRIMARY.radius + 2, 0).applyQuaternion(f.q)));
+      const up = bodyUp(f.pos, 0),
+        forward = new T.Vector3(0, 0, 1).applyQuaternion(f.q);
+      f.vel.copy(surfaceVelocity(f.pos, 0)).addScaledVector(up, -2).addScaledVector(forward, forwardSpeed);
+      f.sas = false;
+      run(f, 30);
+      assert.equal(f.failureEvents?.length || 0, 0, JSON.stringify(f.failureEvents));
+      assert.equal(f.crashed, false);
+      assert.equal(f.telemetry.groundContact, false);
+      assert.ok(overWater(f.pos, f.universalTime));
+      const tilt = new T.Vector3(0, 1, 0).applyQuaternion(f.q).angleTo(bodyUp(f.pos, f.universalTime));
+      assert.ok(tilt < (3 * Math.PI) / 180, 'floats should keep the aircraft upright without SAS');
+      assert.ok(Math.abs(bodyAltitude(f.pos, f.universalTime)) < 1);
+      assert.ok(waterSpeed(f) < 0.2, 'the aircraft should settle on the water');
     } finally {
       f.dispose();
     }
