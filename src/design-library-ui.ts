@@ -2,7 +2,13 @@
 // the workshop design and the launch library of the pad, runway and workshop. Calls up into app.ts through
 // app-hooks. No import-time side effects.
 import {storageKey} from './app-id.js';
-import {DESIGN_LIBRARY_KEY, readDesignLibrary, appendDesign, designForLaunch} from './design-library.js';
+import {
+  DESIGN_LIBRARY_KEY,
+  readDesignLibrary,
+  writeDesignLibrary,
+  appendDesign,
+  designForLaunch
+} from './design-library.js';
 import {loadCraft} from './craft-save.js';
 import {updateDepartureButton} from './departure-mode.js';
 import {state} from './app-state.js';
@@ -37,7 +43,7 @@ export function saveDesign() {
       bay: state.bayMode,
       environment: $('#environment', 'select').value
     });
-    localStorage.setItem(DESIGN_LIBRARY_KEY, JSON.stringify(library));
+    localStorage.setItem(DESIGN_LIBRARY_KEY, JSON.stringify(writeDesignLibrary(library)));
     if (state.atCenter) hooks.refreshCenter();
     notify('設計一覧に新しい版を保存しました · ' + library.designs.length + '件');
     return true;

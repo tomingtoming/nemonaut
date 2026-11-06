@@ -1,5 +1,7 @@
 import {storageKey} from './app-id.js';
-import {validateCraft, type FlightPart} from './core.js';
+import type {FlightPart} from './core.js';
+import {loadCraft, saveCraft} from './craft-save.js';
+import {SAVED_PART_FRAME} from './part-save-frame.js';
 export const DESIGN_LIBRARY_KEY = storageKey('design-library-v1');
 export interface DesignRecord {
   id: string;
@@ -23,6 +25,7 @@ export interface DesignRecordInput {
 }
 export interface DesignLibraryInput {
   version?: unknown;
+  partFrame?: unknown;
   designs?: DesignRecordInput[];
 }
 export interface DesignDraft {
@@ -43,7 +46,15 @@ const environments = [
   'transfer'
 ];
 export function readDesignLibrary(value: DesignLibraryInput | null | undefined): DesignLibrary {
-  if (!value || value.version !== 1 || !Array.isArray(value.designs) || value.designs.length > 100)
+  if (
+    !value ||
+    !(
+      (value.version === 1 && value.partFrame === undefined) ||
+      (value.version === 2 && value.partFrame === SAVED_PART_FRAME)
+    ) ||
+    !Array.isArray(value.designs) ||
+    value.designs.length > 100
+  )
     throw Error('設計一覧の形式が不正です');
   const ids = new Set();
   const designs = value.designs.map(d => {
@@ -66,10 +77,19 @@ export function readDesignLibrary(value: DesignLibraryInput | null | undefined):
       bay: d.bay,
       environment: d.environment,
       savedAt: d.savedAt,
-      parts: validateCraft({version: 1, parts: d.parts})
+      parts: loadCraft({version: value.version, partFrame: value.partFrame, parts: d.parts})
     };
   });
   return {version: 1, designs};
+}
+/** Serialize only at the storage boundary; readers return authored-coordinate editing data. */
+export function writeDesignLibrary(value: DesignLibraryInput) {
+  const library = readDesignLibrary(value);
+  return {
+    version: 2,
+    partFrame: SAVED_PART_FRAME,
+    designs: library.designs.map(d => ({...d, parts: saveCraft(d.parts, d.name).parts}))
+  };
 }
 export function appendDesign(
   library: DesignLibraryInput | null | undefined,
