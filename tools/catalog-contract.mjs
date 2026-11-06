@@ -70,6 +70,16 @@ export function catalogContractErrors(parts) {
         } else if (Math.hypot(...node.slice(3)) === 0) fail('attachmentNodes normal');
       }
     }
+    if (part.stackDiameters !== undefined) {
+      if (
+        !Array.isArray(part.stackDiameters) ||
+        part.stackDiameters.length !== 2 ||
+        part.stackDiameters.some(d => !Number.isFinite(d) || d <= 0)
+      )
+        fail('stackDiameters');
+      // This initial contract describes the two standard axial nodes only.
+      if (part.rootWing || part.attachmentNodes) fail('stackDiameters requires standard axial nodes');
+    }
   }
   return errors;
 }

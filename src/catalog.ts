@@ -65,6 +65,8 @@ export type PartDefinition = {
   planingArea?: number;
   ballast?: number;
   attachmentNodes?: readonly AttachmentNode[];
+  /** Circular stack interfaces at node 0 (+Y) and node 1 (-Y), in metres; other nodes remain unspecified. */
+  stackDiameters?: readonly [number, number];
   cargoBay?: {wall: number};
   heatCapacity?: number;
   emissivity?: number;
@@ -112,6 +114,7 @@ export interface Part {
 // The literal table keeps its keys for PartType; PARTS is its string-keyed view (the same object).
 const BASE_PARTS = {
   tankSmall: {
+    stackDiameters: [0.625, 0.625],
     shroudSupport: true,
     name: '小型タンク',
     code: 'FT-225',
@@ -122,6 +125,7 @@ const BASE_PARTS = {
     desc: '直径0.625 m・推進剤225 kg。接続したエンジンへ供給。'
   },
   tankLarge: {
+    stackDiameters: [2.5, 2.5],
     shroudSupport: true,
     name: '大型タンク',
     code: 'FT-14400',
@@ -132,6 +136,7 @@ const BASE_PARTS = {
     desc: '直径2.5 m・推進剤14400 kg。接続したエンジンへ供給。'
   },
   adapterSmall: {
+    stackDiameters: [0.625, 1.25],
     shroudSupport: true,
     name: '異径アダプター 0.625–1.25',
     code: 'AD-125',
@@ -141,6 +146,7 @@ const BASE_PARTS = {
     desc: '上面0.625 m／下面1.25 m。燃料は通過。回転して逆向きにも接続可能。'
   },
   adapterLarge: {
+    stackDiameters: [1.25, 2.5],
     shroudSupport: true,
     name: '異径アダプター 1.25–2.5',
     code: 'AD-250',
@@ -150,6 +156,7 @@ const BASE_PARTS = {
     desc: '上面1.25 m／下面2.5 m。燃料は通過。回転して逆向きにも接続可能。'
   },
   decouplerSmall: {
+    stackDiameters: [0.625, 0.625],
     shroudSupport: true,
     name: '分離リング 0.625 m',
     code: 'DC-62',
@@ -160,6 +167,7 @@ const BASE_PARTS = {
     desc: '直径0.625 m。ステージで接続枝を分離。燃料通過なし。'
   },
   decouplerLarge: {
+    stackDiameters: [2.5, 2.5],
     shroudSupport: true,
     name: '分離リング 2.5 m',
     code: 'DC-250',
@@ -350,6 +358,7 @@ const BASE_PARTS = {
     desc: '航空機・ローバー向けの広視界キャノピー。'
   },
   tank: {
+    stackDiameters: [1.25, 1.25],
     shroudSupport: true,
     name: '中型タンク',
     code: 'FT-200',
@@ -407,6 +416,7 @@ const BASE_PARTS = {
     desc: '機首を覆う軽量の整流コーン。'
   },
   decoupler: {
+    stackDiameters: [1.25, 1.25],
     shroudSupport: true,
     name: '分離リング',
     code: 'DC-12',
