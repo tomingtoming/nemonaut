@@ -450,6 +450,10 @@ const BASE_PARTS = {
     desc: 'ローバーや宇宙機の骨組み。6方向に接続可能。'
   },
   wing: {
+    attachmentNodes: [
+      [0, 0, 0, -1, 0, 0],
+      [2, 0, 0, 1, 0, 0]
+    ],
     surfaceMount: [0, 0, 0, -1, 0, 0],
     rootWing: true,
     name: '主翼・固定翼',
@@ -464,6 +468,10 @@ const BASE_PARTS = {
     desc: '空気速度と迎角から揚力が発生。基部はローカルX=0。'
   },
   fin: {
+    attachmentNodes: [
+      [0, 0, 0, -1, 0, 0],
+      [2, 0, 0, 1, 0, 0]
+    ],
     surfaceMount: [0, 0, 0, -1, 0, 0],
     rootWing: true,
     name: '可動ロケットフィン',
@@ -614,11 +622,6 @@ export function nodes(type: PartType): AttachmentNode[] {
   const d = PARTS[type],
     [x, y, z] = d.size;
   if (d.attachmentNodes) return d.attachmentNodes.map(n => [...n]);
-  if (d.rootWing)
-    return [
-      [0, 0, 0, -1, 0, 0],
-      [x, 0, 0, 1, 0, 0]
-    ];
   return [
     [0, y / 2, 0, 0, 1, 0],
     [0, -y / 2, 0, 0, -1, 0],
