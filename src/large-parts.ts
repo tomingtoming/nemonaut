@@ -37,6 +37,7 @@ export interface ScalablePart {
   thrustMedium?: 'independent' | 'air' | 'water';
   battery?: number;
   volume?: number;
+  planingArea?: number;
   ballast?: number;
   ac?: number[];
   massCenter?: number[];
@@ -64,6 +65,7 @@ export function installLargeParts(parts: Record<string, ScalablePart>): void {
     for (const key of ['ac', 'massCenter'] as const) if (d[key]) d[key] = d[key].map(v => v * s);
     for (const key of ['chord', 'hingeY'] as const) if (d[key]) d[key] *= s;
     if (d.wing) d.wing *= s * s;
+    if (d.planingArea) d.planingArea *= s * s;
     if (id === 'transportWingRoot') {
       d.wing = 156.8;
       d.chord = 11.2;

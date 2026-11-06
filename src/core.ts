@@ -22,6 +22,7 @@ import {
   mediumDensity,
   submergedFraction,
   waterResistance,
+  planingForce,
   WATER_DENSITY
 } from './buoyancy.js';
 import {engineSubmersion} from './engine-medium.js';
@@ -1039,6 +1040,7 @@ export class Flight {
       p => 1 - engineSubmersion(this, p, startTime)
     );
     const wheelContacts: WheelContact[] = [];
+    const planingSamples = 2 * this.parts.filter(p => PARTS[p.type].planingArea).length;
     let stallCount = 0,
       contacts = 0,
       wheelImpactSpeed = 0;
@@ -1178,6 +1180,17 @@ export class Flight {
             point
           );
           apply(waterResistance(p, orientation, velocity, sub), point);
+          if (d.planingArea) {
+            const lift = planingForce(p, orientation, velocity, localUp(point), sub);
+            if (lift.lengthSq() > 0) {
+              const direction = lift.clone().normalize(),
+                limit =
+                  Math.max(0, -velocity.dot(direction)) /
+                  (dt * inverseEffectiveMass(point, direction) * planingSamples);
+              lift.clampLength(0, limit);
+              apply(lift, point);
+            }
+          }
         }
       }
       if (onWheels(p) && !waterAt(wp)) {

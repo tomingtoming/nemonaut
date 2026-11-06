@@ -61,6 +61,8 @@ export type PartDefinition = {
   volume?: number;
   /** Dimensionless resistance multipliers along the part's local X/Y/Z axes. */
   waterResistance?: PartVector;
+  /** Planing bottom area (m²); the supported face points along local -Z. */
+  planingArea?: number;
   ballast?: number;
   attachmentNodes?: readonly AttachmentNode[];
   cargoBay?: {wall: number};
@@ -563,6 +565,7 @@ const BASE_PARTS = {
     size: [1, 3, 0.8],
     volume: 1.9,
     waterResistance: [1, 0.1, 1],
+    planingArea: 3,
     desc: '水密の浮体。水没体積に応じた浮力を生む。'
   },
   ballast: {

@@ -12,6 +12,8 @@ export function catalogContractErrors(parts) {
     if (codes.has(part.code)) fail(`duplicate code ${part.code} (${codes.get(part.code)})`);
     codes.set(part.code, id);
     if (!Number.isFinite(part.mass) || part.mass <= 0) fail('mass');
+    if (part.planingArea !== undefined && !(Number.isFinite(part.planingArea) && part.planingArea > 0))
+      fail('planingArea');
     if (!vector(part.size) || part.size.some(n => n <= 0)) fail('size');
     else {
       // An envelope measure, NOT material density (wings, tanks and bays are hollow).

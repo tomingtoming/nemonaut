@@ -1,9 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {buoyancyBalance, displacedVolume, waterResistance} from '../dist/buoyancy.js';
+import {buoyancyBalance, displacedVolume, waterResistance, planingForce} from '../dist/buoyancy.js';
 import {preset} from '../dist/catalog.js';
 import {statistics} from '../dist/core.js';
+test('planing pressure supports an entering bottom without propelling it or lifting a submerged hull', () => {
+  const p = {type: 'pontoon'},
+    q = new T.Quaternion().setFromAxisAngle(new T.Vector3(1, 0, 0), Math.PI / 2),
+    up = new T.Vector3(0, 1, 0),
+    velocity = new T.Vector3(0, -2, 35),
+    force = planingForce(p, q, velocity, up, 0.5);
+  assert.ok(force.y > 0);
+  assert.ok(force.dot(velocity) <= 0);
+  assert.equal(planingForce(p, q, velocity, up, 0).length(), 0);
+  assert.equal(planingForce(p, q, velocity, up, 1).length(), 0);
+  assert.equal(planingForce(p, q, new T.Vector3(0, 2, 35), up, 0.5).length(), 0);
+  assert.equal(planingForce(p, q, new T.Vector3(), up, 0.5).length(), 0);
+  assert.equal(planingForce(p, q, velocity, up.clone().negate(), 0.5).length(), 0);
+  assert.equal(planingForce({type: 'tank'}, q, velocity, up, 0.5).length(), 0);
+  assert.ok(
+    Math.abs(planingForce({type: 'hullLarge'}, q, velocity, up, 0.5).length() / force.length() - 16) < 1e-10
+  );
+});
 test('hull water resistance follows part rotation, dissipates energy and vanishes out of water', () => {
   for (const type of ['pontoon', 'hullLarge']) {
     const p = {type},

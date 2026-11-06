@@ -421,7 +421,7 @@ test('a floatplane survives initial gentle sea contact but records a hard downwa
 });
 
 test('fore and aft floats keep a runway-departure aircraft upright for 30 seconds after splashdown', () => {
-  for (const forwardSpeed of [0, 5, 10]) {
+  for (const forwardSpeed of [0, 5, 10, 20, 35]) {
     const parts = preset('plane').filter(p => !['nosegear', 'maingear'].includes(p.type));
     for (const x of [-1.4, 1.4])
       for (const z of [-1.2, 2]) {
