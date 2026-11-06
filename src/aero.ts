@@ -1,6 +1,8 @@
 import * as T from 'three';
 import {PARTS, type PartVector} from './catalog.js';
 import {fuelMass, type FuelMap} from './resources.js';
+import {partRotation, partPointToVessel} from './part-frame.js';
+export {partRotation} from './part-frame.js';
 /** Minimal part shape for pose helpers: catalogue type plus local position and Euler rotation. */
 export interface AeroPart {
   type: string;
@@ -34,8 +36,6 @@ export interface SurfaceForce {
   cl: number;
   stalled: boolean;
 }
-export const partRotation = (p: Pick<AeroPart, 'r'>): T.Quaternion =>
-  new T.Quaternion().setFromEuler(new T.Euler(...p.r));
 export function partMass(
   p: MassPart,
   fuel: FuelMap | number = 1,
@@ -48,14 +48,10 @@ export function partMass(
   );
 }
 export function partCenter(p: AeroPart): T.Vector3 {
-  return new T.Vector3(...(PARTS[p.type].massCenter || [0, 0, 0]))
-    .applyQuaternion(partRotation(p))
-    .add(new T.Vector3(...p.p));
+  return partPointToVessel(p, PARTS[p.type].massCenter || [0, 0, 0]);
 }
 export function aeroPoint(p: AeroPart): T.Vector3 {
-  return new T.Vector3(...(PARTS[p.type].ac || [0, 0, 0]))
-    .applyQuaternion(partRotation(p))
-    .add(new T.Vector3(...p.p));
+  return partPointToVessel(p, PARTS[p.type].ac || [0, 0, 0]);
 }
 export function aeroAnalysis(parts: readonly AeroPart[], com: T.Vector3): AeroAnalysis {
   const center = new T.Vector3();
