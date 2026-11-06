@@ -1196,7 +1196,19 @@ export class Flight {
           }
         }
       }
-      if (onWheels(p) && !waterAt(wp)) {
+      // A wheel may overlap the bank before its axle crosses the shoreline.
+      // An axle below the bank still cannot climb the vertical edge.
+      const wheelEdge = onWheels(p) && nearShore ? shoreline(wp, startTime) : null,
+        edgeDirection = wheelEdge?.inland.clone().applyQuaternion(orientation.clone().invert()),
+        rimOnLand =
+          wheelEdge &&
+          edgeDirection &&
+          altitude(wp) > 0 &&
+          wheelEdge.distance +
+            (Math.hypot(edgeDirection.y, edgeDirection.z) * d.size[1]) / 2 +
+            (Math.abs(edgeDirection.x) * d.size[0]) / 2 >
+            0;
+      if (onWheels(p) && (!waterAt(wp) || rimOnLand)) {
         const radius = d.size[1] / 2,
           steer =
             d.steer && this.steeringEnabled && p.steeringEnabled !== false

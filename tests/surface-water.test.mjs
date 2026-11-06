@@ -10,6 +10,7 @@ import {
   fixedToInertial,
   launchSiteOrientation,
   overWater,
+  shoreline,
   surfaceVelocity,
   surfaceRelativeVelocity
 } from '../dist/surface-frame.js';
@@ -17,6 +18,58 @@ import {vesselControls} from '../dist/vessel-controls.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 
 const AIR = 1.225;
+test('an amphibious craft crosses both ways when its wheels reach the bank', () => {
+  for (const [direction, wheelHeight] of [
+    [-1, 0.25],
+    [1, 0.25],
+    [1, -0.5]
+  ]) {
+    const parts = preset('boat').filter(p => !['propeller', 'rudder'].includes(p.type));
+    const tank = part('tankSmall', [0, 1, 0], [Math.PI / 2, 0, 0]);
+    tank.parent = parts[1].id;
+    tank.fuelLoad = 0.1;
+    parts.push(tank);
+    const jet = part('jet', [0, 0.6, -1], [Math.PI / 2, 0, 0]);
+    jet.parent = tank.id;
+    parts.push(jet);
+    for (const x of [-1.5, 1.5])
+      for (const z of [-1, 2]) {
+        const wheel = part('wheel', [x, wheelHeight, z]);
+        wheel.parent = parts[1].id;
+        parts.push(wheel);
+      }
+    const f = new Flight(parts, 'land');
+    try {
+      const latitude = (-2000 - direction * 30) / PRIMARY.radius,
+        level = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), -latitude),
+        height = direction < 0 ? f.floor + 0.02 : 0;
+      f.pos.copy(fixedToInertial(new T.Vector3(0, PRIMARY.radius + height, 0).applyQuaternion(level)));
+      f.q
+        .copy(level)
+        .multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), (direction * Math.PI) / 2));
+      f.vel.copy(surfaceVelocity(f.pos, 0));
+      assert.equal(overWater(f.pos, 0), direction > 0);
+      f.stageNext();
+      f.throttle = 0.08;
+      f.brake = false;
+      f.sas = false;
+      run(f, 60, {drive: 1});
+      assert.equal(f.failureEvents?.length || 0, 0);
+      if (wheelHeight < 0) {
+        assert.equal(overWater(f.pos, f.universalTime), true);
+        assert.equal(f.telemetry.contacts, 0);
+        assert.ok(waterSpeed(f) < 0.1, 'an axle below the bank cannot climb the edge');
+      } else {
+        assert.equal(overWater(f.pos, f.universalTime), direction < 0);
+        assert.ok(shoreline(f.pos, f.universalTime).distance * direction > 100);
+        assert.equal(f.telemetry.contacts, direction > 0 ? 4 : 0);
+        assert.ok(waterSpeed(f) > 5);
+      }
+    } finally {
+      f.dispose();
+    }
+  }
+});
 for (const epoch of [0, 371, 5000])
   test(`powered water taxi and save restoration at epoch ${epoch}`, () => {
     const parts = preset('plane').filter(p => !['nosegear', 'maingear'].includes(p.type));
