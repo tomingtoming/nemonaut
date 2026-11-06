@@ -11,7 +11,8 @@ export function attachmentProfile(type: PartType, node: number): AttachmentProfi
   if (!Number.isInteger(node) || !nodes(type)[node]) throw Error('接続点の番号が不正です');
   const diameters = PARTS[type].stackDiameters;
   if (!diameters || (node !== 0 && node !== 1)) return null;
-  return {mode: 'stack', shape: 'circle', diameter: diameters[node]};
+  const diameter = diameters[node];
+  return diameter === null ? null : {mode: 'stack', shape: 'circle', diameter};
 }
 
 /** Size compatibility only: pose, occupancy and fuel connectivity are separate checks.

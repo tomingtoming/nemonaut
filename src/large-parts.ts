@@ -29,7 +29,7 @@ export interface ScalablePart {
   name: string;
   code: string;
   size: number[];
-  stackDiameters?: readonly [number, number];
+  stackDiameters?: readonly [number | null, number | null];
   desc?: string;
   model?: string;
   mass?: number;
@@ -61,7 +61,10 @@ export function installLargeParts(parts: Record<string, ScalablePart>): void {
     d.name = name;
     d.code = code;
     d.size = d.size.map(v => v * s);
-    if (d.stackDiameters) d.stackDiameters = [d.stackDiameters[0] * s, d.stackDiameters[1] * s];
+    if (d.stackDiameters) {
+      const [top, bottom] = d.stackDiameters;
+      d.stackDiameters = [top === null ? null : top * s, bottom === null ? null : bottom * s];
+    }
     for (const key of ['mass', 'fuel', 'thrust', 'battery'] as const) if (d[key]) d[key] *= k;
     for (const key of ['volume', 'ballast'] as const) if (d[key]) d[key] *= s ** 3;
     for (const key of ['ac', 'massCenter'] as const) if (d[key]) d[key] = d[key].map(v => v * s);

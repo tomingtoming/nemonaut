@@ -74,7 +74,7 @@ export function catalogContractErrors(parts) {
       if (
         !Array.isArray(part.stackDiameters) ||
         part.stackDiameters.length !== 2 ||
-        part.stackDiameters.some(d => !Number.isFinite(d) || d <= 0)
+        part.stackDiameters.some(d => d !== null && (!Number.isFinite(d) || d <= 0))
       )
         fail('stackDiameters');
       // This initial contract describes the two standard axial nodes only.

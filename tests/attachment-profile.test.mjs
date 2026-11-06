@@ -36,6 +36,23 @@ test('unknown surfaces and wings remain unspecified, not rejected or inferred as
   for (const node of [-1, 0.5, 99]) assert.throws(() => attachmentProfile('tank', node));
 });
 
+test('engine mount sizes are declared without treating the nozzle as a mating flange', () => {
+  for (const [engine, tank] of [
+    ['engine', 'tank'],
+    ['engineSeaSmall', 'tankSmall'],
+    ['engineVacSmall', 'tankSmall'],
+    ['engineSeaMedium', 'tank'],
+    ['engineVacMedium', 'tank'],
+    ['engineSeaLarge', 'tankLarge'],
+    ['engineVacLarge', 'tankLarge']
+  ]) {
+    assert.equal(attachmentFit(tank, 1, engine, 0), 'matched');
+    assert.equal(attachmentProfile(engine, 1), null);
+    assert.equal(attachmentFit(engine, 1, 'decoupler', 0), 'unspecified');
+  }
+  assert.deepEqual(catalogContractErrors({oneEnd: {...PARTS.tank, stackDiameters: [null, 1.25]}}), []);
+});
+
 test('rotated adapter retains node identities and existing node connections', () => {
   const tank = part('tankSmall'),
     adapter = part('adapterSmall', [0, -0.8, 0], [0, Math.PI, 0], tank.id);

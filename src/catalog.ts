@@ -65,8 +65,8 @@ export type PartDefinition = {
   planingArea?: number;
   ballast?: number;
   attachmentNodes?: readonly AttachmentNode[];
-  /** Circular stack interfaces at node 0 (+Y) and node 1 (-Y), in metres; other nodes remain unspecified. */
-  stackDiameters?: readonly [number, number];
+  /** Circular stack interfaces at node 0 (+Y) and node 1 (-Y), in metres; null and other nodes remain unspecified. */
+  stackDiameters?: readonly [number | null, number | null];
   cargoBay?: {wall: number};
   heatCapacity?: number;
   emissivity?: number;
@@ -178,6 +178,7 @@ const BASE_PARTS = {
     desc: '直径2.5 m。ステージで接続枝を分離。燃料通過なし。'
   },
   engineSeaSmall: {
+    stackDiameters: [0.625, null],
     name: '小型海面用エンジン',
     code: 'SL-12',
     cat: '推進',
@@ -193,6 +194,7 @@ const BASE_PARTS = {
     desc: '直径0.625 m。推力 海面11.0／真空12 kN、比推力 285／310 s。ジンバル6°。'
   },
   engineVacSmall: {
+    stackDiameters: [0.625, null],
     name: '小型真空用エンジン',
     code: 'VX-6',
     cat: '推進',
@@ -208,6 +210,7 @@ const BASE_PARTS = {
     desc: '直径0.625 m。推力 海面1.7／真空6 kN、比推力 100／350 s。ジンバル6°。'
   },
   engineSeaMedium: {
+    stackDiameters: [1.25, null],
     name: '中型海面用エンジン',
     code: 'SL-90',
     cat: '推進',
@@ -223,6 +226,7 @@ const BASE_PARTS = {
     desc: '直径1.25 m。推力 海面81.6／真空90 kN、比推力 290／320 s。ジンバル6°。'
   },
   engineVacMedium: {
+    stackDiameters: [1.25, null],
     name: '中型真空用エンジン',
     code: 'VX-60',
     cat: '推進',
@@ -238,6 +242,7 @@ const BASE_PARTS = {
     desc: '直径1.25 m。推力 海面18.3／真空60 kN、比推力 110／360 s。ジンバル6°。'
   },
   engineSeaLarge: {
+    stackDiameters: [2.5, null],
     name: '大型海面用エンジン',
     code: 'SL-650',
     cat: '推進',
@@ -253,6 +258,7 @@ const BASE_PARTS = {
     desc: '直径2.5 m。推力 海面578.9／真空650 kN、比推力 285／320 s。ジンバル6°。'
   },
   engineVacLarge: {
+    stackDiameters: [2.5, null],
     name: '大型真空用エンジン',
     code: 'VX-250',
     cat: '推進',
@@ -369,6 +375,7 @@ const BASE_PARTS = {
     desc: '直径1.25 m・推進剤1800 kg。同じ燃料系統へ推進剤を供給。分離リングを越えては流れません。'
   },
   engine: {
+    stackDiameters: [1.25, null],
     name: '液体燃料エンジン',
     code: 'RE-45',
     cat: '推進',
