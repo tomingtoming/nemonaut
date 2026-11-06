@@ -35,10 +35,12 @@ test('legacy and centre flight saves survive repeated world roundtrips without d
   let restored;
   try {
     let record = saveFlight(original);
+    assert.equal(record.version, 2);
     assert.equal(record.partFrame, 'nominal-center-v1');
     assert.notDeepEqual(record.parts, original.parts);
     for (let i = 0; i < 5; i++) {
       const world = worldFromFlight(record);
+      assert.equal(world.vessels[0].version, 2);
       assert.equal(world.vessels[0].partFrame, 'nominal-center-v1');
       restored = loadFlight(flightFromWorld(world));
       equalPoses(restored.parts, before);
@@ -47,6 +49,7 @@ test('legacy and centre flight saves survive repeated world roundtrips without d
       restored = undefined;
     }
     record.parts = structuredClone(before);
+    record.version = 1;
     delete record.partFrame;
     restored = loadFlight(record);
     equalPoses(restored.parts, before);
@@ -63,6 +66,7 @@ test('centre records reject unknown frames and malformed poses; valid boundary p
     const base = saveFlight(f);
     for (const mutate of [
       s => (s.partFrame = 'future'),
+      s => delete s.partFrame,
       s => (s.parts = null),
       s => (s.parts[0].r = null),
       s => (s.parts[0].p[0] = Infinity),
@@ -78,6 +82,21 @@ test('centre records reject unknown frames and malformed poses; valid boundary p
     assert.ok(encoded[0].p[0] > 10000);
     equalPoses(validateCraft({version: 1, parts: convertSavedPartFrame(encoded, 'decode')}), edge);
   } finally {
+    f.dispose();
+  }
+});
+
+test('migration-era version 1 centre saves upgrade without moving parts', () => {
+  const f = new Flight(preset('plane'), 'runway');
+  let restored;
+  try {
+    const interim = saveFlight(f);
+    interim.version = 1;
+    restored = loadFlight(interim);
+    equalPoses(restored.parts, f.parts);
+    assert.equal(saveFlight(restored).version, 2);
+  } finally {
+    restored?.dispose();
     f.dispose();
   }
 });

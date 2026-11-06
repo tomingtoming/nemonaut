@@ -167,7 +167,7 @@ export function saveFlight(f: Flight, meta: SavedFlightMeta = {}): SavedFlight {
   };
   return structuredClone({
     kind: saveKind('flight'),
-    version: 1,
+    version: 2,
     partFrame: SAVED_PART_FRAME,
     vesselId: f.vesselId,
     physicsModel: PHYSICS_MODEL,
@@ -220,8 +220,10 @@ export function loadFlight(
   }: FlightLoadOptions = {}
 ): Flight {
   check(depth <= 32);
-  check(isSaveKind(value?.kind, 'flight') && value.version === 1);
-  check(value.partFrame === undefined || value.partFrame === SAVED_PART_FRAME);
+  check(isSaveKind(value?.kind, 'flight') && (value.version === 1 || value.version === 2));
+  // Version 2 prevents older readers from treating centre coordinates as authored
+  // coordinates. Version 1 with a marker was written during the migration.
+  check(value.partFrame === SAVED_PART_FRAME || (value.version === 1 && value.partFrame === undefined));
   check(value.physicsModel === undefined || value.physicsModel === PHYSICS_MODEL);
   {
     const migration = value.physicsMigration;
