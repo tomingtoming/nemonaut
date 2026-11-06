@@ -65,6 +65,8 @@ export type PartDefinition = {
   planingArea?: number;
   ballast?: number;
   attachmentNodes?: readonly AttachmentNode[];
+  /** Local surface mounting point and outward normal; default is the lower Y face. */
+  surfaceMount?: AttachmentNode;
   /** Circular stack interfaces at node 0 (+Y) and node 1 (-Y), in metres; null and other nodes remain unspecified. */
   stackDiameters?: readonly [number | null, number | null];
   cargoBay?: {wall: number};
@@ -442,6 +444,7 @@ const BASE_PARTS = {
     desc: 'ローバーや宇宙機の骨組み。6方向に接続可能。'
   },
   wing: {
+    surfaceMount: [0, 0, 0, -1, 0, 0],
     rootWing: true,
     name: '主翼・固定翼',
     code: 'SW-2',
@@ -455,6 +458,7 @@ const BASE_PARTS = {
     desc: '空気速度と迎角から揚力が発生。基部はローカルX=0。'
   },
   fin: {
+    surfaceMount: [0, 0, 0, -1, 0, 0],
     rootWing: true,
     name: '可動ロケットフィン',
     code: 'RF-2',

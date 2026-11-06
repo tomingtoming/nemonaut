@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {symmetryPlacementPoses} from '../dist/placement-poses.js';
+import {PARTS} from '../dist/catalog.js';
+import {catalogContractErrors} from '../tools/catalog-contract.mjs';
+import {symmetryPlacementPoses, surfacePlacementPose} from '../dist/placement-poses.js';
 import {placementSymmetryFrame} from '../dist/symmetry.js';
 test('Placement transforms match saved symmetry frames for every radial count and both bays', () => {
   const p = new T.Vector3(3, 4, 5),
@@ -35,4 +37,55 @@ test('Mirror placement preserves handedness, and rejects invalid counts without 
     assert.ok(q.equals(original));
   }
   assert.throws(() => symmetryPlacementPoses(p, q, '7', 'vab', 'engine'));
+});
+
+test('declared surface mounts preserve every existing part pose for oblique and axial hits', () => {
+  const point = new T.Vector3(2, 3, 4);
+  for (const [type, d] of Object.entries(PARTS))
+    for (const values of [
+      [1, 0, 0],
+      [-1, 0, 0],
+      [0, 1, 0],
+      [0, -1, 0],
+      [0, 0, 1],
+      [0, 0, -1],
+      [1, 2, 3]
+    ]) {
+      const normal = new T.Vector3(...values).normalize();
+      const oldQ = new T.Quaternion().setFromUnitVectors(
+        new T.Vector3(...(d.rootWing ? [1, 0, 0] : [0, 1, 0])),
+        normal
+      );
+      const oldPos = point.clone();
+      if (!d.rootWing) oldPos.addScaledVector(normal, d.size[1] / 2);
+      const pose = surfacePlacementPose(type, point, normal);
+      assert.ok(pose.pos.distanceTo(oldPos) < 1e-9, type);
+      assert.ok(pose.q.angleTo(oldQ) < 1e-7, type);
+      assert.deepEqual(point.toArray(), [2, 3, 4]);
+      assert.ok(normal.distanceTo(new T.Vector3(...values).normalize()) < 1e-12);
+    }
+});
+
+test('off-center surface anchors work without a wing flag and invalid mounts are rejected', () => {
+  const previous = PARTS.truss.surfaceMount;
+  try {
+    PARTS.truss.surfaceMount = [0.2, 0.3, -0.4, 0, 0, -1];
+    const point = new T.Vector3(3, 4, 5),
+      normal = new T.Vector3(1, 2, 3).normalize();
+    const pose = surfacePlacementPose('truss', point, normal);
+    assert.ok(new T.Vector3(0.2, 0.3, -0.4).applyQuaternion(pose.q).add(pose.pos).distanceTo(point) < 1e-9);
+    assert.ok(new T.Vector3(0, 0, -1).applyQuaternion(pose.q).dot(normal) < -1 + 1e-9);
+    for (const surfaceMount of [
+      [0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 2, 0],
+      [0, NaN, 0, 0, 1, 0],
+      [0, 0, 0]
+    ])
+      assert.ok(
+        catalogContractErrors({bad: {...PARTS.truss, surfaceMount}}).some(e => e.includes('surfaceMount'))
+      );
+  } finally {
+    if (previous === undefined) delete PARTS.truss.surfaceMount;
+    else PARTS.truss.surfaceMount = previous;
+  }
 });

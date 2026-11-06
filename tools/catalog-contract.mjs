@@ -80,6 +80,16 @@ export function catalogContractErrors(parts) {
       // This initial contract describes the two standard axial nodes only.
       if (part.rootWing || part.attachmentNodes) fail('stackDiameters requires standard axial nodes');
     }
+    if (part.surfaceMount !== undefined) {
+      const n = part.surfaceMount;
+      if (
+        !Array.isArray(n) ||
+        n.length !== 6 ||
+        !n.every(Number.isFinite) ||
+        Math.abs(Math.hypot(...n.slice(3)) - 1) > 1e-6
+      )
+        fail('surfaceMount');
+    }
   }
   return errors;
 }

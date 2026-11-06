@@ -29,6 +29,7 @@ export interface ScalablePart {
   name: string;
   code: string;
   size: number[];
+  surfaceMount?: readonly [number, number, number, number, number, number];
   stackDiameters?: readonly [number | null, number | null];
   desc?: string;
   model?: string;
@@ -61,6 +62,10 @@ export function installLargeParts(parts: Record<string, ScalablePart>): void {
     d.name = name;
     d.code = code;
     d.size = d.size.map(v => v * s);
+    if (d.surfaceMount) {
+      const [x, y, z, nx, ny, nz] = d.surfaceMount;
+      d.surfaceMount = [x * s, y * s, z * s, nx, ny, nz];
+    }
     if (d.stackDiameters) {
       const [top, bottom] = d.stackDiameters;
       d.stackDiameters = [top === null ? null : top * s, bottom === null ? null : bottom * s];

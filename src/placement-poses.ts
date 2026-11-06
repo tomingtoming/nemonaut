@@ -6,6 +6,16 @@ export interface PlacementPose {
   pos: T.Vector3;
   q: T.Quaternion;
 }
+/** Place the declared mounting point on the target, with opposing outward normals. */
+export function surfacePlacementPose(type: string, point: T.Vector3, normal: T.Vector3): PlacementPose {
+  const d = PARTS[type];
+  const [x, y, z, nx, ny, nz] = d.surfaceMount ?? [0, -d.size[1] / 2, 0, 0, -1, 0];
+  const q = new T.Quaternion().setFromUnitVectors(
+    new T.Vector3(nx, ny, nz).normalize(),
+    normal.clone().normalize().negate()
+  );
+  return {pos: point.clone().sub(new T.Vector3(x, y, z).applyQuaternion(q)), q};
+}
 export function symmetryPlacementPoses(
   position: T.Vector3,
   rotation: T.Quaternion,

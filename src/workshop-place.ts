@@ -8,7 +8,7 @@ import {PARTS, nodes, nodePoint, nodeAxis, type PartType, type PartAttachment} f
 import type {FlightPart} from './core.js';
 import {occupiedNodes, nodeAvailable, assertNodeAttachments, bindMatchingNode} from './attachment-nodes.js';
 import {placementSymmetryFrame} from './symmetry.js';
-import {symmetryPlacementPoses} from './placement-poses.js';
+import {symmetryPlacementPoses, surfacePlacementPose} from './placement-poses.js';
 import {placeBranch, moveBranch, type PartBranch} from './assembly-branch.js';
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
@@ -269,10 +269,9 @@ function posePlacement(e: PointerEvent) {
   } else if (hit && kind === 'surface') {
     if (!hit.face) throw Error('取付面の向きが分かりません');
     const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
-    const source = PARTS[state.placing].rootWing ? new T.Vector3(1, 0, 0) : new T.Vector3(0, 1, 0);
-    q.setFromUnitVectors(source, normal);
-    pos.copy(hit.point);
-    if (!PARTS[state.placing].rootWing) pos.addScaledVector(normal, PARTS[state.placing].size[1] / 2);
+    const pose = surfacePlacementPose(state.placing, hit.point, normal);
+    q.copy(pose.q);
+    pos.copy(pose.pos);
   } else {
     const plane = new T.Plane(new T.Vector3(0, 1, 0), -state.workshopFloor);
     if (!raycaster.ray.intersectPlane(plane, pos)) return;
