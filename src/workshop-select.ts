@@ -4,6 +4,7 @@
 // through app-hooks. No import-time side effects.
 import {selectReference} from './command-frame.js';
 import {PARTS, nodes} from './catalog.js';
+import {attachmentSizeLabel} from './attachment-label.js';
 import {descendants} from './core.js';
 import {occupiedNodes, nodeAvailable, nodeConnection} from './attachment-nodes.js';
 import {editSymmetryPose} from './symmetry-geometry.js';
@@ -65,7 +66,19 @@ function renderInspector() {
     connection = nodeConnection(state.parts, p),
     usedNodes = occupiedNodes(state.parts),
     openNodes = nodes(p.type).filter((_, i) => nodeAvailable(usedNodes, p.id, i)).length;
-  root.innerHTML = `<div class="parttitle"><b>${d.name}</b><small>${d.code}</small></div><p class="desc">${d.desc}</p><p class="muted">接続点：${openNodes} / ${nodes(p.type).length} 空き${connection ? ` · 親の点${connection.parentNode + 1} ↔ この点${connection.ownNode + 1}` : ''}</p>${group.length > 1 ? `<label class="field">対称 ${group.length} 部品を連動<input id="linkSymmetry" type="checkbox" ${state.linkSymmetry ? 'checked' : ''}></label><p class="muted">${hasSymmetryGeometry(state.parts, p.id) ? '位置・回転・作動段・装備設定を連動。子部品も追従します。' : 'この旧グループは作動段・装備設定のみ連動。位置・回転は個別です。'}</p>` : ''}${(
+  const parent = state.parts.find(part => part.id === p.parent),
+    fitLabel =
+      connection && parent
+        ? attachmentSizeLabel(parent.type, connection.parentNode, p.type, connection.ownNode)
+        : '',
+    endLabels =
+      d.stackDiameters
+        ?.map((diameter, i) =>
+          diameter === null ? '' : `${i === 0 ? '+Y' : '−Y'} Ø${Number(diameter.toFixed(3))} m`
+        )
+        .filter(Boolean)
+        .join(' · ') ?? '';
+  root.innerHTML = `<div class="parttitle"><b>${d.name}</b><small>${d.code}</small></div><p class="desc">${d.desc}</p>${endLabels ? `<p class="muted" data-stack-diameters>${endLabels}</p>` : ''}<p class="muted">接続点：${openNodes} / ${nodes(p.type).length} 空き${connection ? ` · 親の点${connection.parentNode + 1} ↔ この点${connection.ownNode + 1}${fitLabel ? ` · ${fitLabel}` : ''}` : ''}</p>${group.length > 1 ? `<label class="field">対称 ${group.length} 部品を連動<input id="linkSymmetry" type="checkbox" ${state.linkSymmetry ? 'checked' : ''}></label><p class="muted">${hasSymmetryGeometry(state.parts, p.id) ? '位置・回転・作動段・装備設定を連動。子部品も追従します。' : 'この旧グループは作動段・装備設定のみ連動。位置・回転は個別です。'}</p>` : ''}${(
     [
       [d.reactionTorque, 'reactionEnabled', 'リアクションホイール'],
       [d.steer, 'steeringEnabled', 'A/D 車輪操舵'],

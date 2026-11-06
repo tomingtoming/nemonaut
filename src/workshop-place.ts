@@ -3,6 +3,7 @@
 // app.ts calls wirePlacement at the original place. Calls up into app.ts through app-hooks. The raycaster
 // and pointer vector are plain values; no import-time side effects.
 import * as T from 'three';
+import {attachmentSizeLabel} from './attachment-label.js';
 import {PARTS, nodes, nodePoint, nodeAxis, type PartType, type PartAttachment} from './catalog.js';
 import type {FlightPart} from './core.js';
 import {occupiedNodes, nodeAvailable, assertNodeAttachments, bindMatchingNode} from './attachment-nodes.js';
@@ -291,7 +292,16 @@ function posePlacement(e: PointerEvent) {
   shape.quaternion.copy(q);
   shape.visible = true;
   state.pendingPose = {pos, q, parent, attachment};
-  placementHint(placementSubject());
+  const target = state.parts.find(p => p.id === parent);
+  const sizeLabel =
+    target &&
+    state.placing &&
+    attachment.mode === 'node' &&
+    attachment.parentNode !== undefined &&
+    attachment.ownNode !== undefined
+      ? attachmentSizeLabel(target.type, attachment.parentNode, state.placing, attachment.ownNode)
+      : '';
+  placementHint(placementSubject() + (sizeLabel ? ' · ' + sizeLabel : ''));
 }
 function place() {
   if (!state.pendingPose) return;
