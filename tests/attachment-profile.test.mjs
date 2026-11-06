@@ -78,3 +78,40 @@ test('catalog rejects malformed diameters and ambiguous node ordering', () => {
     );
   }
 });
+
+test('rectangular frame interfaces retain shape and scale rather than becoming circular diameters', () => {
+  assert.deepEqual(attachmentProfile('truss', 0), {mode: 'stack', shape: 'rectangle', width: 1, height: 1});
+  assert.deepEqual(attachmentProfile('marineFrame', 1), {
+    mode: 'stack',
+    shape: 'rectangle',
+    width: 4,
+    height: 4
+  });
+  assert.deepEqual(attachmentProfile('enginePylon', 0), {
+    mode: 'stack',
+    shape: 'rectangle',
+    width: 1.5,
+    height: 1.5
+  });
+  assert.equal(attachmentFit('truss', 0, 'truss', 1), 'matched');
+  assert.equal(attachmentFit('truss', 0, 'marineFrame', 1), 'different-size');
+  assert.equal(attachmentFit('truss', 0, 'tank', 1), 'different-shape');
+  assert.equal(attachmentFit('truss', 2, 'tank', 1), 'unspecified');
+  for (const stackRectangles of [
+    [
+      [0, 1],
+      [1, 1]
+    ],
+    [[1, NaN], null],
+    [[1, 1]],
+    [[1], null]
+  ])
+    assert.ok(
+      catalogContractErrors({bad: {...PARTS.truss, stackRectangles}}).some(e => e.includes('stackRectangles'))
+    );
+  assert.ok(
+    catalogContractErrors({bad: {...PARTS.truss, stackDiameters: [1, 1]}}).some(e =>
+      e.includes('stackRectangles')
+    )
+  );
+});

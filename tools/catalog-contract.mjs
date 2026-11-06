@@ -90,6 +90,21 @@ export function catalogContractErrors(parts) {
       )
         fail('surfaceMount');
     }
+    if (part.stackRectangles !== undefined) {
+      const ends = part.stackRectangles;
+      if (
+        !Array.isArray(ends) ||
+        ends.length !== 2 ||
+        ends.some(
+          end =>
+            end !== null &&
+            (!Array.isArray(end) || end.length !== 2 || end.some(v => !Number.isFinite(v) || v <= 0))
+        )
+      )
+        fail('stackRectangles');
+      if (part.stackDiameters || part.rootWing || part.attachmentNodes)
+        fail('stackRectangles requires unambiguous standard axial nodes');
+    }
   }
   return errors;
 }

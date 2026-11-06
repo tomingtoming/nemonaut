@@ -1,16 +1,21 @@
 import {PARTS, nodes, type PartType} from './catalog.js';
 
-export interface AttachmentProfile {
-  mode: 'stack';
-  shape: 'circle';
-  diameter: number;
-}
+export type AttachmentProfile =
+  | {
+      mode: 'stack';
+      shape: 'circle';
+      diameter: number;
+    }
+  | {mode: 'stack'; shape: 'rectangle'; width: number; height: number};
 
 /** Author-declared interface, not an estimate from the mesh envelope. */
 export function attachmentProfile(type: PartType, node: number): AttachmentProfile | null {
   if (!Number.isInteger(node) || !nodes(type)[node]) throw Error('接続点の番号が不正です');
+  if (node !== 0 && node !== 1) return null;
+  const rectangle = PARTS[type].stackRectangles?.[node];
+  if (rectangle) return {mode: 'stack', shape: 'rectangle', width: rectangle[0], height: rectangle[1]};
   const diameters = PARTS[type].stackDiameters;
-  if (!diameters || (node !== 0 && node !== 1)) return null;
+  if (!diameters) return null;
   const diameter = diameters[node];
   return diameter === null ? null : {mode: 'stack', shape: 'circle', diameter};
 }
@@ -23,9 +28,14 @@ export function attachmentFit(
   parentNode: number,
   ownType: PartType,
   ownNode: number
-): 'matched' | 'different-size' | 'unspecified' {
+): 'matched' | 'different-size' | 'different-shape' | 'unspecified' {
   const a = attachmentProfile(parentType, parentNode),
     b = attachmentProfile(ownType, ownNode);
   if (!a || !b) return 'unspecified';
-  return Math.abs(a.diameter - b.diameter) <= 1e-6 ? 'matched' : 'different-size';
+  const close = (x: number, y: number) => Math.abs(x - y) <= 1e-6;
+  if (a.shape === 'circle' && b.shape === 'circle')
+    return close(a.diameter, b.diameter) ? 'matched' : 'different-size';
+  if (a.shape === 'rectangle' && b.shape === 'rectangle')
+    return close(a.width, b.width) && close(a.height, b.height) ? 'matched' : 'different-size';
+  return 'different-shape';
 }

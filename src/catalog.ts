@@ -69,6 +69,8 @@ export type PartDefinition = {
   surfaceMount?: AttachmentNode;
   /** Circular stack interfaces at node 0 (+Y) and node 1 (-Y), in metres; null and other nodes remain unspecified. */
   stackDiameters?: readonly [number | null, number | null];
+  /** Rectangular +Y/-Y interfaces, local X/Z extents in metres. Mutually exclusive with diameters. */
+  stackRectangles?: readonly [readonly [number, number] | null, readonly [number, number] | null];
   cargoBay?: {wall: number};
   heatCapacity?: number;
   emissivity?: number;
@@ -436,6 +438,10 @@ const BASE_PARTS = {
     desc: 'ステージ実行時、この部品から先の接続枝を分離。'
   },
   truss: {
+    stackRectangles: [
+      [1, 1],
+      [1, 1]
+    ],
     name: '構造フレーム',
     code: 'TR-1',
     cat: '構造',
