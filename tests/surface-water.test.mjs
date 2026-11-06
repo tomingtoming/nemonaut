@@ -14,8 +14,41 @@ import {
   surfaceRelativeVelocity
 } from '../dist/surface-frame.js';
 import {vesselControls} from '../dist/vessel-controls.js';
+import {saveFlight, loadFlight} from '../dist/flight-save.js';
 
 const AIR = 1.225;
+for (const epoch of [0, 371, 5000])
+  test(`powered water taxi and save restoration at epoch ${epoch}`, () => {
+    const parts = preset('plane').filter(p => !['nosegear', 'maingear'].includes(p.type));
+    parts.find(p => p.type === 'jet').p[1] = 0.8;
+    for (const x of [-1.4, 1.4])
+      for (const z of [-1.2, 2]) {
+        const float = part('pontoon', [x, -0.3, z], [Math.PI / 2, 0, 0]);
+        float.parent = parts[1].id;
+        parts.push(float);
+      }
+    const original = new Flight(parts, 'water', epoch);
+    let restored;
+    try {
+      original.stageNext();
+      original.throttle = 1;
+      run(original, 30);
+      restored = loadFlight(saveFlight(original));
+      assert.equal(restored.throttle, 1);
+      assert.deepEqual([...restored.fuel], [...original.fuel]);
+      const fuelBefore = [...restored.fuel.values()].reduce((a, b) => a + b, 0);
+      run(restored, 30);
+      assert.equal(restored.failureEvents?.length || 0, 0);
+      assert.equal(restored.crashed, false);
+      assert.equal(restored.telemetry.groundContact, false);
+      assert.ok(waterSpeed(restored) > 35 && waterSpeed(restored) < 45);
+      assert.ok(Math.abs(bodyAltitude(restored.pos, restored.universalTime)) < 1);
+      assert.ok([...restored.fuel.values()].reduce((a, b) => a + b, 0) < fuelBefore);
+    } finally {
+      restored?.dispose();
+      original.dispose();
+    }
+  });
 const run = (f, seconds, input = {}) => {
   for (let i = 0; i < seconds * 120; i++) f.step(1 / 120, input);
 };

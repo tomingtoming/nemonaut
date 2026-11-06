@@ -1047,8 +1047,11 @@ export class Flight {
     this.lastThrust = 0;
     // Every surface feels water for the part of it that is submerged (BACKLOG 9b): fins, rudders and wings
     // alike, with the flow relative to the water at rest on the surface.
-    const surfaceSubmersion = (p: FlightPart, point: T.Vector3) =>
-      waterAt(point) ? submergedFraction(altitude(point), extentY(p, this.q)) : 0;
+    const surfaceSubmersion = (p: FlightPart, point: T.Vector3) => {
+      if (!waterAt(point)) return 0;
+      const level = new T.Quaternion().setFromUnitVectors(localUp(point), up).multiply(this.q);
+      return submergedFraction(altitude(point), extentY(p, level));
+    };
     // Retracted gear neither touches the ground nor shares the load (BACKLOG 9c).
     const onWheels = (p: FlightPart) => !!PARTS[p.type].wheel && !gearRetracted(p, this.gearDeployed),
       wheelCount = this.parts.filter(onWheels).length,
