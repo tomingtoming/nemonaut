@@ -1,3 +1,4 @@
+import {showBrakeState} from './flight-controls.js';
 import {keyAxis, pitchKeys, yawKeys} from './flight-keyboard.js';
 import {overWater} from './surface-frame.js';
 import {manualTranslation} from './flight-input.js';
@@ -140,8 +141,7 @@ export function startFrameLoop(
               } else {
                 const ids = new Set(piloted.parts.map(p => p.id));
                 state.launchPilot.update(piloted);
-                $('#brake', 'button').classList.toggle('active', piloted.brake);
-                $('#brake', 'button').textContent = 'BRAKE ' + (piloted.brake ? 'ON' : 'OFF');
+                showBrakeState($('#brake', 'button'), piloted.brake);
                 $('#sas', 'button').classList.toggle('active', piloted.sas);
                 $('#sas', 'button').textContent = 'SAS ' + (piloted.sas ? 'ON' : 'OFF');
                 for (const id of ids)
@@ -160,8 +160,7 @@ export function startFrameLoop(
               pitch = keyAxis(keys, pitchKeys);
             // W/S with the brake on drives powered wheels off at once (BACKLOG 9a).
             if (releaseBrakeForDrive(stepped, pitch)) {
-              $('#brake', 'button').classList.remove('active');
-              $('#brake', 'button').textContent = 'BRAKE OFF';
+              showBrakeState($('#brake', 'button'), stepped.brake);
               notify('ブレーキを解除しました');
             }
             world.replace(stepped);

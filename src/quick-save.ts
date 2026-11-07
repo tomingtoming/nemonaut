@@ -1,3 +1,4 @@
+import {showBrakeState} from './flight-controls.js';
 // Quick save and restore of the current flight (BACKLOG 7c, moved from app.ts unchanged): the practice
 // session's temporary save, the browser save slot, and restoring a saved flight with its controls and
 // autopilot. No import-time side effects (the storage key is a constant string); app.ts calls wireQuickSave.
@@ -114,8 +115,7 @@ export function restoreFlight(data: SavedFlight) {
     $('#trimVal', 'b').textContent = Math.round(restoredFlight.trim * 100) + '%';
     $('#sas', 'button').textContent = 'SAS ' + (restoredFlight.sas ? 'ON' : 'OFF');
     $('#sas', 'button').classList.toggle('active', restoredFlight.sas);
-    $('#brake', 'button').textContent = 'BRAKE ' + (restoredFlight.brake ? 'ON' : 'OFF');
-    $('#brake', 'button').classList.toggle('active', restoredFlight.brake);
+    showBrakeState($('#brake', 'button'), restoredFlight.brake);
     if (pilot) {
       state.launchPilot = pilot.kind === 'return' ? new ReturnPilot() : new LaunchPilot();
       state.launchPilot.done = pilot.done;

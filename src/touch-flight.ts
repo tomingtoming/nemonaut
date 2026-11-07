@@ -1,4 +1,4 @@
-import {pitchKeys, yawKeys} from './flight-keyboard.js';
+import {landingGear, pitchKeys, yawKeys} from './flight-keyboard.js';
 // Flight controls for touch devices (BACKLOG 8b): a virtual stick (W/S, A/D), roll (Q/E), full throttle /
 // cut (Z/X), stage (Space) and RCS translation (I/K, J/L, U/O). They feed the keyboard's own path: every
 // press and release is dispatched to window as the equivalent KeyboardEvent, so the held-key set, its gates
@@ -75,7 +75,7 @@ const BUTTONS: readonly (readonly [
   ['KeyX', '推力0', 'スロットル停止', 'main'],
   ['Space', '次段', '点火 / 次段', 'main'],
   // Landing gear (BACKLOG 9c): shown only on a vessel with retractable gear; the label follows the gear.
-  ['KeyG', 'ギア上げ', 'ランディングギアの出し入れ', 'main'],
+  [landingGear.code, 'ギア上げ', 'ランディングギアの出し入れ', 'main'],
   ['KeyU', '上へ', 'RCS 上へ並進', 'rcs'],
   ['KeyI', '前へ', 'RCS 前へ並進', 'rcs'],
   ['KeyO', '下へ', 'RCS 下へ並進', 'rcs'],
@@ -159,7 +159,7 @@ export function mountTouchFlight(hud: HTMLElement, body: HTMLElement = document.
       button.addEventListener(type, releasePointer);
     groups[group].append(button);
   }
-  const gearButton = groups.main.querySelector('[data-code="KeyG"]');
+  const gearButton = groups.main.querySelector(`[data-code="${landingGear.code}"]`);
   if (gearButton instanceof HTMLButtonElement) gearButton.hidden = true;
   let stickPointer: number | null = null;
   const moveStick = (e: PointerEvent) => {

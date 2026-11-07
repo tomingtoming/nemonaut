@@ -4,7 +4,7 @@
 // through the fleet and does not notify). Calls up into app.ts through app-hooks. No import-time side effects.
 import * as T from 'three';
 import {createEnginePlume} from './engine-plume.js';
-import {updateFlightControls} from './flight-controls.js';
+import {showBrakeState, updateFlightControls} from './flight-controls.js';
 import {WorldRuntime} from './world-runtime.js';
 import {selectVessel, canControl} from './fleet.js';
 import {PARTS} from './catalog.js';
@@ -102,8 +102,7 @@ export function startFlight(restored: Flight | null = null) {
   $('#trimVal', 'b').textContent = '0%';
   $('#sas', 'button').classList.add('active');
   $('#sas', 'button').textContent = 'SAS ON';
-  $('#brake', 'button').classList.add('active');
-  $('#brake', 'button').textContent = 'BRAKE ON';
+  showBrakeState($('#brake', 'button'), state.flight.brake);
   controls.maxDistance = 2000000;
   $('#warp', 'select').value = '1';
   $('#warpStatus', 'small').textContent = '通常速度 · 1倍';
@@ -147,8 +146,7 @@ export function syncFlightControls() {
   $('#trimVal', 'b').textContent = Math.round(fl.trim * 100) + '%';
   $('#sas', 'button').textContent = 'SAS ' + (fl.sas ? 'ON' : 'OFF');
   $('#sas', 'button').classList.toggle('active', fl.sas);
-  $('#brake', 'button').textContent = 'BRAKE ' + (fl.brake ? 'ON' : 'OFF');
-  $('#brake', 'button').classList.toggle('active', fl.brake);
+  showBrakeState($('#brake', 'button'), fl.brake);
   updateInfo();
   updateNavigation();
   updateOrbit();
@@ -248,8 +246,7 @@ export function stage() {
     `ステージ ${String(state.flight.stage).padStart(2, '0')} 実行${removed.size ? ' / ' + removed.size + ' 部品分離' : ''}` +
       (hint ? ' · ' + hint : '')
   );
-  $('#brake', 'button').classList.toggle('active', state.flight.brake);
-  $('#brake', 'button').textContent = 'BRAKE ' + (state.flight.brake ? 'ON' : 'OFF');
+  showBrakeState($('#brake', 'button'), state.flight.brake);
 }
 export function refreshDockedFlight(next: Flight) {
   const blueprint = state.parts;

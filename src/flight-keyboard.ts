@@ -1,3 +1,5 @@
+export const wheelBrake = {code: 'KeyB', button: 'brake', action: 'ブレーキ'} as const;
+export const landingGear = {code: 'KeyG', button: 'gear', action: 'ギアの出し入れ'} as const;
 // W/S and A/D feed both attitude and wheel commands. Equipment switches gate the actuators downstream.
 export const pitchKeys = ['KeyW', 'KeyS'] as const;
 export const yawKeys = ['KeyA', 'KeyD'] as const;
@@ -25,10 +27,10 @@ const flightKeys = new Set([
   'KeyM',
   'KeyR',
   'KeyH',
-  'KeyB',
+  wheelBrake.code,
   'KeyT',
   'KeyF',
-  'KeyG',
+  landingGear.code,
   'KeyV',
   'CapsLock',
   'ShiftLeft',

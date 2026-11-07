@@ -32,6 +32,11 @@ export interface FlightControlsVessel extends ControllableVessel {
   driveEnabled: boolean;
   gearDeployed: boolean;
 }
+export function showBrakeState(button: HTMLButtonElement, engaged: boolean): void {
+  button.textContent = engaged ? 'BRAKE ON' : 'BRAKE OFF';
+  button.classList.toggle('active', engaged);
+  button.setAttribute('aria-pressed', String(engaged));
+}
 export function updateFlightControls(
   root: ParentNode,
   flight: FlightControlsVessel | null | undefined
@@ -57,6 +62,7 @@ export function updateFlightControls(
   // The gear switch (BACKLOG 9c) shows only on a vessel with retractable gear, lit while the gear is down.
   const gear = element(root, '#gear', 'button');
   gear.hidden = !hasRetractableGear(parts);
+  gear.disabled = !controllable || gear.hidden;
   gear.className = flight.gearDeployed ? 'active' : '';
   gear.textContent = flight.gearDeployed ? 'GEAR DOWN' : 'GEAR UP';
 }

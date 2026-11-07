@@ -1,4 +1,4 @@
-import {axisLabel, pitchKeys, yawKeys} from './flight-keyboard.js';
+import {landingGear, wheelBrake, axisLabel, pitchKeys, yawKeys} from './flight-keyboard.js';
 // The controls this vessel can use (BACKLOG 9a). Craft are not classified as rocket / rover / plane / sub:
 // every row comes from the parts present (powered wheels, steerable wheels, engines, screws, control
 // surfaces, reaction wheels, RCS, parachutes, docking ports), so a plane with powered wheels gets the drive
@@ -71,9 +71,13 @@ export function vesselControls(
     if (steerable) rows.push({action: '曲がる', how: touch ? stick + 'を左右' : axisLabel(yawKeys)});
   } else if (steerable)
     rows.push({action: '地上で曲がる', how: touch ? stick + 'を左右' : axisLabel(yawKeys)});
-  if (has(d => d.wheel)) rows.push({action: 'ブレーキ', how: touch ? '「BRAKE」ボタン' : 'B'});
+  if (has(d => d.wheel))
+    rows.push({action: wheelBrake.action, how: touch ? '「BRAKE」ボタン' : wheelBrake.code.slice(3)});
   if (hasRetractableGear(parts))
-    rows.push({action: 'ギアの出し入れ', how: touch ? '「ギア上げ / 下げ」ボタン' : 'G'});
+    rows.push({
+      action: landingGear.action,
+      how: touch ? '「ギア上げ / 下げ」ボタン' : landingGear.code.slice(3)
+    });
   const air = has(d => d.thrust && d.thrustMedium !== 'water'),
     water = has(d => d.thrust && d.thrustMedium === 'water');
   if (air || water) {

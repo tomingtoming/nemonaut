@@ -2,7 +2,7 @@
 // save/load, and the arrow keys that orbit the camera. No import-time side effects except creating the held
 // arrow set; app.ts calls wireKeyboard and wireCameraKeys at the original places (the docking autopilot's
 // capture listener is registered between them by initDockingUi).
-import {acceptsFlightKey} from './flight-keyboard.js';
+import {landingGear, wheelBrake, acceptsFlightKey} from './flight-keyboard.js';
 import {canControl} from './fleet.js';
 import {state} from './app-state.js';
 import {$} from './ui-common.js';
@@ -69,8 +69,8 @@ export function wireKeyboard() {
       if (e.code === 'KeyR') $('#rcsEnabled', 'input').click();
       if (e.code === 'KeyH') state.flight.armParachutes();
       if (e.code === 'Space') stage();
-      if (e.code === 'KeyB') $('#brake', 'button').click();
-      if (e.code === 'KeyG') $('#gear', 'button').click();
+      if (e.code === wheelBrake.code) $('#' + wheelBrake.button, 'button').click();
+      if (e.code === landingGear.code) $('#' + landingGear.button, 'button').click();
       if (e.code === 'KeyT') $('#sas', 'button').click();
       if (e.code === 'KeyX' || e.code === 'KeyZ') {
         state.launchPilot = null;

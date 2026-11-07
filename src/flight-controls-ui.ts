@@ -13,7 +13,7 @@ import {$, blurActive, notify} from './ui-common.js';
 import {stage} from './flight-lifecycle.js';
 import {updateNavigation, updateTransferGuide} from './flight-hud.js';
 import {setGear} from './landing-gear.js';
-import {updateFlightControls} from './flight-controls.js';
+import {showBrakeState, updateFlightControls} from './flight-controls.js';
 export function wireFlightControls() {
   for (const key of ['reactionEnabled', 'steeringEnabled', 'driveEnabled', 'rcsEnabled'] as const)
     $('#' + key, 'input').onchange = () => {
@@ -94,8 +94,7 @@ export function wireFlightControls() {
   $('#brake', 'button').onclick = () => {
     if (!state.flight) return;
     state.flight.brake = !state.flight.brake;
-    $('#brake', 'button').classList.toggle('active', state.flight.brake);
-    $('#brake', 'button').textContent = 'BRAKE ' + (state.flight.brake ? 'ON' : 'OFF');
+    showBrakeState($('#brake', 'button'), state.flight.brake);
   };
   // Landing gear up / down (BACKLOG 9c): G and the touch 「ギア」 button press this button.
   $('#gear', 'button').onclick = () => {
