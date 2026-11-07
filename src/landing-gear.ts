@@ -108,19 +108,24 @@ export interface GearPart {
   r: PartVector;
   parent?: string | null;
 }
+// The original 0.7 m wheels establish the proportions of the procedural support.
+export function gearStrutScale(type: string): number {
+  return PARTS[type].size[1] / 0.7;
+}
 /**
  * The top of the strut a wheel hangs from, in the craft frame: just under its parent's centre line, straight
  * above the wheel's fore-aft station. Null when the wheel has no parent or the strut would be too short or too
  * long to draw (the workshop and flight visuals then show no strut, part-visuals.ts).
  */
 export function gearStrutTop(
-  part: Pick<GearPart, 'p'>,
+  part: Pick<GearPart, 'p' | 'type'>,
   parent: Pick<GearPart, 'p'> | undefined
 ): T.Vector3 | null {
   if (!parent) return null;
-  const top = new T.Vector3(parent.p[0], parent.p[1] - 0.25, part.p[2]),
+  const scale = gearStrutScale(part.type),
+    top = new T.Vector3(parent.p[0], parent.p[1] - 0.25 * scale, part.p[2]),
     length = top.distanceTo(new T.Vector3(...part.p));
-  return length > 0.2 && length < 3 ? top : null;
+  return length > 0.2 * scale && length < 3 * scale ? top : null;
 }
 /** The fold pivot of a gear visual in the part's own axes: the strut's top, or else the top of the wheel. */
 export function gearFoldPivot(part: GearPart, parent: Pick<GearPart, 'p'> | undefined): T.Vector3 {

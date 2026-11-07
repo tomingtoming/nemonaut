@@ -12,7 +12,14 @@ import {sceneCore, editorMarkers, objects, partObject} from './scene.js';
 import {assetModel} from './asset-loader.js';
 import {engineMaxThrust} from './resources.js';
 import {screwRotor, screwSpinStep, screwSpinTarget} from './screw-spin.js';
-import {gearFold, gearFoldPivot, gearStrutTop, gearTravel, isRetractable} from './landing-gear.js';
+import {
+  gearFold,
+  gearFoldPivot,
+  gearStrutScale,
+  gearStrutTop,
+  gearTravel,
+  isRetractable
+} from './landing-gear.js';
 export function cloneModel(type: string) {
   const model = assetModel(type).clone(true);
   model.traverse(m => {
@@ -162,7 +169,8 @@ export function rebuildCraft() {
         mount = cloneModel('truss');
       mount.position.copy(from).add(to).multiplyScalar(0.5);
       mount.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), delta.clone().normalize());
-      mount.scale.set(0.12, delta.length(), 0.12);
+      const width = 0.12 * gearStrutScale(p.type);
+      mount.scale.set(width, delta.length(), width);
       craftRoot.add(mount);
       const fold = wheel.userData.gearFold,
         inner = wheel.userData.gearInner;

@@ -8,6 +8,8 @@ import {angularMomentum} from '../dist/angular-momentum.js';
 import {preset, PARTS} from '../dist/catalog.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 import {
+  gearFoldPivot,
+  gearStrutTop,
   isRetractable,
   hasRetractableGear,
   gearRetracted,
@@ -332,4 +334,23 @@ test('the flag is per vessel: a separated stage keeps the gear state it had, the
   } finally {
     f.dispose();
   }
+});
+
+test('the heavy transport supports every wheel and folds around the mounted end', () => {
+  const craft = preset('transport');
+  const wheels = craft.filter(p => PARTS[p.type].wheel);
+  assert.equal(wheels.length, 32);
+  for (const p of wheels) {
+    const parent = craft.find(q => q.id === p.parent);
+    const top = gearStrutTop(p, parent);
+    assert.ok(top);
+    const pivot = gearFoldPivot(p, parent)
+      .applyEuler(new T.Euler(...p.r))
+      .add(new T.Vector3(...p.p));
+    assert.ok(pivot.distanceTo(top) < 1e-9);
+    const small = {type: 'maingear', p: p.p.map(x => x / 3)};
+    const smallTop = gearStrutTop(small, {p: parent.p.map(x => x / 3)});
+    assert.ok(smallTop.multiplyScalar(3).distanceTo(top) < 1e-9);
+  }
+  assert.equal(gearStrutTop({type: 'maingearLarge', p: [12, 0, 0]}, {p: [0, 0, 0]}), null);
 });
