@@ -4,7 +4,6 @@
 import {storageKey} from './app-id.js';
 import {needsPhysicsMigration, physicsMigrationMessage} from './physics-migration.js';
 import {worldFromFlight} from './world-save.js';
-import {validateCraft, type FlightPart} from './core.js';
 import {saveFlight, loadFlight, type SavedFlight} from './flight-save.js';
 import {ReturnPilot} from './return-pilot.js';
 import {LaunchPilot} from './launch-pilot.js';
@@ -37,7 +36,6 @@ export function quickSave() {
       flightSaveKey,
       JSON.stringify(
         saveFlight(state.flight, {
-          blueprint: state.parts.length ? state.parts : state.flight.parts,
           name: state.flight.vesselName || state.activeFlightName || $('#craftName', 'input').value,
           pilot,
           worldHistory: state.parkedWorld?.history ?? []
@@ -66,9 +64,6 @@ export function quickLoad() {
     notify(errorMessage(e));
   }
 }
-function isPartList(value: unknown): value is FlightPart[] {
-  return Array.isArray(value);
-}
 function isSavedPilot(
   value: unknown
 ): value is {kind: 'return' | 'launch'; done: boolean; released: boolean} {
@@ -92,8 +87,6 @@ export function restoreFlight(data: SavedFlight) {
   };
   let restored;
   try {
-    const blueprint = data.meta?.blueprint;
-    validateCraft({version: 1, parts: isPartList(blueprint) ? blueprint : blueprint ? [] : data.parts});
     const rawPilot = data.meta?.pilot,
       pilot = isSavedPilot(rawPilot) ? rawPilot : undefined;
     if (rawPilot && !pilot) throw Error('自動実演の保存形式が不正です');

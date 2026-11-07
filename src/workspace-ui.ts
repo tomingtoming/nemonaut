@@ -27,7 +27,6 @@ export function flightRecord() {
         }
       : null;
   return saveFlight(recorded, {
-    blueprint: state.parts.length ? state.parts : recorded.parts,
     name: recorded.vesselName || state.activeFlightName || $('#craftName', 'input').value,
     pilot,
     worldHistory: state.parkedWorld?.history ?? []
