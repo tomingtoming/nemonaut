@@ -1,8 +1,16 @@
+// W/S and A/D feed both attitude and wheel commands. Equipment switches gate the actuators downstream.
+export const pitchKeys = ['KeyW', 'KeyS'] as const;
+export const yawKeys = ['KeyA', 'KeyD'] as const;
+type AxisKeys = readonly [string, string];
+export function keyAxis(held: ReadonlySet<string>, [positive, negative]: AxisKeys): number {
+  return Number(held.has(positive)) - Number(held.has(negative));
+}
+export function axisLabel(pair: AxisKeys, separator = ' / '): string {
+  return pair.map(code => code.slice(3)).join(separator);
+}
 const flightKeys = new Set([
-  'KeyW',
-  'KeyA',
-  'KeyS',
-  'KeyD',
+  ...pitchKeys,
+  ...yawKeys,
   'KeyQ',
   'KeyE',
   'KeyI',

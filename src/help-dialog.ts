@@ -1,3 +1,4 @@
+import {axisLabel, pitchKeys, yawKeys} from './flight-keyboard.js';
 // 「? 操作」 (BACKLOG 9a): the full list of keys for the workshop and for flight in the #modal dialog, with
 // the touch gestures and on-screen buttons instead on a touch device. The part-dependent subset is in
 // 「この機体で使える操作」 (vessel-controls-panel.ts). Static text only; no import-time side effects.
@@ -17,13 +18,19 @@ const WORKSHOP_KEYS: Rows = [
   ['矢印キー', '視点を回す']
 ];
 const FLIGHT_KEYS: Rows = [
-  ['W / S · A / D', '動力付きの車輪で前後・操舵（Spaceは要らない。ブレーキは自動で解除）'],
+  [
+    `${axisLabel(pitchKeys)} · ${axisLabel(yawKeys)}`,
+    '動力付きの車輪で前後・操舵（Spaceは要らない。ブレーキは自動で解除）'
+  ],
   ['B', 'ブレーキ'],
   ['G', 'ランディングギアの出し入れ（接地中は格納できない）'],
   ['Space', 'エンジン始動 / 次段'],
   ['Z / X', '全推力 / 推力0'],
   ['Shift / Ctrl', '推力を上げる / 下げる'],
-  ['W/S · A/D · Q/E', 'ピッチ · ヨー · ロール（姿勢制御・操舵面）'],
+  [
+    `${axisLabel(pitchKeys, '/')} · ${axisLabel(yawKeys, '/')} · Q/E`,
+    'ピッチ · ヨー · ロール（姿勢制御・操舵面）'
+  ],
   ['T', 'SAS（姿勢保持）'],
   ['R', 'RCS 入 / 切'],
   ['I/K · J/L · U/O', 'RCSで平行移動'],

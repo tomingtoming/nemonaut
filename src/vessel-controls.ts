@@ -1,3 +1,4 @@
+import {axisLabel, pitchKeys, yawKeys} from './flight-keyboard.js';
 // The controls this vessel can use (BACKLOG 9a). Craft are not classified as rocket / rover / plane / sub:
 // every row comes from the parts present (powered wheels, steerable wheels, engines, screws, control
 // surfaces, reaction wheels, RCS, parachutes, docking ports), so a plane with powered wheels gets the drive
@@ -11,7 +12,7 @@ export interface ControlRow {
   action: string;
   how: string;
 }
-type VesselParts = readonly Pick<Part, 'type' | 'stage' | 'driveEnabled'>[];
+type VesselParts = readonly Pick<Part, 'type' | 'stage' | 'driveEnabled' | 'steeringEnabled'>[];
 
 /** A wheel with a motor capability and its own drive switch not off. */
 export function hasPoweredWheel(parts: VesselParts): boolean {
@@ -49,24 +50,27 @@ export interface ControlOptions {
   touch?: boolean;
   /** The current stage (Flight.stage; -1 before the first). */
   stage?: number;
+  driveEnabled?: boolean;
+  steeringEnabled?: boolean;
 }
 /** The rows of 「この機体で使える操作」 for the parts present. */
 export function vesselControls(
   parts: VesselParts,
-  {touch = false, stage = -1}: ControlOptions = {}
+  {touch = false, stage = -1, driveEnabled = true, steeringEnabled = true}: ControlOptions = {}
 ): ControlRow[] {
   const has = (test: (d: (typeof PARTS)[string]) => unknown) => parts.some(p => test(PARTS[p.type])),
     rows: ControlRow[] = [],
-    powered = hasPoweredWheel(parts),
+    powered = driveEnabled && hasPoweredWheel(parts),
+    steerable = steeringEnabled && parts.some(p => PARTS[p.type].steer && p.steeringEnabled !== false),
     // The touch stick is captioned 走行 whenever a drive wheel is fitted (touch-flight.ts).
     stick = parts.some(p => PARTS[p.type].poweredWheel === true)
       ? '「走行」スティック'
       : '「姿勢」スティック';
   if (powered) {
-    rows.push({action: '前後に走る', how: touch ? stick + 'を上下' : 'W / S'});
-    if (has(d => d.steer)) rows.push({action: '曲がる', how: touch ? stick + 'を左右' : 'A / D'});
-  } else if (has(d => d.wheel && d.steer))
-    rows.push({action: '地上で曲がる', how: touch ? stick + 'を左右' : 'A / D'});
+    rows.push({action: '前後に走る', how: touch ? stick + 'を上下' : axisLabel(pitchKeys)});
+    if (steerable) rows.push({action: '曲がる', how: touch ? stick + 'を左右' : axisLabel(yawKeys)});
+  } else if (steerable)
+    rows.push({action: '地上で曲がる', how: touch ? stick + 'を左右' : axisLabel(yawKeys)});
   if (has(d => d.wheel)) rows.push({action: 'ブレーキ', how: touch ? '「BRAKE」ボタン' : 'B'});
   if (hasRetractableGear(parts))
     rows.push({action: 'ギアの出し入れ', how: touch ? '「ギア上げ / 下げ」ボタン' : 'G'});
@@ -88,7 +92,7 @@ export function vesselControls(
   if (has(d => d.reactionTorque || d.controlAxis || d.gimbal) || rcs) {
     rows.push({
       action: powered ? '向きを変える（走行と共通）' : '向きを変える',
-      how: touch ? stick + '・↺↻' : 'W/S · A/D · Q/E'
+      how: touch ? stick + '・↺↻' : `${axisLabel(pitchKeys, '/')} · ${axisLabel(yawKeys, '/')} · Q/E`
     });
     rows.push({action: '姿勢保持（SAS）', how: touch ? '「SAS」ボタン' : 'T'});
   }
@@ -111,13 +115,13 @@ export function vesselControls(
 }
 
 /** The launch toast: how this vessel starts, from its parts (empty when the panel says it all). */
-export function launchHint(parts: VesselParts, touch = false): string {
-  const powered = hasPoweredWheel(parts),
+export function launchHint(parts: VesselParts, touch = false, driveEnabled = true): string {
+  const powered = driveEnabled && hasPoweredWheel(parts),
     engine = parts.some(p => PARTS[p.type].thrust);
   const drive = powered
       ? touch
         ? '「走行」スティックで走れます'
-        : 'W/Sで走れます（ブレーキは自動で解除）'
+        : `${axisLabel(pitchKeys, '/')}で走れます（ブレーキは自動で解除）`
       : '',
     start = engine ? (touch ? '「次段」でエンジン始動' : 'Spaceでエンジン始動') : '';
   return [drive, start].filter(Boolean).join(' · ');

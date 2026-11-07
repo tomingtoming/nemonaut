@@ -1,9 +1,10 @@
+import {axisLabel, pitchKeys, yawKeys} from './flight-keyboard.js';
 import {PARTS, type Part} from './catalog.js';
 // These per-part switches also have an independent vessel-wide master switch.
 export const equipmentSwitches = [
   {key: 'reactionEnabled', capability: 'reactionTorque', label: 'リアクションホイール', keys: ''},
-  {key: 'steeringEnabled', capability: 'steer', label: '車輪操舵', keys: 'A/D'},
-  {key: 'driveEnabled', capability: 'poweredWheel', label: '車輪駆動', keys: 'W/S'}
+  {key: 'steeringEnabled', capability: 'steer', label: '車輪操舵', keys: axisLabel(yawKeys, '/')},
+  {key: 'driveEnabled', capability: 'poweredWheel', label: '車輪駆動', keys: axisLabel(pitchKeys, '/')}
 ] as const;
 type EquipmentKey = (typeof equipmentSwitches)[number]['key'];
 export function isEquipmentKey(key: string): key is EquipmentKey {

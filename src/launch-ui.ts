@@ -105,7 +105,11 @@ export function launchAdditional(design: PracticeDesign & {bay?: string}) {
       const departure = launchedWorld.history.at(-1);
       if (!departure) throw Error('出発の記録がありません');
       // How this craft starts, from its parts (BACKLOG 9a); the full list is in the controls panel.
-      const hint = launchHint(currentFlight().parts, document.body.classList.contains('touch'));
+      const hint = launchHint(
+        currentFlight().parts,
+        document.body.classList.contains('touch'),
+        currentFlight().driveEnabled
+      );
       notify(
         historyActionLabel(departure) +
           ' · 他の機体 ' +

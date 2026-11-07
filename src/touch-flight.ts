@@ -1,3 +1,4 @@
+import {pitchKeys, yawKeys} from './flight-keyboard.js';
 // Flight controls for touch devices (BACKLOG 8b): a virtual stick (W/S, A/D), roll (Q/E), full throttle /
 // cut (Z/X), stage (Space) and RCS translation (I/K, J/L, U/O). They feed the keyboard's own path: every
 // press and release is dispatched to window as the equivalent KeyboardEvent, so the held-key set, its gates
@@ -20,10 +21,10 @@ export function stickVector(dx: number, dy: number, radius: number): {x: number;
 /** The held keys for a stick vector: up W, down S, left A, right D; each axis past the threshold. */
 export function stickCodes({x, y}: {x: number; y: number}, threshold = 0.35): string[] {
   const codes: string[] = [];
-  if (y > threshold) codes.push('KeyW');
-  else if (y < -threshold) codes.push('KeyS');
-  if (x < -threshold) codes.push('KeyA');
-  else if (x > threshold) codes.push('KeyD');
+  if (y > threshold) codes.push(pitchKeys[0]);
+  else if (y < -threshold) codes.push(pitchKeys[1]);
+  if (x < -threshold) codes.push(yawKeys[0]);
+  else if (x > threshold) codes.push(yawKeys[1]);
   return codes;
 }
 export type KeyEmit = (type: 'keydown' | 'keyup', code: string, repeat: boolean) => void;

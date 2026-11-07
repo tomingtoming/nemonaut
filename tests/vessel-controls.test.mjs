@@ -166,3 +166,15 @@ test('motor capability follows the definition rather than the wheel type name', 
     PARTS.wheel = wheel;
   }
 });
+
+test('wheel help follows individual and vessel switches without hiding shared attitude input', () => {
+  const parts = preset('rover');
+  const active = (options = {}) => actions(vesselControls(parts, options));
+  assert.ok(active().includes('曲がる'));
+  assert.ok(!active({steeringEnabled: false}).includes('曲がる'));
+  assert.ok(active({driveEnabled: false}).includes('地上で曲がる'));
+  assert.ok(!active({driveEnabled: false}).includes('前後に走る'));
+  for (const p of parts) p.steeringEnabled = false;
+  assert.ok(!active().includes('曲がる'));
+  assert.ok(active().some(action => action.startsWith('向きを変える')));
+});

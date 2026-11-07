@@ -1,3 +1,4 @@
+import {keyAxis, pitchKeys, yawKeys} from './flight-keyboard.js';
 import {overWater} from './surface-frame.js';
 import {manualTranslation} from './flight-input.js';
 // The per-frame loop (BACKLOG 7c, moved from app.ts unchanged): audio, failure captions, the space center
@@ -155,9 +156,10 @@ export function startFrameLoop(
             const autopilotCommands = cruisePanel.step(currentFlight(), 1 / 120);
             const dockingCommands = dockingPilot.active ? dockingPilot.step(currentFlight(), 1 / 120) : {};
             const stepped = currentFlight(),
-              world = currentWorldRuntime();
+              world = currentWorldRuntime(),
+              pitch = keyAxis(keys, pitchKeys);
             // W/S with the brake on drives powered wheels off at once (BACKLOG 9a).
-            if (releaseBrakeForDrive(stepped, (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0))) {
+            if (releaseBrakeForDrive(stepped, pitch)) {
               $('#brake', 'button').classList.remove('active');
               $('#brake', 'button').textContent = 'BRAKE OFF';
               notify('ブレーキを解除しました');
@@ -171,9 +173,9 @@ export function startFrameLoop(
                 stepped.instrumentRotation
               ),
               precision: $('#precisionControl', 'button').getAttribute('aria-pressed') === 'true',
-              drive: (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0),
-              pitch: (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0),
-              yaw: (keys.has('KeyA') ? 1 : 0) - (keys.has('KeyD') ? 1 : 0),
+              drive: pitch,
+              pitch,
+              yaw: keyAxis(keys, yawKeys),
               roll: (keys.has('KeyQ') ? 1 : 0) - (keys.has('KeyE') ? 1 : 0),
               assemblyAttitude: autopilotCommands,
               ...dockingCommands

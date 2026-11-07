@@ -74,7 +74,9 @@ export function mountVesselControls(hud: HTMLElement, body: HTMLElement = docume
         touch,
         f.vesselId,
         f.stage,
-        f.parts.map(p => p.type + p.stage + (p.driveEnabled ?? '')).join()
+        f.driveEnabled,
+        f.steeringEnabled,
+        f.parts.map(p => p.type + p.stage + (p.driveEnabled ?? '') + ':' + (p.steeringEnabled ?? '')).join()
       ].join('|');
     if (!flying) {
       // A new flight: the viewer's last choice, else open on a desktop and collapsed on touch.
@@ -85,7 +87,12 @@ export function mountVesselControls(hud: HTMLElement, body: HTMLElement = docume
     if (key !== shown) {
       shown = key;
       list.replaceChildren(
-        ...vesselControls(f.parts, {touch, stage: f.stage}).flatMap(row => {
+        ...vesselControls(f.parts, {
+          touch,
+          stage: f.stage,
+          driveEnabled: f.driveEnabled,
+          steeringEnabled: f.steeringEnabled
+        }).flatMap(row => {
           const dt = document.createElement('dt'),
             dd = document.createElement('dd');
           dt.textContent = row.action;

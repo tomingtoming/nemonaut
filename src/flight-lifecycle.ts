@@ -130,8 +130,11 @@ export function startFlight(restored: Flight | null = null) {
         ? '月の高度20 km円軌道から開始。月基準の速度を表示します。'
         : state.flight.environment === 'orbit'
           ? '高度80 kmの初期円軌道から開始。無推力で周回します。'
-          : launchHint(state.flight.parts, document.body.classList.contains('touch')) ||
-            '使える操作は左の「この機体で使える操作」にあります'
+          : launchHint(
+              state.flight.parts,
+              document.body.classList.contains('touch'),
+              state.flight.driveEnabled
+            ) || '使える操作は左の「この機体で使える操作」にあります'
   );
 }
 export function syncFlightControls() {
