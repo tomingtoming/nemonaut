@@ -1,4 +1,14 @@
 import {PARTS, type Part} from './catalog.js';
+// These per-part switches also have an independent vessel-wide master switch.
+export const equipmentSwitches = [
+  {key: 'reactionEnabled', capability: 'reactionTorque', label: 'リアクションホイール', keys: ''},
+  {key: 'steeringEnabled', capability: 'steer', label: '車輪操舵', keys: 'A/D'},
+  {key: 'driveEnabled', capability: 'poweredWheel', label: '車輪駆動', keys: 'W/S'}
+] as const;
+type EquipmentKey = (typeof equipmentSwitches)[number]['key'];
+export function isEquipmentKey(key: string): key is EquipmentKey {
+  return equipmentSwitches.some(s => s.key === key);
+}
 export type PartToggleKey =
   | 'fuelEnabled'
   | 'fuelCrossfeed'
@@ -7,9 +17,7 @@ export type PartToggleKey =
   | 'controlPitch'
   | 'controlYaw'
   | 'controlRoll'
-  | 'reactionEnabled'
-  | 'steeringEnabled'
-  | 'driveEnabled';
+  | EquipmentKey;
 export type SettablePart = Part &
   Partial<Record<PartToggleKey, boolean>> & {thrustLimit?: number; fuelLoad?: number; controlLimit?: number};
 export type PartSettingRow =
@@ -25,9 +33,11 @@ export function partSettings(p: SettablePart): PartSettingRow[] {
     [d.controlAxis, 'controlPitch', 'ピッチ'],
     [d.controlAxis, 'controlYaw', 'ヨー'],
     [d.controlAxis, 'controlRoll', 'ロール'],
-    [d.reactionTorque, 'reactionEnabled', 'リアクションホイール'],
-    [d.steer, 'steeringEnabled', '車輪操舵'],
-    [PARTS[p.type].poweredWheel === true, 'driveEnabled', '車輪駆動']
+    ...equipmentSwitches.map(({capability, key, label}): [unknown, EquipmentKey, string] => [
+      d[capability],
+      key,
+      label
+    ])
   ];
   const rows: PartSettingRow[] = toggles
     .filter(([yes]) => yes)

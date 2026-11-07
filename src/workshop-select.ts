@@ -1,3 +1,4 @@
+import {equipmentSwitches, isEquipmentKey} from './part-settings.js';
 // Workshop selection and inspector (BACKLOG 7c, moved from app.ts unchanged): selecting a part, the edit
 // modes with the transform gizmo, the inspector with pose, stage and equipment settings (linked across a
 // symmetry group), deleting a branch. app.ts calls wireSelection at the original place. Calls up into app.ts
@@ -50,9 +51,6 @@ export function setMode(next: EditMode) {
   if (state.mode !== 'select') gizmo.setMode(state.mode);
   select(state.selected);
 }
-function isOperationKey(key: string): key is 'reactionEnabled' | 'steeringEnabled' | 'driveEnabled' {
-  return key === 'reactionEnabled' || key === 'steeringEnabled' || key === 'driveEnabled';
-}
 function renderInspector() {
   const {fuelOverlay} = workshopOverlays();
   fuelOverlay.clear();
@@ -79,17 +77,11 @@ function renderInspector() {
       })
       .filter(Boolean)
       .join(' · ');
-  root.innerHTML = `<div class="parttitle"><b>${d.name}</b><small>${d.code}</small></div><p class="desc">${d.desc}</p>${endLabels ? `<p class="muted" data-stack-diameters>${endLabels}</p>` : ''}<p class="muted">接続点：${openNodes} / ${nodes(p.type).length} 空き${connection ? ` · 親の点${connection.parentNode + 1} ↔ この点${connection.ownNode + 1}${fitLabel ? ` · ${fitLabel}` : ''}` : ''}</p>${group.length > 1 ? `<label class="field">対称 ${group.length} 部品を連動<input id="linkSymmetry" type="checkbox" ${state.linkSymmetry ? 'checked' : ''}></label><p class="muted">${hasSymmetryGeometry(state.parts, p.id) ? '位置・回転・作動段・装備設定を連動。子部品も追従します。' : 'この旧グループは作動段・装備設定のみ連動。位置・回転は個別です。'}</p>` : ''}${(
-    [
-      [d.reactionTorque, 'reactionEnabled', 'リアクションホイール'],
-      [d.steer, 'steeringEnabled', 'A/D 車輪操舵'],
-      [PARTS[p.type].poweredWheel === true, 'driveEnabled', 'W/S 車輪駆動']
-    ] as const
-  )
-    .filter(([available]) => available)
+  root.innerHTML = `<div class="parttitle"><b>${d.name}</b><small>${d.code}</small></div><p class="desc">${d.desc}</p>${endLabels ? `<p class="muted" data-stack-diameters>${endLabels}</p>` : ''}<p class="muted">接続点：${openNodes} / ${nodes(p.type).length} 空き${connection ? ` · 親の点${connection.parentNode + 1} ↔ この点${connection.ownNode + 1}${fitLabel ? ` · ${fitLabel}` : ''}` : ''}</p>${group.length > 1 ? `<label class="field">対称 ${group.length} 部品を連動<input id="linkSymmetry" type="checkbox" ${state.linkSymmetry ? 'checked' : ''}></label><p class="muted">${hasSymmetryGeometry(state.parts, p.id) ? '位置・回転・作動段・装備設定を連動。子部品も追従します。' : 'この旧グループは作動段・装備設定のみ連動。位置・回転は個別です。'}</p>` : ''}${equipmentSwitches
+    .filter(({capability}) => d[capability])
     .map(
-      ([, key, label]) =>
-        `<label class="field">${label}<input type="checkbox" data-operation="${key}" ${p[key] !== false ? 'checked' : ''}></label>`
+      ({key, label, keys}) =>
+        `<label class="field">${keys ? keys + ' ' : ''}${label}<input type="checkbox" data-operation="${key}" ${p[key] !== false ? 'checked' : ''}></label>`
     )
     .join(
       ''
@@ -118,7 +110,7 @@ function renderInspector() {
     };
   elements(root, '[data-operation]', 'input').forEach(el => {
     const operation = dataValue(el, 'operation');
-    if (!isOperationKey(operation)) throw Error('不明な装備設定です: ' + operation);
+    if (!isEquipmentKey(operation)) throw Error('不明な装備設定です: ' + operation);
     const targets = symmetryTargets(state.parts, p.id, state.linkSymmetry);
     el.indeterminate = targets.some(q => (q[operation] !== false) !== (p[operation] !== false));
     el.onchange = () => applySetting(operation, el.checked);

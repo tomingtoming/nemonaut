@@ -1,3 +1,4 @@
+import {equipmentSwitches} from './part-settings.js';
 import {PARTS} from './catalog.js';
 import {canControl, type ControllableVessel} from './fleet.js';
 import {element} from './dom.js';
@@ -41,9 +42,9 @@ export function updateFlightControls(
   for (const [id, tag] of commands) element(root, '#' + id, tag).disabled = !controllable;
   for (const [key, available] of [
     ['rcsEnabled', parts.some(p => PARTS[p.type].rcsThrust)],
-    ['reactionEnabled', parts.some(p => PARTS[p.type].reactionTorque)],
-    ['steeringEnabled', parts.some(p => PARTS[p.type].steer)],
-    ['driveEnabled', parts.some(p => PARTS[p.type].poweredWheel === true)]
+    ...equipmentSwitches.map(
+      ({key, capability}) => [key, parts.some(p => PARTS[p.type][capability])] as const
+    )
   ] as const) {
     const input = element(root, '#' + key, 'input');
     input.checked = flight[key];

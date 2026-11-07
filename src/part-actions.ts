@@ -1,7 +1,7 @@
 import {angularMomentum, angularVelocity} from './angular-momentum.js';
 import {engineMedium, type MediumFlight} from './engine-medium.js';
 import {usesTankPropellant, fuelNetworks, type FuelNetworks} from './resources.js';
-import {partSettings, type SettablePart, type PartToggleKey} from './part-settings.js';
+import {isEquipmentKey, partSettings, type SettablePart, type PartToggleKey} from './part-settings.js';
 import {PARTS} from './catalog.js';
 import {canControl} from './fleet.js';
 /** The flight fields the part action menu reads and changes. */
@@ -39,8 +39,6 @@ const TOGGLES: Readonly<Record<PartToggleKey | 'cargoOpen', true>> = {
   cargoOpen: true
 };
 const isToggleKey = (key: string): key is PartToggleKey | 'cargoOpen' => Object.hasOwn(TOGGLES, key);
-const isVesselToggle = (key: string): key is 'reactionEnabled' | 'steeringEnabled' | 'driveEnabled' =>
-  key === 'reactionEnabled' || key === 'steeringEnabled' || key === 'driveEnabled';
 const CHUTE_ACTIONS: Readonly<Record<string, import('./recovery.js').ChuteStatus | undefined>> = {
   arm: 'armed',
   disarm: 'stowed',
@@ -80,7 +78,7 @@ export function partActions(f: PartActionFlight | null | undefined, id: string):
     ...(d.thrust ? [{key: 'engine', label: 'エンジン', on: f.active.has(id), globalOff: false}] : []),
     ...partSettings(p)
       .filter(s => s.type === 'boolean')
-      .map(s => ({key: s.key, label: s.label, on: s.value, globalOff: isVesselToggle(s.key) && !f[s.key]}))
+      .map(s => ({key: s.key, label: s.label, on: s.value, globalOff: isEquipmentKey(s.key) && !f[s.key]}))
   ];
 }
 export function setPartAction(

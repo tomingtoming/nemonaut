@@ -122,3 +122,26 @@ test('side-mounted drive wheels propel the rover along their own rolling plane',
     f.dispose();
   }
 });
+
+test('master steering restores each wheel selection after being toggled', () => {
+  const f = new Flight(preset('rover'), 'land');
+  try {
+    const wheels = f.parts.filter(p => p.type === 'wheel');
+    const selected = wheels.map(p => p.steeringEnabled !== false);
+    assert.ok(selected.includes(true) && selected.includes(false));
+    for (const enabled of [false, true]) {
+      f.steeringEnabled = enabled;
+      run(f, 1, {yaw: 1});
+      assert.deepEqual(
+        wheels.map(p => f.wheelMotion.get(p.id).steer > 0),
+        selected.map(on => enabled && on)
+      );
+      assert.deepEqual(
+        wheels.map(p => p.steeringEnabled !== false),
+        selected
+      );
+    }
+  } finally {
+    f.dispose();
+  }
+});
