@@ -1,30 +1,102 @@
 // Explicit catalog sizes, not a per-vessel visual scale. Existing craft stay unchanged.
+interface LargeVariant {
+  base: string;
+  scale: number;
+  /** Gameplay dry mass follows the area ratio, volume ratio, or an individually tuned multiplier. */
+  massScale: 'area' | 'volume' | number;
+  fuel?: number;
+  thrust?: number;
+  battery?: number;
+  name: string;
+  code: string;
+}
 export const LARGE_VARIANTS = {
-  transportCockpit: {base: 'cockpit', scale: 4.8, factor: 25, name: '輸送機コックピット', code: 'TC-6'},
-  transportFuselage: {base: 'tank', scale: 4.8, factor: 25, name: '輸送機燃料胴体', code: 'AF-45000'},
-  transportTail: {base: 'nose', scale: 4.8, factor: 25, name: '輸送機テールコーン', code: 'TT-6'},
-  transportWingRoot: {base: 'wing', scale: 7, factor: 49, name: '大型内翼区画', code: 'WI-14'},
-  enginePylon: {base: 'truss', scale: 1.5, factor: 4, name: 'エンジンパイロン', code: 'PY-15'},
-  transportWing: {base: 'wing', scale: 7, factor: 49, name: '大型外翼区画', code: 'TW-14'},
-  transportJet: {base: 'jet', scale: 3, factor: 10, name: '輸送機ターボファン', code: 'TF-180'},
-  transportStabilizer: {base: 'stabilizer', scale: 5, factor: 25, name: '大型安定板 9 m', code: 'TS-9'},
-  transportElevator: {base: 'elevator', scale: 5, factor: 25, name: '大型エレベーター 9 m', code: 'TE-9'},
-  cockpitLarge: {base: 'cockpit', scale: 3, factor: 9, name: '大型コックピット', code: 'FC-6'},
-  fuselageLarge: {base: 'tank', scale: 3, factor: 9, name: '大型航空燃料胴体', code: 'AF-16200'},
-  jetLarge: {base: 'jet', scale: 3, factor: 5, name: '大型ターボファン', code: 'TF-90'},
-  wingLarge: {base: 'wing', scale: 3, factor: 9, name: '大型主翼', code: 'SW-6'},
-  stabilizerLarge: {base: 'stabilizer', scale: 3, factor: 9, name: '大型安定板', code: 'ST-5.4'},
-  elevatorLarge: {base: 'elevator', scale: 3, factor: 9, name: '大型エレベーター', code: 'EL-5.4'},
-  aileronLarge: {base: 'aileron', scale: 3, factor: 9, name: '大型エルロン', code: 'AL-4.2'},
-  rudderLarge: {base: 'rudder', scale: 3, factor: 9, name: '大型ラダー', code: 'RD-2.4'},
-  nosegearLarge: {base: 'nosegear', scale: 3, factor: 9, name: '大型操向前脚', code: 'NG-2.1'},
-  maingearLarge: {base: 'maingear', scale: 3, factor: 9, name: '大型主脚', code: 'MG-2.1'},
-  marineCabin: {base: 'cockpit', scale: 4, factor: 64, name: '大型水密操縦区画', code: 'MC-8'},
-  marineFrame: {base: 'truss', scale: 4, factor: 64, name: '大型船体フレーム', code: 'MF-4'},
-  hullLarge: {base: 'pontoon', scale: 4, factor: 64, name: '大型浮力船体', code: 'HL-12'},
-  ballastLarge: {base: 'ballast', scale: 4, factor: 64, name: '大型バラスト区画', code: 'BT-67.2'},
-  propellerLarge: {base: 'propeller', scale: 4, factor: 64, name: '大型可動スクリュー', code: 'MP-384'}
-};
+  transportCockpit: {
+    base: 'cockpit',
+    scale: 4.8,
+    massScale: 25,
+    battery: 12500,
+    name: '輸送機コックピット',
+    code: 'TC-6'
+  },
+  transportFuselage: {
+    base: 'tank',
+    scale: 4.8,
+    massScale: 25,
+    fuel: 45000,
+    name: '輸送機燃料胴体',
+    code: 'AF-45000'
+  },
+  transportTail: {base: 'nose', scale: 4.8, massScale: 25, name: '輸送機テールコーン', code: 'TT-6'},
+  transportWingRoot: {base: 'wing', scale: 7, massScale: 'area', name: '大型内翼区画', code: 'WI-14'},
+  enginePylon: {base: 'truss', scale: 1.5, massScale: 4, name: 'エンジンパイロン', code: 'PY-15'},
+  transportWing: {base: 'wing', scale: 7, massScale: 'area', name: '大型外翼区画', code: 'TW-14'},
+  transportJet: {
+    base: 'jet',
+    scale: 3,
+    massScale: 10,
+    thrust: 180000,
+    name: '輸送機ターボファン',
+    code: 'TF-180'
+  },
+  transportStabilizer: {
+    base: 'stabilizer',
+    scale: 5,
+    massScale: 'area',
+    name: '大型安定板 9 m',
+    code: 'TS-9'
+  },
+  transportElevator: {
+    base: 'elevator',
+    scale: 5,
+    massScale: 'area',
+    name: '大型エレベーター 9 m',
+    code: 'TE-9'
+  },
+  cockpitLarge: {
+    base: 'cockpit',
+    scale: 3,
+    massScale: 'area',
+    battery: 4500,
+    name: '大型コックピット',
+    code: 'FC-6'
+  },
+  fuselageLarge: {
+    base: 'tank',
+    scale: 3,
+    massScale: 'area',
+    fuel: 16200,
+    name: '大型航空燃料胴体',
+    code: 'AF-16200'
+  },
+  jetLarge: {base: 'jet', scale: 3, massScale: 5, thrust: 90000, name: '大型ターボファン', code: 'TF-90'},
+  wingLarge: {base: 'wing', scale: 3, massScale: 'area', name: '大型主翼', code: 'SW-6'},
+  stabilizerLarge: {base: 'stabilizer', scale: 3, massScale: 'area', name: '大型安定板', code: 'ST-5.4'},
+  elevatorLarge: {base: 'elevator', scale: 3, massScale: 'area', name: '大型エレベーター', code: 'EL-5.4'},
+  aileronLarge: {base: 'aileron', scale: 3, massScale: 'area', name: '大型エルロン', code: 'AL-4.2'},
+  rudderLarge: {base: 'rudder', scale: 3, massScale: 'area', name: '大型ラダー', code: 'RD-2.4'},
+  nosegearLarge: {base: 'nosegear', scale: 3, massScale: 'area', name: '大型操向前脚', code: 'NG-2.1'},
+  maingearLarge: {base: 'maingear', scale: 3, massScale: 'area', name: '大型主脚', code: 'MG-2.1'},
+  marineCabin: {
+    base: 'cockpit',
+    scale: 4,
+    massScale: 'volume',
+    battery: 32000,
+    name: '大型水密操縦区画',
+    code: 'MC-8'
+  },
+  marineFrame: {base: 'truss', scale: 4, massScale: 'volume', name: '大型船体フレーム', code: 'MF-4'},
+  hullLarge: {base: 'pontoon', scale: 4, massScale: 'volume', name: '大型浮力船体', code: 'HL-12'},
+  ballastLarge: {base: 'ballast', scale: 4, massScale: 'volume', name: '大型バラスト区画', code: 'BT-67.2'},
+  propellerLarge: {
+    base: 'propeller',
+    scale: 4,
+    massScale: 'volume',
+    thrust: 384000,
+    name: '大型可動スクリュー',
+    code: 'MP-384'
+  }
+} satisfies Record<string, LargeVariant>;
 export interface ScalablePart {
   name: string;
   code: string;
@@ -57,8 +129,8 @@ function requiredVolume(volume: number | undefined): number {
   return volume;
 }
 export function installLargeParts(parts: Record<string, ScalablePart>): void {
-  for (const [id, spec] of Object.entries(LARGE_VARIANTS)) {
-    const {base, scale: s, factor: k, name, code} = spec,
+  for (const [id, spec] of Object.entries<LargeVariant>(LARGE_VARIANTS)) {
+    const {base, scale: s, massScale, name, code} = spec,
       d = structuredClone(parts[base]);
     delete d.model;
     d.name = name;
@@ -79,7 +151,12 @@ export function installLargeParts(parts: Record<string, ScalablePart>): void {
       const [top, bottom] = d.stackDiameters;
       d.stackDiameters = [top === null ? null : top * s, bottom === null ? null : bottom * s];
     }
-    for (const key of ['mass', 'fuel', 'thrust', 'battery'] as const) if (d[key]) d[key] *= k;
+    if (d.mass !== undefined)
+      d.mass *= massScale === 'area' ? s ** 2 : massScale === 'volume' ? s ** 3 : massScale;
+    for (const key of ['fuel', 'thrust', 'battery'] as const) {
+      const rating = spec[key];
+      if (rating !== undefined) d[key] = rating;
+    }
     for (const key of ['volume', 'ballast'] as const) if (d[key]) d[key] *= s ** 3;
     for (const key of ['ac', 'massCenter', 'hingePivot'] as const)
       if (d[key]) d[key] = d[key].map(v => v * s);

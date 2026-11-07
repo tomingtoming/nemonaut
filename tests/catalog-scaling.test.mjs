@@ -9,6 +9,11 @@ test('all installed large variants obey dimensional contracts with explicit rede
   assert.deepEqual(check(PARTS), []);
 });
 for (const [id, field] of [
+  ['jetLarge', 'mass'],
+  ['transportJet', 'thrust'],
+  ['marineCabin', 'battery'],
+  ['transportFuselage', 'fuel'],
+  ['hullLarge', 'planingArea'],
   ['wingLarge', 'size'],
   ['wingLarge', 'wing'],
   ['wingLarge', 'ac'],
@@ -27,14 +32,19 @@ for (const [id, field] of [
 test('redesigned inner wing cannot silently pass as a similar copy', () => {
   assert.ok(scalingErrors(PARTS, LARGE_VARIANTS).some(e => e.startsWith('transportWingRoot:')));
 });
-test('mass/thrust tuning does not pretend to enforce constant density', () => {
-  const parts = structuredClone(PARTS);
-  parts.jetLarge.mass *= 2;
-  parts.jetLarge.thrust *= 3;
-  assert.deepEqual(check(parts), []);
+test('equal-size engines retain distinct dry masses and thrust ratings', () => {
+  assert.equal(LARGE_VARIANTS.jetLarge.scale, LARGE_VARIANTS.transportJet.scale);
+  assert.deepEqual([PARTS.jetLarge.mass, PARTS.jetLarge.thrust], [1150, 90000]);
+  assert.deepEqual([PARTS.transportJet.mass, PARTS.transportJet.thrust], [2300, 180000]);
 });
 test('invalid scale, factor or base is rejected', () => {
-  for (const mutation of [{scale: NaN}, {scale: 0}, {factor: -1}, {base: 'missing'}]) {
+  for (const mutation of [
+    {scale: NaN},
+    {scale: 0},
+    {massScale: -1},
+    {massScale: 'unknown'},
+    {base: 'missing'}
+  ]) {
     assert.deepEqual(scalingErrors(PARTS, {jetLarge: {...LARGE_VARIANTS.jetLarge, ...mutation}}), [
       'jetLarge: invalid variant'
     ]);
