@@ -12,7 +12,8 @@ export interface DesignRecord {
   parts: FlightPart[];
 }
 export interface DesignLibrary {
-  version: 1;
+  version: 2;
+  partFrame: typeof SAVED_PART_FRAME;
   designs: DesignRecord[];
 }
 export interface DesignRecordInput {
@@ -71,26 +72,20 @@ export function readDesignLibrary(value: DesignLibraryInput | null | undefined):
     )
       throw Error('設計一覧の項目が不正です');
     ids.add(d.id);
+    if (!d.parts) throw Error('設計の部品がありません');
+    const loaded = loadCraft({version: value.version, partFrame: value.partFrame, parts: d.parts});
     return {
       id: d.id,
       name: d.name,
       bay: d.bay,
       environment: d.environment,
       savedAt: d.savedAt,
-      parts: loadCraft({version: value.version, partFrame: value.partFrame, parts: d.parts})
+      parts: value.version === 2 ? structuredClone(d.parts) : saveCraft(loaded, d.name).parts
     };
   });
-  return {version: 1, designs};
+  return {version: 2, partFrame: SAVED_PART_FRAME, designs};
 }
-/** Serialize only at the storage boundary; readers return authored-coordinate editing data. */
-export function writeDesignLibrary(value: DesignLibraryInput) {
-  const library = readDesignLibrary(value);
-  return {
-    version: 2,
-    partFrame: SAVED_PART_FRAME,
-    designs: library.designs.map(d => ({...d, parts: saveCraft(d.parts, d.name).parts}))
-  };
-}
+export const writeDesignLibrary = readDesignLibrary;
 export function appendDesign(
   library: DesignLibraryInput | null | undefined,
   {name, parts, bay, environment}: DesignDraft,
@@ -100,8 +95,11 @@ export function appendDesign(
   const valid = readDesignLibrary(library);
   if (valid.designs.length >= 100) throw Error('設計一覧は100件までです。JSON出力で機体を保管してください。');
   return readDesignLibrary({
-    version: 1,
-    designs: [...valid.designs, {id, name: name.slice(0, 80), parts, bay, environment, savedAt}]
+    ...valid,
+    designs: [
+      ...valid.designs,
+      {id, name: name.slice(0, 80), parts: saveCraft(parts, name).parts, bay, environment, savedAt}
+    ]
   });
 }
 export function designForLaunch(
@@ -115,5 +113,9 @@ export function designForLaunch(
   if (!['pad', 'runway'].includes(facility)) throw Error('出発施設が不正です');
   if (design.parts.filter(p => !p.parent).length !== 1)
     throw Error('独立した部品を接続してから出発してください');
-  return {...structuredClone(design), environment: facility === 'pad' ? 'land' : 'runway'};
+  return {
+    ...design,
+    parts: loadCraft({...design, version: valid.version, partFrame: valid.partFrame}),
+    environment: facility === 'pad' ? 'land' : 'runway'
+  };
 }

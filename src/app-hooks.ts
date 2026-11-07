@@ -2,7 +2,8 @@
 // importing the module that imports them, which keeps the runtime import graph acyclic. app.ts assigns the
 // real functions once at start-up; a slot that is called before that throws instead of doing nothing.
 // Type-only imports: no runtime dependencies and no import-time side effects.
-import type {Flight, CraftRecord} from './core.js';
+import type {Flight} from './core.js';
+import type {SavedCraftInput} from './craft-save.js';
 import type {SavedWorld} from './world-save.js';
 import type {PracticeDesign} from './practice-session.js';
 export type AppHooks = {
@@ -29,7 +30,7 @@ export type AppHooks = {
   cancelPlacement: () => void;
   checkpoint: () => void;
   setBay: (b: string) => void;
-  loadData: (data: CraftRecord & {name?: unknown}) => void;
+  loadData: (data: SavedCraftInput) => void;
   frame: () => void;
   updateWorkshop: () => void;
   renderInterferences: () => void;

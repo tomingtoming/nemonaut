@@ -2,13 +2,7 @@
 // the workshop design and the launch library of the pad, runway and workshop. Calls up into app.ts through
 // app-hooks. No import-time side effects.
 import {storageKey} from './app-id.js';
-import {
-  DESIGN_LIBRARY_KEY,
-  readDesignLibrary,
-  writeDesignLibrary,
-  appendDesign,
-  designForLaunch
-} from './design-library.js';
+import {DESIGN_LIBRARY_KEY, readDesignLibrary, appendDesign, designForLaunch} from './design-library.js';
 import {loadCraft} from './craft-save.js';
 import {updateDepartureButton} from './departure-mode.js';
 import {state} from './app-state.js';
@@ -21,7 +15,7 @@ export function loadDesigns(): import('./design-library.js').DesignLibrary {
     return readDesignLibrary(JSON.parse(raw));
   }
   const legacy = localStorage.getItem(storageKey('craft'));
-  if (!legacy) return {version: 1, designs: []};
+  if (!legacy) return readDesignLibrary({version: 1, designs: []});
   const old = JSON.parse(legacy);
   return appendDesign(
     {version: 1, designs: []},
@@ -43,7 +37,7 @@ export function saveDesign() {
       bay: state.bayMode,
       environment: $('#environment', 'select').value
     });
-    localStorage.setItem(DESIGN_LIBRARY_KEY, JSON.stringify(writeDesignLibrary(library)));
+    localStorage.setItem(DESIGN_LIBRARY_KEY, JSON.stringify(library));
     if (state.atCenter) hooks.refreshCenter();
     notify('設計一覧に新しい版を保存しました · ' + library.designs.length + '件');
     return true;
@@ -94,7 +88,7 @@ export function openLaunchLibrary(facility: string) {
         if (facility === 'workshop') {
           if (state.flight) return;
           $('#modal', 'dialog').close();
-          hooks.loadData({version: 1, name: design.name, parts: design.parts});
+          hooks.loadData({...design, version: library.version, partFrame: library.partFrame});
           hooks.setBay(design.bay);
           $('#environment', 'select').value = design.environment;
           updateDepartureButton(document, design.environment);

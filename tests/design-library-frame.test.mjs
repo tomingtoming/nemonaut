@@ -15,13 +15,12 @@ const equalParts = (a, b) => {
     assert.deepEqual({...p, p: []}, {...b[i], p: []});
   });
 };
-const legacy = () =>
-  appendDesign(
-    {version: 1, designs: []},
-    {name: 'aircraft', parts: preset('transport'), bay: 'sph', environment: 'runway'},
-    'a',
-    123
-  );
+const legacy = () => ({
+  version: 1,
+  designs: [
+    {id: 'a', name: 'aircraft', parts: preset('transport'), bay: 'sph', environment: 'runway', savedAt: 123}
+  ]
+});
 test('legacy designs upgrade, preserve metadata and launch poses through repeated stored roundtrips', () => {
   const source = legacy(),
     before = structuredClone(source);
@@ -32,7 +31,8 @@ test('legacy designs upgrade, preserve metadata and launch poses through repeate
     assert.equal(encoded.partFrame, 'nominal-center-v1');
     assert.notDeepEqual(encoded.designs[0].parts, source.designs[0].parts);
     library = readDesignLibrary(JSON.parse(JSON.stringify(encoded)));
-    assert.equal(library.version, 1);
+    assert.deepEqual(library, encoded);
+    assert.deepEqual(writeDesignLibrary(library), encoded);
     assert.deepEqual({...library.designs[0], parts: []}, {...before.designs[0], parts: []});
     equalParts(designForLaunch(library, 'a', 'runway').parts, before.designs[0].parts);
   }
@@ -45,11 +45,12 @@ test('appending to a persisted library decodes existing entries exactly once', (
   parts.find(p => p.type === 'jet').thrustLimit = 0.5;
   const library = appendDesign(encoded, {name: 'second', parts, bay: 'sph', environment: 'runway'}, 'b', 456);
   const restored = readDesignLibrary(writeDesignLibrary(library));
-  equalParts(restored.designs[0].parts, source.designs[0].parts);
-  equalParts(restored.designs[1].parts, parts);
+  equalParts(designForLaunch(restored, 'a', 'runway').parts, source.designs[0].parts);
+  equalParts(designForLaunch(restored, 'b', 'runway').parts, parts);
   assert.equal(restored.designs[1].parts.find(p => p.type === 'jet').thrustLimit, 0.5);
   assert.deepEqual(readDesignLibrary(writeDesignLibrary({version: 1, designs: []})), {
-    version: 1,
+    version: 2,
+    partFrame: 'nominal-center-v1',
     designs: []
   });
 });
