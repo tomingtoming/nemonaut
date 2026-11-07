@@ -167,7 +167,7 @@ const BASE_PARTS = {
     stackDiameters: [0.625, 0.625],
     shroudSupport: true,
     name: '分離リング 0.625 m',
-    code: 'DC-62',
+    code: 'DC-62.5',
     cat: '構造',
     mass: 15,
     size: [0.625, 0.16, 0.625],
@@ -434,7 +434,7 @@ const BASE_PARTS = {
     stackDiameters: [1.25, 1.25],
     shroudSupport: true,
     name: '分離リング',
-    code: 'DC-12',
+    code: 'DC-125',
     cat: '構造',
     mass: 40,
     size: [1.25, 0.22, 1.25],
@@ -497,7 +497,7 @@ const BASE_PARTS = {
   },
   stabilizer: {
     name: '水平・垂直安定板',
-    code: 'ST-1',
+    code: 'ST-1.8',
     cat: '空力',
     mass: 25,
     size: [1.8, 0.65, 0.09],
@@ -508,7 +508,7 @@ const BASE_PARTS = {
   },
   elevator: {
     name: 'エレベーター',
-    code: 'EL-1',
+    code: 'EL-1.8',
     cat: '空力',
     mass: 12,
     size: [1.8, 0.4, 0.08],
@@ -521,7 +521,7 @@ const BASE_PARTS = {
   },
   aileron: {
     name: 'エルロン',
-    code: 'AL-1',
+    code: 'AL-1.4',
     cat: '空力',
     mass: 10,
     size: [1.4, 0.3, 0.07],
@@ -534,7 +534,7 @@ const BASE_PARTS = {
   },
   rudder: {
     name: 'ラダー',
-    code: 'RD-1',
+    code: 'RD-0.8',
     cat: '空力',
     mass: 10,
     size: [0.8, 0.4, 0.07],
@@ -547,7 +547,7 @@ const BASE_PARTS = {
   },
   nosegear: {
     name: '操向前脚',
-    code: 'NG-1',
+    code: 'NG-0.7',
     cat: '走行',
     mass: 35,
     size: [0.34, 0.7, 0.7],
@@ -559,7 +559,7 @@ const BASE_PARTS = {
   },
   maingear: {
     name: '主脚',
-    code: 'MG-1',
+    code: 'MG-0.7',
     cat: '走行',
     mass: 45,
     size: [0.34, 0.7, 0.7],
@@ -570,7 +570,7 @@ const BASE_PARTS = {
   },
   wheel: {
     name: '駆動輪',
-    code: 'RW-7',
+    code: 'RW-0.7',
     cat: '走行',
     mass: 45,
     size: [0.34, 0.7, 0.7],
@@ -611,7 +611,7 @@ const BASE_PARTS = {
   },
   ballast: {
     name: 'バラストタンク',
-    code: 'BT-1',
+    code: 'BT-1.05',
     cat: '船舶',
     mass: 110,
     size: [1.25, 1, 1.25],

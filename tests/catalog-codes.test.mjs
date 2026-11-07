@@ -12,11 +12,26 @@ test('same-category size variants may share a prefix', () => {
 test('new cross-category reuse is detected', () => {
   assert.match(codeFamilyErrors({a: PARTS.tank, b: {...PARTS.engine, code: 'FT-99'}})[0], /FT: mixed/);
 });
-test('fuel family model numbers specify kilograms and turbofans specify kilonewtons', () => {
+test('model numbers use the same catalog quantity throughout each variant family', () => {
+  const families = [
+    [['FT', 'AF'], part => part.fuel], // kg
+    [['RE', 'SL', 'VX', 'TJ', 'TF', 'MP'], part => part.thrust / 1000], // kN
+    [['AD', 'DC'], part => Math.max(...part.stackDiameters) * 100], // larger mating diameter, cm
+    [['SW', 'RF', 'ST', 'EL', 'AL', 'RD', 'WI', 'TW', 'TS', 'TE'], part => part.size[0]], // span, m
+    [['NG', 'MG', 'RW'], part => part.size[1]], // wheel diameter, m
+    [['FC', 'MC'], part => part.size[1]], // cabin length, m
+    [['BT'], part => part.ballast / 1000] // ballast capacity, tonnes
+  ];
+  const quantities = new Map(
+    families.flatMap(([prefixes, quantity]) => prefixes.map(prefix => [prefix, quantity]))
+  );
+  const seen = new Set();
   for (const part of Object.values(PARTS)) {
     const [prefix, number] = part.code.split('-');
-    if (['FT', 'AF'].includes(prefix)) assert.equal(Number(number), part.fuel, part.code);
-    if (prefix === 'TF') assert.equal(Number(number) * 1000, part.thrust, part.code);
+    const quantity = quantities.get(prefix);
+    if (seen.has(prefix)) assert.ok(quantity, 'Define the number for the new variant family ' + prefix);
+    seen.add(prefix);
+    if (quantity) assert.ok(Math.abs(Number(number) - quantity(part)) < 1e-9, part.code);
   }
   assert.equal(PARTS.rcs.code, 'RCS-6');
   assert.equal(PARTS.parachute.code, 'PC-14');

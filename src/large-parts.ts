@@ -13,16 +13,16 @@ export const LARGE_VARIANTS = {
   fuselageLarge: {base: 'tank', scale: 3, factor: 9, name: '大型航空燃料胴体', code: 'AF-16200'},
   jetLarge: {base: 'jet', scale: 3, factor: 5, name: '大型ターボファン', code: 'TF-90'},
   wingLarge: {base: 'wing', scale: 3, factor: 9, name: '大型主翼', code: 'SW-6'},
-  stabilizerLarge: {base: 'stabilizer', scale: 3, factor: 9, name: '大型安定板', code: 'ST-3'},
-  elevatorLarge: {base: 'elevator', scale: 3, factor: 9, name: '大型エレベーター', code: 'EL-3'},
-  aileronLarge: {base: 'aileron', scale: 3, factor: 9, name: '大型エルロン', code: 'AL-3'},
-  rudderLarge: {base: 'rudder', scale: 3, factor: 9, name: '大型ラダー', code: 'RD-3'},
-  nosegearLarge: {base: 'nosegear', scale: 3, factor: 9, name: '大型操向前脚', code: 'NG-3'},
-  maingearLarge: {base: 'maingear', scale: 3, factor: 9, name: '大型主脚', code: 'MG-3'},
+  stabilizerLarge: {base: 'stabilizer', scale: 3, factor: 9, name: '大型安定板', code: 'ST-5.4'},
+  elevatorLarge: {base: 'elevator', scale: 3, factor: 9, name: '大型エレベーター', code: 'EL-5.4'},
+  aileronLarge: {base: 'aileron', scale: 3, factor: 9, name: '大型エルロン', code: 'AL-4.2'},
+  rudderLarge: {base: 'rudder', scale: 3, factor: 9, name: '大型ラダー', code: 'RD-2.4'},
+  nosegearLarge: {base: 'nosegear', scale: 3, factor: 9, name: '大型操向前脚', code: 'NG-2.1'},
+  maingearLarge: {base: 'maingear', scale: 3, factor: 9, name: '大型主脚', code: 'MG-2.1'},
   marineCabin: {base: 'cockpit', scale: 4, factor: 64, name: '大型水密操縦区画', code: 'MC-8'},
   marineFrame: {base: 'truss', scale: 4, factor: 64, name: '大型船体フレーム', code: 'MF-4'},
   hullLarge: {base: 'pontoon', scale: 4, factor: 64, name: '大型浮力船体', code: 'HL-12'},
-  ballastLarge: {base: 'ballast', scale: 4, factor: 64, name: '大型バラスト区画', code: 'BT-67'},
+  ballastLarge: {base: 'ballast', scale: 4, factor: 64, name: '大型バラスト区画', code: 'BT-67.2'},
   propellerLarge: {base: 'propeller', scale: 4, factor: 64, name: '大型可動スクリュー', code: 'MP-384'}
 };
 export interface ScalablePart {
