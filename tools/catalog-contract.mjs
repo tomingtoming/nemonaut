@@ -25,15 +25,7 @@ export function catalogContractErrors(parts) {
     for (const [field, value] of Object.entries(part)) {
       if (typeof value === 'number' && !Number.isFinite(value)) fail(`${field} finite`);
     }
-    for (const field of [
-      'gimbalPivot',
-      'modelCenter',
-      'hingePivot',
-      'mirrorRotation',
-      'ac',
-      'massCenter',
-      'shieldNormal'
-    ]) {
+    for (const field of ['gimbalPivot', 'hingePivot', 'mirrorRotation', 'ac', 'massCenter', 'shieldNormal']) {
       if (part[field] !== undefined && !vector(part[field])) fail(field);
     }
     if (

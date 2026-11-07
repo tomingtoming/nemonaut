@@ -177,7 +177,7 @@ export function saveFlight(f: Flight, meta: SavedFlightMeta = {}): SavedFlight {
     separationCount: f.separationCount,
     failureEvents: f.failureEvents ?? [],
     failureDynamics: f.failureDynamics === true,
-    parts: convertSavedPartFrame(f.parts, 'encode'),
+    parts: structuredClone(f.parts),
     environment: f.environment,
     pos: f.pos.toArray(),
     vel: f.vel.toArray(),
@@ -236,7 +236,7 @@ export function loadFlight(
   }
   const parts = validateCraft({
       version: 1,
-      parts: value.partFrame === SAVED_PART_FRAME ? convertSavedPartFrame(value.parts, 'decode') : value.parts
+      parts: value.partFrame === SAVED_PART_FRAME ? value.parts : convertSavedPartFrame(value.parts, 'encode')
     }),
     byId = new Map<string, FlightPart>(parts.map(p => [p.id, p]));
   check(parts.filter(p => !p.parent).length === 1);

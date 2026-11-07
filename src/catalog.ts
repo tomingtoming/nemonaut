@@ -1,4 +1,3 @@
-import {partDirectionToVessel} from './part-frame.js';
 import {installCargoParts} from './cargo-parts.js';
 import {installLargeParts} from './large-parts.js';
 /** Catalog entry: base parts below, large variants (large-parts.ts) and the cargo bay (cargo-parts.ts) are installed at load. */
@@ -51,8 +50,6 @@ export type PartDefinition = {
   massCenter?: number[];
   chord?: number;
   model?: string;
-  /** Position of the centered GLB in the current assembly frame (metres). */
-  modelCenter?: number[];
   controlAxis?: PartControlAxis;
   maxDeflection?: number;
   /** Local control-surface pivot; defaults to the upper Y face. */
@@ -462,7 +459,6 @@ const BASE_PARTS = {
       [1, 0, 0, 1, 0, 0]
     ],
     surfaceMount: [-1, 0, 0, -1, 0, 0],
-    modelCenter: [1, 0, 0],
     placementNode: 0,
     mirrorRotation: [0, Math.PI, 0],
     name: '主翼・固定翼',
@@ -474,7 +470,7 @@ const BASE_PARTS = {
     ac: [-0.2, 0.13, 0],
     massCenter: [-0.2, -0.2, 0],
     chord: 1.1,
-    desc: '空気速度と迎角から揚力が発生。基部はローカルX=0。'
+    desc: '対気速度と迎角に応じて揚力が発生する固定翼。'
   },
   fin: {
     attachmentNodes: [
@@ -482,7 +478,6 @@ const BASE_PARTS = {
       [1, 0, 0, 1, 0, 0]
     ],
     surfaceMount: [-1, 0, 0, -1, 0, 0],
-    modelCenter: [1, 0, 0],
     placementNode: 0,
     mirrorRotation: [0, Math.PI, 0],
     name: '可動ロケットフィン',
@@ -629,17 +624,10 @@ export const PARTS: PartCatalog = BASE_PARTS;
 installLargeParts(PARTS);
 installCargoParts(PARTS);
 export const CATEGORIES = ['すべて', '指令', '燃料', '推進', '構造', '空力', '走行', '装備', '船舶'];
-/** Convert a model-space mount to the current assembly pose datum. Normals are directions. */
-export function assemblyNode(
-  [x, y, z, nx, ny, nz]: AttachmentNode,
-  center: readonly number[] = [0, 0, 0]
-): AttachmentNode {
-  return [x + center[0], y + center[1], z + center[2], nx, ny, nz];
-}
 export function nodes(type: PartType): AttachmentNode[] {
   const d = PARTS[type],
     [x, y, z] = d.size;
-  if (d.attachmentNodes) return d.attachmentNodes.map(n => assemblyNode(n, d.modelCenter));
+  if (d.attachmentNodes) return d.attachmentNodes.map(n => [...n]);
   return [
     [0, y / 2, 0, 0, 1, 0],
     [0, -y / 2, 0, 0, -1, 0],
@@ -664,7 +652,7 @@ function presetPart(a: readonly Part[], test: (p: Part) => boolean): Part {
   if (!p) throw Error('プリセットの部品が見つかりません');
   return p;
 }
-function centeredPreset(kind: string): Part[] {
+export function preset(kind: string): Part[] {
   let a: Part[] = [];
   const add = (t: PartType, p: PartVector, r: PartVector = [0, 0, 0], par = 0, stage = 0) => {
     const o = part(t, p, r, a[par]?.id ?? null, stage);
@@ -731,7 +719,7 @@ function centeredPreset(kind: string): Part[] {
     for (const x of [-1.6, 1.6]) add('solar', [x, -2.15, 0], [0, 0, 0], tank);
   }
   if (kind === 'lunar-expedition') {
-    a = centeredPreset('lunar-return');
+    a = preset('lunar-return');
     for (const p of a) {
       if (p.type === 'engine') p.stage = 2;
       else if (p.type === 'decoupler') p.stage = 3;
@@ -755,7 +743,7 @@ function centeredPreset(kind: string): Part[] {
     }
   }
   if (kind === 'lunar-surface-expedition') {
-    a = centeredPreset('lunar-expedition');
+    a = preset('lunar-expedition');
     const tank = presetPart(a, p => p.type === 'tank');
     for (const x of [-1.3, 1.3]) a.push(part('tank', [x, -2.15, 0], [0, 0, 0], tank.id));
     for (const [x, z] of [
@@ -839,7 +827,7 @@ function centeredPreset(kind: string): Part[] {
     add('solar', [-1.6, -1.35, 0], [0, 0, 0], 4);
   }
   if (kind === 'rendezvous') {
-    a = centeredPreset('twin');
+    a = preset('twin');
     for (const core of a.filter(p => p.type === 'probe')) {
       core.reactionEnabled = false;
       for (const x of [-0.9, 0.9])
@@ -847,12 +835,12 @@ function centeredPreset(kind: string): Part[] {
     }
   }
   if (kind === 'orbital-tug') {
-    a = centeredPreset('orbiter');
+    a = preset('orbiter');
     add('dockingPort', [0, 2.821, 0]);
     for (const z of [-0.9, 0.9]) for (const y of [0.2, 2.4]) add('rcs', [0, y, z], [0, 0, 0], 1);
   }
   if (kind === 'tug-launcher') {
-    a = centeredPreset('orbital-tug');
+    a = preset('orbital-tug');
     const engine = presetPart(a, p => p.type === 'engine');
     engine.stage = 1;
     const upper = add('tank', [0, -0.7, 0], [0, 0, 0], 1);
@@ -1018,7 +1006,7 @@ function centeredPreset(kind: string): Part[] {
             propeller: 'propellerLarge'
           };
     // The large submarine turns with its gimballed screw; the small one's rudder has no large mapping.
-    a = centeredPreset(base).filter(p => p.type in mapping);
+    a = preset(base).filter(p => p.type in mapping);
     for (const p of a) {
       p.type = mapping[p.type];
       p.p = [p.p[0] * s, p.p[1] * s, p.p[2] * s];
@@ -1032,12 +1020,12 @@ function centeredPreset(kind: string): Part[] {
     }
   }
   if (kind === 'transport-cargo') {
-    a = centeredPreset('transport');
+    a = preset('transport');
     const bay = presetPart(a, p => p.type === 'transportFuselage' && p.p[2] === 0);
     bay.type = 'cargoBay';
     bay.r = [Math.PI / 2, 0, 0];
     // Belly doors clear the high wing; the payload hangs from the internal mount.
-    const lab = centeredPreset('cargo-lab'),
+    const lab = preset('cargo-lab'),
       source = lab[0];
     const payload = lab.filter(p => p.id !== source.id && (p.parent !== source.id || p.type === 'decoupler'));
     for (const p of payload) {
@@ -1058,17 +1046,4 @@ function centeredPreset(kind: string): Part[] {
     for (const x of [-0.85, 0.85]) add('solar', [x, 0, -1.88], [0, 0, 0], payload);
   }
   return a;
-}
-
-/** Composite presets are assembled in model-center coordinates. Adapt only the finished craft. */
-export function preset(kind: string): Part[] {
-  const parts = centeredPreset(kind);
-  for (const p of parts) {
-    const center = PARTS[p.type].modelCenter;
-    if (center) {
-      const offset = partDirectionToVessel(p, center);
-      p.p = [p.p[0] - offset.x, p.p[1] - offset.y, p.p[2] - offset.z];
-    }
-  }
-  return parts;
 }

@@ -3,6 +3,7 @@ import {needsPhysicsMigration} from './physics-migration.js';
 import {validUniversalTime} from './universal-time.js';
 import {validateCraft, type FlightPart} from './core.js';
 import {loadFlight, saveFlight, type SavedFlight} from './flight-save.js';
+import {convertSavedPartFrame} from './part-save-frame.js';
 export interface SavedWorkspace {
   kind: string;
   version: number;
@@ -37,7 +38,8 @@ export function validateWorkspace(value: LegacyWorkspace): SavedWorkspace {
     !Array.isArray(value.parts)
   )
     throw Error('宇宙センターの保存形式が不正です');
-  const parts = value.parts.length ? validateCraft({version: 1, parts: value.parts}) : [];
+  if (value.parts.length) validateCraft({version: 1, parts: convertSavedPartFrame(value.parts, 'encode')});
+  const parts = structuredClone(value.parts);
   let flightTime = 0,
     normalizedFlight = structuredClone(value.flight);
   if (value.flight !== null) {
@@ -72,7 +74,7 @@ export function workspaceRecord({
     universalTime: validUniversalTime(universalTime),
     kind: saveKind('workspace'),
     version: 1,
-    parts: structuredClone(parts),
+    parts: convertSavedPartFrame(parts, 'decode'),
     name: name.slice(0, 80),
     bay,
     environment,

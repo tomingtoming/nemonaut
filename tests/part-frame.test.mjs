@@ -1,3 +1,4 @@
+import {convertSavedPartFrame} from '../dist/part-save-frame.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
@@ -12,10 +13,8 @@ test('all catalog datums transform nodes, mass centres and aero centres with the
     const q = new T.Quaternion().setFromEuler(new T.Euler(...p.r));
     const matrix = new T.Matrix4().compose(new T.Vector3(...p.p), q, new T.Vector3(1, 1, 1));
     const transform = point => new T.Vector3(...point).applyMatrix4(matrix);
-    const fromModel = point =>
-      new T.Vector3(...point).add(new T.Vector3(...(d.modelCenter || []))).applyMatrix4(matrix);
-    assert.ok(partCenter(p).distanceTo(fromModel(d.massCenter || [0, 0, 0])) < 1e-10, type);
-    assert.ok(aeroPoint(p).distanceTo(fromModel(d.ac || [0, 0, 0])) < 1e-10, type);
+    assert.ok(partCenter(p).distanceTo(transform(d.massCenter || [0, 0, 0])) < 1e-10, type);
+    assert.ok(aeroPoint(p).distanceTo(transform(d.ac || [0, 0, 0])) < 1e-10, type);
     for (const [index, node] of nodes(type).entries()) {
       const local = nodePoint(node),
         world = partPointToVessel(p, local),
@@ -56,13 +55,16 @@ test('legacy rotated wing poses retain their mass and lift application points', 
     transportWing: 7,
     transportWingRoot: 7
   })) {
-    const p = part(type, [3, -1, 8], [0.5, -0.9, 1.4]);
+    const old = part(type, [3, -1, 8], [0.5, -0.9, 1.4]);
+    const [p] = convertSavedPartFrame([old], 'encode');
     const inner = type === 'transportWingRoot';
     for (const [actual, original] of [
       [partCenter(p), inner ? [7, 0, 0] : [0.8 * scale, -0.2 * scale, 0]],
       [aeroPoint(p), inner ? [7, 0, 0] : [0.8 * scale, 0.13 * scale, 0]]
     ]) {
-      const expected = new T.Vector3(...original).applyEuler(new T.Euler(...p.r)).add(new T.Vector3(...p.p));
+      const expected = new T.Vector3(...original)
+        .applyEuler(new T.Euler(...old.r))
+        .add(new T.Vector3(...old.p));
       assert.ok(actual.distanceTo(expected) < 1e-10, type);
     }
   }

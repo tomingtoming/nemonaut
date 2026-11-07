@@ -12,8 +12,8 @@ test('modular six-engine transport retains independent wings, gear and a connect
   assert.equal(craft.filter(p => PARTS[p.type].steer).length, 4);
   assert.equal(craft.filter(p => p.type === 'transportFuselage').length, 3);
   assert.deepEqual(nodes('transportWingRoot'), [
-    [0, 0, 0, -1, 0, 0],
-    [14, 0, 0, 1, 0, 0]
+    [-7, 0, 0, -1, 0, 0],
+    [7, 0, 0, 1, 0, 0]
   ]);
   assert.ok(statistics(craft).mass > 200000);
   for (const p of craft) if (p.parent) assert.ok(craft.some(parent => parent.id === p.parent));

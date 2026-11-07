@@ -1,3 +1,4 @@
+import {convertSavedPartFrame} from '../dist/part-save-frame.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
@@ -14,8 +15,8 @@ test('declared wing endpoints preserve legacy node numbers, positions and normal
     transportWingRoot: 14
   })) {
     const expected = [
-      [0, 0, 0, -1, 0, 0],
-      [width, 0, 0, 1, 0, 0]
+      [-width / 2, 0, 0, -1, 0, 0],
+      [width / 2, 0, 0, 1, 0, 0]
     ];
     assert.deepEqual(
       PARTS[type].attachmentNodes.map(n => n[0]),
@@ -53,19 +54,9 @@ test('large variants scale arbitrary attachment points, never normals or source 
 
 test('rebased wing endpoints preserve a rotated tip-to-root joint', () => {
   const parent = part('transportWingRoot', [4, 5, 6], [0.3, -0.4, 0.7]);
-  const child = part('transportWing', nodePose(parent, 1).position.toArray(), [...parent.r], parent.id);
+  const tip = new T.Vector3(14, 0, 0).applyEuler(new T.Euler(...parent.r)).add(new T.Vector3(...parent.p));
+  const child = part('transportWing', tip.toArray(), [...parent.r], parent.id);
   child.attachment = {mode: 'node', parentNode: 1, ownNode: 0};
-  assert.deepEqual(nodeConnection([parent, child], child), {parent: parent.id, parentNode: 1, ownNode: 0});
-  const types = ['transportWingRoot', 'transportWing'];
-  const before = types.map(type => PARTS[type].modelCenter);
-  try {
-    for (const type of types) delete PARTS[type].modelCenter;
-    for (const p of [parent, child]) {
-      const offset = new T.Vector3(7, 0, 0).applyEuler(new T.Euler(...p.r));
-      p.p = new T.Vector3(...p.p).add(offset).toArray();
-    }
-    assert.deepEqual(nodeConnection([parent, child], child), {parent: parent.id, parentNode: 1, ownNode: 0});
-  } finally {
-    types.forEach((type, i) => (PARTS[type].modelCenter = before[i]));
-  }
+  const parts = convertSavedPartFrame([parent, child], 'encode');
+  assert.deepEqual(nodeConnection(parts, parts[1]), {parent: parent.id, parentNode: 1, ownNode: 0});
 });

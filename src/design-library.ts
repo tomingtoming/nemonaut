@@ -72,7 +72,6 @@ export function readDesignLibrary(value: DesignLibraryInput | null | undefined):
     )
       throw Error('設計一覧の項目が不正です');
     ids.add(d.id);
-    if (!d.parts) throw Error('設計の部品がありません');
     const loaded = loadCraft({version: value.version, partFrame: value.partFrame, parts: d.parts});
     return {
       id: d.id,
@@ -80,7 +79,7 @@ export function readDesignLibrary(value: DesignLibraryInput | null | undefined):
       bay: d.bay,
       environment: d.environment,
       savedAt: d.savedAt,
-      parts: value.version === 2 ? structuredClone(d.parts) : saveCraft(loaded, d.name).parts
+      parts: loaded
     };
   });
   return {version: 2, partFrame: SAVED_PART_FRAME, designs};
@@ -115,7 +114,6 @@ export function designForLaunch(
     throw Error('独立した部品を接続してから出発してください');
   return {
     ...design,
-    parts: loadCraft({...design, version: valid.version, partFrame: valid.partFrame}),
     environment: facility === 'pad' ? 'land' : 'runway'
   };
 }

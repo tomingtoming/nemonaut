@@ -1,3 +1,4 @@
+import {convertSavedPartFrame} from '../dist/part-save-frame.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
@@ -34,7 +35,10 @@ test('legacy designs upgrade, preserve metadata and launch poses through repeate
     assert.deepEqual(library, encoded);
     assert.deepEqual(writeDesignLibrary(library), encoded);
     assert.deepEqual({...library.designs[0], parts: []}, {...before.designs[0], parts: []});
-    equalParts(designForLaunch(library, 'a', 'runway').parts, before.designs[0].parts);
+    equalParts(
+      designForLaunch(library, 'a', 'runway').parts,
+      convertSavedPartFrame(before.designs[0].parts, 'encode')
+    );
   }
   assert.deepEqual(source, before);
 });
@@ -45,7 +49,10 @@ test('appending to a persisted library decodes existing entries exactly once', (
   parts.find(p => p.type === 'jet').thrustLimit = 0.5;
   const library = appendDesign(encoded, {name: 'second', parts, bay: 'sph', environment: 'runway'}, 'b', 456);
   const restored = readDesignLibrary(writeDesignLibrary(library));
-  equalParts(designForLaunch(restored, 'a', 'runway').parts, source.designs[0].parts);
+  equalParts(
+    designForLaunch(restored, 'a', 'runway').parts,
+    convertSavedPartFrame(source.designs[0].parts, 'encode')
+  );
   equalParts(designForLaunch(restored, 'b', 'runway').parts, parts);
   assert.equal(restored.designs[1].parts.find(p => p.type === 'jet').thrustLimit, 0.5);
   assert.deepEqual(readDesignLibrary(writeDesignLibrary({version: 1, designs: []})), {

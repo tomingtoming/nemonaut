@@ -1,3 +1,4 @@
+import {withinLegacyPositionLimit} from './part-save-frame.js';
 import {instrumentForward, instrumentRotation, usesAxialControls} from './command-frame.js';
 import {isParked} from './ground-rest.js';
 import {fractureVessel, copyPartState} from './fracture.js';
@@ -219,8 +220,9 @@ export function validateCraft<A extends FlightPart[] = FlightPart[]>(
         k =>
           Array.isArray(p[k]) &&
           p[k].length === 3 &&
-          p[k].every(n => Number.isFinite(n) && Math.abs(n) < 10000)
+          p[k].every(n => Number.isFinite(n) && (k === 'p' || Math.abs(n) < 10000))
       ) ||
+      !withinLegacyPositionLimit(p) ||
       !Number.isInteger(p.stage) ||
       p.stage < 0 ||
       p.stage > 9

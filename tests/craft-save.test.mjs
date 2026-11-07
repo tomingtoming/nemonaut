@@ -1,3 +1,4 @@
+import {convertSavedPartFrame} from '../dist/part-save-frame.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
@@ -15,7 +16,7 @@ test('legacy and new workshop files keep parts, centre of mass and attachment po
   for (const type of ['rocket', 'plane', 'plane-large', 'transport', 'rover']) {
     const parts = preset(type),
       before = structuredClone(parts);
-    posesEqual(loadCraft({version: 1, parts}), before);
+    posesEqual(loadCraft({version: 1, parts: convertSavedPartFrame(parts, 'decode')}), before);
     let restored = parts;
     for (let i = 0; i < 5; i++) {
       const record = saveCraft(restored, 'name');

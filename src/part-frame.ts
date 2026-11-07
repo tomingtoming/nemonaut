@@ -11,14 +11,8 @@ export interface PartPose {
 export const partRotation = (part: Pick<PartPose, 'r'>): T.Quaternion =>
   new T.Quaternion().setFromEuler(new T.Euler(...part.r));
 
-export function partPointToVessel(
-  part: PartPose,
-  point: readonly number[],
-  origin?: readonly number[]
-): T.Vector3 {
-  const local = new T.Vector3(...point);
-  if (origin) local.add(new T.Vector3(...origin));
-  return local.applyQuaternion(partRotation(part)).add(new T.Vector3(...part.p));
+export function partPointToVessel(part: PartPose, point: readonly number[]): T.Vector3 {
+  return new T.Vector3(...point).applyQuaternion(partRotation(part)).add(new T.Vector3(...part.p));
 }
 
 export function vesselPointToPart(part: PartPose, point: T.Vector3): T.Vector3 {

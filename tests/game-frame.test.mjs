@@ -73,7 +73,8 @@ test('empty drafts and legacy games remain valid and invalid frame combinations 
 
 test('legacy game migrates a near-limit wing once and retains its exact centered save coordinates', () => {
   const parts = [part('transportWing', [9999.75, 0, 0])];
-  const current = gameRecord({world: worldFromFlight(null), draft: {...draft(), parts}});
+  const centered = [{...parts[0], p: [10006.75, 0, 0]}];
+  const current = gameRecord({world: worldFromFlight(null), draft: {...draft(), parts: centered}});
   const legacy = {...current, version: 1, workshop: {...current.workshop, parts}};
   delete legacy.partFrame;
   let game = validateGame(legacy);
@@ -81,6 +82,6 @@ test('legacy game migrates a near-limit wing once and retains its exact centered
   for (let i = 0; i < 5; i++) {
     game = validateGame(JSON.parse(JSON.stringify(writeGame(game))));
     assert.deepEqual(game, current);
-    assert.deepEqual(editingParts(game), parts);
+    assert.deepEqual(editingParts(game), centered);
   }
 });

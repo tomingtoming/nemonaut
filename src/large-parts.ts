@@ -35,7 +35,6 @@ export interface ScalablePart {
   stackRectangles?: readonly [readonly [number, number] | null, readonly [number, number] | null];
   desc?: string;
   model?: string;
-  modelCenter?: number[];
   mass?: number;
   fuel?: number;
   thrust?: number;
@@ -82,7 +81,7 @@ export function installLargeParts(parts: Record<string, ScalablePart>): void {
     }
     for (const key of ['mass', 'fuel', 'thrust', 'battery'] as const) if (d[key]) d[key] *= k;
     for (const key of ['volume', 'ballast'] as const) if (d[key]) d[key] *= s ** 3;
-    for (const key of ['ac', 'massCenter', 'hingePivot', 'modelCenter'] as const)
+    for (const key of ['ac', 'massCenter', 'hingePivot'] as const)
       if (d[key]) d[key] = d[key].map(v => v * s);
     if (d.chord) d.chord *= s;
     if (d.wing) d.wing *= s * s;

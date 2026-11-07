@@ -35,3 +35,11 @@ export function convertSavedPartFrame<P extends PartPose & {type: string}>(
     return copy;
   });
 }
+
+/** The original 10 km limit was measured at the mount, even for centered saves. */
+export function withinLegacyPositionLimit(part: PartPose & {type: string}): boolean {
+  const offset = Object.hasOwn(centers, part.type) ? centers[part.type] : undefined;
+  if (!offset) return part.p.every(n => Math.abs(n) < 10000);
+  const delta = partDirectionToVessel(part, offset).toArray();
+  return part.p.every((n, i) => Math.abs(n - delta[i]) < 10000);
+}

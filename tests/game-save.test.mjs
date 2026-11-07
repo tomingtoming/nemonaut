@@ -1,3 +1,4 @@
+import {convertSavedPartFrame} from '../dist/part-save-frame.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';
@@ -24,7 +25,7 @@ test('whole-game migration separates editable design from persistent world witho
       restored = validateGame(JSON.parse(JSON.stringify(game)));
     assert.equal(restored.world.vessels.length, 2);
     assert.equal(restored.world.universalTime, f.universalTime);
-    assert.deepEqual(editingParts(restored), legacy.parts);
+    assert.deepEqual(editingParts(restored), convertSavedPartFrame(legacy.parts, 'encode'));
     assert.deepEqual(legacy, before);
     const world = structuredClone(restored.world);
     restored.workshop.parts[0].p[0] += 10;

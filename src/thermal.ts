@@ -80,7 +80,7 @@ export function createThermal(
 function geometry(p: ThermalPart, q: T.Quaternion, definitions: ThermalCatalog): PartGeometry {
   const d = definitions[p.type],
     rotation = q.clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(...p.r))),
-    center = partPointToVessel(p, d.massCenter || [0, 0, 0], d.modelCenter).applyQuaternion(q);
+    center = partPointToVessel(p, d.massCenter || [0, 0, 0]).applyQuaternion(q);
   return {p, d, rotation, center};
 }
 function projectedArea(g: PartGeometry, direction: T.Vector3): number {

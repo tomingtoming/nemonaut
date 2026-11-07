@@ -11,7 +11,7 @@ test('all control surfaces keep their previous neutral and deflected model posit
   for (const [type, d] of Object.entries(PARTS).filter(([, d]) => d.controlAxis)) {
     const visual = new T.Group(),
       hinge = makeSurfaceHinge(visual, d);
-    const oldPivot = new T.Vector3(0, type === 'fin' ? 0.13 : d.size[1] / 2, 0);
+    const oldPivot = new T.Vector3(type === 'fin' ? -1 : 0, type === 'fin' ? 0.13 : d.size[1] / 2, 0);
     assert.ok(hinge.position.distanceTo(oldPivot) < 1e-10, type);
     for (const angle of [-0.3, 0, 0.3]) {
       hinge.rotation.x = angle;

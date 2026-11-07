@@ -61,8 +61,9 @@ test('declared surface mounts preserve every existing part pose for oblique and 
         normal
       );
       const oldPos = point.clone();
-      if (!['wing', 'fin', 'wingLarge', 'transportWing', 'transportWingRoot'].includes(type))
-        oldPos.addScaledVector(normal, d.size[1] / 2);
+      if (['wing', 'fin', 'wingLarge', 'transportWing', 'transportWingRoot'].includes(type))
+        oldPos.addScaledVector(normal, d.size[0] / 2);
+      else oldPos.addScaledVector(normal, d.size[1] / 2);
       const pose = surfacePlacementPose(type, point, normal);
       assert.ok(pose.pos.distanceTo(oldPos) < 1e-9, type);
       assert.ok(pose.q.angleTo(oldQ) < 1e-7, type);

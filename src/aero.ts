@@ -49,11 +49,11 @@ export function partMass(
 }
 export function partCenter(p: AeroPart): T.Vector3 {
   const d = PARTS[p.type];
-  return partPointToVessel(p, d.massCenter || [0, 0, 0], d.modelCenter);
+  return partPointToVessel(p, d.massCenter || [0, 0, 0]);
 }
 export function aeroPoint(p: AeroPart): T.Vector3 {
   const d = PARTS[p.type];
-  return partPointToVessel(p, d.ac || [0, 0, 0], d.modelCenter);
+  return partPointToVessel(p, d.ac || [0, 0, 0]);
 }
 export function aeroAnalysis(parts: readonly AeroPart[], com: T.Vector3): AeroAnalysis {
   const center = new T.Vector3();

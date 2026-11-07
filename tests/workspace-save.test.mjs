@@ -1,3 +1,4 @@
+import {convertSavedPartFrame} from '../dist/part-save-frame.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {workspaceRecord, validateWorkspace} from '../dist/workspace-save.js';
@@ -18,7 +19,7 @@ test('Workshop draft and paused multi-vessel flight remain independent across wo
       flight: saveFlight(flight)
     });
   const restored = validateWorkspace(JSON.parse(JSON.stringify(record)));
-  assert.deepEqual(restored.parts, draft);
+  assert.deepEqual(convertSavedPartFrame(restored.parts, 'encode'), draft);
   assert.equal(restored.bay, 'sph');
   assert.equal(restored.environment, 'runway');
   const paused = loadFlight(restored.flight);

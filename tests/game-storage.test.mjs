@@ -1,3 +1,4 @@
+import {convertSavedPartFrame} from '../dist/part-save-frame.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {WORKSPACE_KEY, workspaceRecord} from '../dist/workspace-save.js';
@@ -51,7 +52,7 @@ test('old workspace migrates to new key while original and independent flight qu
     assert.equal(next.migrated, false);
     assert.equal(next.game.world.vessels.length, 2);
     assert.equal(next.game.world.universalTime, f.universalTime);
-    assert.deepEqual(editingParts(next.game), legacy.parts);
+    assert.deepEqual(editingParts(next.game), convertSavedPartFrame(legacy.parts, 'encode'));
     const flight = flightFromWorld(next.game.world);
     assert.equal(flight.vesselId, f.vesselId);
     assert.deepEqual(flight.fuel, saveFlight(f).fuel);

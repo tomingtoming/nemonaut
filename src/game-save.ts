@@ -39,13 +39,12 @@ function workshop(value: WorkshopDraft | null | undefined, centered: boolean): W
     !Array.isArray(value.parts)
   )
     throw Error('組立中の設計の保存形式が不正です');
-  const editable = centered ? convertSavedPartFrame(value.parts, 'decode') : value.parts;
-  if (editable.length) validateCraft({version: 1, parts: editable});
+  const editable = centered ? value.parts : convertSavedPartFrame(value.parts, 'encode');
   return {
     name: value.name,
     bay: value.bay,
     environment: value.environment,
-    parts: centered ? structuredClone(value.parts) : convertSavedPartFrame(value.parts, 'encode')
+    parts: editable.length ? validateCraft({version: 1, parts: editable}) : []
   };
 }
 export function gameRecord({world, draft}: GameRecordInput): CenteredGame {
@@ -54,7 +53,7 @@ export function gameRecord({world, draft}: GameRecordInput): CenteredGame {
     version: 2,
     partFrame: SAVED_PART_FRAME,
     world: validateWorld(world),
-    workshop: workshop(draft, false)
+    workshop: workshop(draft, true)
   };
 }
 // Pure migration; browser storage is not touched. The caller must retain the
@@ -63,7 +62,7 @@ export function migrateWorkspace(value: LegacyWorkspace): CenteredGame {
   const legacy = validateWorkspace(value);
   return gameRecord({
     world: worldFromFlight(legacy.flight, {universalTime: legacy.universalTime}),
-    draft: legacy
+    draft: {...legacy, parts: convertSavedPartFrame(legacy.parts, 'encode')}
   });
 }
 export function validateGame(value: SavedGame): CenteredGame {
@@ -87,5 +86,5 @@ export const writeGame = validateGame;
 
 /** Called only when handing the stored draft to the editor. */
 export function editingParts(game: CenteredGame): FlightPart[] {
-  return convertSavedPartFrame(game.workshop.parts, 'decode');
+  return structuredClone(game.workshop.parts);
 }
