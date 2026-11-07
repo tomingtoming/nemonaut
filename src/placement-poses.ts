@@ -1,4 +1,4 @@
-import {PARTS, nodes, nodeAxis, type PartType} from './catalog.js';
+import {PARTS, nodes, assemblyNode, nodeAxis, type PartType} from './catalog.js';
 import * as T from 'three';
 
 // One transform source for the visible placement ghosts and committed parts.
@@ -9,7 +9,10 @@ export interface PlacementPose {
 /** Place the declared mounting point on the target, with opposing outward normals. */
 export function surfacePlacementPose(type: string, point: T.Vector3, normal: T.Vector3): PlacementPose {
   const d = PARTS[type];
-  const [x, y, z, nx, ny, nz] = d.surfaceMount ?? [0, -d.size[1] / 2, 0, 0, -1, 0];
+  const [x, y, z, nx, ny, nz] = assemblyNode(
+    d.surfaceMount ?? [0, -d.size[1] / 2, 0, 0, -1, 0],
+    d.modelCenter
+  );
   const q = new T.Quaternion().setFromUnitVectors(
     new T.Vector3(nx, ny, nz).normalize(),
     normal.clone().normalize().negate()

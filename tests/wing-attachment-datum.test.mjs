@@ -17,6 +17,10 @@ test('declared wing endpoints preserve legacy node numbers, positions and normal
       [0, 0, 0, -1, 0, 0],
       [width, 0, 0, 1, 0, 0]
     ];
+    assert.deepEqual(
+      PARTS[type].attachmentNodes.map(n => n[0]),
+      [-width / 2, width / 2]
+    );
     assert.deepEqual(nodes(type), expected);
     const p = part(type, [3, 4, 5], [0.2, -0.8, 1.4]);
     const q = new T.Quaternion().setFromEuler(new T.Euler(...p.r));
@@ -53,16 +57,15 @@ test('rebased wing endpoints preserve a rotated tip-to-root joint', () => {
   child.attachment = {mode: 'node', parentNode: 1, ownNode: 0};
   assert.deepEqual(nodeConnection([parent, child], child), {parent: parent.id, parentNode: 1, ownNode: 0});
   const types = ['transportWingRoot', 'transportWing'];
-  const before = types.map(type => PARTS[type].attachmentNodes);
+  const before = types.map(type => PARTS[type].modelCenter);
   try {
-    for (const type of types)
-      PARTS[type].attachmentNodes = nodes(type).map(([x, y, z, nx, ny, nz]) => [x - 7, y, z, nx, ny, nz]);
+    for (const type of types) delete PARTS[type].modelCenter;
     for (const p of [parent, child]) {
       const offset = new T.Vector3(7, 0, 0).applyEuler(new T.Euler(...p.r));
       p.p = new T.Vector3(...p.p).add(offset).toArray();
     }
     assert.deepEqual(nodeConnection([parent, child], child), {parent: parent.id, parentNode: 1, ownNode: 0});
   } finally {
-    types.forEach((type, i) => (PARTS[type].attachmentNodes = before[i]));
+    types.forEach((type, i) => (PARTS[type].modelCenter = before[i]));
   }
 });

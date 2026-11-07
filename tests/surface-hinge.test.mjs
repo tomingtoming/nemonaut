@@ -12,6 +12,7 @@ test('all control surfaces keep their previous neutral and deflected model posit
     const visual = new T.Group(),
       hinge = makeSurfaceHinge(visual, d);
     const oldPivot = new T.Vector3(0, type === 'fin' ? 0.13 : d.size[1] / 2, 0);
+    assert.ok(hinge.position.distanceTo(oldPivot) < 1e-10, type);
     for (const angle of [-0.3, 0, 0.3]) {
       hinge.rotation.x = angle;
       hinge.updateMatrixWorld(true);
@@ -47,7 +48,7 @@ test('moving both datum and pivot preserves a deflected surface under arbitrary 
   const h1 = makeSurfaceHinge(a, PARTS.fin);
   const h2 = makeSurfaceHinge(b, {
     size: PARTS.fin.size,
-    hingePivot: new T.Vector3(...PARTS.fin.hingePivot).sub(delta).toArray()
+    hingePivot: h1.position.clone().sub(delta).toArray()
   });
   before.add(h1);
   after.add(h2);

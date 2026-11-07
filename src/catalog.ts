@@ -457,10 +457,10 @@ const BASE_PARTS = {
   },
   wing: {
     attachmentNodes: [
-      [0, 0, 0, -1, 0, 0],
-      [2, 0, 0, 1, 0, 0]
+      [-1, 0, 0, -1, 0, 0],
+      [1, 0, 0, 1, 0, 0]
     ],
-    surfaceMount: [0, 0, 0, -1, 0, 0],
+    surfaceMount: [-1, 0, 0, -1, 0, 0],
     modelCenter: [1, 0, 0],
     placementNode: 0,
     mirrorRotation: [0, Math.PI, 0],
@@ -477,10 +477,10 @@ const BASE_PARTS = {
   },
   fin: {
     attachmentNodes: [
-      [0, 0, 0, -1, 0, 0],
-      [2, 0, 0, 1, 0, 0]
+      [-1, 0, 0, -1, 0, 0],
+      [1, 0, 0, 1, 0, 0]
     ],
-    surfaceMount: [0, 0, 0, -1, 0, 0],
+    surfaceMount: [-1, 0, 0, -1, 0, 0],
     modelCenter: [1, 0, 0],
     placementNode: 0,
     mirrorRotation: [0, Math.PI, 0],
@@ -496,7 +496,7 @@ const BASE_PARTS = {
     chord: 1.1,
     controlAxis: 'auto',
     maxDeflection: 18,
-    hingePivot: [0, 0.13, 0],
+    hingePivot: [-1, 0.13, 0],
     desc: '全遊動フィン。配置に合わせてピッチ・ヨー・ロールへ混合。気流が必要。'
   },
   stabilizer: {
@@ -628,10 +628,17 @@ export const PARTS: PartCatalog = BASE_PARTS;
 installLargeParts(PARTS);
 installCargoParts(PARTS);
 export const CATEGORIES = ['すべて', '指令', '燃料', '推進', '構造', '空力', '走行', '装備', '船舶'];
+/** Convert a model-space mount to the current assembly pose datum. Normals are directions. */
+export function assemblyNode(
+  [x, y, z, nx, ny, nz]: AttachmentNode,
+  center: readonly number[] = [0, 0, 0]
+): AttachmentNode {
+  return [x + center[0], y + center[1], z + center[2], nx, ny, nz];
+}
 export function nodes(type: PartType): AttachmentNode[] {
   const d = PARTS[type],
     [x, y, z] = d.size;
-  if (d.attachmentNodes) return d.attachmentNodes.map(n => [...n]);
+  if (d.attachmentNodes) return d.attachmentNodes.map(n => assemblyNode(n, d.modelCenter));
   return [
     [0, y / 2, 0, 0, 1, 0],
     [0, -y / 2, 0, 0, -1, 0],
