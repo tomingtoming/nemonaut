@@ -35,7 +35,7 @@ export function makePartVisual(p: FlightPart) {
   const o = new T.Group();
   o.userData.partId = p.id;
   const visual = cloneModel(p.type);
-  if (PARTS[p.type].controlAxis) {
+  if (PARTS[p.type].controlAxis || PARTS[p.type].flapAngles) {
     const hinge = makeSurfaceHinge(visual, PARTS[p.type]);
     o.add(hinge);
     o.userData.hinge = hinge;

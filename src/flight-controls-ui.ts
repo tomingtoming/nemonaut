@@ -13,7 +13,7 @@ import {$, blurActive, notify} from './ui-common.js';
 import {stage} from './flight-lifecycle.js';
 import {updateNavigation, updateTransferGuide} from './flight-hud.js';
 import {setGear} from './landing-gear.js';
-import {armChutes} from './flight-keyboard.js';
+import {flapControl, armChutes} from './flight-keyboard.js';
 import {showBrakeState, updateFlightControls} from './flight-controls.js';
 export function wireFlightControls() {
   for (const key of ['reactionEnabled', 'steeringEnabled', 'driveEnabled', 'rcsEnabled'] as const)
@@ -98,6 +98,14 @@ export function wireFlightControls() {
     showBrakeState($('#brake', 'button'), state.flight.brake);
   };
   // Landing gear up / down (BACKLOG 9c): G and the touch 「ギア」 button press this button.
+  $('#' + flapControl.button, 'button').onclick = () => {
+    const f = state.flight;
+    if (!f || !canControl(f)) return;
+    f.flapStage = (f.flapStage + 1) % 4;
+    updateFlightControls(document, f);
+    blurActive();
+  };
+  // Gear up / down (BACKLOG 9c): G and the touch 「ギア」 button press this button.
   $('#gear', 'button').onclick = () => {
     const f = state.flight;
     if (!f || !canControl(f)) return;

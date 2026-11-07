@@ -51,6 +51,16 @@ export function catalogContractErrors(parts) {
       if (!['axial', 'forward', 'legacy-auto'].includes(part.commandFrame)) fail('commandFrame');
       if (!part.control) fail('commandFrame requires control');
     }
+    if (part.flapAngles !== undefined) {
+      const angles = part.flapAngles;
+      if (
+        !Array.isArray(angles) ||
+        angles.length !== 3 ||
+        !angles.every((a, i) => Number.isFinite(a) && a > (i ? angles[i - 1] : 0) && a < 90)
+      )
+        fail('invalid flapAngles');
+      if (!(part.wing > 0 && part.chord > 0) || !vector(part.ac)) fail('flap requires lifting surface');
+    }
     if (part.controlAxis !== undefined) {
       if (!['auto', 'pitch', 'roll', 'yaw'].includes(part.controlAxis)) fail('controlAxis');
       for (const field of ['wing', 'chord', 'maxDeflection']) {
@@ -60,7 +70,8 @@ export function catalogContractErrors(parts) {
       // surface-hinge.ts defaults the pivot to [0, size[1] / 2, 0].
     }
     if ('hingeY' in part) fail('hingePivot replaces hingeY');
-    if (part.hingePivot !== undefined && !part.controlAxis) fail('hingePivot requires controlAxis');
+    if (part.hingePivot !== undefined && !part.controlAxis && !part.flapAngles)
+      fail('hingePivot requires controlAxis');
     if (part.wheel && !(Number.isFinite(part.suspensionTravel) && part.suspensionTravel > 0))
       fail('wheel requires positive suspensionTravel');
     if (part.poweredWheel && !part.wheel) fail('poweredWheel requires wheel');

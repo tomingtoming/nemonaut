@@ -3,6 +3,7 @@
 // arrow set; app.ts calls wireKeyboard and wireCameraKeys at the original places (the docking autopilot's
 // capture listener is registered between them by initDockingUi).
 import {
+  flapControl,
   stageKey,
   sasKey,
   throttleKeys,
@@ -80,6 +81,7 @@ export function wireKeyboard() {
       if (e.code === armChutes.code) $('#' + armChutes.button, 'button').click();
       if (e.code === stageKey) stage();
       if (e.code === wheelBrake.code) $('#' + wheelBrake.button, 'button').click();
+      if (e.code === flapControl.code) $('#' + flapControl.button, 'button').click();
       if (e.code === landingGear.code) $('#' + landingGear.button, 'button').click();
       if (e.code === sasKey) $('#sas', 'button').click();
       if (e.code === throttleKeys[1] || e.code === throttleKeys[0]) {

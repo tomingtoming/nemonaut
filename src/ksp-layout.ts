@@ -170,6 +170,7 @@ export function mountKspLayout(): void {
     element(document, '#sas', 'button'),
     element(document, '#brake', 'button'),
     element(document, '#gear', 'button'),
+    element(document, '#flaps', 'button'),
     element(document, '#precisionControl', 'button'),
     closest(element(document, '#rcsEnabled', 'input'), 'label', 'label')
   );

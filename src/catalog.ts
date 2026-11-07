@@ -52,6 +52,7 @@ export type PartDefinition = {
   massCenter?: number[];
   chord?: number;
   model?: string;
+  flapAngles?: readonly [number, number, number];
   controlAxis?: PartControlAxis;
   maxDeflection?: number;
   /** Local control-surface pivot; defaults to the upper Y face. */
@@ -511,6 +512,19 @@ const BASE_PARTS = {
     chord: 0.65,
     ac: [0, 0.16, 0],
     desc: '固定安定板。回転させて垂直尾翼にも使えます。'
+  },
+  flap: {
+    name: 'フラップ',
+    code: 'FP-1.8',
+    cat: '空力',
+    mass: 12,
+    size: [1.8, 0.4, 0.08],
+    wing: 0.72,
+    chord: 0.4,
+    ac: [0, 0.1, 0],
+    model: 'elevator',
+    flapAngles: [5, 10, 15],
+    desc: '主翼後縁に取り付ける高揚力装置。Fで段階的に展開。'
   },
   elevator: {
     name: 'エレベーター',

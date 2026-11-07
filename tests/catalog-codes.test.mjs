@@ -17,7 +17,7 @@ test('model numbers use the same catalog quantity throughout each variant family
     [['FT', 'AF'], part => part.fuel], // kg
     [['RE', 'SL', 'VX', 'TJ', 'TF', 'MP'], part => part.thrust / 1000], // kN
     [['AD', 'DC'], part => Math.max(...part.stackDiameters) * 100], // larger mating diameter, cm
-    [['SW', 'RF', 'ST', 'EL', 'AL', 'RD', 'WI', 'TW', 'TS', 'TE'], part => part.size[0]], // span, m
+    [['SW', 'RF', 'ST', 'EL', 'FP', 'AL', 'RD', 'WI', 'TW', 'TS', 'TE'], part => part.size[0]], // span, m
     [['NG', 'MG', 'RW'], part => part.size[1]], // wheel diameter, m
     [['FC', 'MC'], part => part.size[1]], // cabin length, m
     [['BT'], part => part.ballast / 1000] // ballast capacity, tonnes

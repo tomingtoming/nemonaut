@@ -1,4 +1,10 @@
 export const wheelBrake = {code: 'KeyB', button: 'brake', action: 'ブレーキ'} as const;
+export const flapControl = {
+  code: 'KeyF',
+  button: 'flaps',
+  action: 'フラップ',
+  capability: 'flapAngles'
+} as const;
 export const landingGear = {code: 'KeyG', button: 'gear', action: 'ギアの出し入れ'} as const;
 export const armChutes = {
   code: 'KeyH',
@@ -50,7 +56,7 @@ const flightKeys = new Set([
   armChutes.code,
   wheelBrake.code,
   sasKey,
-  'KeyF',
+  flapControl.code,
   landingGear.code,
   'KeyV',
   'CapsLock',

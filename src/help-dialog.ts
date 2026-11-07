@@ -1,4 +1,5 @@
 import {
+  flapControl,
   stageKey,
   sasKey,
   throttleKeys,
@@ -36,6 +37,7 @@ const FLIGHT_KEYS: Rows = [
     `${axisLabel(pitchKeys)} · ${axisLabel(yawKeys)}`,
     '動力付きの車輪で前後・操舵（Spaceは要らない。ブレーキは自動で解除）'
   ],
+  [flapControl.code.slice(3), 'フラップを1段展開（3段の次は格納）'],
   [wheelBrake.code.slice(3), wheelBrake.action],
   [landingGear.code.slice(3), 'ランディングギアの出し入れ（接地中は格納できない）'],
   [stageKey, 'エンジン始動 / 次段'],
@@ -68,6 +70,7 @@ const FLIGHT_TOUCH: Rows = [
   ['「次段」', 'エンジン始動 / 次段'],
   ['「全推力」「推力0」', '全推力 / 推力0。細かくは推力のつまみ'],
   ['「BRAKE」「SAS」「RCS」', 'ブレーキ · 姿勢保持 · RCS の切替'],
+  ['「FLAP」', 'フラップを1段展開（3段の次は格納）'],
   ['「ギア上げ」「ギア下げ」', 'ランディングギアの出し入れ（ギアのある機体だけ。接地中は格納できない）'],
   ['「SAS方向」', '順行・逆行などの向きを選ぶ'],
   ['「RCS並進」ボタン', 'RCSで平行移動（RCSを入れると出る）'],

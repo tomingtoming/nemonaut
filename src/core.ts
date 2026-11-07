@@ -65,6 +65,7 @@ import {
   partCenter,
   aeroPoint,
   aeroAnalysis,
+  flapDeflection,
   surfaceForce,
   surfaceForceScale,
   controlDeflection,
@@ -407,6 +408,7 @@ export class Flight {
   declare floor: number;
   declare fuel: FuelMap;
   /** Landing gear down (BACKLOG 9c): one switch for the vessel's retractable gear, deployed at launch. */
+  flapStage = 0;
   declare gearDeployed: boolean;
   declare gimbals: Map<string, T.Vector3>;
   declare ground: import('./physics.js').Collider | undefined;
@@ -752,6 +754,7 @@ export class Flight {
         child.trim = this.trim;
         child.brake = this.brake;
         child.gearDeployed = this.gearDeployed;
+        child.flapStage = this.flapStage;
         child.sas = branch.some(p => PARTS[p.type].control) && this.sas;
         child.holdQ = this.q.clone();
         for (const key of ['reactionEnabled', 'driveEnabled', 'steeringEnabled', 'rcsEnabled'] as const)
@@ -1148,7 +1151,7 @@ export class Flight {
       }
       if (d.wing) {
         let angle = this.deflections.get(p.id) || 0,
-          target = controlDeflection(p, st.com, commands);
+          target = d.flapAngles ? flapDeflection(p, this.flapStage) : controlDeflection(p, st.com, commands);
         angle += T.MathUtils.clamp(target - angle, -dt * 1.6, dt * 1.6);
         this.deflections.set(p.id, angle);
         const point = aeroPoint(p).applyQuaternion(this.q).add(this.pos),

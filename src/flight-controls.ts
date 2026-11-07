@@ -1,4 +1,4 @@
-import {armChutes, toggleRcs} from './flight-keyboard.js';
+import {flapControl, armChutes, toggleRcs} from './flight-keyboard.js';
 import {equipmentSwitches} from './part-settings.js';
 import {PARTS} from './catalog.js';
 import {canControl, type ControllableVessel} from './fleet.js';
@@ -31,6 +31,7 @@ export interface FlightControlsVessel extends ControllableVessel {
   reactionEnabled: boolean;
   steeringEnabled: boolean;
   driveEnabled: boolean;
+  flapStage: number;
   gearDeployed: boolean;
 }
 export function showBrakeState(button: HTMLButtonElement, engaged: boolean): void {
@@ -64,6 +65,10 @@ export function updateFlightControls(
   chute.disabled = !controllable || chute.hidden;
   element(root, '#ballastControl', 'label').hidden = !parts.some(p => PARTS[p.type].ballast);
   // The gear switch (BACKLOG 9c) shows only on a vessel with retractable gear, lit while the gear is down.
+  const flaps = element(root, '#' + flapControl.button, 'button');
+  flaps.hidden = !parts.some(p => PARTS[p.type][flapControl.capability]);
+  flaps.disabled = !controllable || flaps.hidden;
+  flaps.textContent = 'FLAP ' + flight.flapStage;
   const gear = element(root, '#gear', 'button');
   gear.hidden = !hasRetractableGear(parts);
   gear.disabled = !controllable || gear.hidden;

@@ -50,6 +50,7 @@ export interface FractureFlight {
   started: boolean;
   brake: boolean;
   gearDeployed: boolean;
+  flapStage: number;
   navigationFrame: string;
   navigationAuto: boolean;
   reactionEnabled: boolean;
@@ -166,6 +167,7 @@ export function fractureVessel(
     v.trim = before.trim;
     v.brake = before.brake;
     v.gearDeployed = before.gearDeployed;
+    v.flapStage = before.flapStage;
     v.navigationFrame = before.navigationFrame;
     v.navigationAuto = before.navigationAuto;
     v.reactionEnabled = before.reactionEnabled;

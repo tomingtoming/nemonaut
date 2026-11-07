@@ -74,6 +74,13 @@ export function aeroAnalysis(parts: readonly AeroPart[], com: T.Vector3): AeroAn
   chord /= weight || 1;
   return {center, area, chord, weight, staticMargin: weight ? (com.z - center.z) / (chord || 1) : null};
 }
+/** Positive local X rotation moves the trailing edge toward local -Z. Keep mirrored panels down together. */
+export function flapDeflection(p: AeroPart, stage: number): number {
+  const degrees = PARTS[p.type].flapAngles?.[stage - 1] ?? 0;
+  if (!degrees) return 0;
+  const normal = new T.Vector3(0, 0, 1).applyQuaternion(partRotation(p));
+  return T.MathUtils.degToRad(normal.y < 0 ? -degrees : degrees);
+}
 export function surfaceForce(
   p: Pick<AeroPart, 'type'>,
   orientation: T.Quaternion,

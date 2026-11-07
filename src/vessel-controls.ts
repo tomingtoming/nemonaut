@@ -1,4 +1,5 @@
 import {
+  flapControl,
   stageKey,
   sasKey,
   throttleKeys,
@@ -87,6 +88,8 @@ export function vesselControls(
     rows.push({action: '地上で曲がる', how: touch ? stick + 'を左右' : axisLabel(yawKeys)});
   if (has(d => d.wheel))
     rows.push({action: wheelBrake.action, how: touch ? '「BRAKE」ボタン' : wheelBrake.code.slice(3)});
+  if (has(d => d[flapControl.capability]))
+    rows.push({action: flapControl.action, how: touch ? '「FLAP」ボタン' : flapControl.code.slice(3)});
   if (hasRetractableGear(parts))
     rows.push({
       action: landingGear.action,
