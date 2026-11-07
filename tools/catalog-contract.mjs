@@ -63,7 +63,11 @@ export function catalogContractErrors(parts) {
     if (part.hingePivot !== undefined && !part.controlAxis) fail('hingePivot requires controlAxis');
     if (part.poweredWheel && !part.wheel) fail('poweredWheel requires wheel');
     if (part.retractable && !part.wheel) fail('retractable requires wheel');
-    if (part.steer && !part.wheel) fail('steer requires wheel');
+    if (part.steer !== undefined) {
+      if (!part.wheel) fail('steer requires wheel');
+      if (!Number.isFinite(part.steer) || part.steer <= 0 || part.steer > Math.PI / 2)
+        fail('invalid wheel steering limit');
+    }
     if (part.rcsThrust > 0 && !(part.rcsIsp > 0)) fail('rcsThrust requires rcsIsp');
     if (part.attachmentNodes !== undefined) {
       for (const node of part.attachmentNodes) {

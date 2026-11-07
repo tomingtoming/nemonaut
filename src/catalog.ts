@@ -61,7 +61,8 @@ export type PartDefinition = {
   poweredWheel?: boolean;
   /** Landing gear that folds away in flight (BACKLOG 9c): G toggles it for the whole vessel. */
   retractable?: boolean;
-  steer?: boolean;
+  /** Maximum wheel steering angle in radians at rest. */
+  steer?: number;
   parachute?: number;
   solarPower?: number;
   volume?: number;
@@ -557,7 +558,7 @@ const BASE_PARTS = {
     size: [0.34, 0.7, 0.7],
     wheel: true,
     retractable: true,
-    steer: true,
+    steer: 0.4,
     model: 'wheel',
     desc: '前輪1輪の操向脚。地上のA/D入力で操向。飛行中は格納可能。'
   },
@@ -580,7 +581,7 @@ const BASE_PARTS = {
     size: [0.34, 0.7, 0.7],
     wheel: true,
     poweredWheel: true,
-    steer: true,
+    steer: 0.4,
     desc: '接地中に駆動・ブレーキ・操舵できるサスペンション輪。'
   },
   parachute: {

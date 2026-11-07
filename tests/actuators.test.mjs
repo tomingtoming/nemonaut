@@ -105,3 +105,20 @@ test('Nomad turns left and right on wheel forces alone and stops under braking',
     }
   }
 });
+
+test('side-mounted drive wheels propel the rover along their own rolling plane', () => {
+  const parts = preset('rover');
+  for (const p of parts) if (p.type === 'wheel') p.r[1] = Math.PI / 2;
+  const f = new Flight(parts, 'land');
+  try {
+    f.reactionEnabled = false;
+    f.brake = false;
+    const start = inertialToFixed(f.pos, f.universalTime);
+    run(f, 240, {drive: 1});
+    const travel = inertialToFixed(f.pos, f.universalTime).sub(start);
+    assert.ok(travel.x > 2 && Math.abs(travel.z) < travel.x / 4, travel.toArray().join(','));
+    assert.ok([...f.wheelMotion.values()].every(w => w.speed > 0));
+  } finally {
+    f.dispose();
+  }
+});

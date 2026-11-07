@@ -64,7 +64,7 @@ const mutations = [
   [
     'steer requires wheel',
     p => {
-      p.steer = true;
+      p.steer = 0.4;
       delete p.wheel;
     }
   ],

@@ -1214,9 +1214,11 @@ export class Flight {
         const radius = d.size[1] / 2,
           steer =
             d.steer && this.steeringEnabled && p.steeringEnabled !== false
-              ? ((input.yaw || 0) * 0.4) / (1 + relativeVelocity.lengthSq() / 9)
+              ? (T.MathUtils.clamp(input.yaw || 0, -1, 1) * d.steer) / (1 + relativeVelocity.lengthSq() / 9)
               : 0;
-        const rollingDirection = new T.Vector3(Math.sin(steer), 0, Math.cos(steer)).applyQuaternion(this.q);
+        // The visual steers about part-local Y and rolls about the steered local X axle.
+        const axle = new T.Vector3(Math.cos(steer), 0, -Math.sin(steer)).applyQuaternion(orientation);
+        const rollingDirection = axle.clone().cross(normal).normalize();
         const motion = this.wheelMotion.get(p.id) || {angle: 0, speed: 0, steer: 0};
         const bottom = altitude(wp) - radius;
         motion.extension = T.MathUtils.clamp(bottom, 0, 0.18);
@@ -1233,16 +1235,14 @@ export class Flight {
           const share = mass / Math.max(1, wheelCount),
             spring = Math.max(0, (0.18 - bottom) * share * 150 - pv.dot(normal) * share * 12);
           apply(normal.clone().multiplyScalar(spring), wp);
-          const forward = new T.Vector3(Math.sin(steer), 0, Math.cos(steer)).applyQuaternion(this.q);
-          forward.addScaledVector(normal, -forward.dot(normal));
-          forward.normalize();
+          const forward = rollingDirection;
           const side = normal.clone().cross(forward),
             load = Math.max(spring, share * gravity(wp).length() * 0.25),
             point = wp.clone().addScaledVector(normal, -radius);
           wheelContacts.push({
             id: p.id,
             point: point.toArray(),
-            halfAxle: new T.Vector3(d.size[0] / 2, 0, 0).applyQuaternion(orientation).toArray(),
+            halfAxle: axle.multiplyScalar(d.size[0] / 2).toArray(),
             time: startTime
           });
           apply(
