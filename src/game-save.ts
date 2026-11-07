@@ -1,4 +1,5 @@
 import {saveKind, isSaveKind} from './app-id.js';
+import {convertSavedPartFrame, SAVED_PART_FRAME} from './part-save-frame.js';
 import {validateCraft, type FlightPart} from './core.js';
 import {validateWorkspace, type LegacyWorkspace} from './workspace-save.js';
 import {validateWorld, worldFromFlight, type SavedWorld} from './world-save.js';
@@ -12,6 +13,8 @@ export interface WorkshopDraft {
 export interface SavedGame {
   kind: string;
   version: number;
+  /** Applies to workshop.parts only. World vessels carry their own frame versions. */
+  partFrame?: string;
   world: SavedWorld;
   workshop: WorkshopDraft;
 }
@@ -52,6 +55,27 @@ export function migrateWorkspace(value: LegacyWorkspace): SavedGame {
   });
 }
 export function validateGame(value: SavedGame): SavedGame {
-  if (!isSaveKind(value?.kind, 'game') || value.version !== 1) throw Error('ゲーム保存の形式が不正です');
-  return gameRecord({world: value.world, draft: value.workshop});
+  if (
+    !isSaveKind(value?.kind, 'game') ||
+    !(
+      (value.version === 1 && value.partFrame === undefined) ||
+      (value.version === 2 && value.partFrame === SAVED_PART_FRAME)
+    )
+  )
+    throw Error('ゲーム保存の形式が不正です');
+  const draft =
+    value.version === 2 && value.workshop
+      ? {...value.workshop, parts: convertSavedPartFrame(value.workshop.parts, 'decode')}
+      : value.workshop;
+  return gameRecord({world: value.world, draft});
+}
+/** Encode at the persistence boundary; validateGame returns editing coordinates. */
+export function writeGame(value: SavedGame): SavedGame {
+  const game = validateGame(value);
+  return {
+    ...game,
+    version: 2,
+    partFrame: SAVED_PART_FRAME,
+    workshop: {...game.workshop, parts: convertSavedPartFrame(game.workshop.parts, 'encode')}
+  };
 }

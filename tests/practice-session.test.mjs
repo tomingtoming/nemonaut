@@ -27,6 +27,7 @@ test('practice burn and separation cannot advance or replace the normal world, a
     before = structuredClone(game),
     s = storage();
   writeStoredGame(s, game);
+  const storedBeforePractice = readStoredGame(s).game;
   const normal = s.getItem(GAME_KEY);
   s.setItem('omnivehicle-flight-v1', 'normal-quick');
   const session = new PracticeSession(game, draft),
@@ -65,7 +66,7 @@ test('practice burn and separation cannot advance or replace the normal world, a
     session.saveHome(s);
     assert.equal(s.getItem(GAME_KEY), normal);
     assert.equal(s.getItem('omnivehicle-flight-v1'), 'normal-quick');
-    assert.deepEqual(readStoredGame(s).game, JSON.parse(JSON.stringify(game)));
+    assert.deepEqual(readStoredGame(s).game, storedBeforePractice);
     assert.deepEqual(session.home, game);
     assert.deepEqual(game, before);
     const exit = session.home;
@@ -81,6 +82,7 @@ test('a new practice session has no inherited quicksave and failed saves leave n
   const {game, draft} = fixture(),
     s = storage();
   writeStoredGame(s, game);
+  const storedBeforePractice = readStoredGame(s).game;
   const before = new Map(s.data);
   const session = new PracticeSession(game, draft);
   assert.throws(() => session.loadFlight(), /まだありません/);
@@ -95,7 +97,7 @@ test('a new practice session has no inherited quicksave and failed saves leave n
   assert.deepEqual(s.data, before);
   session.saveFlight(flightFromWorld(session.initialWorld));
   assert.throws(() => new PracticeSession(game, draft).loadFlight(), /まだありません/);
-  assert.deepEqual(readStoredGame(s).game, JSON.parse(JSON.stringify(game)));
+  assert.deepEqual(readStoredGame(s).game, storedBeforePractice);
 });
 
 test('rendezvous practice adds a separate target at the home epoch and quicksave retains both', () => {

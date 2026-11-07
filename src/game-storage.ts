@@ -1,6 +1,6 @@
 import {storageKey} from './app-id.js';
 import {WORKSPACE_KEY, type LegacyWorkspace} from './workspace-save.js';
-import {validateGame, migrateWorkspace, type SavedGame} from './game-save.js';
+import {validateGame, writeGame, migrateWorkspace, type SavedGame} from './game-save.js';
 
 export type GameStorage = Pick<Storage, 'getItem' | 'setItem'>;
 export interface StoredGame {
@@ -23,7 +23,7 @@ export function readStoredGame(storage: GameStorage): StoredGame | null {
   return {game: migrateWorkspace(parse(legacy) as LegacyWorkspace), migrated: true};
 }
 export function writeStoredGame(storage: GameStorage, value: SavedGame): void {
-  const serialized = JSON.stringify(validateGame(value));
+  const serialized = JSON.stringify(writeGame(value));
   if (serialized.length > MAX_SAVE_LENGTH) throw Error('保存データが大きすぎます');
   // localStorage.setItem is atomic. Keep the legacy key as the original
   // migration backup; never remove it or overwrite it on new-format saves.
