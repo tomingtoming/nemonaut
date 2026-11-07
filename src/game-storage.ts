@@ -1,10 +1,10 @@
 import {storageKey} from './app-id.js';
 import {WORKSPACE_KEY, type LegacyWorkspace} from './workspace-save.js';
-import {validateGame, writeGame, migrateWorkspace, type SavedGame} from './game-save.js';
+import {validateGame, writeGame, migrateWorkspace, type SavedGame, type CenteredGame} from './game-save.js';
 
 export type GameStorage = Pick<Storage, 'getItem' | 'setItem'>;
 export interface StoredGame {
-  game: SavedGame;
+  game: CenteredGame;
   migrated: boolean;
 }
 

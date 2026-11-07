@@ -16,7 +16,7 @@ import {loadFlight, saveFlight} from '../dist/flight-save.js';
 import {fleet} from '../dist/fleet.js';
 import {worldFromFlight, flightFromWorld} from '../dist/world-save.js';
 import {launchWorld, selectWorldVessel, retireWorldVessel} from '../dist/world-operations.js';
-import {gameRecord, validateGame} from '../dist/game-save.js';
+import {editingParts, gameRecord, validateGame} from '../dist/game-save.js';
 
 // Both vehicles actually depart from the rotating surface. Demonstration pilots
 // use the same staging/throttle/SAS actuators; no positions or velocities are set.
@@ -174,7 +174,7 @@ for (const mode of ['instantaneous', 'corrected', 'automatic'])
       assert.equal(recovered.world.vessels.length, count - 1);
       assert.equal(recovered.removed.action, '回収');
       const game = validateGame(JSON.parse(JSON.stringify(gameRecord({world: recovered.world, draft}))));
-      assert.deepEqual(game.workshop, JSON.parse(JSON.stringify(draft)));
+      assert.deepEqual({...game.workshop, parts: editingParts(game)}, JSON.parse(JSON.stringify(draft)));
       assert.equal(game.world.activeVesselId, aId);
       assert.ok(!game.world.vessels.some(v => v.vesselId === bId));
       assert.deepEqual(

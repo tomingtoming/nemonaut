@@ -1,5 +1,5 @@
 import {withRendezvousTarget} from './rendezvous-practice.js';
-import {validateGame, type SavedGame} from './game-save.js';
+import {validateGame, type SavedGame, type CenteredGame} from './game-save.js';
 import {worldFromFlight, type SavedWorld} from './world-save.js';
 import {launchWorld} from './world-operations.js';
 import {writeStoredGame, type GameStorage} from './game-storage.js';
@@ -9,7 +9,7 @@ import {departureMode} from './departure-mode.js';
 // so neither autosave nor F5 can replace the normal world's persisted state.
 export type PracticeDesign = import('./launch-fleet.js').LaunchRequest & {practiceScenario?: string};
 export class PracticeSession {
-  #home: SavedGame;
+  #home: CenteredGame;
   #quick: import('./flight-save.js').SavedFlight | null = null;
   #initial: SavedWorld;
   constructor(game: SavedGame, design: PracticeDesign) {
@@ -30,7 +30,7 @@ export class PracticeSession {
   get initialWorld(): SavedWorld {
     return structuredClone(this.#initial);
   }
-  get home(): SavedGame {
+  get home(): CenteredGame {
     return structuredClone(this.#home);
   }
   saveHome(storage: GameStorage): void {

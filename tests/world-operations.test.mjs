@@ -10,7 +10,7 @@ import {
   worldTrackingList,
   retireWorldVessel
 } from '../dist/world-operations.js';
-import {gameRecord, validateGame} from '../dist/game-save.js';
+import {editingParts, gameRecord, validateGame} from '../dist/game-save.js';
 
 test('independent world operations preserve satellite A through launch, selection and recovery of B', () => {
   const start = worldFromFlight(null, {universalTime: 5000});
@@ -54,7 +54,7 @@ test('independent world operations preserve satellite A through launch, selectio
   const draft = {parts: preset('plane'), name: 'Next plane', bay: 'sph', environment: 'runway'};
   const game = validateGame(JSON.parse(JSON.stringify(gameRecord({world: result.world, draft}))));
   assert.equal(game.world.vessels[0].vesselId, aId);
-  assert.deepEqual(game.workshop, draft);
+  assert.deepEqual({...game.workshop, parts: editingParts(game)}, draft);
   assert.equal(game.world.universalTime, world.universalTime);
 });
 

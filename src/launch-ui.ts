@@ -9,7 +9,7 @@ import {departureMode, historyActionLabel} from './departure-mode.js';
 import {launchWorld} from './world-operations.js';
 import {fleet} from './fleet.js';
 import {launchHint} from './vessel-controls.js';
-import {gameRecord} from './game-save.js';
+import {editingParts, gameRecord} from './game-save.js';
 import {worldFromFlight, flightFromWorld} from './world-save.js';
 import type {LaunchSiteError} from './launch-clearance.js';
 import {state} from './app-state.js';
@@ -42,7 +42,7 @@ export function finishPractice() {
   state.practiceSession = null;
   state.parkedWorld = home.world;
   state.universalTime = home.world.universalTime;
-  state.parts = home.workshop.parts;
+  state.parts = editingParts(home);
   $('#craftName', 'input').value = home.workshop.name;
   setBay(home.workshop.bay);
   $('#environment', 'select').value = home.workshop.environment;

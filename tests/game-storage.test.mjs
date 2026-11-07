@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {WORKSPACE_KEY, workspaceRecord} from '../dist/workspace-save.js';
 import {GAME_KEY, readStoredGame, writeStoredGame, backupStoredGame} from '../dist/game-storage.js';
-import {migrateWorkspace} from '../dist/game-save.js';
+import {editingParts, migrateWorkspace} from '../dist/game-save.js';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {saveFlight} from '../dist/flight-save.js';
@@ -51,7 +51,7 @@ test('old workspace migrates to new key while original and independent flight qu
     assert.equal(next.migrated, false);
     assert.equal(next.game.world.vessels.length, 2);
     assert.equal(next.game.world.universalTime, f.universalTime);
-    assert.deepEqual(next.game.workshop.parts, legacy.parts);
+    assert.deepEqual(editingParts(next.game), legacy.parts);
     const flight = flightFromWorld(next.game.world);
     assert.equal(flight.vesselId, f.vesselId);
     assert.deepEqual(flight.fuel, saveFlight(f).fuel);

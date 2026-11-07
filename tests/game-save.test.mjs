@@ -4,7 +4,7 @@ import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {saveFlight} from '../dist/flight-save.js';
 import {workspaceRecord} from '../dist/workspace-save.js';
-import {migrateWorkspace, validateGame} from '../dist/game-save.js';
+import {editingParts, migrateWorkspace, validateGame} from '../dist/game-save.js';
 
 test('whole-game migration separates editable design from persistent world without changing the source', () => {
   const f = new Flight(preset('twin'), 'orbit', 5000);
@@ -24,7 +24,7 @@ test('whole-game migration separates editable design from persistent world witho
       restored = validateGame(JSON.parse(JSON.stringify(game)));
     assert.equal(restored.world.vessels.length, 2);
     assert.equal(restored.world.universalTime, f.universalTime);
-    assert.deepEqual(restored.workshop.parts, legacy.parts);
+    assert.deepEqual(editingParts(restored), legacy.parts);
     assert.deepEqual(legacy, before);
     const world = structuredClone(restored.world);
     restored.workshop.parts[0].p[0] += 10;
@@ -56,7 +56,7 @@ test('empty worlds and empty drafts remain valid independently; invalid saves fa
     s => (s.world.activeVesselId = 'missing'),
     s => (s.workshop.bay = 'unknown'),
     s => (s.workshop.parts = [{}]),
-    s => (s.version = 2)
+    s => (s.version = 3)
   ]) {
     const bad = structuredClone(game);
     mutate(bad);

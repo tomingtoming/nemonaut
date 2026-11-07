@@ -18,12 +18,16 @@ export interface SavedGame {
   world: SavedWorld;
   workshop: WorkshopDraft;
 }
+export interface CenteredGame extends SavedGame {
+  version: 2;
+  partFrame: typeof SAVED_PART_FRAME;
+}
 export interface GameRecordInput {
   world: SavedWorld;
   draft: WorkshopDraft | null | undefined;
 }
 
-function workshop(value: WorkshopDraft | null | undefined): WorkshopDraft {
+function workshop(value: WorkshopDraft | null | undefined, centered: boolean): WorkshopDraft {
   if (
     !value ||
     typeof value.name !== 'string' ||
@@ -35,26 +39,34 @@ function workshop(value: WorkshopDraft | null | undefined): WorkshopDraft {
     !Array.isArray(value.parts)
   )
     throw Error('組立中の設計の保存形式が不正です');
+  const editable = centered ? convertSavedPartFrame(value.parts, 'decode') : value.parts;
+  if (editable.length) validateCraft({version: 1, parts: editable});
   return {
     name: value.name,
     bay: value.bay,
     environment: value.environment,
-    parts: value.parts.length ? validateCraft({version: 1, parts: value.parts}) : []
+    parts: centered ? structuredClone(value.parts) : convertSavedPartFrame(value.parts, 'encode')
   };
 }
-export function gameRecord({world, draft}: GameRecordInput): SavedGame {
-  return {kind: saveKind('game'), version: 1, world: validateWorld(world), workshop: workshop(draft)};
+export function gameRecord({world, draft}: GameRecordInput): CenteredGame {
+  return {
+    kind: saveKind('game'),
+    version: 2,
+    partFrame: SAVED_PART_FRAME,
+    world: validateWorld(world),
+    workshop: workshop(draft, false)
+  };
 }
 // Pure migration; browser storage is not touched. The caller must retain the
 // original save before replacing it with this validated game record.
-export function migrateWorkspace(value: LegacyWorkspace): SavedGame {
+export function migrateWorkspace(value: LegacyWorkspace): CenteredGame {
   const legacy = validateWorkspace(value);
   return gameRecord({
     world: worldFromFlight(legacy.flight, {universalTime: legacy.universalTime}),
     draft: legacy
   });
 }
-export function validateGame(value: SavedGame): SavedGame {
+export function validateGame(value: SavedGame): CenteredGame {
   if (
     !isSaveKind(value?.kind, 'game') ||
     !(
@@ -63,19 +75,17 @@ export function validateGame(value: SavedGame): SavedGame {
     )
   )
     throw Error('ゲーム保存の形式が不正です');
-  const draft =
-    value.version === 2 && value.workshop
-      ? {...value.workshop, parts: convertSavedPartFrame(value.workshop.parts, 'decode')}
-      : value.workshop;
-  return gameRecord({world: value.world, draft});
-}
-/** Encode at the persistence boundary; validateGame returns editing coordinates. */
-export function writeGame(value: SavedGame): SavedGame {
-  const game = validateGame(value);
   return {
-    ...game,
+    kind: saveKind('game'),
     version: 2,
     partFrame: SAVED_PART_FRAME,
-    workshop: {...game.workshop, parts: convertSavedPartFrame(game.workshop.parts, 'encode')}
+    world: validateWorld(value.world),
+    workshop: workshop(value.workshop, value.version === 2)
   };
+}
+export const writeGame = validateGame;
+
+/** Called only when handing the stored draft to the editor. */
+export function editingParts(game: CenteredGame): FlightPart[] {
+  return convertSavedPartFrame(game.workshop.parts, 'decode');
 }

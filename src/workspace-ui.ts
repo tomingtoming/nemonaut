@@ -4,7 +4,7 @@
 // wireWorkspacePersistence at the original place.
 import {ReturnPilot} from './return-pilot.js';
 import {saveFlight} from './flight-save.js';
-import {gameRecord} from './game-save.js';
+import {editingParts, gameRecord} from './game-save.js';
 import {worldFromFlight, flightFromWorld} from './world-save.js';
 import {readStoredGame, writeStoredGame, backupStoredGame} from './game-storage.js';
 import {physicsMigrationMessage} from './physics-migration.js';
@@ -85,7 +85,7 @@ export function restoreWorkspace() {
     if (record?.physicsMigration) notices.push(physicsMigrationMessage(record.physicsMigration));
     $('#centerNotice', 'p').textContent = notices.join(' ');
     state.universalTime = game.world.universalTime;
-    state.parts = w.parts;
+    state.parts = editingParts(game);
     $('#craftName', 'input').value = w.name;
     setBay(w.bay);
     $('#environment', 'select').value = w.environment;

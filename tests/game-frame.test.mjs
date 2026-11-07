@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {preset} from '../dist/catalog.js';
-import {gameRecord, validateGame, writeGame} from '../dist/game-save.js';
+import {part, preset} from '../dist/catalog.js';
+import {editingParts, gameRecord, validateGame, writeGame} from '../dist/game-save.js';
 import {worldFromFlight} from '../dist/world-save.js';
 import {Flight} from '../dist/core.js';
 import {saveFlight} from '../dist/flight-save.js';
@@ -37,7 +37,7 @@ test('game writer changes only workshop coordinates and repeated storage resumes
       const encoded = JSON.parse(raw);
       assert.equal(encoded.version, 2);
       assert.equal(encoded.partFrame, 'nominal-center-v1');
-      assert.notDeepEqual(encoded.workshop.parts, original.workshop.parts);
+      assert.deepEqual(encoded.workshop.parts, original.workshop.parts);
       assert.deepEqual(encoded.world, before.world);
       game = readStoredGame(storage).game;
       equalParts(game.workshop.parts, before.workshop.parts);
@@ -68,5 +68,19 @@ test('empty drafts and legacy games remain valid and invalid frame combinations 
     const before = structuredClone(bad);
     assert.throws(() => validateGame(bad));
     assert.deepEqual(bad, before);
+  }
+});
+
+test('legacy game migrates a near-limit wing once and retains its exact centered save coordinates', () => {
+  const parts = [part('transportWing', [9999.75, 0, 0])];
+  const current = gameRecord({world: worldFromFlight(null), draft: {...draft(), parts}});
+  const legacy = {...current, version: 1, workshop: {...current.workshop, parts}};
+  delete legacy.partFrame;
+  let game = validateGame(legacy);
+  assert.equal(game.workshop.parts[0].p[0], 10006.75);
+  for (let i = 0; i < 5; i++) {
+    game = validateGame(JSON.parse(JSON.stringify(writeGame(game))));
+    assert.deepEqual(game, current);
+    assert.deepEqual(editingParts(game), parts);
   }
 });
