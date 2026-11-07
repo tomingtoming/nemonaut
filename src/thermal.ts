@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {partPointToVessel} from './part-frame.js';
 import {PARTS, type PartDefinition, type Part} from './catalog.js';
 /** Per-part thermal state, mutated in place by thermalStep. Temperatures in K, ablator in kg. */
 export interface ThermalState {
@@ -79,9 +80,7 @@ export function createThermal(
 function geometry(p: ThermalPart, q: T.Quaternion, definitions: ThermalCatalog): PartGeometry {
   const d = definitions[p.type],
     rotation = q.clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(...p.r))),
-    center = new T.Vector3(...(d.massCenter || [0, 0, 0]))
-      .applyQuaternion(rotation)
-      .add(new T.Vector3(...p.p).applyQuaternion(q));
+    center = partPointToVessel(p, d.massCenter || [0, 0, 0], d.modelCenter).applyQuaternion(q);
   return {p, d, rotation, center};
 }
 function projectedArea(g: PartGeometry, direction: T.Vector3): number {

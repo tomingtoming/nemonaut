@@ -12,8 +12,10 @@ test('all catalog datums transform nodes, mass centres and aero centres with the
     const q = new T.Quaternion().setFromEuler(new T.Euler(...p.r));
     const matrix = new T.Matrix4().compose(new T.Vector3(...p.p), q, new T.Vector3(1, 1, 1));
     const transform = point => new T.Vector3(...point).applyMatrix4(matrix);
-    assert.ok(partCenter(p).distanceTo(transform(d.massCenter || [0, 0, 0])) < 1e-10, type);
-    assert.ok(aeroPoint(p).distanceTo(transform(d.ac || [0, 0, 0])) < 1e-10, type);
+    const fromModel = point =>
+      new T.Vector3(...point).add(new T.Vector3(...(d.modelCenter || []))).applyMatrix4(matrix);
+    assert.ok(partCenter(p).distanceTo(fromModel(d.massCenter || [0, 0, 0])) < 1e-10, type);
+    assert.ok(aeroPoint(p).distanceTo(fromModel(d.ac || [0, 0, 0])) < 1e-10, type);
     for (const [index, node] of nodes(type).entries()) {
       const local = nodePoint(node),
         world = partPointToVessel(p, local),
@@ -43,5 +45,25 @@ test('rebasing a datum preserves every authored point only when pose and offsets
     assert.ok(
       partDirectionToVessel(p, [0, 1, 0]).distanceTo(partDirectionToVessel(shifted, [0, 1, 0])) < 1e-12
     );
+  }
+});
+
+test('legacy rotated wing poses retain their mass and lift application points', () => {
+  for (const [type, scale] of Object.entries({
+    wing: 1,
+    fin: 1,
+    wingLarge: 3,
+    transportWing: 7,
+    transportWingRoot: 7
+  })) {
+    const p = part(type, [3, -1, 8], [0.5, -0.9, 1.4]);
+    const inner = type === 'transportWingRoot';
+    for (const [actual, original] of [
+      [partCenter(p), inner ? [7, 0, 0] : [0.8 * scale, -0.2 * scale, 0]],
+      [aeroPoint(p), inner ? [7, 0, 0] : [0.8 * scale, 0.13 * scale, 0]]
+    ]) {
+      const expected = new T.Vector3(...original).applyEuler(new T.Euler(...p.r)).add(new T.Vector3(...p.p));
+      assert.ok(actual.distanceTo(expected) < 1e-10, type);
+    }
   }
 });

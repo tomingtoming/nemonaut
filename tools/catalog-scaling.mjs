@@ -46,5 +46,5 @@ export function scalingErrors(parts, variants, overrides = {}) {
 
 // Non-similar inner wing: explicitly redesigned area, chord and centers.
 export const CURRENT_GEOMETRY_OVERRIDES = {
-  transportWingRoot: {wing: 156.8, chord: 11.2, ac: [7, 0, 0], massCenter: [7, 0, 0]}
+  transportWingRoot: {wing: 156.8, chord: 11.2, ac: [0, 0, 0], massCenter: [0, 0, 0]}
 };

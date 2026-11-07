@@ -90,8 +90,8 @@ export function installLargeParts(parts: Record<string, ScalablePart>): void {
     if (id === 'transportWingRoot') {
       d.wing = 156.8;
       d.chord = 11.2;
-      d.ac = [7, 0, 0];
-      d.massCenter = [7, 0, 0];
+      d.ac = [0, 0, 0];
+      d.massCenter = [0, 0, 0];
     }
     d.desc = d.wing
       ? `面積 ${d.wing.toFixed(2)} m²。大型胴体用。重心からの配置と気流で効きが変わります。`
