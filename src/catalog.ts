@@ -1,3 +1,4 @@
+import {partDirectionToVessel} from './part-frame.js';
 import {installCargoParts} from './cargo-parts.js';
 import {installLargeParts} from './large-parts.js';
 /** Catalog entry: base parts below, large variants (large-parts.ts) and the cargo bay (cargo-parts.ts) are installed at load. */
@@ -663,7 +664,7 @@ function presetPart(a: readonly Part[], test: (p: Part) => boolean): Part {
   if (!p) throw Error('プリセットの部品が見つかりません');
   return p;
 }
-export function preset(kind: string): Part[] {
+function centeredPreset(kind: string): Part[] {
   let a: Part[] = [];
   const add = (t: PartType, p: PartVector, r: PartVector = [0, 0, 0], par = 0, stage = 0) => {
     const o = part(t, p, r, a[par]?.id ?? null, stage);
@@ -688,7 +689,7 @@ export function preset(kind: string): Part[] {
     add('engine', [0, 0.35, 0], [0, 0, 0], 1);
     for (let i = 0; i < 4; i++) {
       const t = (i * Math.PI) / 2;
-      add('fin', [0.625 * Math.cos(t), 0.8, -0.625 * Math.sin(t)], [0, t, 0], 1);
+      add('fin', [1.625 * Math.cos(t), 0.8, -1.625 * Math.sin(t)], [0, t, 0], 1);
     }
   }
   if (kind === 'launcher' || kind === 'returner') {
@@ -703,7 +704,7 @@ export function preset(kind: string): Part[] {
     for (const x of [-0.7, 0.7]) for (const z of [-0.7, 0.7]) add('engine', [x, -7.07, z], [0, 0, 0], 7);
     for (let i = 0; i < 4; i++) {
       const t = (i * Math.PI) / 2;
-      add('fin', [0.625 * Math.cos(t), -5.5, -0.625 * Math.sin(t)], [0, t, 0], 7);
+      add('fin', [1.625 * Math.cos(t), -5.5, -1.625 * Math.sin(t)], [0, t, 0], 7);
     }
   }
   if (kind === 'returner') {
@@ -730,7 +731,7 @@ export function preset(kind: string): Part[] {
     for (const x of [-1.6, 1.6]) add('solar', [x, -2.15, 0], [0, 0, 0], tank);
   }
   if (kind === 'lunar-expedition') {
-    a = preset('lunar-return');
+    a = centeredPreset('lunar-return');
     for (const p of a) {
       if (p.type === 'engine') p.stage = 2;
       else if (p.type === 'decoupler') p.stage = 3;
@@ -750,11 +751,11 @@ export function preset(kind: string): Part[] {
     }
     for (let i = 0; i < 4; i++) {
       const angle = (i * Math.PI) / 2;
-      add('fin', [0.625 * Math.cos(angle), -18.99, -0.625 * Math.sin(angle)], [0, angle, 0], tank);
+      add('fin', [1.625 * Math.cos(angle), -18.99, -1.625 * Math.sin(angle)], [0, angle, 0], tank);
     }
   }
   if (kind === 'lunar-surface-expedition') {
-    a = preset('lunar-expedition');
+    a = centeredPreset('lunar-expedition');
     const tank = presetPart(a, p => p.type === 'tank');
     for (const x of [-1.3, 1.3]) a.push(part('tank', [x, -2.15, 0], [0, 0, 0], tank.id));
     for (const [x, z] of [
@@ -838,7 +839,7 @@ export function preset(kind: string): Part[] {
     add('solar', [-1.6, -1.35, 0], [0, 0, 0], 4);
   }
   if (kind === 'rendezvous') {
-    a = preset('twin');
+    a = centeredPreset('twin');
     for (const core of a.filter(p => p.type === 'probe')) {
       core.reactionEnabled = false;
       for (const x of [-0.9, 0.9])
@@ -846,12 +847,12 @@ export function preset(kind: string): Part[] {
     }
   }
   if (kind === 'orbital-tug') {
-    a = preset('orbiter');
+    a = centeredPreset('orbiter');
     add('dockingPort', [0, 2.821, 0]);
     for (const z of [-0.9, 0.9]) for (const y of [0.2, 2.4]) add('rcs', [0, y, z], [0, 0, 0], 1);
   }
   if (kind === 'tug-launcher') {
-    a = preset('orbital-tug');
+    a = centeredPreset('orbital-tug');
     const engine = presetPart(a, p => p.type === 'engine');
     engine.stage = 1;
     const upper = add('tank', [0, -0.7, 0], [0, 0, 0], 1);
@@ -863,7 +864,7 @@ export function preset(kind: string): Part[] {
     for (const x of [-0.7, 0.7]) for (const z of [-0.7, 0.7]) add('engine', [x, -9.72, z], [0, 0, 0], tank);
     for (let i = 0; i < 4; i++) {
       const angle = (i * Math.PI) / 2;
-      add('fin', [0.625 * Math.cos(angle), -8.15, -0.625 * Math.sin(angle)], [0, angle, 0], tank);
+      add('fin', [1.625 * Math.cos(angle), -8.15, -1.625 * Math.sin(angle)], [0, angle, 0], tank);
     }
   }
   if (kind === 'docking') {
@@ -888,8 +889,8 @@ export function preset(kind: string): Part[] {
     add('cockpit', [0, 1.3, 2.2], r);
     add('tank', [0, 1.3, 0.2], r);
     add('jet', [0, 1.3, -1.4], r, 1);
-    add('wing', [0.625, 1.3, 0.45], [Math.PI / 2 - 0.045, 0, 0], 1);
-    add('wing', [-0.625, 1.3, 0.45], [Math.PI / 2 - 0.045, Math.PI, 0], 1);
+    add('wing', [1.625, 1.3, 0.45], [Math.PI / 2 - 0.045, 0, 0], 1);
+    add('wing', [-1.625, 1.3, 0.45], [Math.PI / 2 - 0.045, Math.PI, 0], 1);
     add('aileron', [1.7, 1.3, -0.51], r, 3);
     add('aileron', [-1.7, 1.3, -0.51], left, 4);
     add('stabilizer', [0.95, 1.4, -1.6], r, 1);
@@ -914,8 +915,8 @@ export function preset(kind: string): Part[] {
     for (const sign of [-1, 1]) {
       const wr: PartVector = sign > 0 ? [Math.PI / 2 - 0.045, 0, 0] : [Math.PI / 2 - 0.045, Math.PI, 0],
         sr = sign > 0 ? r : left;
-      const wing = add('transportWingRoot', [sign * 2.8, 7.5, 1], wr, mid);
-      const outer = add('transportWing', [sign * 16.8, 7.5, 1], wr, wing);
+      const wing = add('transportWingRoot', [sign * 9.8, 7.5, 1], wr, mid);
+      const outer = add('transportWing', [sign * 23.8, 7.5, 1], wr, wing);
       for (const x of [8, 16, 24]) {
         const pylon = add('enginePylon', [sign * x, 6.75, 1], [0, 0, 0], x < 17 ? wing : outer);
         add('transportJet', [sign * x, 4.5, 1], r, pylon);
@@ -1017,7 +1018,7 @@ export function preset(kind: string): Part[] {
             propeller: 'propellerLarge'
           };
     // The large submarine turns with its gimballed screw; the small one's rudder has no large mapping.
-    a = preset(base).filter(p => p.type in mapping);
+    a = centeredPreset(base).filter(p => p.type in mapping);
     for (const p of a) {
       p.type = mapping[p.type];
       p.p = [p.p[0] * s, p.p[1] * s, p.p[2] * s];
@@ -1031,12 +1032,12 @@ export function preset(kind: string): Part[] {
     }
   }
   if (kind === 'transport-cargo') {
-    a = preset('transport');
+    a = centeredPreset('transport');
     const bay = presetPart(a, p => p.type === 'transportFuselage' && p.p[2] === 0);
     bay.type = 'cargoBay';
     bay.r = [Math.PI / 2, 0, 0];
     // Belly doors clear the high wing; the payload hangs from the internal mount.
-    const lab = preset('cargo-lab'),
+    const lab = centeredPreset('cargo-lab'),
       source = lab[0];
     const payload = lab.filter(p => p.id !== source.id && (p.parent !== source.id || p.type === 'decoupler'));
     for (const p of payload) {
@@ -1057,4 +1058,17 @@ export function preset(kind: string): Part[] {
     for (const x of [-0.85, 0.85]) add('solar', [x, 0, -1.88], [0, 0, 0], payload);
   }
   return a;
+}
+
+/** Composite presets are assembled in model-center coordinates. Adapt only the finished craft. */
+export function preset(kind: string): Part[] {
+  const parts = centeredPreset(kind);
+  for (const p of parts) {
+    const center = PARTS[p.type].modelCenter;
+    if (center) {
+      const offset = partDirectionToVessel(p, center);
+      p.p = [p.p[0] - offset.x, p.p[1] - offset.y, p.p[2] - offset.z];
+    }
+  }
+  return parts;
 }
