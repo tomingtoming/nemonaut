@@ -6,7 +6,7 @@ import {Flight, statistics} from '../dist/core.js';
 import {preset, part, PARTS} from '../dist/catalog.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 import {selectVessel} from '../dist/fleet.js';
-const definitions = {rcs: {rcsThrust: 120, rcsIsp: 65}},
+const definitions = {rcs: {size: [0.48, 0.48, 0.48], rcsThrust: 120, rcsIsp: 65}},
   zero = () => new T.Vector3();
 const parts = [-1, 1].map((x, i) => ({id: String(i), type: 'rcs', p: [x, 0, 0], r: [0, 0, 0]}));
 function result(thrusters, levels) {
@@ -167,5 +167,24 @@ test('Tug RCS removes cancelling nozzles without losing axial thrust or torque b
       assert.ok(Math.abs(force.z - 463.83289807191943) < 1e-6);
       assert.ok(Math.abs(torque.x - 30.289461935971275) < 1e-6);
     }
+  }
+});
+
+test('rectangular RCS outlets use each face distance after mounting the block', () => {
+  const mounted = {...parts[0], p: [2, 3, -1], r: [0, Math.PI / 2, 0]};
+  const jets = rcsThrusters([mounted], {rcs: {...definitions.rcs, size: [0.6, 1, 2]}});
+  const expected = [
+    [2, 3, -1.3],
+    [2, 3, -0.7],
+    [2, 3.5, -1],
+    [2, 2.5, -1],
+    [3, 3, -1],
+    [1, 3, -1]
+  ];
+  assert.equal(jets.length, expected.length);
+  for (const [i, jet] of jets.entries()) {
+    assert.ok(jet.position.distanceTo(new T.Vector3(...expected[i])) < 1e-9);
+    const inward = new T.Vector3(...mounted.p).sub(jet.position).normalize();
+    assert.ok(jet.direction.distanceTo(inward) < 1e-9);
   }
 });

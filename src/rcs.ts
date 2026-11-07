@@ -1,13 +1,20 @@
 import * as T from 'three';
-// Each nozzle's exhaust points opposite its force. Positions are in part-local meters.
-export const RCS_NOZZLES = [...Array(3)].flatMap((_, axis) =>
-  [-1, 1].map(sign => {
-    const direction: T.Vector3Tuple = [0, 0, 0];
-    direction[axis] = sign;
-    const position: T.Vector3Tuple = [-0.24 * direction[0], -0.24 * direction[1], -0.24 * direction[2]];
-    return {direction, position};
-  })
-);
+// Stable jet indices: -X, +X, -Y, +Y, -Z, +Z (force, opposite to the exhaust).
+export const RCS_DIRECTIONS: readonly T.Vector3Tuple[] = [
+  [-1, 0, 0],
+  [1, 0, 0],
+  [0, -1, 0],
+  [0, 1, 0],
+  [0, 0, -1],
+  [0, 0, 1]
+];
+/** Local outlet of a six-face block; each bell opens at the centre of its own face. */
+export function rcsOutlet(size: readonly number[], direction: T.Vector3Tuple): T.Vector3 {
+  return new T.Vector3()
+    .fromArray(size)
+    .multiply(new T.Vector3(...direction))
+    .multiplyScalar(-0.5);
+}
 export interface RcsThruster {
   id: string;
   index: number;
@@ -28,6 +35,7 @@ export interface RcsPart {
   fuelEnabled?: boolean;
 }
 export interface RcsDefinition {
+  size: readonly number[];
   rcsThrust?: number;
   rcsIsp?: number;
   readonly [key: string]: unknown;
@@ -96,11 +104,13 @@ export function rcsThrusters(
     if (!thrust || p.fuelEnabled === false) return [];
     if (isp === undefined) throw Error('RCSの比推力が定義されていません: ' + p.type);
     const q = new T.Quaternion().setFromEuler(new T.Euler(...p.r));
-    return RCS_NOZZLES.map((n, index) => ({
+    return RCS_DIRECTIONS.map((direction, index) => ({
       id: p.id,
       index,
-      position: new T.Vector3(...n.position).applyQuaternion(q).add(new T.Vector3(...p.p)),
-      direction: new T.Vector3(...n.direction).applyQuaternion(q),
+      position: rcsOutlet(d.size, direction)
+        .applyQuaternion(q)
+        .add(new T.Vector3(...p.p)),
+      direction: new T.Vector3(...direction).applyQuaternion(q),
       thrust,
       isp
     }));

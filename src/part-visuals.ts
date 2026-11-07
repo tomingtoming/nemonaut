@@ -4,7 +4,7 @@ import * as T from 'three';
 import {makeSurfaceHinge} from './surface-hinge.js';
 import {PARTS} from './catalog.js';
 import type {FlightPart, Flight} from './core.js';
-import {RCS_NOZZLES} from './rcs.js';
+import {RCS_DIRECTIONS, rcsOutlet} from './rcs.js';
 import {syncCargoVisual} from './cargo-geometry.js';
 import {disposeWreckVisual} from './failure-visuals.js';
 import {state} from './app-state.js';
@@ -80,14 +80,14 @@ export function makePartVisual(p: FlightPart) {
     if (rotor) o.userData.rotor = rotor;
   }
   if (PARTS[p.type].rcsThrust) {
-    o.userData.rcsPlumes = RCS_NOZZLES.map(n => {
+    o.userData.rcsPlumes = RCS_DIRECTIONS.map(direction => {
       const plume = new T.Mesh(
         new T.ConeGeometry(0.07, 0.5, 12),
         new T.MeshBasicMaterial({color: '#b7e9ff', transparent: true, opacity: 0.6, depthWrite: false})
       );
-      const exhaust = new T.Vector3(...n.direction).negate();
+      const exhaust = new T.Vector3(...direction).negate();
       plume.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), exhaust.clone().negate());
-      plume.position.fromArray(n.position).addScaledVector(exhaust, 0.25);
+      plume.position.copy(rcsOutlet(PARTS[p.type].size, direction)).addScaledVector(exhaust, 0.25);
       plume.visible = false;
       o.add(plume);
       return plume;
