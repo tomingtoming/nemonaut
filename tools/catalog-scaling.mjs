@@ -19,7 +19,7 @@ export function scalingErrors(parts, variants, overrides = {}) {
       continue;
     }
     const expected = {};
-    for (const field of ['size', 'ac', 'massCenter', 'hingePivot']) {
+    for (const field of ['size', 'ac', 'massCenter', 'hingePivot', 'modelCenter']) {
       if (base[field] !== undefined) expected[field] = base[field].map(v => v * s);
     }
     for (const [field, power] of [

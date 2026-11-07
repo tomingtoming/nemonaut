@@ -21,7 +21,7 @@ for ident,item in spec.items():
   if ident=='transportWingRoot':
    # Full-chord modular inner wing; equal root/tip sections mate without gaps.
    vs=[];fs=[];N=33
-   for x in [0,3.5,7,10.5,14]:
+   for x in [-7,-3.5,0,3.5,7]:
     for side in [1,-1]:
      for i in range(N):
       t=(1-math.cos(math.pi*i/(N-1)))/2

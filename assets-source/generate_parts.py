@@ -58,7 +58,6 @@ def finalize(id):
  bpy.context.view_layer.update()
  objs=parts[id]['objects'];dim=parts[id]['dimensions'];vs=[o.matrix_world@v.co for o in objs for v in o.data.vertices]
  lo=Vector(tuple(min(v[i] for v in vs) for i in range(3)));hi=Vector(tuple(max(v[i] for v in vs) for i in range(3)));center=(lo+hi)/2
- if id=='wing':center.x=lo.x
  scale=Vector((dim[0]/(hi.x-lo.x),dim[2]/(hi.y-lo.y),dim[1]/(hi.z-lo.z)))
  for o in objs:
   mw=o.matrix_world.copy()
@@ -262,7 +261,7 @@ for ident,span,chord,thickness in [('stabilizer',1.8,.65,.09),('elevator',1.8,.4
   box('Control surface stripe',(span*.38,-chord*.22,thickness*.32),(span*.07,chord*.25,thickness*.06),orange,.002)
  finalize(ident)
 
-manifest={id:{'file':id+'.glb','dimensions':p['dimensions'],'coordinates':'Y up / nose +Y; meters','origin':'wing attachment at x=0; others centered' if id=='wing' else 'center'} for id,p in parts.items()}
+manifest={id:{'file':id+'.glb','dimensions':p['dimensions'],'coordinates':'Y up / nose +Y; meters','origin':'center'} for id,p in parts.items()}
 with open(os.path.join(OUT,'manifest.json'),'w') as f:json.dump(manifest,f,indent=2)
 # Preserve editable geometry and provide a studio contact sheet.
 for i,(id,p) in enumerate(parts.items()):

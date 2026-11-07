@@ -87,7 +87,7 @@
       0.12
     ],
     "coordinates": "Y up / nose +Y; meters",
-    "origin": "wing attachment at x=0; others centered"
+    "origin": "center"
   },
   "wheel": {
     "file": "wheel.glb",

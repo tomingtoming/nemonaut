@@ -21,8 +21,12 @@ export async function loadAssets() {
   await Promise.all(
     Object.keys(PARTS).map(async type => {
       const gltf = await loader.loadAsync(`./assets/parts/${PARTS[type].model || type}.glb`);
-      assets.set(type, gltf.scene);
-      assetBounds.set(type, new T.Box3().setFromObject(gltf.scene));
+      const model = gltf.scene,
+        offset = PARTS[type].modelCenter;
+      const assemblyModel = offset ? new T.Group().add(model) : model;
+      if (offset) model.position.fromArray(offset);
+      assets.set(type, assemblyModel);
+      assetBounds.set(type, new T.Box3().setFromObject(assemblyModel));
     })
   );
   const thumbRenderer = new T.WebGLRenderer({antialias: true, alpha: true, preserveDrawingBuffer: true});

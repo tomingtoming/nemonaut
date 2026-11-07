@@ -50,6 +50,8 @@ export type PartDefinition = {
   massCenter?: number[];
   chord?: number;
   model?: string;
+  /** Position of the centered GLB in the current assembly frame (metres). */
+  modelCenter?: number[];
   controlAxis?: PartControlAxis;
   maxDeflection?: number;
   /** Local control-surface pivot; defaults to the upper Y face. */
@@ -459,6 +461,7 @@ const BASE_PARTS = {
       [2, 0, 0, 1, 0, 0]
     ],
     surfaceMount: [0, 0, 0, -1, 0, 0],
+    modelCenter: [1, 0, 0],
     placementNode: 0,
     mirrorRotation: [0, Math.PI, 0],
     name: '主翼・固定翼',
@@ -478,6 +481,7 @@ const BASE_PARTS = {
       [2, 0, 0, 1, 0, 0]
     ],
     surfaceMount: [0, 0, 0, -1, 0, 0],
+    modelCenter: [1, 0, 0],
     placementNode: 0,
     mirrorRotation: [0, Math.PI, 0],
     name: '可動ロケットフィン',
