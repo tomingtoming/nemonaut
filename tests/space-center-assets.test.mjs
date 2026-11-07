@@ -49,3 +49,29 @@ test('Blender campus has selectable facility roots with finite nonempty geometry
   }
   assert.ok(new Box3().setFromObject(facilities.get('vab')).getSize(new Vector3()).y > 60);
 });
+
+test('campus pad and flight pad retain matching meshes at a common launch datum', async () => {
+  async function load(name) {
+    const data = await readFile(new URL('../dist/assets/scenery/' + name + '.glb', import.meta.url));
+    const {scene} = await new GLTFLoader().parseAsync(
+      data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength),
+      ''
+    );
+    return scene;
+  }
+  const [campus, flight] = await Promise.all([load('space-center'), load('launchpad')]);
+  const pad = campus.getObjectByProperty('name', 'pad');
+  assert.equal(pad?.userData.facility, 'pad');
+  const datum = new Vector3(107, 1.05, -66);
+  const flightMeshes = flight.children.filter(o => o.isMesh);
+  assert.ok(flightMeshes.length > 0);
+  assert.equal(pad.children.length, flightMeshes.length);
+  for (const mesh of flightMeshes) {
+    const name = mesh.name.replace(/^Pad01_/, 'pad_');
+    const overview = pad.children.find(o => o.name.replaceAll(' ', '_') === name);
+    assert.ok(overview?.isMesh, name);
+    const actual = new Box3().setFromObject(overview).translate(datum.clone().negate());
+    const expected = new Box3().setFromObject(mesh);
+    for (const end of ['min', 'max']) assert.ok(actual[end].distanceTo(expected[end]) < 0.001, name);
+  }
+});
