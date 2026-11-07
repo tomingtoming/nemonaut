@@ -13,8 +13,12 @@ import {angularMomentum, angularVelocity} from './angular-momentum.js';
 
 /** Seconds for the gear visual to fold or unfold completely. */
 export const GEAR_TRAVEL_TIME = 1;
-/** A wheel's suspension reaches this far (core.ts): an extension below it means the tyre is on the ground. */
-const SUSPENSION_TRAVEL = 0.18;
+/** Maximum axle extension in metres for a wheel. */
+export function suspensionTravel(type: string): number {
+  const travel = PARTS[type].suspensionTravel;
+  if (travel === undefined) throw Error('車輪のサスペンション長がありません: ' + type);
+  return travel;
+}
 /** Starts that begin standing on the ground (the flight spawns there before its first step). */
 const GROUND_STARTS: ReadonlySet<string> = new Set(['land', 'runway', 'moon-surface']);
 
@@ -49,7 +53,7 @@ export function gearOnGround(v: GearGroundVessel): boolean {
   if (v.time === 0 && GROUND_STARTS.has(v.environment)) return true;
   return v.parts.some(p => {
     const extension = isRetractable(p.type) ? v.wheelMotion.get(p.id)?.extension : undefined;
-    return extension !== undefined && extension < SUSPENSION_TRAVEL;
+    return extension !== undefined && extension < suspensionTravel(p.type);
   });
 }
 

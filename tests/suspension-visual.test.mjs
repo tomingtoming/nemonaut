@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';
 import {preset, PARTS} from '../dist/catalog.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
+import {gearOnGround} from '../dist/landing-gear.js';
 import {partCenter} from '../dist/aero.js';
 import {bodyAltitude} from '../dist/celestial.js';
 import {soundState} from '../dist/game-audio.js';
@@ -34,5 +35,42 @@ test('wheel extension follows real clearance, survives saves and rolling audio r
   } finally {
     restored?.dispose();
     f.dispose();
+  }
+});
+
+test('changing suspension travel preserves unloaded and compressed gear in legacy and current saves', () => {
+  const flight = new Flight(preset('plane-large'), 'orbit');
+  const gear = flight.parts.find(p => p.type === 'maingearLarge');
+  const def = PARTS[gear.type],
+    original = def.suspensionTravel;
+  try {
+    flight.step(1 / 120);
+    assert.equal(flight.wheelMotion.get(gear.id).extension, original);
+    const legacy = JSON.parse(JSON.stringify(saveFlight(flight)));
+    for (const [, motion] of legacy.wheelMotion) delete motion.travel;
+    def.suspensionTravel = original * 3;
+    for (const fraction of [1, 0.5]) {
+      legacy.wheelMotion.find(([id]) => id === gear.id)[1].extension = original * fraction;
+      const loaded = loadFlight(legacy);
+      try {
+        assert.equal(loaded.wheelMotion.get(gear.id).extension, def.suspensionTravel * fraction);
+        assert.equal(gearOnGround(loaded), fraction < 1);
+        const saved = saveFlight(loaded);
+        assert.equal(saved.wheelMotion.find(([id]) => id === gear.id)[1].travel, def.suspensionTravel);
+        const again = loadFlight(saved);
+        try {
+          assert.deepEqual([...again.wheelMotion], [...loaded.wheelMotion]);
+        } finally {
+          again.dispose();
+        }
+        loaded.step(1 / 120);
+        assert.equal(loaded.wheelMotion.get(gear.id).extension, def.suspensionTravel);
+      } finally {
+        loaded.dispose();
+      }
+    }
+  } finally {
+    def.suspensionTravel = original;
+    flight.dispose();
   }
 });

@@ -16,7 +16,7 @@ import {
   type ObservationMap
 } from './observation.js';
 import {createBodyAerodynamics, bodyDrag, type BodyAerodynamics} from './body-drag.js';
-import {foldedGearCenter, gearMassCenter, gearRetracted} from './landing-gear.js';
+import {foldedGearCenter, gearMassCenter, gearRetracted, suspensionTravel} from './landing-gear.js';
 import {separationName} from './separation-name.js';
 import {
   displacedVolume,
@@ -1211,7 +1211,8 @@ export class Flight {
             (Math.abs(edgeDirection.x) * d.size[0]) / 2 >
             0;
       if (onWheels(p) && (!waterAt(wp) || rimOnLand)) {
-        const radius = d.size[1] / 2,
+        const travel = suspensionTravel(p.type),
+          radius = d.size[1] / 2,
           steer =
             d.steer && this.steeringEnabled && p.steeringEnabled !== false
               ? (T.MathUtils.clamp(input.yaw || 0, -1, 1) * d.steer) / (1 + relativeVelocity.lengthSq() / 9)
@@ -1221,19 +1222,19 @@ export class Flight {
         const rollingDirection = axle.clone().cross(normal).normalize();
         const motion = this.wheelMotion.get(p.id) || {angle: 0, speed: 0, steer: 0};
         const bottom = altitude(wp) - radius;
-        motion.extension = T.MathUtils.clamp(bottom, 0, 0.18);
+        motion.extension = T.MathUtils.clamp(bottom, 0, travel);
         motion.steer = steer;
         motion.speed =
-          bottom < 0.18
+          bottom < travel
             ? pv.dot(rollingDirection) / radius
             : motion.speed * Math.exp(-dt * (this.brake ? 12 : 0.3));
         motion.angle = (motion.angle + motion.speed * dt) % (2 * Math.PI);
         this.wheelMotion.set(p.id, motion);
-        if (bottom < 0.18) {
+        if (bottom < travel) {
           contacts++;
           wheelImpactSpeed = Math.min(wheelImpactSpeed, pv.dot(normal));
           const share = mass / Math.max(1, wheelCount),
-            spring = Math.max(0, (0.18 - bottom) * share * 150 - pv.dot(normal) * share * 12);
+            spring = Math.max(0, (travel - bottom) * share * 150 - pv.dot(normal) * share * 12);
           apply(normal.clone().multiplyScalar(spring), wp);
           const forward = rollingDirection;
           const side = normal.clone().cross(forward),

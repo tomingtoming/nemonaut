@@ -19,6 +19,7 @@ import {validateManeuverNode, type ManeuverNodeRecord} from './maneuver-node.js'
 import * as T from 'three';
 import {validateTransferGuide, type TransferGuide} from './lunar-transfer.js';
 import {Flight, statistics, validateCraft, type FlightPart, type WheelMotion} from './core.js';
+import {suspensionTravel} from './landing-gear.js';
 import {PARTS} from './catalog.js';
 import {bodyOrbitState} from './celestial.js';
 import {SAS_MODES} from './navigation.js';
@@ -91,7 +92,7 @@ export interface SavedFlight {
   active: string[];
   deflections: [string, number][];
   gimbals: [string, number[]][];
-  wheelMotion: [string, WheelMotion][];
+  wheelMotion: [string, WheelMotion & {travel?: number}][];
   chutes: [string, import('./recovery.js').ParachuteState][];
   detached?: SavedFlight[];
   meta?: SavedFlightMeta;
@@ -205,7 +206,10 @@ export function saveFlight(f: Flight, meta: SavedFlightMeta = {}): SavedFlight {
     active: [...f.active],
     deflections: [...f.deflections],
     gimbals: [...f.gimbals].map(([k, v]) => [k, v.toArray()]),
-    wheelMotion: [...f.wheelMotion],
+    wheelMotion: f.parts.flatMap((p): SavedFlight['wheelMotion'] => {
+      const motion = f.wheelMotion.get(p.id);
+      return motion ? [[p.id, {...motion, travel: suspensionTravel(p.type)}]] : [];
+    }),
     chutes: [...f.chutes],
     detached: f.detached.map(child => saveFlight(child)),
     meta
@@ -300,20 +304,31 @@ export function loadFlight(
       return v;
     }),
     gimbals = entries(value.gimbals, ids, v => new T.Vector3(...vector(v, 3, Math.PI))),
-    wheelMotion = entries(value.wheelMotion, ids, v => {
-      check(
-        v && (['angle', 'speed', 'steer'] as const).every(k => Number.isFinite(v[k]) && Math.abs(v[k]) < 1e6)
-      );
-      check(
-        v.extension === undefined || (Number.isFinite(v.extension) && v.extension >= 0 && v.extension <= 0.18)
-      );
-      return {
-        angle: v.angle,
-        speed: v.speed,
-        steer: v.steer,
-        ...(v.extension === undefined ? {} : {extension: v.extension})
-      };
-    }),
+    wheelMotion = entries(
+      value.wheelMotion,
+      new Set(parts.filter(p => PARTS[p.type].wheel).map(p => p.id)),
+      (v, id) => {
+        check(
+          v &&
+            (['angle', 'speed', 'steer'] as const).every(k => Number.isFinite(v[k]) && Math.abs(v[k]) < 1e6)
+        );
+        const savedTravel = v.travel === undefined ? 0.18 : v.travel; // All legacy wheels used 0.18 m.
+        check(Number.isFinite(savedTravel) && savedTravel > 0);
+        const travel = suspensionTravel(savedPart(byId, id).type);
+        check(
+          v.extension === undefined ||
+            (Number.isFinite(v.extension) && v.extension >= 0 && v.extension <= savedTravel)
+        );
+        return {
+          angle: v.angle,
+          speed: v.speed,
+          steer: v.steer,
+          ...(v.extension === undefined
+            ? {}
+            : {extension: savedTravel === travel ? v.extension : (v.extension / savedTravel) * travel})
+        };
+      }
+    ),
     chuteIds = new Set(parts.filter(p => PARTS[p.type].parachute).map(p => p.id)),
     chutes = entries(value.chutes, chuteIds, v => {
       check(

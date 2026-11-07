@@ -57,6 +57,7 @@ export type PartDefinition = {
   /** Local control-surface pivot; defaults to the upper Y face. */
   hingePivot?: number[];
   wheel?: boolean;
+  suspensionTravel?: number; // metres from the resting axle to full extension
   /** Wheel motor capability, independent of the part name or vessel type. */
   poweredWheel?: boolean;
   /** Landing gear that folds away in flight (BACKLOG 9c): G toggles it for the whole vessel. */
@@ -557,6 +558,7 @@ const BASE_PARTS = {
     mass: 35,
     size: [0.34, 0.7, 0.7],
     wheel: true,
+    suspensionTravel: 0.18,
     retractable: true,
     steer: 0.4,
     model: 'wheel',
@@ -569,6 +571,7 @@ const BASE_PARTS = {
     mass: 45,
     size: [0.34, 0.7, 0.7],
     wheel: true,
+    suspensionTravel: 0.18,
     retractable: true,
     model: 'wheel',
     desc: '航空機の自由転動する主脚。ブレーキ付き。飛行中は格納可能。'
@@ -580,6 +583,7 @@ const BASE_PARTS = {
     mass: 45,
     size: [0.34, 0.7, 0.7],
     wheel: true,
+    suspensionTravel: 0.18,
     poweredWheel: true,
     steer: 0.4,
     desc: '接地中に駆動・ブレーキ・操舵できるサスペンション輪。'

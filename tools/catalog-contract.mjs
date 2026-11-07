@@ -61,6 +61,8 @@ export function catalogContractErrors(parts) {
     }
     if ('hingeY' in part) fail('hingePivot replaces hingeY');
     if (part.hingePivot !== undefined && !part.controlAxis) fail('hingePivot requires controlAxis');
+    if (part.wheel && !(Number.isFinite(part.suspensionTravel) && part.suspensionTravel > 0))
+      fail('wheel requires positive suspensionTravel');
     if (part.poweredWheel && !part.wheel) fail('poweredWheel requires wheel');
     if (part.retractable && !part.wheel) fail('retractable requires wheel');
     if (part.steer !== undefined) {
