@@ -15,6 +15,15 @@ export const toggleRcs = {
 // W/S and A/D feed both attitude and wheel commands. Equipment switches gate the actuators downstream.
 export const pitchKeys = ['KeyW', 'KeyS'] as const;
 export const yawKeys = ['KeyA', 'KeyD'] as const;
+export const rollKeys = ['KeyQ', 'KeyE'] as const;
+export const forwardKeys = ['KeyI', 'KeyK'] as const;
+export const leftKeys = ['KeyJ', 'KeyL'] as const;
+export const upKeys = ['KeyU', 'KeyO'] as const;
+export const throttleKeys = ['KeyZ', 'KeyX'] as const;
+export const throttleUp = {codes: ['ShiftLeft', 'ShiftRight'], label: 'Shift'} as const;
+export const throttleDown = {codes: ['ControlLeft', 'ControlRight'], label: 'Ctrl'} as const;
+export const stageKey = 'Space';
+export const sasKey = 'KeyT';
 type AxisKeys = readonly [string, string];
 export function keyAxis(held: ReadonlySet<string>, [positive, negative]: AxisKeys): number {
   return Number(held.has(positive)) - Number(held.has(negative));
@@ -22,33 +31,31 @@ export function keyAxis(held: ReadonlySet<string>, [positive, negative]: AxisKey
 export function axisLabel(pair: AxisKeys, separator = ' / '): string {
   return pair.map(code => code.slice(3)).join(separator);
 }
+export const attitudeKeyLabel = [pitchKeys, yawKeys, rollKeys].map(pair => axisLabel(pair, '/')).join(' · ');
+export const translationKeyLabel = [forwardKeys, leftKeys, upKeys]
+  .map(pair => axisLabel(pair, '/'))
+  .join(' · ');
+export const throttleAdjustLabel = throttleUp.label + ' / ' + throttleDown.label;
 const flightKeys = new Set([
   ...pitchKeys,
   ...yawKeys,
-  'KeyQ',
-  'KeyE',
-  'KeyI',
-  'KeyK',
-  'KeyJ',
-  'KeyL',
-  'KeyU',
-  'KeyO',
-  'KeyZ',
-  'KeyX',
+  ...rollKeys,
+  ...forwardKeys,
+  ...leftKeys,
+  ...upKeys,
+  ...throttleKeys,
   'KeyP',
   'KeyM',
   toggleRcs.code,
   armChutes.code,
   wheelBrake.code,
-  'KeyT',
+  sasKey,
   'KeyF',
   landingGear.code,
   'KeyV',
   'CapsLock',
-  'ShiftLeft',
-  'ShiftRight',
-  'ControlLeft',
-  'ControlRight'
+  ...throttleUp.codes,
+  ...throttleDown.codes
 ]);
 
 export function acceptsFlightKey(target: EventTarget | null, code: string): boolean {

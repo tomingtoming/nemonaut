@@ -2,7 +2,17 @@
 // save/load, and the arrow keys that orbit the camera. No import-time side effects except creating the held
 // arrow set; app.ts calls wireKeyboard and wireCameraKeys at the original places (the docking autopilot's
 // capture listener is registered between them by initDockingUi).
-import {armChutes, toggleRcs, landingGear, wheelBrake, acceptsFlightKey} from './flight-keyboard.js';
+import {
+  stageKey,
+  sasKey,
+  throttleKeys,
+  throttleDown,
+  armChutes,
+  toggleRcs,
+  landingGear,
+  wheelBrake,
+  acceptsFlightKey
+} from './flight-keyboard.js';
 import {canControl} from './fleet.js';
 import {state} from './app-state.js';
 import {$} from './ui-common.js';
@@ -59,23 +69,23 @@ export function wireKeyboard() {
     if (
       state.flight &&
       (!canControl(state.flight) ||
-        ((e.ctrlKey || e.metaKey || e.altKey) && !['ControlLeft', 'ControlRight'].includes(e.code)))
+        ((e.ctrlKey || e.metaKey || e.altKey) && !throttleDown.codes.some(code => code === e.code)))
     )
       return;
     keys.add(e.code);
-    if (['Space', 'Delete', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
+    if ([stageKey, 'Delete', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
     if (e.repeat) return;
     if (state.flight) {
       if (e.code === toggleRcs.code) $('#' + toggleRcs.input, 'input').click();
       if (e.code === armChutes.code) $('#' + armChutes.button, 'button').click();
-      if (e.code === 'Space') stage();
+      if (e.code === stageKey) stage();
       if (e.code === wheelBrake.code) $('#' + wheelBrake.button, 'button').click();
       if (e.code === landingGear.code) $('#' + landingGear.button, 'button').click();
-      if (e.code === 'KeyT') $('#sas', 'button').click();
-      if (e.code === 'KeyX' || e.code === 'KeyZ') {
+      if (e.code === sasKey) $('#sas', 'button').click();
+      if (e.code === throttleKeys[1] || e.code === throttleKeys[0]) {
         state.launchPilot = null;
         $('#autoLaunch', 'button').textContent = '自動軌道投入（見本用）';
-        state.flight.throttle = e.code === 'KeyZ' ? 1 : 0;
+        state.flight.throttle = e.code === throttleKeys[0] ? 1 : 0;
         syncFlightControls();
       }
       return;

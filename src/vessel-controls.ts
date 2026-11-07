@@ -1,4 +1,10 @@
 import {
+  stageKey,
+  sasKey,
+  throttleKeys,
+  attitudeKeyLabel,
+  translationKeyLabel,
+  throttleAdjustLabel,
   armChutes,
   toggleRcs,
   landingGear,
@@ -90,27 +96,27 @@ export function vesselControls(
     water = has(d => d.thrust && d.thrustMedium === 'water');
   if (air || water) {
     rows.push(
-      {action: '全推力 / 停止', how: touch ? '「全推力」「推力0」ボタン' : 'Z / X'},
-      {action: '推力を少しずつ', how: touch ? '推力のつまみ' : 'Shift / Ctrl'}
+      {action: '全推力 / 停止', how: touch ? '「全推力」「推力0」ボタン' : axisLabel(throttleKeys)},
+      {action: '推力を少しずつ', how: touch ? '推力のつまみ' : throttleAdjustLabel}
     );
     if (water) rows.push({action: 'スクリュー', how: '水中でだけ働く'});
   }
   if (hasNextStage(parts, stage))
     rows.push({
       action: stage < 0 && (air || water) ? 'エンジン始動 / 次段' : '次段',
-      how: touch ? '「次段」ボタン' : 'Space'
+      how: touch ? '「次段」ボタン' : stageKey
     });
   const rcs = has(d => d[toggleRcs.capability]);
   if (has(d => d.reactionTorque || d.controlAxis || d.gimbal) || rcs) {
     rows.push({
       action: powered ? '向きを変える（走行と共通）' : '向きを変える',
-      how: touch ? stick + '・↺↻' : `${axisLabel(pitchKeys, '/')} · ${axisLabel(yawKeys, '/')} · Q/E`
+      how: touch ? stick + '・↺↻' : attitudeKeyLabel
     });
-    rows.push({action: '姿勢保持（SAS）', how: touch ? '「SAS」ボタン' : 'T'});
+    rows.push({action: '姿勢保持（SAS）', how: touch ? '「SAS」ボタン' : sasKey.slice(3)});
   }
   if (rcs) {
     rows.push({action: toggleRcs.action, how: touch ? '「RCS」の切替' : toggleRcs.code.slice(3)});
-    rows.push({action: 'RCSで平行移動', how: touch ? '「RCS並進」ボタン' : 'I/K · J/L · U/O'});
+    rows.push({action: 'RCSで平行移動', how: touch ? '「RCS並進」ボタン' : translationKeyLabel});
   }
   if (has(d => d.ballast)) rows.push({action: '浮く / 沈む', how: '「機器」のバラスト'});
   if (has(d => d[armChutes.capability]))
@@ -138,6 +144,6 @@ export function launchHint(parts: VesselParts, touch = false, driveEnabled = tru
         ? '「走行」スティックで走れます'
         : `${axisLabel(pitchKeys, '/')}で走れます（ブレーキは自動で解除）`
       : '',
-    start = engine ? (touch ? '「次段」でエンジン始動' : 'Spaceでエンジン始動') : '';
+    start = engine ? (touch ? '「次段」でエンジン始動' : `${stageKey}でエンジン始動`) : '';
   return [drive, start].filter(Boolean).join(' · ');
 }

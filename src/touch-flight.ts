@@ -1,4 +1,14 @@
-import {landingGear, pitchKeys, yawKeys} from './flight-keyboard.js';
+import {
+  stageKey,
+  throttleKeys,
+  rollKeys,
+  forwardKeys,
+  leftKeys,
+  upKeys,
+  landingGear,
+  pitchKeys,
+  yawKeys
+} from './flight-keyboard.js';
 // Flight controls for touch devices (BACKLOG 8b): a virtual stick (W/S, A/D), roll (Q/E), full throttle /
 // cut (Z/X), stage (Space) and RCS translation (I/K, J/L, U/O). They feed the keyboard's own path: every
 // press and release is dispatched to window as the equivalent KeyboardEvent, so the held-key set, its gates
@@ -69,19 +79,19 @@ const BUTTONS: readonly (readonly [
   aria: string,
   group: 'roll' | 'main' | 'rcs'
 ])[] = [
-  ['KeyQ', '↺', '左にロール', 'roll'],
-  ['KeyE', '↻', '右にロール', 'roll'],
-  ['KeyZ', '全推力', 'スロットル全開', 'main'],
-  ['KeyX', '推力0', 'スロットル停止', 'main'],
-  ['Space', '次段', '点火 / 次段', 'main'],
+  [rollKeys[0], '↺', '左にロール', 'roll'],
+  [rollKeys[1], '↻', '右にロール', 'roll'],
+  [throttleKeys[0], '全推力', 'スロットル全開', 'main'],
+  [throttleKeys[1], '推力0', 'スロットル停止', 'main'],
+  [stageKey, '次段', '点火 / 次段', 'main'],
   // Landing gear (BACKLOG 9c): shown only on a vessel with retractable gear; the label follows the gear.
   [landingGear.code, 'ギア上げ', 'ランディングギアの出し入れ', 'main'],
-  ['KeyU', '上へ', 'RCS 上へ並進', 'rcs'],
-  ['KeyI', '前へ', 'RCS 前へ並進', 'rcs'],
-  ['KeyO', '下へ', 'RCS 下へ並進', 'rcs'],
-  ['KeyJ', '左へ', 'RCS 左へ並進', 'rcs'],
-  ['KeyK', '後へ', 'RCS 後ろへ並進', 'rcs'],
-  ['KeyL', '右へ', 'RCS 右へ並進', 'rcs']
+  [upKeys[0], '上へ', 'RCS 上へ並進', 'rcs'],
+  [forwardKeys[0], '前へ', 'RCS 前へ並進', 'rcs'],
+  [upKeys[1], '下へ', 'RCS 下へ並進', 'rcs'],
+  [leftKeys[0], '左へ', 'RCS 左へ並進', 'rcs'],
+  [forwardKeys[1], '後へ', 'RCS 後ろへ並進', 'rcs'],
+  [leftKeys[1], '右へ', 'RCS 右へ並進', 'rcs']
 ];
 
 /** Builds the touch flight controls inside #flightHud and wires them. Called once by app.ts. */

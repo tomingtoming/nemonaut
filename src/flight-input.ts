@@ -1,3 +1,4 @@
+import {keyAxis, forwardKeys, leftKeys, upKeys} from './flight-keyboard.js';
 import {Vector3, type Quaternion} from 'three';
 // Scale manual attitude commands only; wheel steering/drive and translation
 // consume the original input, and SAS retains its full actuator authority.
@@ -20,9 +21,10 @@ export function manualTranslation(
   portPower: number,
   rotation?: Quaternion
 ) {
-  const forward = Number(keys.has('KeyI')) - Number(keys.has('KeyK'));
-  const right = Number(keys.has('KeyL')) - Number(keys.has('KeyJ'));
-  const up = Number(keys.has('KeyU')) - Number(keys.has('KeyO'));
+  const forward = keyAxis(keys, forwardKeys);
+  const [leftKey, rightKey] = leftKeys;
+  const right = Number(keys.has(rightKey)) - Number(keys.has(leftKey));
+  const up = keyAxis(keys, upKeys);
   const body = new Vector3(right, axial ? forward : up, axial ? -up : forward);
   if (rotation) body.applyQuaternion(rotation);
   return {

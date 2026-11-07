@@ -1,5 +1,5 @@
 import {showBrakeState} from './flight-controls.js';
-import {keyAxis, pitchKeys, yawKeys} from './flight-keyboard.js';
+import {rollKeys, throttleUp, throttleDown, keyAxis, pitchKeys, yawKeys} from './flight-keyboard.js';
 import {overWater} from './surface-frame.js';
 import {manualTranslation} from './flight-input.js';
 // The per-frame loop (BACKLOG 7c, moved from app.ts unchanged): audio, failure captions, the space center
@@ -71,9 +71,9 @@ export function startFrameLoop(
     state.last = now;
     if (state.flight) {
       if (!flightPause.paused) {
-        if (keys.has('ShiftLeft') || keys.has('ShiftRight'))
+        if (throttleUp.codes.some(code => keys.has(code)))
           state.flight.throttle = Math.min(1, state.flight.throttle + dt * 0.35);
-        if (keys.has('ControlLeft') || keys.has('ControlRight'))
+        if (throttleDown.codes.some(code => keys.has(code)))
           state.flight.throttle = Math.max(0, state.flight.throttle - dt * 0.35);
         $('#throttle', 'input').value = String(state.flight.throttle * 100);
         const transferWindow =
@@ -175,7 +175,7 @@ export function startFrameLoop(
               drive: pitch,
               pitch,
               yaw: keyAxis(keys, yawKeys),
-              roll: (keys.has('KeyQ') ? 1 : 0) - (keys.has('KeyE') ? 1 : 0),
+              roll: keyAxis(keys, rollKeys),
               assemblyAttitude: autopilotCommands,
               ...dockingCommands
             });
