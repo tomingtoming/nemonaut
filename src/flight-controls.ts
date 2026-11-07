@@ -1,3 +1,4 @@
+import {armChutes, toggleRcs} from './flight-keyboard.js';
 import {equipmentSwitches} from './part-settings.js';
 import {PARTS} from './catalog.js';
 import {canControl, type ControllableVessel} from './fleet.js';
@@ -16,8 +17,8 @@ const commands = [
   ['reactionEnabled', 'input'],
   ['steeringEnabled', 'input'],
   ['driveEnabled', 'input'],
-  ['rcsEnabled', 'input'],
-  ['armChutes', 'button'],
+  [toggleRcs.input, 'input'],
+  [armChutes.button, 'button'],
   ['autoReturn', 'button'],
   ['autoLaunch', 'button']
 ] as const;
@@ -46,7 +47,7 @@ export function updateFlightControls(
     parts = flight.parts;
   for (const [id, tag] of commands) element(root, '#' + id, tag).disabled = !controllable;
   for (const [key, available] of [
-    ['rcsEnabled', parts.some(p => PARTS[p.type].rcsThrust)],
+    [toggleRcs.input, parts.some(p => PARTS[p.type][toggleRcs.capability])],
     ...equipmentSwitches.map(
       ({key, capability}) => [key, parts.some(p => PARTS[p.type][capability])] as const
     )
@@ -58,6 +59,9 @@ export function updateFlightControls(
     if (!label) throw Error('画面要素 #' + key + ' の親要素がありません');
     label.hidden = !available;
   }
+  const chute = element(root, '#' + armChutes.button, 'button');
+  chute.hidden = !parts.some(p => PARTS[p.type][armChutes.capability]);
+  chute.disabled = !controllable || chute.hidden;
   element(root, '#ballastControl', 'label').hidden = !parts.some(p => PARTS[p.type].ballast);
   // The gear switch (BACKLOG 9c) shows only on a vessel with retractable gear, lit while the gear is down.
   const gear = element(root, '#gear', 'button');

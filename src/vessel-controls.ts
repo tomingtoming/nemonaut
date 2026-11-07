@@ -1,4 +1,12 @@
-import {landingGear, wheelBrake, axisLabel, pitchKeys, yawKeys} from './flight-keyboard.js';
+import {
+  armChutes,
+  toggleRcs,
+  landingGear,
+  wheelBrake,
+  axisLabel,
+  pitchKeys,
+  yawKeys
+} from './flight-keyboard.js';
 // The controls this vessel can use (BACKLOG 9a). Craft are not classified as rocket / rover / plane / sub:
 // every row comes from the parts present (powered wheels, steerable wheels, engines, screws, control
 // surfaces, reaction wheels, RCS, parachutes, docking ports), so a plane with powered wheels gets the drive
@@ -92,7 +100,7 @@ export function vesselControls(
       action: stage < 0 && (air || water) ? 'エンジン始動 / 次段' : '次段',
       how: touch ? '「次段」ボタン' : 'Space'
     });
-  const rcs = has(d => d.rcsThrust);
+  const rcs = has(d => d[toggleRcs.capability]);
   if (has(d => d.reactionTorque || d.controlAxis || d.gimbal) || rcs) {
     rows.push({
       action: powered ? '向きを変える（走行と共通）' : '向きを変える',
@@ -101,12 +109,15 @@ export function vesselControls(
     rows.push({action: '姿勢保持（SAS）', how: touch ? '「SAS」ボタン' : 'T'});
   }
   if (rcs) {
-    rows.push({action: 'RCS 入 / 切', how: touch ? '「RCS」の切替' : 'R'});
+    rows.push({action: toggleRcs.action, how: touch ? '「RCS」の切替' : toggleRcs.code.slice(3)});
     rows.push({action: 'RCSで平行移動', how: touch ? '「RCS並進」ボタン' : 'I/K · J/L · U/O'});
   }
   if (has(d => d.ballast)) rows.push({action: '浮く / 沈む', how: '「機器」のバラスト'});
-  if (has(d => d.parachute))
-    rows.push({action: 'パラシュート待機', how: touch ? '「パラシュート待機」ボタン' : 'H'});
+  if (has(d => d[armChutes.capability]))
+    rows.push({
+      action: armChutes.action,
+      how: touch ? `「${armChutes.action}」ボタン` : armChutes.code.slice(3)
+    });
   if (has(d => d.docking)) rows.push({action: 'ドッキング', how: '「ドッキング」ボタン'});
   rows.push(
     {action: '一時停止', how: touch ? '「Ⅱ」ボタン' : 'P'},

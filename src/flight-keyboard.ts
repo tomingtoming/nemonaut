@@ -1,5 +1,17 @@
 export const wheelBrake = {code: 'KeyB', button: 'brake', action: 'ブレーキ'} as const;
 export const landingGear = {code: 'KeyG', button: 'gear', action: 'ギアの出し入れ'} as const;
+export const armChutes = {
+  code: 'KeyH',
+  button: 'armChutes',
+  action: 'パラシュート待機',
+  capability: 'parachute'
+} as const;
+export const toggleRcs = {
+  code: 'KeyR',
+  input: 'rcsEnabled',
+  action: 'RCS 入 / 切',
+  capability: 'rcsThrust'
+} as const;
 // W/S and A/D feed both attitude and wheel commands. Equipment switches gate the actuators downstream.
 export const pitchKeys = ['KeyW', 'KeyS'] as const;
 export const yawKeys = ['KeyA', 'KeyD'] as const;
@@ -25,8 +37,8 @@ const flightKeys = new Set([
   'KeyX',
   'KeyP',
   'KeyM',
-  'KeyR',
-  'KeyH',
+  toggleRcs.code,
+  armChutes.code,
   wheelBrake.code,
   'KeyT',
   'KeyF',

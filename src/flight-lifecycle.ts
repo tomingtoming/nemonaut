@@ -83,7 +83,6 @@ export function startFlight(restored: Flight | null = null) {
       testWorld.add(canopy);
       parachuteVisuals.set(p.id, canopy);
     }
-  $('#armChutes', 'button').hidden = !parachuteVisuals.size;
   $('#autoReturn', 'button').hidden =
     ['moon-orbit', 'moon-surface', 'transfer'].includes(state.flight.environment) ||
     !parachuteVisuals.size ||

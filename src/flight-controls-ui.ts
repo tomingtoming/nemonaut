@@ -13,6 +13,7 @@ import {$, blurActive, notify} from './ui-common.js';
 import {stage} from './flight-lifecycle.js';
 import {updateNavigation, updateTransferGuide} from './flight-hud.js';
 import {setGear} from './landing-gear.js';
+import {armChutes} from './flight-keyboard.js';
 import {showBrakeState, updateFlightControls} from './flight-controls.js';
 export function wireFlightControls() {
   for (const key of ['reactionEnabled', 'steeringEnabled', 'driveEnabled', 'rcsEnabled'] as const)
@@ -21,7 +22,7 @@ export function wireFlightControls() {
       if (state.flight) state.flight[key] = input.checked;
       input.blur();
     };
-  $('#armChutes', 'button').onclick = () => {
+  $('#' + armChutes.button, 'button').onclick = () => {
     state.flight?.armParachutes();
     blurActive();
   };

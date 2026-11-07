@@ -17,9 +17,9 @@ function controls() {
 }
 
 test('flight controls follow real separation and vessel switching without changing actuator settings', () => {
-  const parts = preset('launcher'),
+  const parts = preset('launcher').filter(p => p.type !== 'parachute'),
     separator = parts.find(p => p.type === 'decoupler');
-  for (const type of ['wheel', 'rcs', 'ballast', 'probe'])
+  for (const type of ['wheel', 'rcs', 'ballast', 'probe', 'parachute'])
     parts.push({
       ...structuredClone(parts[0]),
       id: crypto.randomUUID(),
@@ -37,6 +37,7 @@ test('flight controls follow real separation and vessel switching without changi
     assert.equal(ui.querySelector('#driveEnabled').checked, false);
     assert.equal(ui.querySelector('#rcsEnabled').checked, true);
     assert.equal(ui.querySelector('#ballastControl').hidden, false);
+    assert.equal(ui.querySelector('#armChutes').hidden, false);
     flight.stageNext();
     flight.stageNext();
     const child = flight.detached[0];
@@ -46,6 +47,8 @@ test('flight controls follow real separation and vessel switching without changi
       assert.equal(ui.querySelector(id).parentElement.hidden, true);
       assert.equal(ui.querySelector(id).disabled, true);
     }
+    assert.equal(ui.querySelector('#armChutes').hidden, true);
+    assert.equal(ui.querySelector('#armChutes').disabled, true);
     assert.equal(ui.querySelector('#ballastControl').hidden, true);
     assert.equal(ui.querySelector('#reactionEnabled').parentElement.hidden, false);
     assert.equal(ui.querySelector('#stage').disabled, false);
@@ -53,6 +56,8 @@ test('flight controls follow real separation and vessel switching without changi
     assert.equal(flight.driveEnabled, false);
     flight = selectVessel(flight, child);
     updateFlightControls(ui, flight);
+    assert.equal(ui.querySelector('#armChutes').hidden, false);
+    assert.equal(ui.querySelector('#armChutes').disabled, false);
     assert.equal(ui.querySelector('#driveEnabled').parentElement.hidden, false);
     assert.equal(ui.querySelector('#driveEnabled').disabled, false);
     assert.equal(ui.querySelector('#driveEnabled').checked, false);

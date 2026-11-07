@@ -1,4 +1,12 @@
-import {landingGear, wheelBrake, axisLabel, pitchKeys, yawKeys} from './flight-keyboard.js';
+import {
+  armChutes,
+  toggleRcs,
+  landingGear,
+  wheelBrake,
+  axisLabel,
+  pitchKeys,
+  yawKeys
+} from './flight-keyboard.js';
 // 「? 操作」 (BACKLOG 9a): the full list of keys for the workshop and for flight in the #modal dialog, with
 // the touch gestures and on-screen buttons instead on a touch device. The part-dependent subset is in
 // 「この機体で使える操作」 (vessel-controls-panel.ts). Static text only; no import-time side effects.
@@ -32,9 +40,9 @@ const FLIGHT_KEYS: Rows = [
     'ピッチ · ヨー · ロール（姿勢制御・操舵面）'
   ],
   ['T', 'SAS（姿勢保持）'],
-  ['R', 'RCS 入 / 切'],
+  [toggleRcs.code.slice(3), toggleRcs.action],
   ['I/K · J/L · U/O', 'RCSで平行移動'],
-  ['H', 'パラシュート待機'],
+  [armChutes.code.slice(3), armChutes.action],
   ['CapsLock', '精密操縦（姿勢操作を25%に）'],
   ['P', '一時停止'],
   ['M', '軌道マップ'],
