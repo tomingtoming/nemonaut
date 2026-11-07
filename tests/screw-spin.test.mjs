@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
 import * as T from 'three';
 import {
   SCREW_SPIN_LAG,
@@ -32,45 +31,19 @@ test('the rotor speeds up and runs down with a lag, and stands still without tim
   for (let i = 0; i < 300; i++) speed = screwSpinStep(speed, 0, 1 / 60);
   assert.ok(speed < 1e-3);
 });
-test('the blades are the widest sub-mesh centred on the shaft and turn in their own group', () => {
-  const box = (w, h, d, x = 0, y = 0, z = 0) => {
-    const g = new T.BoxGeometry(w, h, d);
-    g.translate(x, y, z);
-    return new T.Mesh(g);
-  };
-  const model = new T.Group(),
-    housing = box(0.36, 0.3, 0.36, 0, 0.1, 0),
-    blades = box(0.8, 0.06, 0.8, 0, -0.19, 0),
-    stripe = box(0.9, 0.02, 0.1, 0.4, 0, 0);
-  model.add(housing, blades, stripe);
-  const rotor = screwRotor(model);
-  assert.ok(rotor);
+test('only the declared blades turn, even inside a wider housing', () => {
+  const model = new T.Group();
+  const housing = new T.Mesh(new T.BoxGeometry(3, 1, 3));
+  const blades = new T.Mesh(new T.BoxGeometry(1, 0.1, 1));
+  blades.material.name = 'Blade metal';
+  model.add(housing, blades);
+  const pivot = [0.2, 0, 0];
+  assert.equal(screwRotor(model, 'absent', pivot), null);
+  const before = blades.getWorldPosition(new T.Vector3());
+  const rotor = screwRotor(model, 'Blade metal', pivot);
   assert.equal(blades.parent, rotor);
-  assert.equal(rotor.parent, model);
   assert.equal(housing.parent, model);
-  assert.equal(stripe.parent, model, 'an off-centre piece does not turn');
-  rotor.rotation.y = Math.PI / 2;
-  model.updateMatrixWorld(true);
-  const before = new T.Box3().setFromObject(blades);
-  assert.ok(Math.abs(before.getCenter(new T.Vector3()).x) < 1e-9, 'the blades turn about the shaft');
-  assert.equal(screwRotor(new T.Group()), null);
-});
-test('both screw models have a blade primitive that is the widest one centred on the shaft', () => {
-  for (const [name, radius] of [
-    ['propeller', 0.4],
-    ['propellerLarge', 1.6]
-  ]) {
-    const glb = readFileSync(new URL(`../src/assets/parts/${name}.glb`, import.meta.url)),
-      json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString()),
-      bounds = json.meshes.flatMap(m => m.primitives.map(p => json.accessors[p.attributes.POSITION])),
-      centred = bounds
-        .map(a => ({r: Math.max(a.max[0], -a.min[0], a.max[2], -a.min[2]), a}))
-        .filter(
-          ({r, a}) => Math.abs(a.max[0] + a.min[0]) < r * 0.1 && Math.abs(a.max[2] + a.min[2]) < r * 0.1
-        );
-    const widest = Math.max(...centred.map(c => c.r));
-    assert.ok(Math.abs(widest - radius) < 0.01, `${name}: ${widest}`);
-  }
+  assert.ok(blades.getWorldPosition(new T.Vector3()).distanceTo(before) < 1e-9);
 });
 test('a screw gives thrust (and so turns) only when started, throttled and in the water', () => {
   const f = new Flight(preset('sub'), 'water');

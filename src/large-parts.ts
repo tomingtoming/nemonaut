@@ -118,6 +118,7 @@ export interface ScalablePart {
   ac?: number[];
   massCenter?: number[];
   chord?: number;
+  screwPivot?: number[];
   hingePivot?: number[];
   wing?: number;
   wheel?: boolean;
@@ -158,7 +159,7 @@ export function installLargeParts(parts: Record<string, ScalablePart>): void {
       if (rating !== undefined) d[key] = rating;
     }
     for (const key of ['volume', 'ballast'] as const) if (d[key]) d[key] *= s ** 3;
-    for (const key of ['ac', 'massCenter', 'hingePivot'] as const)
+    for (const key of ['ac', 'massCenter', 'hingePivot', 'screwPivot'] as const)
       if (d[key]) d[key] = d[key].map(v => v * s);
     if (d.chord) d.chord *= s;
     if (d.wing) d.wing *= s * s;

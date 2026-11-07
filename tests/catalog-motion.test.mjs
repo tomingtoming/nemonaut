@@ -35,7 +35,17 @@ for (const [id, part] of Object.entries(PARTS)) {
   if (part.thrustMedium === 'water' && part.thrust) {
     test(`${id}: actual screw export yields a rotor with the catalog radius`, async () => {
       const scene = await model(id, part);
-      const rotor = screwRotor(scene);
+      let shaftMesh;
+      scene.traverse(node => {
+        if (node.isMesh && node.material.name.startsWith('Machined titanium')) shaftMesh = node;
+      });
+      const center = new Box3().setFromObject(shaftMesh).getCenter(new Vector3());
+      const rotor = screwRotor(scene, part.screwBlades, part.screwPivot);
+      const stationary = new Vector3(center.x, center.y, center.z);
+      const local = rotor.worldToLocal(stationary.clone());
+      rotor.rotation.y = Math.PI / 2;
+      assert.ok(rotor.localToWorld(local).distanceTo(stationary) < 1e-6, 'shaft stays on the spin axis');
+      rotor.rotation.y = 0;
       assert.ok(hasGeometry(rotor), `${id}: rotor extraction failed`);
       const size = new Box3().setFromObject(rotor).getSize(new Vector3());
       assert.ok(Math.abs(Math.max(size.x, size.z) - Math.max(part.size[0], part.size[2])) < 0.002);

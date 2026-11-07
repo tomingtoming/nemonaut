@@ -13,6 +13,8 @@ export type PartDefinition = {
   decoupler?: boolean;
   thrust?: number;
   /** Medium required for thrust; independent engines carry their reaction mass. */
+  screwBlades?: string;
+  screwPivot?: number[];
   thrustMedium?: 'independent' | 'air' | 'water';
   oxidizerSource?: 'onboard' | 'atmosphere' | 'none';
   isp?: number;
@@ -412,6 +414,8 @@ const BASE_PARTS = {
   propeller: {
     name: 'スクリュー',
     code: 'MP-6',
+    screwBlades: 'Thermal foil',
+    screwPivot: [-0.02741155, 0, 0],
     cat: '推進',
     mass: 60,
     thrust: 6000,
