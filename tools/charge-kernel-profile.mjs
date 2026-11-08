@@ -1,5 +1,5 @@
 // Build dist, then run the following from the repo root (artifacts/ must exist):
-// rustc --edition 2024 --crate-type cdylib --target wasm32-unknown-unknown -C opt-level=3 tools/charge-kernel.rs -o artifacts/charge-kernel.wasm
+// rustc --edition 2024 --crate-type cdylib --target wasm32-unknown-unknown -C opt-level=3 engine/src/charge.rs -o artifacts/charge-kernel.wasm
 // node tools/charge-kernel-profile.mjs
 import assert from 'node:assert/strict';
 import {makeKernel} from './charge-kernel-adapter.mjs';

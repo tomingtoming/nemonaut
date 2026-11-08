@@ -5,14 +5,14 @@ const wasm = await WebAssembly.compile(
 );
 export const newChargeEngine = () => new WebAssembly.Instance(wasm).exports;
 export function makeKernel(batteries, engine = newChargeEngine()) {
-  const ptr = engine.prepare(batteries.length);
+  const ptr = engine.charge_prepare(batteries.length);
   let buf = new Float64Array(engine.memory.buffer, ptr, 5 + 2 * batteries.length);
   batteries.forEach((p, i) => (buf[5 + i * 2] = PARTS[p.type].battery));
   return (charge, generation, demand, dt) => {
     if (buf.buffer !== engine.memory.buffer)
       buf = new Float64Array(engine.memory.buffer, ptr, 5 + 2 * batteries.length);
     for (let i = 0; i < batteries.length; i++) buf[6 + 2 * i] = charge.get(batteries[i].id) || 0;
-    engine.distribute(generation, demand, dt);
+    engine.charge_distribute(generation, demand, dt);
     for (let i = 0; i < batteries.length; i++) charge.set(batteries[i].id, buf[6 + 2 * i]);
     return {
       stored: buf[0],

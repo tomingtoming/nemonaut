@@ -1,4 +1,4 @@
-// Standalone prototype. The backing storage belongs to one Wasm instance;
+// Per-instance charge accounting scratch buffer. The backing storage belongs to one Wasm instance;
 // JS only retains its view until the next prepare call.
 use std::cell::RefCell;
 
@@ -8,7 +8,7 @@ thread_local! {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn prepare(batteries: usize) -> *mut f64 {
+pub extern "C" fn charge_prepare(batteries: usize) -> *mut f64 {
     BUFFER.with_borrow_mut(|buf| {
         buf.resize(OUTPUTS + batteries * 2, 0.0);
         buf.as_mut_ptr()
@@ -16,7 +16,7 @@ pub extern "C" fn prepare(batteries: usize) -> *mut f64 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn distribute(generation: f64, demand: f64, dt: f64) {
+pub extern "C" fn charge_distribute(generation: f64, demand: f64, dt: f64) {
     BUFFER.with_borrow_mut(|buf| {
         let (out, cells) = buf.split_at_mut(OUTPUTS);
         let mut stored = 0.0;
