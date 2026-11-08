@@ -8,12 +8,13 @@ import {FlightScenery, surfaceMaterial} from './flight-scenery.js';
 import {loadCampus, addPadBuildings, addRunwayHangar} from './campus-scenery.js';
 import {addLaunchpad} from './launchpad-scenery.js';
 import {addSurveyMarkers} from './survey-markers.js';
+import {addRunwayMarkings} from './runway-scenery.js';
 import {RUNWAY} from './runway-navigation.js';
 import {launchSiteOrientation, surfaceOrientation} from './surface-frame.js';
 import {disposeWreckVisual} from './failure-visuals.js';
 import {state} from './app-state.js';
 import {currentFlight, flightCenter} from './current-flight.js';
-import {sceneCore, mat, box} from './scene.js';
+import {sceneCore, mat} from './scene.js';
 import {assets} from './asset-loader.js';
 type MeshLike = T.Object3D & {geometry?: T.BufferGeometry; material?: T.Material | T.Material[]};
 let surfacePatch: T.Mesh;
@@ -86,8 +87,7 @@ export function buildTestWorld(time: number) {
   const runway = new T.Mesh(runwayGeometry, mat('#3a4245'));
   runway.receiveShadow = true;
   runwaySite.add(runway);
-  for (let z = -40; z < 1400; z += 22)
-    box(runwaySite, [0.25, 0.01, 8], [0, 0.035 - (z * z) / (2 * PLANET.radius), z], mat('#d8d7bd'));
+  addRunwayMarkings(runwaySite);
 }
 export function updateWorldGeometry() {
   const fl = currentFlight(),
