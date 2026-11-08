@@ -1,3 +1,5 @@
+import {referenceCooling} from '../tools/coast-cooling-reference.mjs';
+import {bodyState, referenceBody} from '../dist/celestial.js';
 import {surfaceRelativeVelocity, inertialToFixed, surfaceOrientation} from '../dist/surface-frame.js';
 const surfaceSpeed = f =>
   surfaceRelativeVelocity(
@@ -305,5 +307,49 @@ test('Coasting a hot reentry shield retains its last gram across save and return
     resumed?.dispose();
     slow?.dispose();
     f.dispose();
+  }
+});
+
+test('orbital and parked temperatures follow the reference across interrupted and restored fleet coast', () => {
+  const rover = new Flight(preset('rover'), 'land');
+  let orbit, restored;
+  try {
+    for (let i = 0; i < 1200; i++) rover.step(1 / 120);
+    orbit = new Flight(preset('reentry'), 'moon-orbit', rover.universalTime);
+    orbit.detached.push(rover);
+    for (const [v, temperature] of [
+      [orbit, 700],
+      [rover, 170]
+    ])
+      for (const state of v.thermal.values()) state.temperature = temperature;
+    const reference = [structuredClone(orbit.thermal), structuredClone(rover.thermal)];
+    const position = center(rover),
+      body = referenceBody(position, rover.universalTime);
+    const air = atmosphere(position.distanceTo(bodyState(body, rover.universalTime).position) - body.radius);
+    function check(active, steps) {
+      const start = active.universalTime;
+      assert.equal(advanceCoastFleet(active, 30, {maxSteps: steps}).advanced, steps * 5);
+      for (const [i, vessel] of [active, active.detached[0]].entries()) {
+        assert.equal(vessel.universalTime, start + steps * 5);
+        for (let n = 0; n < steps; n++)
+          referenceCooling(vessel.parts, reference[i], 5, i === 0 ? {temperature: 3, density: 0} : air);
+        for (const [id, state] of vessel.thermal) {
+          const expected = reference[i].get(id);
+          assert.ok(Math.abs(expected.temperature - state.temperature) < 1e-8);
+          assert.equal(state.ablator, expected.ablator);
+          assert.equal(state.failed, expected.failed);
+        }
+      }
+    }
+    check(orbit, 2);
+    const saved = saveFlight(orbit);
+    assert.equal(advanceCoastFleet(orbit, 30, {input: true}).advanced, 0);
+    assert.deepEqual(saveFlight(orbit), saved);
+    restored = loadFlight(saved);
+    check(restored, 4);
+  } finally {
+    restored?.dispose();
+    if (orbit) orbit.dispose();
+    else rover.dispose();
   }
 });

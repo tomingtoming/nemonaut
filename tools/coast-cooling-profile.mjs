@@ -1,37 +1,9 @@
-// From the repo root after npm run build:
-// rustc --edition 2024 --crate-type cdylib --target wasm32-unknown-unknown -C opt-level=3 tools/coast-cooling-kernel.rs -o artifacts/coast-cooling-kernel.wasm
-// node tools/coast-cooling-profile.mjs
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
-import {PARTS, preset} from '../dist/catalog.js';
+import {preset} from '../dist/catalog.js';
 import {atmosphere} from '../dist/planet.js';
-import {coolStationary} from '../dist/coast-flight.js';
-import {createThermal, THERMAL} from '../dist/thermal.js';
-const {instance} = await WebAssembly.instantiate(
-  await readFile(new URL('../artifacts/coast-cooling-kernel.wasm', import.meta.url))
-);
-const wasm = instance.exports;
-function coolBatch(parts, states, dt, air) {
-  if (!Number.isFinite(dt) || dt <= 0) throw Error('冷却時間が不正です');
-  const ptr = wasm.prepare(parts.length);
-  const buf = new Float64Array(wasm.memory.buffer, ptr, parts.length * 3);
-  for (const [i, p] of parts.entries()) {
-    const d = PARTS[p.type],
-      [x, y, z] = d.size,
-      temp = states.get(p.id)?.temperature;
-
-    const area = 2 * (x * y + y * z + z * x),
-      capacity = Math.max(1, d.mass) * (d.heatCapacity || THERMAL.heatCapacity);
-    buf[3 * i] = temp;
-    buf[3 * i + 1] = ((d.emissivity || THERMAL.emissivity) * THERMAL.sigma * area) / capacity;
-    buf[3 * i + 2] = (air.density * 10 * area) / capacity;
-  }
-  const status = wasm.cool(dt, air.density > 1e-9 ? air.temperature : 3);
-  const done = status < 0 ? -status - 1 : status;
-  for (let i = 0; i < done; i++) states.get(parts[i].id).temperature = buf[3 * i];
-  if (status < 0) throw Error('真空冷却の温度が不正です');
-  if (done !== parts.length) throw Error('真空冷却の計算上限です');
-}
+import {coolStationary as coolBatch} from '../dist/coast-flight.js';
+import {referenceCooling as coolStationary} from './coast-cooling-reference.mjs';
+import {createThermal} from '../dist/thermal.js';
 const ground = atmosphere(0),
   vacuum = {density: 0, temperature: 3};
 function initial(parts, temps) {
