@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {campusPadOrigin, addPadBuildings} from '../dist/campus-scenery.js';
+import {campusPadOrigin, addPadBuildings, addRunwayHangar} from '../dist/campus-scenery.js';
 import {PLANET} from '../dist/planet.js';
 import {Box3, Group, Vector3} from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
@@ -64,6 +64,15 @@ test('campus pad and flight pad retain matching meshes at a common launch datum'
   const [campus, flight] = await Promise.all([load('space-center'), load('launchpad')]);
   const pad = campus.getObjectByProperty('name', 'pad');
   assert.equal(pad?.userData.facility, 'pad');
+  const runwaySite = new Group();
+  addRunwayHangar(runwaySite, campus);
+  const hangar = runwaySite.getObjectByName('sph');
+  assert.ok(hangar);
+  const door = hangar.localToWorld(new Vector3(62, 10, 76));
+  const back = hangar.localToWorld(new Vector3(62, 10, 34));
+  assert.ok(Math.abs(door.z - 2) < 0.001 && Math.abs(door.x - 69) < 0.001);
+  assert.ok(back.x > door.x && Math.abs(back.z - door.z) < 0.001);
+  assert.ok(new Box3().setFromObject(hangar).min.x > 9);
   const datum = campusPadOrigin;
   const flightMeshes = flight.children.filter(o => o.isMesh);
   assert.ok(flightMeshes.length > 0);
