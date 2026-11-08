@@ -133,3 +133,31 @@ test('vessel charge allocation preserves per-battery shares, curtailment and dir
     }
   }
 });
+
+test('a restored separated craft draws power only from its own probe', () => {
+  const f = new Flight(preset('twin'), 'orbit');
+  let restored;
+  try {
+    f.pos.copy(night);
+    f.sas = false;
+    f.step(1 / 120);
+    const [upper, lower] = [...f.charge.keys()];
+    f.charge.set(upper, 17);
+    f.charge.set(lower, 43);
+    f.stageNext();
+    f.stageNext();
+    const child = f.detached[0];
+    const save = saveFlight(f);
+    restored = loadFlight(JSON.parse(JSON.stringify(save)));
+    restored.sas = restored.detached[0].sas = false;
+    restored.step(1 / 120, {pitch: 1});
+    assert.deepEqual([...restored.charge.keys()], [upper]);
+    assert.ok(restored.charge.get(upper) < 17 && restored.charge.get(upper) > 16);
+    assert.deepEqual([...restored.detached[0].charge], [[lower, 43]]);
+    assert.deepEqual([...f.charge], [[upper, 17]]);
+    assert.deepEqual([...child.charge], [[lower, 43]]);
+  } finally {
+    restored?.dispose();
+    f.dispose();
+  }
+});

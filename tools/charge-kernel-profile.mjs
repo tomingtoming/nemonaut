@@ -2,34 +2,11 @@
 // rustc --edition 2024 --crate-type cdylib --target wasm32-unknown-unknown -C opt-level=3 tools/charge-kernel.rs -o artifacts/charge-kernel.wasm
 // node tools/charge-kernel-profile.mjs
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {makeKernel} from './charge-kernel-adapter.mjs';
 import {PARTS, part, preset} from '../dist/catalog.js';
 import {createCharge, distributeCharge} from '../dist/power.js';
 import {chargeCases} from '../tests/fixtures/charge-cases.mjs';
 
-const wasm = await WebAssembly.compile(
-  await readFile(new URL('../artifacts/charge-kernel.wasm', import.meta.url))
-);
-function makeKernel(batteries) {
-  const engine = new WebAssembly.Instance(wasm).exports;
-  const ptr = engine.prepare(batteries.length);
-  const buf = new Float64Array(engine.memory.buffer, ptr, 5 + 2 * batteries.length);
-  batteries.forEach((p, i) => (buf[5 + i * 2] = PARTS[p.type].battery));
-  return (charge, generation, demand, dt) => {
-    for (let i = 0; i < batteries.length; i++) buf[6 + 2 * i] = charge.get(batteries[i].id) || 0;
-    engine.distribute(generation, demand, dt);
-    for (let i = 0; i < batteries.length; i++) charge.set(batteries[i].id, buf[6 + 2 * i]);
-    return {
-      stored: buf[0],
-      capacity: buf[1],
-      generation,
-      demand,
-      consumption: buf[2],
-      ratio: buf[3],
-      net: buf[4]
-    };
-  };
-}
 for (const [initial, generation, demand, dt, target, consumption, ratio] of chargeCases) {
   const cells = initial.length ? [part('probe'), part('battery')] : [];
   const charge = new Map(cells.map((p, i) => [p.id, initial[i]])),
