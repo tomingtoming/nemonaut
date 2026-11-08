@@ -1,14 +1,29 @@
-// After npm run build, compile the optional benchmark adapter (not shipped):
+// Run with --cache to compare radius reuse against the original per-pair scan.
+// Without --cache, first build dist and compile the optional batch adapter (not shipped):
 // npm exec --yes --package=wabt@1.0.37 -- wat2wasm tools/shape-boundary-profile.wat -o artifacts/shape-boundary-profile.wasm
 import assert from 'node:assert/strict';
+import {ShapeType} from '../dist/physics.js';
 import {readFile} from 'node:fs/promises';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {WorldRuntime} from '../dist/world-runtime.js';
 
-const module = await WebAssembly.compile(
-  await readFile(new URL('../artifacts/shape-boundary-profile.wasm', import.meta.url))
-);
+const cache = process.argv.includes('--cache');
+const module = cache
+  ? null
+  : await WebAssembly.compile(
+      await readFile(new URL('../artifacts/shape-boundary-profile.wasm', import.meta.url))
+    );
+function scalarRadius(v) {
+  let r = 0;
+  for (let i = 0; i < v.body.numColliders(); i++) {
+    const c = v.body.collider(i),
+      p = c.translationWrtParent(),
+      h = c.shapeType() === ShapeType.Ball ? {x: c.radius(), y: c.radius(), z: c.radius()} : c.halfExtents();
+    r = Math.max(r, Math.hypot(p.x, p.y, p.z) + Math.hypot(h.x, h.y, h.z));
+  }
+  return r;
+}
 const ticks = 480;
 function measure(batch) {
   const root = new Flight(preset('orbiter'), 'orbit');
@@ -23,6 +38,8 @@ function measure(batch) {
     for (const vessel of vessels) {
       const world = vessel.world,
         engine = world.exports;
+      if (!cache || !batch) world.collisionRadius = () => scalarRadius(vessel);
+      if (cache) continue;
       const count = vessel.body.numColliders();
       const {read, memory} = new WebAssembly.Instance(module, {engine}).exports;
       const values = new Float64Array(memory.buffer, 0, count * 7);
@@ -85,4 +102,13 @@ for (let i = 0; i < 10; i++) {
   pairedSavingMs.push(scalar.ms - bulk.ms);
   bytesPerTick = bulk.bytesPerTick;
 }
-console.log(JSON.stringify({ticks, bytesPerTick, scalarMs, batchMs, pairedSavingMs}));
+console.log(
+  JSON.stringify({
+    candidate: cache ? 'cached' : 'batch',
+    ticks,
+    bytesPerTick,
+    scalarMs,
+    batchMs,
+    pairedSavingMs
+  })
+);

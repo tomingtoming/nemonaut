@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {ShapeType} from '../dist/physics.js';
 import * as T from 'three';
 import {PARTS, preset, part, nodes} from '../dist/catalog.js';
 import {Flight, validateCraft, statistics} from '../dist/core.js';
@@ -113,4 +114,53 @@ test('assembly inspection distinguishes the cargo cavity, walls and moved doors'
   assert.equal(assemblyInterferences([bay, payload], bounds).total, 0);
   payload.p = [3.4, 0, 2.8];
   assert.equal(assemblyInterferences([bay, payload], bounds).total, 1);
+});
+
+test('broad-phase radius follows cargo geometry and separation, and only reads unchanged shapes once', () => {
+  const f = new Flight(preset('cargo-lab'), 'orbit');
+  function check(v) {
+    const original = v.world.exports;
+    let reads = 0;
+    v.world.exports = {
+      ...original,
+      shape_get(...args) {
+        reads++;
+        return original.shape_get(...args);
+      }
+    };
+    try {
+      let expected = 0;
+      for (let i = 0; i < v.body.numColliders(); i++) {
+        const c = v.body.collider(i),
+          p = c.translationWrtParent();
+        const h =
+          c.shapeType() === ShapeType.Ball
+            ? [c.radius(), c.radius(), c.radius()]
+            : Object.values(c.halfExtents());
+        expected = Math.max(expected, Math.hypot(p.x, p.y, p.z) + Math.hypot(...h));
+      }
+      reads = 0;
+      assert.equal(v.world.collisionRadius(), expected);
+      assert.ok(reads > 0, 'new geometry was read');
+      reads = 0;
+      assert.equal(v.world.collisionRadius(), expected);
+      assert.equal(reads, 0);
+    } finally {
+      v.world.exports = original;
+    }
+  }
+  try {
+    const bay = f.parts.find(p => p.type === 'cargoBay');
+    check(f);
+    for (const open of [true, false, true]) {
+      assert.ok(setPartAction(f, bay.id, 'cargoOpen', open));
+      check(f);
+    }
+    f.decouplePart(f.parts.find(p => p.type === 'decoupler').id);
+    assert.equal(f.detached.length, 1);
+    check(f);
+    check(f.detached[0]);
+  } finally {
+    f.dispose();
+  }
 });

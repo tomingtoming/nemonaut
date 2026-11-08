@@ -317,6 +317,7 @@ export class World {
     friction: 0.5
   };
   shapes: Collider[] = [];
+  private cachedCollisionRadius: number | null = null;
   private removed = new Set<Collider>();
   private nextHandle = 1;
   private freed = false;
@@ -373,6 +374,7 @@ export class World {
     );
     const collider = new Collider(this, this.nextHandle++, this.shapes.length, desc.mass);
     this.shapes.push(collider);
+    this.cachedCollisionRadius = null;
     return collider;
   }
   /** The game rebuilds all part colliders at once (staging, docking, cargo doors). */
@@ -386,7 +388,23 @@ export class World {
       fail('only removing every part collider at once is supported');
     ok(this.exports.craft_clear_shapes(), 'collider removal rejected');
     this.shapes = [];
+    this.cachedCollisionRadius = null;
     this.removed.clear();
+  }
+  // Part colliders are rigid in body coordinates until they are added or rebuilt.
+  collisionRadius(): number {
+    this.flushRemovals();
+    if (this.cachedCollisionRadius === null) {
+      let radius = 0;
+      for (const collider of this.shapes) {
+        const p = collider.translationWrtParent();
+        // shape_get returns the radius on all three extent axes for a sphere.
+        const h = collider.halfExtents();
+        radius = Math.max(radius, Math.hypot(p.x, p.y, p.z) + Math.hypot(h.x, h.y, h.z));
+      }
+      this.cachedCollisionRadius = radius;
+    }
+    return this.cachedCollisionRadius;
   }
   syncGround() {
     const g = this.ground,

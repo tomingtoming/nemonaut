@@ -65,19 +65,6 @@ export const VESSEL_COLLISION: VesselCollisionSettings = {
 const ignored = new Map<string, boolean>();
 const key = (a: Flight, b: Flight) =>
   a.vesselId < b.vesselId ? a.vesselId + '|' + b.vesselId : b.vesselId + '|' + a.vesselId;
-function radius(v: Flight): number {
-  let r = 0;
-  for (let i = 0; i < v.body.numColliders(); i++) {
-    const c = v.body.collider(i),
-      p = c.translationWrtParent(),
-      h =
-        c.shapeType() === RAPIER.ShapeType.Ball
-          ? {x: c.radius(), y: c.radius(), z: c.radius()}
-          : c.halfExtents();
-    r = Math.max(r, Math.hypot(p.x, p.y, p.z) + Math.hypot(h.x, h.y, h.z));
-  }
-  return r;
-}
 function shapes(v: Flight): ContactShape[] {
   const owner = new Map<number, string>();
   for (const [id, group] of v.colliderGroups) for (const {collider} of group) owner.set(collider.handle, id);
@@ -140,7 +127,10 @@ export function resolveVesselCollisions(vessels: readonly Flight[], dt: number):
       const a = live[i],
         b = live[j],
         k = key(a, b);
-      if (a.pos.distanceTo(b.pos) > radius(a) + radius(b) + VESSEL_COLLISION.prediction) {
+      if (
+        a.pos.distanceTo(b.pos) >
+        a.world.collisionRadius() + b.world.collisionRadius() + VESSEL_COLLISION.prediction
+      ) {
         ignored.delete(k);
         continue;
       }
