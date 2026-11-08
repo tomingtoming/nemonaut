@@ -2,6 +2,7 @@
 use rapier3d::prelude::*;
 use std::cell::RefCell;
 mod charge;
+mod coast_cooling;
 mod craft;
 mod fuel;
 mod pair;
