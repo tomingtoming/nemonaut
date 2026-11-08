@@ -1,6 +1,7 @@
 // Build dist first, then compile from the repository root:
 // rustc --edition 2024 --crate-type cdylib --target wasm32-unknown-unknown -C opt-level=3 tools/fuel-kernel.rs -o artifacts/fuel-kernel.wasm
 // node tools/fuel-kernel-profile.mjs
+import {vesselBurn} from './fuel-vessel-kernel.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {PARTS, preset} from '../dist/catalog.js';
@@ -57,20 +58,24 @@ for (const design of ['launcher', 'transport-cargo']) {
     const a = createFuel(parts);
     let n = 0;
     for (const [id, kg] of a) a.set(id, kg * factor * (++n / 10));
-    const b = new Map(a);
+    const b = new Map(a),
+      c = new Map(a);
     for (let i = 0; i < 256; i++) {
       const args = input(i);
-      assert.deepEqual(wasmBurn(network, b, ...args), engineBurn(network, a, ...args));
+      const expected = engineBurn(network, a, ...args);
+      assert.deepEqual(wasmBurn(network, b, ...args), expected);
+      assert.deepEqual(vesselBurn(network, c, ...args), expected);
+      assert.deepEqual(c, a);
       assert.deepEqual(b, a);
     }
   }
-  const samples = [[], []],
-    methods = [engineBurn, wasmBurn],
+  const samples = [[], [], []],
+    methods = [engineBurn, wasmBurn, vesselBurn],
     steps = 10000;
   const args = input(7);
   for (let trial = 0; trial < 9; trial++) {
     let expected;
-    for (const index of [trial % 2, 1 - (trial % 2)]) {
+    for (const index of [trial % 3, (trial + 1) % 3, (trial + 2) % 3]) {
       const fuel = createFuel(parts),
         update = methods[index];
       let sum = 0;
@@ -87,5 +92,11 @@ for (const design of ['launcher', 'transport-cargo']) {
     xs.sort((a, b) => a - b);
     return (xs[2] + xs[3]) / 2;
   };
-  console.log({design, steps, tsMs: median(samples[0]), wasmMs: median(samples[1])});
+  console.log({
+    design,
+    steps,
+    tsMs: median(samples[0]),
+    groupMs: median(samples[1]),
+    vesselMs: median(samples[2])
+  });
 }
