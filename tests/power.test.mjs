@@ -9,6 +9,7 @@ import {
   inEclipse,
   solarGeneration,
   createCharge,
+  distributeCharge,
   powerStep,
   powerTotals
 } from '../dist/power.js';
@@ -104,4 +105,41 @@ test('Separation, switching and save/restore preserve battery values without sha
   active.dispose();
   g.dispose();
   migrated.dispose();
+});
+
+test('vessel charge allocation preserves per-battery shares, curtailment and direct solar supply', () => {
+  // Old TS behavior, expressed as independent EC balances for a 200 and a 1000 EC battery.
+  // Columns: initial EC, generation, load, seconds, final EC, delivered EC/s, supply ratio.
+  const cases = [
+    [[100, 250], 0.8, 0, 106.25, [110, 325], 0, 1],
+    [[100, 250], 0, 7, 5, [90, 225], 7, 1],
+    [[1, 2], 0, 12, 0.5, [0, 0], 6, 0.5],
+    [[199, 999], 0.8, 0, 10, [200, 1000], 0, 1],
+    [[0, 0], 0.8, 1, 1, [0, 0], 0.8, 0.8],
+    [[], 0.8, 1, 1, [], 0.8, 0.8],
+    [[100, 250], 0, 120, 1 / 120, [100 - 2 / 7, 250 - 5 / 7], 120, 1]
+  ];
+  const near = (value, expected) => assert.ok(Math.abs(value - expected) < 1e-9, value + ' vs ' + expected);
+  for (const [initial, generation, load, dt, target, delivered, supply] of cases) {
+    const batteries = initial.length ? [part('probe'), part('battery')] : [];
+    const parts = [...batteries, part('solar')];
+    const charge = new Map(batteries.map((p, i) => [p.id, initial[i]]));
+    const flightCharge = new Map(charge);
+    const actual = distributeCharge(parts, charge, generation, load, dt);
+    const live = powerStep(parts, flightCharge, generation ? day : night, q, idle, false, dt, 0, load);
+    for (const [reading, state] of [
+      [actual, charge],
+      [live, flightCharge]
+    ]) {
+      near(reading.consumption, delivered);
+      near(reading.ratio, supply);
+      near(
+        reading.stored,
+        target.reduce((a, b) => a + b, 0)
+      );
+      near(reading.net, (reading.stored - initial.reduce((a, b) => a + b, 0)) / dt);
+      assert.equal(state.size, batteries.length);
+      batteries.forEach((p, i) => near(state.get(p.id), target[i]));
+    }
+  }
 });

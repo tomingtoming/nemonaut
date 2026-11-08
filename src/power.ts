@@ -72,12 +72,24 @@ export function powerStep(
   time = 0,
   load = 0
 ): PowerReading {
-  const {stored, capacity} = powerTotals(parts, charge),
-    generation = solarGeneration(parts, pos, q, time),
+  const generation = solarGeneration(parts, pos, q, time),
     reaction = enabled
       ? parts.reduce((s, p) => s + (p.reactionEnabled === false ? 0 : PARTS[p.type].reactionTorque || 0), 0)
       : 0,
-    demand = load + (reaction / 1000) * Math.hypot(commands.pitch, commands.yaw, commands.roll),
+    demand = load + (reaction / 1000) * Math.hypot(commands.pitch, commands.yaw, commands.roll);
+  return {...distributeCharge(parts, charge, generation, demand, dt), eclipse: inEclipse(pos, time)};
+}
+
+// One vessel update, shared by fixed physics ticks and adaptive coast steps.
+// Geometry, eclipse and actuator demand have already been evaluated by the caller.
+export function distributeCharge(
+  parts: readonly Pick<Part, 'id' | 'type'>[],
+  charge: ChargeMap,
+  generation: number,
+  demand: number,
+  dt: number
+): Omit<PowerReading, 'eclipse'> {
+  const {stored, capacity} = powerTotals(parts, charge),
     available = stored + generation * dt,
     consumed = Math.min(available, demand * dt),
     ratio = demand > 0 ? Math.min(1, available / (demand * dt)) : 1,
@@ -104,7 +116,6 @@ export function powerStep(
     demand,
     consumption: consumed / dt,
     ratio,
-    eclipse: inEclipse(pos, time),
     net: change / dt
   };
 }
