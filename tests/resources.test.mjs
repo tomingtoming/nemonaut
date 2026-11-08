@@ -129,3 +129,62 @@ test('Explicit thrust media preserve every engine burn and fuel gauge without le
     }
   }
 });
+
+test('Unequal stores drain in proportion to remaining mass in either part order', () => {
+  const parts = preset('launcher');
+  const booster = fuelNetworks(parts).groups.find(g => g.engines.length === 4);
+  const initial = createFuel(parts);
+  const amounts = [0, 25, 75];
+  booster.tanks.forEach((tank, i) => initial.set(tank.id, amounts[i]));
+  const [full, limited] = booster.engines;
+  limited.thrustLimit = 0.25;
+  const active = new Set([full.id, limited.id]);
+  const thrust = PARTS[full.type].thrust;
+  const demand = (1.25 * thrust) / (PARTS[full.type].isp * 9.81);
+  for (const order of [parts, [...parts].reverse()]) {
+    for (const dt of [1, 100]) {
+      const fuel = new Map(initial);
+      const actual = engineBurn(fuelNetworks(order), fuel, active, 1, 0, dt);
+      const remaining = Math.max(0, 100 - demand * dt);
+      const fraction = Math.min(1, 100 / (demand * dt));
+      const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, a + ' vs ' + b);
+      assert.equal(actual.size, 2);
+      near(actual.get(full.id), thrust * fraction);
+      near(actual.get(limited.id), thrust * 0.25 * fraction);
+      for (const [id, kg] of initial) {
+        const shared = booster.tanks.some(t => t.id === id);
+        near(fuel.get(id), shared ? (kg * remaining) / 100 : kg);
+      }
+    }
+  }
+});
+
+test('Staging partitions partially used tanks by id before either vessel burns again', () => {
+  const f = new Flight(preset('launcher'), 'orbit');
+  try {
+    f.stageNext();
+    f.throttle = 0.6;
+    f.step(1 / 120);
+    const before = new Map(f.fuel);
+    f.stageNext();
+    const child = f.detached[0];
+    const combined = [...f.fuel, ...child.fuel];
+    assert.equal(combined.length, before.size);
+    assert.deepEqual(new Map(combined), before);
+    for (const [vessel, other] of [
+      [f, child],
+      [child, f]
+    ]) {
+      const held = new Map(other.fuel);
+      const local = new Map(vessel.fuel);
+      assert.ok(local.size > 0);
+      for (const id of local.keys()) assert.ok(vessel.parts.some(p => p.id === id));
+      const engines = vessel.networks.groups.flatMap(g => g.engines.map(p => p.id));
+      engineBurn(vessel.networks, vessel.fuel, new Set(engines), 1, 0, 1);
+      for (const [id, kg] of local) assert.ok(vessel.fuel.get(id) < kg);
+      assert.deepEqual(other.fuel, held);
+    }
+  } finally {
+    f.dispose();
+  }
+});
