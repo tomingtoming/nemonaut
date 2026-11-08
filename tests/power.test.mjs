@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {chargeCases} from './fixtures/charge-cases.mjs';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {Flight} from '../dist/core.js';
@@ -108,19 +109,8 @@ test('Separation, switching and save/restore preserve battery values without sha
 });
 
 test('vessel charge allocation preserves per-battery shares, curtailment and direct solar supply', () => {
-  // Old TS behavior, expressed as independent EC balances for a 200 and a 1000 EC battery.
-  // Columns: initial EC, generation, load, seconds, final EC, delivered EC/s, supply ratio.
-  const cases = [
-    [[100, 250], 0.8, 0, 106.25, [110, 325], 0, 1],
-    [[100, 250], 0, 7, 5, [90, 225], 7, 1],
-    [[1, 2], 0, 12, 0.5, [0, 0], 6, 0.5],
-    [[199, 999], 0.8, 0, 10, [200, 1000], 0, 1],
-    [[0, 0], 0.8, 1, 1, [0, 0], 0.8, 0.8],
-    [[], 0.8, 1, 1, [], 0.8, 0.8],
-    [[100, 250], 0, 120, 1 / 120, [100 - 2 / 7, 250 - 5 / 7], 120, 1]
-  ];
   const near = (value, expected) => assert.ok(Math.abs(value - expected) < 1e-9, value + ' vs ' + expected);
-  for (const [initial, generation, load, dt, target, delivered, supply] of cases) {
+  for (const [initial, generation, load, dt, target, delivered, supply] of chargeCases) {
     const batteries = initial.length ? [part('probe'), part('battery')] : [];
     const parts = [...batteries, part('solar')];
     const charge = new Map(batteries.map((p, i) => [p.id, initial[i]]));

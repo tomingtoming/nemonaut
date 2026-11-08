@@ -1,0 +1,88 @@
+// Build dist, then run the following from the repo root (artifacts/ must exist):
+// rustc --edition 2024 --crate-type cdylib --target wasm32-unknown-unknown -C opt-level=3 tools/charge-kernel.rs -o artifacts/charge-kernel.wasm
+// node tools/charge-kernel-profile.mjs
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {PARTS, part, preset} from '../dist/catalog.js';
+import {createCharge, distributeCharge} from '../dist/power.js';
+import {chargeCases} from '../tests/fixtures/charge-cases.mjs';
+
+const wasm = await WebAssembly.compile(
+  await readFile(new URL('../artifacts/charge-kernel.wasm', import.meta.url))
+);
+function makeKernel(batteries) {
+  const engine = new WebAssembly.Instance(wasm).exports;
+  const ptr = engine.prepare(batteries.length);
+  const buf = new Float64Array(engine.memory.buffer, ptr, 5 + 2 * batteries.length);
+  batteries.forEach((p, i) => (buf[5 + i * 2] = PARTS[p.type].battery));
+  return (charge, generation, demand, dt) => {
+    for (let i = 0; i < batteries.length; i++) buf[6 + 2 * i] = charge.get(batteries[i].id) || 0;
+    engine.distribute(generation, demand, dt);
+    for (let i = 0; i < batteries.length; i++) charge.set(batteries[i].id, buf[6 + 2 * i]);
+    return {
+      stored: buf[0],
+      capacity: buf[1],
+      generation,
+      demand,
+      consumption: buf[2],
+      ratio: buf[3],
+      net: buf[4]
+    };
+  };
+}
+for (const [initial, generation, demand, dt, target, consumption, ratio] of chargeCases) {
+  const cells = initial.length ? [part('probe'), part('battery')] : [];
+  const charge = new Map(cells.map((p, i) => [p.id, initial[i]])),
+    ref = new Map(charge);
+  const expected = distributeCharge([...cells, part('solar')], ref, generation, demand, dt);
+  const result = makeKernel(cells)(charge, generation, demand, dt);
+  assert.deepEqual(result, expected);
+  assert.deepEqual(charge, ref);
+  cells.forEach((p, i) => assert.ok(Math.abs(charge.get(p.id) - target[i]) < 1e-9));
+  assert.ok(Math.abs(result.ratio - ratio) < 1e-9 && Math.abs(result.consumption - consumption) < 1e-9);
+}
+const steps = 20000;
+for (const design of ['plane', 'transport-cargo']) {
+  const parts = preset(design),
+    cells = parts.filter(p => PARTS[p.type].battery);
+  const kernels = [
+    (charge, g, d, t) => distributeCharge(parts, charge, g, d, t),
+    (charge, g, d, t) => distributeCharge(cells, charge, g, d, t),
+    makeKernel(cells)
+  ];
+  const times = kernels.map(() => []);
+  let reference;
+  for (let trial = 0; trial < 9; trial++) {
+    for (let slot = 0; slot < 3; slot++) {
+      const k = (trial + slot) % 3,
+        charge = createCharge(parts);
+      const update = kernels[k];
+      let checksum = 0;
+      const start = performance.now();
+      for (let i = 0; i < steps; i++) {
+        const r = update(charge, (i % 7) * 0.2, (i % 5) * 0.4, 1 / 120);
+        checksum += r.stored + r.net + r.consumption + r.ratio;
+      }
+      const elapsed = performance.now() - start;
+      if (trial >= 3) times[k].push(elapsed);
+      const end = {charge: [...charge], checksum};
+      if (!reference) reference = end;
+      else assert.deepEqual(end, reference);
+    }
+  }
+  const median = values => {
+    const sorted = [...values].sort((a, b) => a - b);
+    return (sorted[2] + sorted[3]) / 2;
+  };
+  console.log(
+    JSON.stringify({
+      design,
+      parts: parts.length,
+      batteries: cells.length,
+      steps,
+      fullTS: median(times[0]),
+      indexedTS: median(times[1]),
+      wasm: median(times[2])
+    })
+  );
+}
