@@ -6,7 +6,7 @@
 
 type Vec3 = {x: number; y: number; z: number};
 type Quat = {x: number; y: number; z: number; w: number};
-type Exports = Record<string, (...args: number[]) => number>;
+type Exports = Record<string, (...args: number[]) => number> & {memory: WebAssembly.Memory};
 
 let wasmModule: WebAssembly.Module | null = null;
 let loadError: unknown = null;
@@ -21,6 +21,7 @@ const ok = (result: number, message: string) => {
 
 /** Use an already compiled engine module (Node tests, Workers that compiled it themselves). */
 export function installPhysics(module: WebAssembly.Module) {
+  if (module !== wasmModule) shared = null;
   wasmModule = module;
 }
 async function engineBytes(url: URL) {
@@ -48,11 +49,11 @@ async function init() {
     await loadPhysics();
   } catch {}
 }
-let pair: Exports | null = null;
-/** The vessel-vessel contact query instance (pair_*), shared by all worlds. */
-export function pairQuery() {
+let shared: Exports | null = null;
+/** Scratch instance for vessel-pair queries and charge accounting, shared by all worlds in this realm. */
+export function sharedPhysics() {
   if (!wasmModule) return null;
-  return (pair ??= new WebAssembly.Instance(wasmModule, {}).exports as unknown as Exports);
+  return (shared ??= new WebAssembly.Instance(wasmModule, {}).exports as unknown as Exports);
 }
 export const physicsReady = () => wasmModule !== null;
 

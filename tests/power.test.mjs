@@ -2,6 +2,7 @@ import test from 'node:test';
 import {chargeCases} from './fixtures/charge-cases.mjs';
 import assert from 'node:assert/strict';
 import * as T from 'three';
+import {sharedPhysics} from '../dist/physics.js';
 import {Flight} from '../dist/core.js';
 import {preset, part} from '../dist/catalog.js';
 import {PLANET, center} from '../dist/planet.js';
@@ -160,4 +161,18 @@ test('a restored separated craft draws power only from its own probe', () => {
     restored?.dispose();
     f.dispose();
   }
+});
+
+test('charge scratch follows shared memory growth and the current vessel', () => {
+  const first = [part('probe')],
+    second = [part('battery')];
+  const firstCharge = createCharge(first),
+    secondCharge = createCharge(second);
+  distributeCharge(first, firstCharge, 0, 1, 1);
+  const held = firstCharge.get(first[0].id),
+    initial = secondCharge.get(second[0].id);
+  sharedPhysics().memory.grow(1);
+  distributeCharge(second, secondCharge, 0, 2, 1);
+  assert.equal(secondCharge.get(second[0].id), initial - 2);
+  assert.equal(firstCharge.get(first[0].id), held);
 });

@@ -1,31 +1,18 @@
-// Optional differential preload for Node tests after compiling the charge prototype.
+// Optional differential preload for Node tests on the shared charge engine.
 // Rewrites modules in memory only. Applied to the built power module and its bundled
 // copy in the actual takeoff forecast worker. TS runs on a snapshot, Rust on live input.
 import assert from 'node:assert/strict';
 import {registerHooks} from 'node:module';
 import {threadId} from 'node:worker_threads';
-import {PARTS} from '../dist/catalog.js';
-import {makeKernel, newChargeEngine} from './charge-kernel-adapter.mjs';
 
-const layouts = new WeakMap();
+import {referenceCharge} from './charge-reference.mjs';
+
 let calls = 0;
-globalThis.compareChargeUpdate = (reference, parts, charge, generation, demand, dt) => {
+globalThis.compareChargeUpdate = (production, parts, charge, generation, demand, dt) => {
   try {
     const expectedCharge = new Map(charge);
-    const expected = reference(parts, expectedCharge, generation, demand, dt);
-    const cells = parts.filter(p => PARTS[p.type].battery);
-    let layout = layouts.get(parts);
-    if (
-      !layout ||
-      layout.ids.length !== cells.length ||
-      cells.some((p, i) => layout.ids[i] !== p.id || layout.types[i] !== p.type)
-    ) {
-      const engine = newChargeEngine();
-      layout = {ids: cells.map(p => p.id), types: cells.map(p => p.type), update: makeKernel(cells, engine)};
-      layouts.set(parts, layout);
-      if (!calls) engine.memory.grow(1); // detach the original typed view before the first use
-    }
-    const actual = layout.update(charge, generation, demand, dt);
+    const expected = referenceCharge(parts, expectedCharge, generation, demand, dt);
+    const actual = production(parts, charge, generation, demand, dt);
     assert.deepEqual(actual, expected);
     assert.deepEqual(charge, expectedCharge);
     if (++calls === 1) console.log('charge parity active, worker thread ' + threadId);
@@ -50,7 +37,7 @@ registerHooks({
       source: code.replace(
         signature,
         signature +
-          '\n  return globalThis.compareChargeUpdate(referenceCharge,parts,charge,generation,demand,dt);\n}\nfunction referenceCharge(parts, charge, generation, demand, dt) {'
+          '\n  return globalThis.compareChargeUpdate(productionCharge,parts,charge,generation,demand,dt);\n}\nfunction productionCharge(parts, charge, generation, demand, dt) {'
       )
     };
   }

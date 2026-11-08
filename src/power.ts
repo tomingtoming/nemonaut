@@ -1,6 +1,10 @@
 import * as T from 'three';
+import RAPIER, {sharedPhysics} from './physics.js';
+
 import {PARTS, type Part} from './catalog.js';
 import {PRIMARY, MOON, bodyState} from './celestial.js';
+await RAPIER.init();
+let chargeBuffer: Float64Array | undefined;
 export const SUN_DIRECTION = new T.Vector3(12, 24, 12).normalize();
 /** The part fields the electric model reads (a catalog Part satisfies it). */
 export type PowerPart = Pick<Part, 'id' | 'type' | 'r' | 'reactionEnabled'>;
@@ -89,33 +93,28 @@ export function distributeCharge(
   demand: number,
   dt: number
 ): Omit<PowerReading, 'eclipse'> {
-  const {stored, capacity} = powerTotals(parts, charge),
-    available = stored + generation * dt,
-    consumed = Math.min(available, demand * dt),
-    ratio = demand > 0 ? Math.min(1, available / (demand * dt)) : 1,
-    next = Math.max(0, Math.min(capacity, available - consumed)),
-    change = next - stored;
-  for (const p of parts) {
-    const cap = PARTS[p.type].battery || 0;
-    if (!cap) continue;
-    const current = charge.get(p.id) || 0,
-      share =
-        change >= 0
-          ? capacity > stored
-            ? (cap - current) / (capacity - stored)
-            : 0
-          : stored
-            ? current / stored
-            : 0;
-    charge.set(p.id, Math.max(0, Math.min(cap, current + change * share)));
+  const engine = sharedPhysics();
+  if (!engine) throw Error('Rust電力計算を初期化できませんでした');
+  const batteries = parts.filter(p => PARTS[p.type].battery);
+  const length = 5 + 2 * batteries.length;
+  if (!chargeBuffer || chargeBuffer.length !== length || chargeBuffer.buffer !== engine.memory.buffer) {
+    const ptr = engine.charge_prepare(batteries.length);
+    chargeBuffer = new Float64Array(engine.memory.buffer, ptr, length);
   }
+  const buf = chargeBuffer;
+  for (const [i, p] of batteries.entries()) {
+    buf[5 + 2 * i] = PARTS[p.type].battery ?? 0;
+    buf[6 + 2 * i] = charge.get(p.id) ?? 0;
+  }
+  engine.charge_distribute(generation, demand, dt);
+  for (const [i, p] of batteries.entries()) charge.set(p.id, buf[6 + 2 * i]);
   return {
-    stored: next,
-    capacity,
+    stored: buf[0],
+    capacity: buf[1],
     generation,
     demand,
-    consumption: consumed / dt,
-    ratio,
-    net: change / dt
+    consumption: buf[2],
+    ratio: buf[3],
+    net: buf[4]
   };
 }

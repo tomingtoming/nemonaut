@@ -1,5 +1,5 @@
 import * as T from 'three';
-import RAPIER, {pairQuery} from './physics.js';
+import RAPIER, {sharedPhysics} from './physics.js';
 import {PARTS} from './catalog.js';
 import {partMass, partRotation} from './aero.js';
 import {inertiaAbout} from './vessel-inertia.js';
@@ -117,7 +117,7 @@ function effectiveMass(
 export function resolveVesselCollisions(vessels: readonly Flight[], dt: number): VesselContactEvent[] {
   if (!(dt > 0)) throw Error('vessel collision needs the step dt');
   if (!VESSEL_COLLISION.enabled) return [];
-  const pair = pairQuery();
+  const pair = sharedPhysics();
   if (!pair) return []; // the engine failed to load (worlds then fail too)
   const events: VesselContactEvent[] = [],
     live = vessels.filter(v => v.body && v.parts.length),

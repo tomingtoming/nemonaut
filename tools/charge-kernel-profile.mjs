@@ -1,10 +1,8 @@
-// Build dist, then run the following from the repo root (artifacts/ must exist):
-// rustc --edition 2024 --crate-type cdylib --target wasm32-unknown-unknown -C opt-level=3 engine/src/charge.rs -o artifacts/charge-kernel.wasm
-// node tools/charge-kernel-profile.mjs
 import assert from 'node:assert/strict';
-import {makeKernel} from './charge-kernel-adapter.mjs';
+
 import {PARTS, part, preset} from '../dist/catalog.js';
-import {createCharge, distributeCharge} from '../dist/power.js';
+import {createCharge, distributeCharge as productCharge} from '../dist/power.js';
+import {referenceCharge as distributeCharge} from './charge-reference.mjs';
 import {chargeCases} from '../tests/fixtures/charge-cases.mjs';
 
 for (const [initial, generation, demand, dt, target, consumption, ratio] of chargeCases) {
@@ -12,7 +10,7 @@ for (const [initial, generation, demand, dt, target, consumption, ratio] of char
   const charge = new Map(cells.map((p, i) => [p.id, initial[i]])),
     ref = new Map(charge);
   const expected = distributeCharge([...cells, part('solar')], ref, generation, demand, dt);
-  const result = makeKernel(cells)(charge, generation, demand, dt);
+  const result = productCharge([...cells, part('solar')], charge, generation, demand, dt);
   assert.deepEqual(result, expected);
   assert.deepEqual(charge, ref);
   cells.forEach((p, i) => assert.ok(Math.abs(charge.get(p.id) - target[i]) < 1e-9));
@@ -25,7 +23,7 @@ for (const design of ['plane', 'transport-cargo']) {
   const kernels = [
     (charge, g, d, t) => distributeCharge(parts, charge, g, d, t),
     (charge, g, d, t) => distributeCharge(cells, charge, g, d, t),
-    makeKernel(cells)
+    (charge, g, d, t) => productCharge(parts, charge, g, d, t)
   ];
   const times = kernels.map(() => []);
   let reference;
