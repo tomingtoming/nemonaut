@@ -5,6 +5,7 @@ import * as T from 'three';
 import {PLANET, center} from './planet.js';
 import {MOON, bodyState, bodyUp, bodyOrbitState} from './celestial.js';
 import {FlightScenery, surfaceMaterial} from './flight-scenery.js';
+import {loadCampus, addPadBuildings} from './campus-scenery.js';
 import {addLaunchpad} from './launchpad-scenery.js';
 import {addSurveyMarkers} from './survey-markers.js';
 import {RUNWAY} from './runway-navigation.js';
@@ -62,6 +63,12 @@ export function buildTestWorld(time: number) {
   surfacePatch.receiveShadow = true;
   testWorld.add(surfacePatch);
   addLaunchpad(groundFacilities, assets.get('launchpad'));
+  const site = groundFacilities;
+  void loadCampus()
+    .then(model => {
+      if (site.parent === testWorld) addPadBuildings(site, model);
+    })
+    .catch(error => console.warn('宇宙センターの建物を表示できません', error));
   addSurveyMarkers(groundFacilities, assets);
   const runwaySite = new T.Group();
   runwaySite.quaternion.copy(launchSiteOrientation('runway'));

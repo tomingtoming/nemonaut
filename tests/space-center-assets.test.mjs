@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {Box3, Vector3} from 'three';
+import {campusPadOrigin, addPadBuildings} from '../dist/campus-scenery.js';
+import {PLANET} from '../dist/planet.js';
+import {Box3, Group, Vector3} from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 test('detailed campus retains launch-complex scale and bounded rendering cost', async () => {
   const data = await readFile(new URL('../dist/assets/scenery/space-center.glb', import.meta.url));
@@ -62,10 +64,25 @@ test('campus pad and flight pad retain matching meshes at a common launch datum'
   const [campus, flight] = await Promise.all([load('space-center'), load('launchpad')]);
   const pad = campus.getObjectByProperty('name', 'pad');
   assert.equal(pad?.userData.facility, 'pad');
-  const datum = new Vector3(107, 1.05, -66);
+  const datum = campusPadOrigin;
   const flightMeshes = flight.children.filter(o => o.isMesh);
   assert.ok(flightMeshes.length > 0);
   assert.equal(pad.children.length, flightMeshes.length);
+  const site = new Group();
+  addPadBuildings(site, campus);
+  const buildings = site.children[0];
+  assert.deepEqual(buildings.children.map(o => o.userData.facility).sort(), ['tracking', 'vab']);
+  for (const copy of buildings.children) {
+    const original = campus.getObjectByName(copy.name);
+    assert.notEqual(copy, original);
+    const expected = new Box3()
+      .setFromObject(original)
+      .translate(new Vector3(0, PLANET.radius, 0).sub(datum));
+    site.updateMatrixWorld(true);
+    const actual = new Box3().setFromObject(copy);
+    assert.ok(actual.min.distanceTo(expected.min) < 0.001);
+    assert.ok(actual.max.distanceTo(expected.max) < 0.001);
+  }
   for (const mesh of flightMeshes) {
     const name = mesh.name.replace(/^Pad01_/, 'pad_');
     const overview = pad.children.find(o => o.name.replaceAll(' ', '_') === name);

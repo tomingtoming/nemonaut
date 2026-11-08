@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {loadCampus} from './campus-scenery.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {CENTER_FACILITIES} from './center-facilities.js';
 import {renderQuality} from './render-quality.js';
@@ -114,8 +114,7 @@ export class SpaceCenter {
     new ResizeObserver(() => this.resize()).observe(canvas);
   }
   async load() {
-    const gltf = await new GLTFLoader().loadAsync('./assets/scenery/space-center.glb');
-    this.model = gltf.scene;
+    this.model = await loadCampus();
     this.model.traverse(o => {
       const facility: unknown = o.userData.facility;
       if (isFacilityId(facility)) this.facilities.set(facility, o);
