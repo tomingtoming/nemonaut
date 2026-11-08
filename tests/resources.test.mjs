@@ -188,3 +188,26 @@ test('Staging partitions partially used tanks by id before either vessel burns a
     f.dispose();
   }
 });
+
+test('Air intake sampling can run a separate burn without overwriting shared fuel data', () => {
+  const network = fuelNetworks(preset('transport-cargo'));
+  const engines = network.groups.flatMap(g => g.engines);
+  const active = new Set(engines.map(p => p.id));
+  const parts = network.groups.flatMap(g => g.parts);
+  const expected = createFuel(parts),
+    actual = new Map(expected);
+  const before = engineBurn(network, expected, active, 1, 1.225, 1, 101325, () => 0.75);
+  const other = fuelNetworks(preset('launcher'));
+  const others = new Set(other.groups.flatMap(g => g.engines.map(p => p.id)));
+  const reserve = createFuel(other.groups.flatMap(g => g.parts));
+  let sampled = 0;
+  const after = engineBurn(network, actual, active, 1, 1.225, 1, 101325, () => {
+    engineBurn(other, reserve, others, 0.5, 0, 1);
+    sampled++;
+    return 0.75;
+  });
+  assert.ok(engines.length > 0);
+  assert.equal(sampled, engines.length);
+  assert.deepEqual(after, before);
+  assert.deepEqual(actual, expected);
+});

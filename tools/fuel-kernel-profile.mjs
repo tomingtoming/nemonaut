@@ -1,43 +1,7 @@
-// Build dist first, then compile from the repository root:
-// rustc --edition 2024 --crate-type cdylib --target wasm32-unknown-unknown -C opt-level=3 tools/fuel-kernel.rs -o artifacts/fuel-kernel.wasm
-// node tools/fuel-kernel-profile.mjs
-import {vesselBurn} from './fuel-vessel-kernel.mjs';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
-import {PARTS, preset} from '../dist/catalog.js';
-import {createFuel, engineBurn, engineMaxThrust, fuelNetworks} from '../dist/resources.js';
-
-const {instance} = await WebAssembly.instantiate(
-  await readFile(new URL('../artifacts/fuel-kernel.wasm', import.meta.url))
-);
-const wasm = instance.exports;
-function wasmBurn(network, fuel, active, throttle, density, dt, pressure, intake) {
-  const thrust = new Map();
-  for (const group of network.groups) {
-    const engines = group.engines.filter(p => active.has(p.id));
-    if (!engines.length) continue;
-    const tankOffset = engines.length * 5;
-    const length = tankOffset + group.tanks.length;
-    const ptr = wasm.prepare(length);
-    const buf = new Float64Array(wasm.memory.buffer, ptr, length);
-    for (const [i, p] of engines.entries()) {
-      const def = PARTS[p.type],
-        air = def.oxidizerSource === 'atmosphere';
-      const offset = 5 * i;
-      buf[offset] = engineMaxThrust(p);
-      buf[offset + 1] = def.isp;
-      buf[offset + 2] = def.ispSeaLevel ?? def.isp;
-      buf[offset + 3] = Number(air);
-      buf[offset + 4] = air ? intake(p) : 1;
-    }
-    for (const [i, p] of group.tanks.entries()) buf[tankOffset + i] = fuel.get(p.id) || 0;
-    const changed = wasm.burn(engines.length, throttle, density, pressure, dt);
-    for (const [i, p] of engines.entries()) thrust.set(p.id, buf[5 * i]);
-    if (changed) for (const [i, p] of group.tanks.entries()) fuel.set(p.id, buf[tankOffset + i]);
-  }
-  return thrust;
-}
-
+import {preset} from '../dist/catalog.js';
+import {createFuel, engineBurn, fuelNetworks} from '../dist/resources.js';
+import {referenceBurn} from './fuel-reference.mjs';
 for (const design of ['launcher', 'transport-cargo']) {
   const parts = preset(design);
   const network = fuelNetworks(parts);
@@ -58,24 +22,22 @@ for (const design of ['launcher', 'transport-cargo']) {
     const a = createFuel(parts);
     let n = 0;
     for (const [id, kg] of a) a.set(id, kg * factor * (++n / 10));
-    const b = new Map(a),
-      c = new Map(a);
+    const c = new Map(a);
     for (let i = 0; i < 256; i++) {
       const args = input(i);
-      const expected = engineBurn(network, a, ...args);
-      assert.deepEqual(wasmBurn(network, b, ...args), expected);
-      assert.deepEqual(vesselBurn(network, c, ...args), expected);
+      const expected = referenceBurn(network, a, ...args);
+
+      assert.deepEqual(engineBurn(network, c, ...args), expected);
       assert.deepEqual(c, a);
-      assert.deepEqual(b, a);
     }
   }
-  const samples = [[], [], []],
-    methods = [engineBurn, wasmBurn, vesselBurn],
+  const samples = [[], []],
+    methods = [referenceBurn, engineBurn],
     steps = 10000;
   const args = input(7);
   for (let trial = 0; trial < 9; trial++) {
     let expected;
-    for (const index of [trial % 3, (trial + 1) % 3, (trial + 2) % 3]) {
+    for (const index of [trial % 2, (trial + 1) % 2]) {
       const fuel = createFuel(parts),
         update = methods[index];
       let sum = 0;
@@ -96,7 +58,7 @@ for (const design of ['launcher', 'transport-cargo']) {
     design,
     steps,
     tsMs: median(samples[0]),
-    groupMs: median(samples[1]),
-    vesselMs: median(samples[2])
+
+    vesselMs: median(samples[1])
   });
 }

@@ -1,4 +1,6 @@
+import RAPIER, {sharedPhysics} from './physics.js';
 import {PARTS, type Part} from './catalog.js';
+await RAPIER.init();
 /** The part fields resource bookkeeping reads (a catalog Part satisfies it). */
 export interface ResourcePart {
   id: string;
@@ -108,25 +110,47 @@ export function engineBurn<P extends ResourcePart>(
   pressure = (density / 1.225) * 101325,
   intakeExposure?: (engine: P) => number
 ): Map<string, number> {
+  const groups = [];
+  let length = 0;
+  for (const {engines, tanks} of networks.groups) {
+    const lit = engines.filter(p => active.has(p.id));
+    if (!lit.length) continue;
+    const exposure = lit.map(p =>
+      PARTS[p.type].oxidizerSource === 'atmosphere' ? (intakeExposure?.(p) ?? 1) : 1
+    );
+    groups.push({lit, tanks, exposure, start: length});
+    length += 2 + lit.length * 5 + tanks.length;
+  }
   const thrust = new Map<string, number>();
-  for (const g of networks.groups) {
-    const engines = g.engines.filter(p => active.has(p.id)),
-      requested = engines.map(
-        p =>
-          engineMaxThrust(p) *
-          throttle *
-          (PARTS[p.type].oxidizerSource === 'atmosphere'
-            ? (density / 1.225) * (intakeExposure?.(p) ?? 1)
-            : engineIsp(p, pressure) / vacuumIsp(p))
-      ),
-      need = engines.reduce((s, p, i) => s + (requested[i] * dt) / (engineIsp(p, pressure) * 9.81), 0),
-      available = g.tanks.reduce((s, p) => s + (fuel.get(p.id) || 0), 0),
-      fraction = need > 0 ? Math.min(1, available / need) : 0;
-    engines.forEach((p, i) => thrust.set(p.id, requested[i] * fraction));
-    if (available > 0 && need > 0) {
-      const remaining = need >= available ? 0 : 1 - need / available;
-      for (const p of g.tanks) fuel.set(p.id, (fuel.get(p.id) || 0) * remaining);
+  if (!length) return thrust;
+  const wasm = sharedPhysics();
+  if (!wasm) throw Error('Rust燃焼計算を初期化できませんでした');
+  const ptr = wasm.fuel_prepare(length);
+  const buf = new Float64Array(wasm.memory.buffer, ptr, length);
+  for (const {lit, tanks, exposure, start} of groups) {
+    let i = start;
+    buf[i++] = lit.length;
+    buf[i++] = tanks.length;
+    for (const [index, p] of lit.entries()) {
+      const d = PARTS[p.type],
+        air = d.oxidizerSource === 'atmosphere';
+      buf[i++] = engineMaxThrust(p);
+      const isp = vacuumIsp(p);
+      buf[i++] = isp;
+      buf[i++] = d.ispSeaLevel ?? isp;
+      buf[i++] = Number(air);
+      buf[i++] = exposure[index];
     }
+    for (const tank of tanks) buf[i++] = fuel.get(tank.id) || 0;
+  }
+  wasm.fuel_burn_vessel(throttle, density, pressure, dt);
+  for (const {lit, tanks, start} of groups) {
+    let i = start + 2;
+    for (const p of lit) {
+      thrust.set(p.id, buf[i]);
+      i += 5;
+    }
+    if (buf[start]) for (const p of tanks) fuel.set(p.id, buf[i++]);
   }
   return thrust;
 }
