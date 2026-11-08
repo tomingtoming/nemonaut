@@ -3,6 +3,7 @@ use rapier3d::prelude::*;
 use std::cell::RefCell;
 mod charge;
 mod craft;
+mod fuel;
 mod pair;
 
 struct Kernel {
