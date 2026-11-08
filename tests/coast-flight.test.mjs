@@ -276,3 +276,34 @@ test('parking rejects spinning extremities and a resting rover wakes on drive in
     rod.dispose();
   }
 });
+
+test('Coasting a hot reentry shield retains its last gram across save and return to fixed ticks', () => {
+  const f = new Flight(preset('reentry'), 'moon-orbit', 40000);
+  let slow, resumed;
+  try {
+    f.sas = false;
+    const id = f.parts.find(p => p.type === 'heatShield').id;
+    Object.assign(f.thermal.get(id), {temperature: 666.02, ablator: 0.001});
+    slow = loadFlight(saveFlight(f));
+    const result = advanceCoastFleet(f, 60);
+    assert.equal(result.reason, null);
+    assert.equal(result.advanced, 60);
+    for (let i = 0; i < 7200; i++) slow.step(1 / 120);
+    for (const flight of [f, slow]) {
+      const shield = flight.thermal.get(id);
+      assert.equal(shield.ablator, 0.001);
+      assert.equal(shield.failed, false);
+      assert.ok(Math.abs(shield.temperature - 596.49) < 0.05);
+    }
+    resumed = loadFlight(saveFlight(f));
+    assert.deepEqual(resumed.thermal.get(id), f.thermal.get(id));
+    const before = resumed.thermal.get(id).temperature;
+    resumed.step(1 / 120);
+    assert.ok(resumed.thermal.get(id).temperature < before);
+    assert.equal(resumed.thermal.get(id).ablator, 0.001);
+  } finally {
+    resumed?.dispose();
+    slow?.dispose();
+    f.dispose();
+  }
+});

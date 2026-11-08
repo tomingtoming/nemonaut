@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
+import {preset} from '../dist/catalog.js';
 import {stagnationFlux, createThermal, shieldCoverage, thermalStep} from '../dist/thermal.js';
 const defs = {
     payload: {mass: 100, size: [0.6, 1, 0.6], maxTemperature: 700},
@@ -76,4 +77,35 @@ test('Ablation absorbs finite energy only on the exposed protective face', () =>
   assert.ok(front.get('s').temperature > 650);
   assert.equal(back.get('s').ablator, 10);
   assert.ok(back.get('s').temperature > 650);
+});
+
+test('Reentry shield uses the last fraction of ablator before heating and still covers its capsule', () => {
+  const craft = preset('reentry');
+  const state = createThermal(craft);
+  const disk = craft.find(p => p.type === 'heatShield'),
+    capsule = craft.find(p => p.type === 'capsule');
+  const material = state.get(disk.id);
+  material.temperature = 650;
+  material.ablator = 0.001;
+  // Pre-migration 120 Hz trajectory. Temperatures are in K, remaining mass in kg.
+  const checkpoints = new Map([
+    [2, [650, 0.000135624]],
+    [3, [650.09415, 0]],
+    [4, [650.23134, 0]],
+    [120, [666.01864, 0]]
+  ]);
+  for (let tick = 1; tick <= 120; tick++) {
+    const before = material.ablator;
+    const reading = thermalStep(craft, state, q, v, air, 1 / 120);
+    assert.ok(Math.abs(reading.consumed - (before - material.ablator)) < 1e-9);
+    assert.equal(reading.parts.get(capsule.id).shielded, true);
+    assert.deepEqual(reading.failed, []);
+    if (checkpoints.has(tick)) {
+      const [temp, kg] = checkpoints.get(tick);
+      assert.ok(Math.abs(material.temperature - temp) < 0.01, 'shield temperature at tick ' + tick);
+      if (kg === 0) assert.equal(material.ablator, 0);
+      else assert.ok(Math.abs(material.ablator - kg) < 1e-7);
+    }
+  }
+  assert.ok(Math.abs(state.get(capsule.id).temperature - 288.175) < 0.01);
 });
