@@ -5,6 +5,7 @@ mod charge;
 mod craft;
 mod fuel;
 mod pair;
+mod thermal;
 
 struct Kernel {
     world: PhysicsWorld,
