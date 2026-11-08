@@ -1,15 +1,16 @@
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFileSync} from 'node:fs';
 import * as T from 'three';
 import {PARTS} from '../dist/catalog.js';
 import {partPointToVessel, partRotation} from '../dist/part-frame.js';
 import {THERMAL} from '../dist/thermal.js';
-const module = await WebAssembly.compile(
-  await readFile(new URL('../artifacts/thermal-kernel.wasm', import.meta.url))
-);
+let module;
 export function register(parts, definitions = PARTS) {
+  module ??= new WebAssembly.Module(
+    readFileSync(new URL('../artifacts/thermal-kernel.wasm', import.meta.url))
+  );
   const wasm = new WebAssembly.Instance(module).exports;
-  const ptr = wasm.register(parts.length);
+  const ptr = wasm.thermal_register(parts.length);
   const config = new Float64Array(wasm.memory.buffer, ptr, parts.length * 47);
   for (const [i, p] of parts.entries()) {
     const d = definitions[p.type],
@@ -51,7 +52,7 @@ export function register(parts, definitions = PARTS) {
     assert.equal(row.length, 47);
     config.set(row, i * 47);
   }
-  const statePtr = wasm.states();
+  const statePtr = wasm.thermal_states();
   const view = () => new Float64Array(wasm.memory.buffer, statePtr, parts.length * 8);
   return (state, q, v, air, dt) => {
     const input = view();
@@ -65,7 +66,7 @@ export function register(parts, definitions = PARTS) {
       dir = (speed ? v.clone().divideScalar(speed) : new T.Vector3(0, 1, 0)).applyQuaternion(
         q.clone().invert()
       );
-    wasm.step(dir.x, dir.y, dir.z, speed, air.density, air.temperature, dt);
+    wasm.thermal_step(dir.x, dir.y, dir.z, speed, air.density, air.temperature, dt);
     const output = view(),
       readings = new Map();
     let hottest = null,

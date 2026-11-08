@@ -134,3 +134,34 @@ test('Nominal shallow entry lands intact without requiring ablation below its on
     f.dispose();
   }
 });
+
+test('Thermal geometry follows each Rapier world through separation, memory growth and disposal', () => {
+  const f = new Flight(preset('returner'), 'orbit');
+  let restored;
+  try {
+    f.step(1 / 120);
+    assert.equal(f.world.exports.thermal_part_count(), f.parts.length);
+    while (f.stage < 2) f.stageNext();
+    f.step(1 / 120);
+    for (const vessel of fleet(f))
+      assert.equal(vessel.world.exports.thermal_part_count(), vessel.parts.length);
+    restored = loadFlight(saveFlight(f));
+    const shield = f.parts.find(p => p.type === 'heatShield');
+    const original = {...f.thermal.get(shield.id)};
+    restored.thermal.get(shield.id).temperature = 720;
+    restored.step(1 / 120);
+    restored.world.exports.memory.grow(1);
+    restored.step(1 / 120);
+    assert.deepEqual(f.thermal.get(shield.id), original);
+    assert.ok(restored.thermal.get(shield.id).temperature < 720);
+    const worlds = fleet(restored).map(v => v.world);
+    restored.dispose();
+    restored = undefined;
+    assert.ok(worlds.every(w => w.exports.thermal_part_count() === 0));
+    f.step(1 / 120);
+    assert.ok(fleet(f).every(v => v.world.exports.thermal_part_count() === v.parts.length));
+  } finally {
+    restored?.dispose();
+    f.dispose();
+  }
+});

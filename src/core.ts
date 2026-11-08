@@ -49,7 +49,8 @@ import {
   type TransferGuide
 } from './lunar-transfer.js';
 import {validateAttachments} from './attachment-nodes.js';
-import {createThermal, thermalStep, type ThermalMap, type ThermalStepResult} from './thermal.js';
+import {flightThermalStep, forgetThermalShape} from './flight-thermal.js';
+import {createThermal, type ThermalMap, type ThermalStepResult} from './thermal.js';
 import {portGuidance, portTranslation, type PortVessel} from './port-navigation.js';
 import {relativeState, resolveTargets, type DockingPortPair} from './relative-navigation.js';
 import {rcsThrusters, mixRCS, burnRCS, type RcsJet} from './rcs.js';
@@ -684,6 +685,7 @@ export class Flight {
   }
   dispose() {
     for (const child of this.detached) child.dispose();
+    forgetThermalShape(this.world);
     this.world.free();
   }
   stageNext() {
@@ -1343,7 +1345,15 @@ export class Flight {
     advanceManeuver(this.maneuver, engineForce.clone().multiplyScalar(dt / mass));
     if (!maneuverWasComplete && this.maneuver?.complete && this.maneuver.stopAtTarget === true)
       this.throttle = 0;
-    const thermal = thermalStep(this.parts, this.thermal, this.q, relativeVelocity, air, dt);
+    const thermal = flightThermalStep(
+      this.world,
+      this.parts,
+      this.thermal,
+      this.q,
+      relativeVelocity,
+      air,
+      dt
+    );
     this.telemetry = {
       thermal,
       force,

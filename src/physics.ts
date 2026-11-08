@@ -447,6 +447,7 @@ export class World {
   free() {
     if (!this.freed) {
       this.freed = true;
+      this.exports.thermal_release();
       this.exports.craft_dispose();
     }
   }
