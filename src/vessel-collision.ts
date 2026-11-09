@@ -1,5 +1,5 @@
 import * as T from 'three';
-import RAPIER, {sharedPhysics} from './physics.js';
+import RAPIER, {sharedPhysics, type Collider} from './physics.js';
 import {PARTS} from './catalog.js';
 import {partMass, partRotation} from './aero.js';
 import {inertiaAbout} from './vessel-inertia.js';
@@ -65,22 +65,29 @@ export const VESSEL_COLLISION: VesselCollisionSettings = {
 const ignored = new Map<string, boolean>();
 const key = (a: Flight, b: Flight) =>
   a.vesselId < b.vesselId ? a.vesselId + '|' + b.vesselId : b.vesselId + '|' + a.vesselId;
+// A rebuilt part gets a new Collider. Pose and mass of the vessel can change independently.
+const shapeArgs = new WeakMap<Collider, ContactShape['args']>();
+function contactArgs(c: Collider): ContactShape['args'] {
+  const cached = shapeArgs.get(c);
+  if (cached) return cached;
+  const p = c.translationWrtParent(),
+    q = c.rotationWrtParent(),
+    kind = c.shapeType(),
+    ball = kind === RAPIER.ShapeType.Ball;
+  if (!ball && kind !== RAPIER.ShapeType.Cuboid)
+    throw Error('Rust物理: unsupported collider for vessel contact');
+  const h = ball ? {x: c.radius(), y: 0, z: 0} : c.halfExtents();
+  const args: ContactShape['args'] = [ball ? 1 : 0, h.x, h.y, h.z, p.x, p.y, p.z, q.x, q.y, q.z, q.w];
+  shapeArgs.set(c, args);
+  return args;
+}
 function shapes(v: Flight): ContactShape[] {
   const owner = new Map<number, string>();
   for (const [id, group] of v.colliderGroups) for (const {collider} of group) owner.set(collider.handle, id);
   const out: ContactShape[] = [];
   for (let i = 0; i < v.body.numColliders(); i++) {
-    const c = v.body.collider(i),
-      p = c.translationWrtParent(),
-      q = c.rotationWrtParent(),
-      ball = c.shapeType() === RAPIER.ShapeType.Ball;
-    if (!ball && c.shapeType() !== RAPIER.ShapeType.Cuboid)
-      throw Error('Rust物理: unsupported collider for vessel contact');
-    const h = ball ? {x: c.radius(), y: 0, z: 0} : c.halfExtents();
-    out.push({
-      part: v.parts.find(x => x.id === owner.get(c.handle)),
-      args: [ball ? 1 : 0, h.x, h.y, h.z, p.x, p.y, p.z, q.x, q.y, q.z, q.w]
-    });
+    const c = v.body.collider(i);
+    out.push({part: v.parts.find(x => x.id === owner.get(c.handle)), args: contactArgs(c)});
   }
   return out;
 }
