@@ -1,23 +1,10 @@
 // After npm run build, compile the standalone prototype from the repository root:
 // rustc --edition 2024 --crate-type cdylib --target wasm32-unknown-unknown -C opt-level=3 tools/kepler-kernel.rs -o artifacts/kepler-kernel.wasm
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {rustDrift as rust} from './kepler-prototype.mjs';
 import {Vector3} from 'three';
 import {PRIMARY, MOON} from '../dist/celestial.js';
 import {keplerDrift} from '../dist/coast-orbit.js';
-const {instance} = await WebAssembly.instantiate(
-  await readFile(new URL('../artifacts/kepler-kernel.wasm', import.meta.url))
-);
-const wasm = instance.exports;
-const result = new Float64Array(wasm.memory.buffer);
-function rust(p, v, mu, dt) {
-  const address = wasm.drift(p.x, p.y, p.z, v.x, v.y, v.z, mu, dt);
-  if (address < 0) throw Error('drift status ' + address);
-  return {
-    position: new Vector3().fromArray(result, address / 8),
-    velocity: new Vector3().fromArray(result, address / 8 + 3)
-  };
-}
 let maxPosition = 0,
   maxVelocity = 0,
   cases = 0;
