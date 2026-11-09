@@ -90,7 +90,18 @@ for (const {kind, fuelLoad, epoch = 161700, early = false, end = '09'} of condit
       assert.ok(planningSteps > 2);
       assert.ok(approached);
       t.diagnostic(
-        JSON.stringify({kind, end, fuelLoad, epoch, early, planningSteps, touchdown, worstWheel, track})
+        JSON.stringify({
+          kind,
+          end,
+          fuelLoad,
+          epoch,
+          early,
+          planningSteps,
+          touchdown,
+          worstWheel,
+          departureTrack,
+          track
+        })
       );
       assert.ok(touchdown && touchdown.impact > -3, JSON.stringify(touchdown));
       assert.ok(worstWheel && worstWheel.impact > -3, JSON.stringify(worstWheel));

@@ -134,6 +134,17 @@ export class TakeoffPrototype {
     if (this.integral && (Math.abs(raw) < 1 || error * raw < 0))
       this.pitchBias = clamp(this.pitchBias + error * 0.08 * dt, -0.6, 0.6);
     this.commands = {pitch: clamp(error * 0.2 + pitchRate * 0.12 + this.pitchBias, -1, 1)};
+    if ((this.phase === 'roll' || this.phase === 'rotate') && f.telemetry.contacts) {
+      const runway = runwayApproach(center, f.universalTime, '09', f.vel);
+      if (runway) {
+        // Positive cross-track is left of runway 09. Lead lateral drift and damp body yaw.
+        this.commands.yaw = clamp(
+          0.03 * runway.crossTrack + 0.12 * (runway.track?.x ?? 0) - 1.5 * omega.y,
+          -1,
+          1
+        );
+      }
+    }
     this.telemetry = {
       height,
       speed,
