@@ -29,6 +29,8 @@ test('opening moves roof collisions, preserves COM and angular momentum, and per
   let f = new Flight(preset('cargo-lab'), 'orbit');
   try {
     const bay = f.parts.find(p => p.type === 'cargoBay');
+    const wind = new T.Vector3(0.7, 0.4, 0.8);
+    const closedArea = f.bodyAerodynamics.dragArea(wind);
     f.omega.set(0.01, 0.02, 0.03);
     const com = statistics(f.parts).com,
       mass = f.body.mass(),
@@ -38,6 +40,8 @@ test('opening moves roof collisions, preserves COM and angular momentum, and per
       .add(new T.Vector3().copy(f.body.translation()));
     assert.ok(f.colliderGroups.get(bay.id).some(({collider}) => collider.containsPoint(roofPoint)));
     assert.equal(setPartAction(f, bay.id, 'cargoOpen', true), true);
+    const openArea = f.bodyAerodynamics.dragArea(wind);
+    assert.ok(Math.abs(openArea - closedArea) > 0.01);
     assert.ok(f.colliderGroups.get(bay.id).every(({collider}) => !collider.containsPoint(roofPoint)));
     assert.ok(Math.abs(f.body.mass() - mass) < 0.01);
     assert.ok(new T.Vector3().copy(f.body.localCom()).distanceTo(com) < 1e-5);
@@ -46,9 +50,11 @@ test('opening moves roof collisions, preserves COM and angular momentum, and per
     f.dispose();
     f = restored;
     assert.equal(f.parts.find(p => p.id === bay.id).cargoOpen, true);
+    assert.equal(f.bodyAerodynamics.dragArea(wind), openArea);
     assert.equal(f.colliderGroups.get(bay.id).length, 25);
     assert.equal(setPartAction(f, bay.id, 'cargoOpen', false), true);
     assert.equal(f.parts.find(p => p.id === bay.id).cargoOpen, false);
+    assert.equal(f.bodyAerodynamics.dragArea(wind), closedArea);
   } finally {
     f.dispose();
   }

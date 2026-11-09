@@ -629,7 +629,9 @@ export class Flight {
   }
   buildColliders(): void {
     // Retracted gear is inside the body: no drag of its own (BACKLOG 9c).
-    this.bodyAerodynamics = createBodyAerodynamics(this.parts, this.gearDeployed);
+    const nextDrag = createBodyAerodynamics(this.parts, this.gearDeployed);
+    this.bodyAerodynamics?.dispose();
+    this.bodyAerodynamics = nextDrag;
     for (const group of this.colliderGroups?.values() || [])
       for (const {collider} of group) this.world.removeCollider(collider, true);
     this.colliders.clear();
@@ -683,6 +685,7 @@ export class Flight {
   }
   dispose() {
     for (const child of this.detached) child.dispose();
+    this.bodyAerodynamics.dispose();
     forgetThermalShape(this.world);
     this.world.free();
   }

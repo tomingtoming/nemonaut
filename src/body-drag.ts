@@ -3,11 +3,11 @@ import * as T from 'three';
 import {PARTS} from './catalog.js';
 import {partRotation, type AeroPart} from './aero.js';
 import {gearRetracted} from './landing-gear.js';
+import physics, {sharedPhysics} from './physics.js';
+await physics.init();
 // D = 1/2 rho v² Cd A. Bounding-box face quadrature approximates exposed
 // projected area; this is a game model, not measured Cd or compressible CFD.
 // Wings already have their own lift/drag and are excluded here.
-type Axis = 'x' | 'y' | 'z';
-const axes: readonly Axis[] = ['x', 'y', 'z'];
 export const MIN_BODY_DRAG_FORCE = 1e-4; // Newtons; upper bound, not a speed cutoff.
 export interface BodyDragPart extends AeroPart {
   id: string;
@@ -19,41 +19,16 @@ export interface BodyDragBox {
   center: T.Vector3;
   half: T.Vector3;
   rotation: T.Quaternion;
-  inverse: T.Quaternion;
   axes: T.Vector3[];
-  wind?: number[];
 }
 export interface BodyAerodynamics {
+  dispose(): void;
   maxCdArea: number;
   dragArea(direction: T.Vector3): number;
 }
 export interface BodyDragResult {
   force: T.Vector3;
   cdArea: number;
-}
-function hitBox(point: T.Vector3, direction: T.Vector3, box: BodyDragBox): number | null {
-  const wind = box.wind;
-  if (!wind) throw Error('抗力計算の風向きが未設定です');
-  const x = point.x - box.center.x,
-    y = point.y - box.center.y,
-    z = point.z - box.center.z;
-  let near = -Infinity,
-    far = Infinity;
-  for (let i = 0; i < 3; i++) {
-    const axis = box.axes[i],
-      o = x * axis.x + y * axis.y + z * axis.z,
-      d = wind[i],
-      h = box.half[axes[i]];
-    if (Math.abs(d) < 1e-10) {
-      if (Math.abs(o) > h + 1e-8) return null;
-    } else {
-      const a = (-h - o) / d,
-        b = (h - o) / d;
-      near = Math.max(near, Math.min(a, b));
-      far = Math.min(far, Math.max(a, b));
-    }
-  }
-  return far >= Math.max(near, 0) ? Math.max(near, 0) : null;
 }
 export function bodyDragBoxes(parts: BodyDragPart[], gearDeployed = true): BodyDragBox[] {
   return parts
@@ -74,7 +49,6 @@ export function bodyDragBoxes(parts: BodyDragPart[], gearDeployed = true): BodyD
           center: new T.Vector3(...piece.center).applyQuaternion(rotation).add(new T.Vector3(...p.p)),
           half: new T.Vector3(...piece.size).multiplyScalar(0.5),
           rotation: q,
-          inverse: q.clone().invert(),
           axes: [new T.Vector3(1, 0, 0), new T.Vector3(0, 1, 0), new T.Vector3(0, 0, 1)].map(a =>
             a.applyQuaternion(q)
           )
@@ -82,10 +56,13 @@ export function bodyDragBoxes(parts: BodyDragPart[], gearDeployed = true): BodyD
       });
     });
 }
+const abandoned = new FinalizationRegistry<{wasm: NonNullable<ReturnType<typeof sharedPhysics>>; id: number}>(
+  ({wasm, id}) => wasm.drag_release(id)
+);
+
 export function createBodyAerodynamics(parts: BodyDragPart[], gearDeployed = true): BodyAerodynamics {
   const boxes = bodyDragBoxes(parts, gearDeployed);
-  let lastDirection: T.Vector3 | null = null,
-    lastArea = 0;
+
   const maxCdArea = boxes.reduce(
     (sum, b) =>
       sum +
@@ -94,50 +71,36 @@ export function createBodyAerodynamics(parts: BodyDragPart[], gearDeployed = tru
         (PARTS[b.type].bodyDragShape === 'disc-y' ? 1.1 : 0.4),
     0
   );
-  return {
-    maxCdArea,
-    dragArea(direction) {
-      if (direction.lengthSq() < 1e-12) return 0;
-      const wind = direction.clone().normalize();
-      if (lastDirection && lastDirection.distanceToSquared(wind) < 1e-6) return lastArea;
-      for (const box of boxes) box.wind = box.axes.map(a => a.dot(wind));
-      let cdArea = 0;
-      for (const box of boxes) {
-        const local = wind.clone().applyQuaternion(box.inverse);
-        for (let axis = 0; axis < 3; axis++) {
-          const key = axes[axis],
-            cos = Math.abs(local[key]);
-          if (cos < 1e-6) continue;
-          const u = axes[(axis + 1) % 3],
-            v = axes[(axis + 2) % 3],
-            sign = Math.sign(local[key]);
-          let exposed = 0;
-          for (let i = 0; i < 4; i++)
-            for (let j = 0; j < 4; j++) {
-              const p = new T.Vector3();
-              p[key] = sign * box.half[key];
-              p[u] = box.half[u] * ((i + 0.5) / 2 - 1);
-              p[v] = box.half[v] * ((j + 0.5) / 2 - 1);
-              p.applyQuaternion(box.rotation).add(box.center);
-              const start = p.clone().addScaledVector(wind, 1e-7);
-              if (!boxes.some(other => other !== box && hitBox(start, wind, other) !== null)) exposed++;
-            }
-          // Shield disc uses its circular face area. Other dimensions are box bounds.
-          const round = PARTS[box.type].bodyDragShape === 'disc-y' && axis === 1 ? Math.PI / 4 : 1;
-          const cd =
-            PARTS[box.type].bodyDragShape === 'disc-y' && axis === 1
-              ? 1.1
-              : PARTS[box.type].streamlinedNose && axis === 1 && sign > 0
-                ? 0.15
-                : 0.4;
-          cdArea += ((4 * box.half[u] * box.half[v] * cos * exposed) / 16) * round * cd;
-        }
+  const wasm = sharedPhysics();
+  if (!wasm) throw Error('胴体抵抗の物理エンジンが未初期化です');
+  const id = wasm.drag_create(boxes.length);
+  try {
+    const stride = 17;
+    const rows = new Float64Array(wasm.memory.buffer, wasm.drag_rows(id), boxes.length * stride);
+    boxes.forEach((box, i) => {
+      const j = i * stride,
+        d = PARTS[box.type];
+      box.center.toArray(rows, j);
+      box.half.toArray(rows, j + 3);
+      box.axes.forEach((axis, k) => axis.toArray(rows, j + 6 + 3 * k));
+      rows[j + 15] = Number(d.bodyDragShape === 'disc-y');
+      rows[j + 16] = Number(!!d.streamlinedNose);
+    });
+    const model: BodyAerodynamics = {
+      maxCdArea,
+      dragArea(direction) {
+        return wasm.drag_area(id, direction.x, direction.y, direction.z);
+      },
+      dispose() {
+        if (abandoned.unregister(model)) wasm.drag_release(id);
       }
-      lastDirection = wind;
-      lastArea = cdArea;
-      return cdArea;
-    }
-  };
+    };
+    abandoned.register(model, {wasm, id}, model);
+    return model;
+  } catch (error) {
+    wasm.drag_release(id);
+    throw error;
+  }
 }
 export function bodyDrag(
   model: BodyAerodynamics,

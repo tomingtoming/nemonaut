@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {Vector3} from 'three';
 import {preset} from '../../dist/catalog.js';
-import {createBodyAerodynamics} from '../../dist/body-drag.js';
+import {createBodyAerodynamics} from './body-drag-reference.mjs';
 
 const winds = Array.from({length: 128}, (_, i) => {
   const a = (2 * Math.PI * i) / 128;
