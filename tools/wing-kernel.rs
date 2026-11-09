@@ -1,0 +1,62 @@
+//! Isolated f64 prototype. The caller supplies the deflected surface basis in world coordinates.
+use std::cell::Cell;
+use std::f64::consts::{FRAC_PI_2, PI};
+
+thread_local! {
+    static RESULT: Cell<[f64; 6]> = const { Cell::new([0.0; 6]) };
+}
+
+fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn wing_force(
+    vx: f64,
+    vy: f64,
+    vz: f64,
+    sx: f64,
+    sy: f64,
+    sz: f64,
+    nx: f64,
+    ny: f64,
+    nz: f64,
+    fx: f64,
+    fy: f64,
+    fz: f64,
+    density: f64,
+    area: f64,
+) -> *const f64 {
+    let velocity = [vx, vy, vz];
+    let span = [sx, sy, sz];
+    let normal = [nx, ny, nz];
+    let across = dot(velocity, span);
+    let flow = std::array::from_fn(|i| velocity[i] - across * span[i]);
+    let speed = dot(flow, flow).sqrt();
+    let mut result = [0.0; 6];
+    if speed >= 0.05 {
+        let alpha = (-dot(flow, normal)).atan2(dot(flow, [fx, fy, fz]));
+        let stall = 15.0 * PI / 180.0;
+        let stalled = alpha.abs() > stall;
+        let cl = if stalled {
+            alpha.signum() * 1.18 * ((alpha.abs() - stall) * 1.4).min(FRAC_PI_2).cos()
+        } else {
+            4.5 * alpha
+        };
+        let cd = 0.022 + 0.065 * cl * cl + 1.2 * alpha.sin().powi(2);
+        let direction = flow.map(|v| v * speed.recip());
+        let along = dot(normal, direction);
+        let lift = std::array::from_fn(|i| normal[i] - along * direction[i]);
+        let length = dot(lift, lift).sqrt();
+        let inverse = if length == 0.0 { 1.0 } else { length.recip() };
+        let q = 0.5 * density * speed * speed * area;
+        for i in 0..3 {
+            result[i] = lift[i] * inverse * (q * cl) - direction[i] * (q * cd);
+        }
+        result[3..].copy_from_slice(&[alpha, cl, u8::from(stalled) as f64]);
+    }
+    RESULT.with(|out| {
+        out.set(result);
+        out.as_ptr().cast()
+    })
+}
