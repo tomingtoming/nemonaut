@@ -1,9 +1,10 @@
 //! Isolated f64 prototype. The caller supplies the deflected surface basis in world coordinates.
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::f64::consts::{FRAC_PI_2, PI};
 
 thread_local! {
     static RESULT: Cell<[f64; 6]> = const { Cell::new([0.0; 6]) };
+    static ROWS: RefCell<Vec<[f64; 14]>> = const { RefCell::new(Vec::new()) };
 }
 
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
@@ -27,6 +28,32 @@ pub extern "C" fn wing_force(
     density: f64,
     area: f64,
 ) -> *const f64 {
+    let result = calculate([
+        vx, vy, vz, sx, sy, sz, nx, ny, nz, fx, fy, fz, density, area,
+    ]);
+    RESULT.with(|out| {
+        out.set(result);
+        out.as_ptr().cast()
+    })
+}
+
+fn calculate(input: [f64; 14]) -> [f64; 6] {
+    let [
+        vx,
+        vy,
+        vz,
+        sx,
+        sy,
+        sz,
+        nx,
+        ny,
+        nz,
+        fx,
+        fy,
+        fz,
+        density,
+        area,
+    ] = input;
     let velocity = [vx, vy, vz];
     let span = [sx, sy, sz];
     let normal = [nx, ny, nz];
@@ -55,8 +82,24 @@ pub extern "C" fn wing_force(
         }
         result[3..].copy_from_slice(&[alpha, cl, u8::from(stalled) as f64]);
     }
-    RESULT.with(|out| {
-        out.set(result);
-        out.as_ptr().cast()
+    result
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn wing_prepare(count: usize) -> *mut f64 {
+    ROWS.with_borrow_mut(|rows| {
+        rows.resize(count, [0.0; 14]);
+        rows.as_mut_ptr().cast()
+    })
+}
+
+/// Replace the first six fields of each prepared row with its flight result.
+#[unsafe(no_mangle)]
+pub extern "C" fn wing_batch() {
+    ROWS.with_borrow_mut(|rows| {
+        for row in rows {
+            let result = calculate(*row);
+            row[..6].copy_from_slice(&result);
+        }
     })
 }
