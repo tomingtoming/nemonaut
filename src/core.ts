@@ -629,9 +629,7 @@ export class Flight {
   }
   buildColliders(): void {
     // Retracted gear is inside the body: no drag of its own (BACKLOG 9c).
-    this.bodyAerodynamics = createBodyAerodynamics(
-      this.parts.filter(p => !gearRetracted(p, this.gearDeployed))
-    );
+    this.bodyAerodynamics = createBodyAerodynamics(this.parts, this.gearDeployed);
     for (const group of this.colliderGroups?.values() || [])
       for (const {collider} of group) this.world.removeCollider(collider, true);
     this.colliders.clear();

@@ -2,9 +2,32 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {Flight} from '../dist/core.js';
-import {preset} from '../dist/catalog.js';
+import {part, preset} from '../dist/catalog.js';
 import {finiteBurnPreview} from '../dist/finite-burn.js';
 import {deorbitPlan} from '../dist/deorbit-plan.js';
+
+test('atmospheric forecast excludes folded gear while preserving its mass', () => {
+  const f = new Flight(preset('returner'), 'orbit');
+  try {
+    f.stageNext();
+    f.stageNext();
+    const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+    const {preview} = deorbitPlan(center, f.vel, 0, {delay: 360});
+    const predict = () => finiteBurnPreview(f, preview.impulse, 360, {throttle: 0.01});
+    // Hold mass, COM, fuel and thrust fixed so only the exposed drag geometry changes.
+    const reference = predict();
+    f.parts.push(part('maingear', [12, 0, 0]));
+    f.gearDeployed = false;
+    const folded = predict();
+    f.gearDeployed = true;
+    const extended = predict();
+    assert.ok(folded.atmospheric && extended.atmospheric);
+    assert.equal(folded.orbit.periapsis, reference.orbit.periapsis);
+    assert.ok(Math.abs(extended.orbit.periapsis - folded.orbit.periapsis) > 0.01);
+  } finally {
+    f.dispose();
+  }
+});
 test('finite comparison rejects unsupported inputs without consuming live fuel', () => {
   const f = new Flight(preset('returner'), 'orbit');
   try {

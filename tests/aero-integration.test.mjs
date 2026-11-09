@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import golden from './golden/aero-integration.json' with {type: 'json'};
 import {Euler, Quaternion, Vector3} from 'three';
-import {surfaceForce} from '../dist/aero.js';
+import {surfaceForce} from '../tools/golden/wing-reference.mjs';
 import {wingLoads} from '../dist/wing-loads.js';
 import {Flight} from '../dist/core.js';
 import {preset, PARTS} from '../dist/catalog.js';
@@ -26,6 +26,8 @@ test('batched wing loads preserve mixed media, part order and previous reads on 
   rows.forEach((row, i) => {
     const reference = surfaceForce({type: 'wing'}, row.orientation, row.velocity, row.medium, row.angle);
     assert.equal(loads[i].stalled, reference.stalled);
+    assert.ok(Math.abs(loads[i].alpha - reference.alpha) < 1e-12);
+    assert.ok(Math.abs(loads[i].cl - reference.cl) < 1e-12);
     assert.ok(loads[i].force.distanceTo(reference.force) <= 1e-8 + reference.force.length() * 1e-10);
   });
 });

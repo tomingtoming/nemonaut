@@ -10,7 +10,7 @@ interface WingSample {
 }
 
 /** Results use the input part order. Copy them before any subsequent shared-engine call can grow memory. */
-export function wingLoads(samples: readonly WingSample[]): {force: Vector3; stalled: boolean}[] {
+export function wingLoads(samples: readonly WingSample[]) {
   if (!samples.length) return [];
   const wasm = sharedPhysics();
   if (!wasm) throw Error('翼の物理エンジンが未初期化です');
@@ -43,6 +43,8 @@ export function wingLoads(samples: readonly WingSample[]): {force: Vector3; stal
   wasm.wing_batch();
   return samples.map((_, i) => ({
     force: new Vector3().fromArray(rows, i * stride),
+    alpha: rows[i * stride + 3],
+    cl: rows[i * stride + 4],
     stalled: rows[i * stride + 5] !== 0
   }));
 }

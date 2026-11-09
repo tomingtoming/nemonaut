@@ -4,7 +4,8 @@ import {readFileSync} from 'node:fs';
 import {Euler, Quaternion, Vector3} from 'three';
 import {preset, PARTS} from '../../dist/catalog.js';
 import {statistics} from '../../dist/core.js';
-import {aeroPoint, controlDeflection, partRotation, surfaceForce} from '../../dist/aero.js';
+import {aeroPoint, controlDeflection, partRotation} from '../../dist/aero.js';
+import {surfaceForce} from './wing-reference.mjs';
 
 const bytes = readFileSync(new URL('../../artifacts/wing-kernel.wasm', import.meta.url));
 const wasm = new WebAssembly.Instance(new WebAssembly.Module(bytes)).exports;

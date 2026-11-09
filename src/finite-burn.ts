@@ -13,6 +13,7 @@ import {advanceCelestialOrbit, bodyOrbitState, type OrbitState} from './celestia
 // The live vessel and its fuel are never changed by this comparison.
 /** The vessel fields the finite-burn comparison reads (never changed). */
 export interface FiniteBurnVessel extends BurnEstimateVessel {
+  gearDeployed?: boolean;
   parts: Part[];
   universalTime: number;
   throttle: number;
@@ -98,7 +99,7 @@ export function finiteBurnPreview(
   const orientation = new T.Quaternion()
       .setFromUnitVectors(new T.Vector3(0, 1, 0).applyQuaternion(vessel.q), direction)
       .multiply(vessel.q),
-    aerodynamics = createBodyAerodynamics(vessel.parts);
+    aerodynamics = createBodyAerodynamics(vessel.parts, vessel.gearDeployed);
   let atmospheric = false;
   const sum = (f: ReadonlyMap<string, number>) => [...f.values()].reduce((a, b) => a + b, 0),
     initialFuel = sum(fuel),

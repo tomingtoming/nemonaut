@@ -2,6 +2,7 @@ import {cargoShellBoxes, hasCargoBay, type CargoBox} from './cargo-geometry.js';
 import * as T from 'three';
 import {PARTS} from './catalog.js';
 import {partRotation, type AeroPart} from './aero.js';
+import {gearRetracted} from './landing-gear.js';
 // D = 1/2 rho v² Cd A. Bounding-box face quadrature approximates exposed
 // projected area; this is a game model, not measured Cd or compressible CFD.
 // Wings already have their own lift/drag and are excluded here.
@@ -54,9 +55,9 @@ function hitBox(point: T.Vector3, direction: T.Vector3, box: BodyDragBox): numbe
   }
   return far >= Math.max(near, 0) ? Math.max(near, 0) : null;
 }
-export function createBodyAerodynamics(parts: BodyDragPart[]): BodyAerodynamics {
+export function createBodyAerodynamics(parts: BodyDragPart[], gearDeployed = true): BodyAerodynamics {
   const boxes = parts
-    .filter(p => !PARTS[p.type].wing)
+    .filter(p => !PARTS[p.type].wing && !gearRetracted(p, gearDeployed))
     .flatMap((p): BodyDragBox[] => {
       const d = PARTS[p.type],
         rotation = partRotation(p),
