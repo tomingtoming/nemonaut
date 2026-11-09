@@ -18,14 +18,8 @@ import {
 import {createBodyAerodynamics, bodyDrag, type BodyAerodynamics} from './body-drag.js';
 import {foldedGearCenter, gearMassCenter, gearRetracted, suspensionTravel} from './landing-gear.js';
 import {separationName} from './separation-name.js';
-import {
-  displacedVolume,
-  mediumDensity,
-  submergedFraction,
-  waterResistance,
-  planingForce,
-  WATER_DENSITY
-} from './buoyancy.js';
+import {mediumDensity, submergedFraction} from './buoyancy.js';
+import {waterLoads} from './water-loads.js';
 import {engineSubmersion} from './engine-medium.js';
 import {angularMomentum, angularVelocity} from './angular-momentum.js';
 import {transferFuel} from './fuel-transfer.js';
@@ -1048,7 +1042,7 @@ export class Flight {
       p => 1 - engineSubmersion(this, p, startTime)
     );
     const wheelContacts: WheelContact[] = [];
-    const planingSamples = 2 * this.parts.filter(p => PARTS[p.type].planingArea).length;
+
     let stallCount = 0,
       contacts = 0,
       wheelImpactSpeed = 0;
@@ -1111,6 +1105,25 @@ export class Flight {
         turn = (a: number, b: number) => (b > 1e-9 ? (a * a) / b : 0);
       return 1 / mass + turn(w.x, inertia.x) + turn(w.y, inertia.y) + turn(w.z, inertia.z);
     };
+    const water =
+      coast && coast.distance <= craftRadius
+        ? waterLoads(
+            this.parts,
+            {
+              pos: this.pos,
+              q: this.q,
+              com,
+              relativeVelocity,
+              relativeOmega,
+              waterAt,
+              altitude,
+              localUp,
+              gravity,
+              inverseEffectiveMass
+            },
+            dt
+          )
+        : null;
     for (const p of this.parts) {
       const d = PARTS[p.type],
         orientation = d.wing ? surfaces[surfaceIndex].orientation : this.q.clone().multiply(partRotation(p)),
@@ -1196,31 +1209,13 @@ export class Flight {
         }
         if (density > 1e-8 && aero.stalled && velocity.length() > 5) stallCount++;
       }
-      if (coast && coast.distance <= craftRadius) {
-        const volume = displacedVolume(p);
-        for (const u of [-0.32, 0.32]) {
-          const point = new T.Vector3(0, d.size[1] * u, 0).applyQuaternion(orientation).add(wp),
-            velocity = relativeVelocity.clone().add(relativeOmega.clone().cross(point.clone().sub(com))),
-            sub = surfaceSubmersion(p, point);
-          if (!sub) continue;
-          apply(
-            localUp(point).multiplyScalar(gravity(point).length() * WATER_DENSITY * volume * 0.5 * sub),
-            point
-          );
-          apply(waterResistance(p, orientation, velocity, sub), point);
-          if (d.planingArea) {
-            const lift = planingForce(p, orientation, velocity, localUp(point), sub);
-            if (lift.lengthSq() > 0) {
-              const direction = lift.clone().normalize(),
-                limit =
-                  Math.max(0, -velocity.dot(direction)) /
-                  (dt * inverseEffectiveMass(point, direction) * planingSamples);
-              lift.clampLength(0, limit);
-              apply(lift, point);
-            }
-          }
+      const wetLoads = water?.get(p);
+      if (wetLoads)
+        for (const load of wetLoads) {
+          apply(load.buoyancy, load.point);
+          apply(load.resistance, load.point);
+          if (load.planing) apply(load.planing, load.point);
         }
-      }
       // A wheel may overlap the bank before its axle crosses the shoreline.
       // An axle below the bank still cannot climb the vertical edge.
       const wheelEdge = onWheels(p) && nearShore ? shoreline(wp, startTime) : null,

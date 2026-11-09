@@ -1,9 +1,67 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {buoyancyBalance, displacedVolume, waterResistance, planingForce} from '../dist/buoyancy.js';
-import {preset} from '../dist/catalog.js';
+import {buoyancyBalance, displacedVolume} from '../dist/buoyancy.js';
+import {waterLoads} from '../dist/water-loads.js';
+import {PARTS, preset} from '../dist/catalog.js';
 import {statistics} from '../dist/core.js';
+
+function sampleLoads({type}, q, velocity, up, wet, inverseMass = 1e-12) {
+  const p = {type, p: [0, 0, 0], r: [0, 0, 0]};
+  const axis = up.clone().applyQuaternion(q.clone().invert());
+  const [w, h, l] = PARTS[type].size;
+  const extent = (Math.abs(axis.x) * w + Math.abs(axis.y) * h + Math.abs(axis.z) * l) / 2;
+  const zero = new T.Vector3();
+  const frame = {
+    pos: zero,
+    q,
+    com: zero,
+    relativeVelocity: velocity,
+    relativeOmega: zero,
+    waterAt: () => true,
+    altitude: () => (0.5 - wet) * Math.max(0.12, 1.2 * extent),
+    localUp: () => up.clone(),
+    gravity: () => up.clone().multiplyScalar(-9.81),
+    inverseEffectiveMass: () => inverseMass
+  };
+  return waterLoads([p], frame, 1 / 120).get(p)?.[0];
+}
+function planingForce(p, q, velocity, up, wet) {
+  return sampleLoads(p, q, velocity, up, wet)?.planing ?? new T.Vector3();
+}
+function waterResistance(p, q, velocity, wet) {
+  return sampleLoads(p, q, velocity, new T.Vector3(0, 1, 0), wet)?.resistance ?? new T.Vector3();
+}
+
+test('two wetted samples share the planing impulse limit on a light float', () => {
+  const up = new T.Vector3(0, 1, 0);
+  const q = new T.Quaternion().setFromAxisAngle(new T.Vector3(1, 0, 0), Math.PI / 2);
+  const load = sampleLoads({type: 'pontoon'}, q, new T.Vector3(0, -4, 8), up, 0.5, 0.5);
+  assert.ok(Math.abs(load.planing.y - 4 / ((1 / 120) * 0.5 * 2)) < 1e-8);
+});
+
+test('a part straddling the bank receives water force only at its seaward sample', () => {
+  const p = {type: 'pontoon', p: [0, 0, 0], r: [0, 0, Math.PI / 2]},
+    zero = new T.Vector3();
+  const loads = waterLoads(
+    [p],
+    {
+      pos: zero,
+      q: new T.Quaternion(),
+      com: zero,
+      relativeVelocity: zero,
+      relativeOmega: zero,
+      waterAt: point => point.x < 0,
+      altitude: () => -2,
+      localUp: () => new T.Vector3(0, 1, 0),
+      gravity: () => new T.Vector3(0, -9.81, 0),
+      inverseEffectiveMass: () => 1
+    },
+    1 / 120
+  ).get(p);
+  assert.equal(loads.length, 1);
+  assert.ok(loads[0].point.x < 0 && loads[0].buoyancy.y > 0);
+});
 test('planing pressure supports an entering bottom without propelling it or lifting a submerged hull', () => {
   const p = {type: 'pontoon'},
     q = new T.Quaternion().setFromAxisAngle(new T.Vector3(1, 0, 0), Math.PI / 2),

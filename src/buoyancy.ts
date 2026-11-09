@@ -34,38 +34,6 @@ export function displacedVolume(p: Pick<AeroPart, 'type'>): number {
   const d = PARTS[p.type];
   return d.volume || d.size[0] * d.size[1] * d.size[2] * 0.18;
 }
-/** Per-sample water damping, expressed in world coordinates. */
-export function waterResistance(
-  p: Pick<AeroPart, 'type'>,
-  orientation: T.Quaternion,
-  velocity: T.Vector3,
-  submersion: number
-): T.Vector3 {
-  const force = velocity.clone(),
-    factors = PARTS[p.type].waterResistance;
-  if (factors) {
-    force.applyQuaternion(orientation.clone().invert());
-    force.multiply(new T.Vector3(...factors)).applyQuaternion(orientation);
-  }
-  return force.multiplyScalar(-submersion * displacedVolume(p) * 500);
-}
-/** Approximate bottom pressure near the free surface, per buoyancy sample. */
-export function planingForce(
-  p: Pick<AeroPart, 'type'>,
-  orientation: T.Quaternion,
-  velocity: T.Vector3,
-  waterUp: T.Vector3,
-  submersion: number
-): T.Vector3 {
-  const normal = new T.Vector3(0, 0, -1).applyQuaternion(orientation),
-    area = PARTS[p.type].planingArea || 0,
-    incoming = Math.max(0, -velocity.dot(normal)),
-    wet = Math.max(0, Math.min(1, submersion));
-  if (normal.dot(waterUp) <= 0) return normal.set(0, 0, 0);
-  return normal.multiplyScalar(
-    0.25 * WATER_DENSITY * area * velocity.length() * incoming * 4 * wet * (1 - wet)
-  );
-}
 export function buoyancyBalance(parts: Iterable<BuoyantPart>, ballast = 0): BuoyancyBalance {
   const center = new T.Vector3(),
     com = new T.Vector3();
