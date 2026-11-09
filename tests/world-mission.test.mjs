@@ -13,6 +13,40 @@ import {worldFromFlight, flightFromWorld} from '../dist/world-save.js';
 import {launchWorld, selectWorldVessel, retireWorldVessel} from '../dist/world-operations.js';
 import {editingParts, gameRecord, validateGame} from '../dist/game-save.js';
 
+function missionState(root) {
+  return new Map(
+    fleet(root).map(v => [
+      v.vesselId,
+      structuredClone({
+        stage: v.stage,
+        active: [...v.active],
+        parts: v.parts.map(p => p.id),
+        fuel: [...v.fuel],
+        charge: [...v.charge],
+        thermal: [...v.thermal],
+        pos: v.pos.toArray(),
+        vel: v.vel.toArray(),
+        omega: v.omega.toArray(),
+        orientation: v.q.toArray(),
+        universalTime: v.universalTime
+      })
+    ])
+  );
+}
+
+function checkRestored(root, before) {
+  const after = missionState(root);
+  assert.equal(after.size, before.size);
+  for (const [id, {orientation, ...expected}] of before) {
+    assert.ok(after.has(id), id);
+    const {orientation: restored, ...observed} = after.get(id);
+    assert.deepEqual(observed, expected);
+    // Restoring a quaternion normalizes it. q and -q specify the same orientation.
+    const dot = restored.reduce((n, v, i) => n + v * orientation[i], 0);
+    assert.ok(Math.abs(1 - Math.abs(dot)) < 1e-6);
+  }
+}
+
 // Both vehicles actually depart from the rotating surface. Demonstration pilots
 // use the same staging/throttle/SAS actuators; no positions or velocities are set.
 test('surface-launched A survives B launch, orbit, return, recovery and whole-game reload', t => {
@@ -60,15 +94,37 @@ test('surface-launched A survives B launch, orbit, return, recovery and whole-ga
     runtime = new WorldRuntime(f);
     const launchTime = f.universalTime,
       launch = new LaunchPilot();
+    let resumedAfterSeparation = false;
     assert.ok(launchTime > 100, 'B begins at the epoch reached by A');
     for (let i = 0; i < 500 * 120 && !launch.done && !f.crashed; i++) {
+      const partsBefore = f.parts.length;
       launch.update(f);
+      const separated = f.parts.length < partsBefore;
       runtime.replace(f);
       runtime.step(1 / 120);
+      if (!resumedAfterSeparation && separated) {
+        const state = missionState(f);
+        const before = worldFromFlight(saveFlight(f), {history: world.history});
+        const game = validateGame(JSON.parse(JSON.stringify(gameRecord({world: before, draft}))));
+        const restored = loadFlight(flightFromWorld(game.world));
+        f.dispose();
+        f = restored;
+        runtime = new WorldRuntime(f);
+        assert.equal(f.vesselId, bId);
+        assert.ok(
+          [...f.fuel.values()].some(mass => mass > 0) && f.active.size,
+          'upper stage is fueled and ignited'
+        );
+        checkRestored(f, state);
+        resumedAfterSeparation = true;
+      }
     }
+    assert.ok(resumedAfterSeparation, 'the mission resumed at the first actual separation');
     assert.ok(launch.done, 'B reaches orbit from ground at the later epoch');
     assert.ok(f.orbit.stable);
     assert.equal(f.crashed, false);
+    const orbitalState = missionState(f);
+    const returnerPeriapsis = f.orbit.periapsis;
     world.history = recordOrbitAchievements(world.history, f);
     world = worldFromFlight(saveFlight(f), {history: world.history});
     f.dispose();
@@ -79,6 +135,7 @@ test('surface-launched A survives B launch, orbit, return, recovery and whole-ga
     world = selectWorldVessel(world, bId).world;
     f = loadFlight(flightFromWorld(world));
     runtime = new WorldRuntime(f);
+    checkRestored(f, orbitalState);
     const returning = new ReturnPilot();
     let opened = false;
     for (let i = 0; i < 2500 * 60 && !returning.done && !f.crashed; i++) {
@@ -142,6 +199,7 @@ test('surface-launched A survives B launch, orbit, return, recovery and whole-ga
     t.diagnostic(
       JSON.stringify({
         universalTime: game.world.universalTime,
+        returnerPeriapsis,
         satellitePeriapsis: f.orbit.periapsis,
         satelliteApoapsis: f.orbit.apoapsis,
         retainedVessels: game.world.vessels.length,
