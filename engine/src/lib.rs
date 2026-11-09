@@ -9,6 +9,7 @@ mod fuel;
 mod kepler;
 mod pair;
 mod thermal;
+mod wing;
 
 struct Kernel {
     world: PhysicsWorld,
