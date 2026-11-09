@@ -55,8 +55,8 @@ function hitBox(point: T.Vector3, direction: T.Vector3, box: BodyDragBox): numbe
   }
   return far >= Math.max(near, 0) ? Math.max(near, 0) : null;
 }
-export function createBodyAerodynamics(parts: BodyDragPart[], gearDeployed = true): BodyAerodynamics {
-  const boxes = parts
+export function bodyDragBoxes(parts: BodyDragPart[], gearDeployed = true): BodyDragBox[] {
+  return parts
     .filter(p => !PARTS[p.type].wing && !gearRetracted(p, gearDeployed))
     .flatMap((p): BodyDragBox[] => {
       const d = PARTS[p.type],
@@ -81,6 +81,9 @@ export function createBodyAerodynamics(parts: BodyDragPart[], gearDeployed = tru
         };
       });
     });
+}
+export function createBodyAerodynamics(parts: BodyDragPart[], gearDeployed = true): BodyAerodynamics {
+  const boxes = bodyDragBoxes(parts, gearDeployed);
   let lastDirection: T.Vector3 | null = null,
     lastArea = 0;
   const maxCdArea = boxes.reduce(
