@@ -1,13 +1,34 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import golden from './golden/aero-integration.json' with {type: 'json'};
-import {Vector3} from 'three';
+import {Euler, Quaternion, Vector3} from 'three';
+import {surfaceForce} from '../dist/aero.js';
+import {wingLoads} from '../dist/wing-loads.js';
 import {Flight} from '../dist/core.js';
 import {preset, PARTS} from '../dist/catalog.js';
 import {bodyUp} from '../dist/celestial.js';
 import {surfaceVelocity, surfaceAngularVelocity} from '../dist/surface-frame.js';
 import {deorbitPlan} from '../dist/deorbit-plan.js';
 import {finiteBurnPreview} from '../dist/finite-burn.js';
+
+test('batched wing loads preserve mixed media, part order and previous reads on resize', () => {
+  const rows = [0, 1.225, 500, 1000].map((medium, i) => ({
+    orientation: new Quaternion().setFromEuler(new Euler(0.03 * i, 0.6, -0.2)),
+    velocity: new Vector3(2, 20 + i, 3),
+    angle: i * 0.16,
+    area: PARTS.wing.wing,
+    medium
+  }));
+  const loads = wingLoads(rows);
+  assert.deepEqual(wingLoads([]), []);
+  wingLoads([...rows, ...rows].reverse());
+  assert.equal(loads.length, rows.length);
+  rows.forEach((row, i) => {
+    const reference = surfaceForce({type: 'wing'}, row.orientation, row.velocity, row.medium, row.angle);
+    assert.equal(loads[i].stalled, reference.stalled);
+    assert.ok(loads[i].force.distanceTo(reference.force) <= 1e-8 + reference.force.length() * 1e-10);
+  });
+});
 
 function flightLoads(kind, localFlow, fuel) {
   const parts = preset(kind);

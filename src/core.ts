@@ -60,6 +60,7 @@ import {validateSymmetry} from './symmetry.js';
 import * as T from 'three';
 import {PARTS, type Part} from './catalog.js';
 import RAPIER from './physics.js';
+import {wingLoads} from './wing-loads.js';
 import {
   partRotation,
   partMass,
@@ -67,7 +68,6 @@ import {
   aeroPoint,
   aeroAnalysis,
   flapDeflection,
-  surfaceForce,
   surfaceForceScale,
   controlDeflection,
   type AeroPart,
@@ -1062,12 +1062,35 @@ export class Flight {
     // Retracted gear neither touches the ground nor shares the load (BACKLOG 9c).
     const onWheels = (p: FlightPart) => !!PARTS[p.type].wheel && !gearRetracted(p, this.gearDeployed),
       wheelCount = this.parts.filter(onWheels).length,
-      surfaces = this.parts.filter(p => PARTS[p.type].wing),
-      submergedSurfaces = surfaces.filter(
-        p => surfaceSubmersion(p, aeroPoint(p).applyQuaternion(this.q).add(this.pos)) > 0
-      ).length,
+      surfaces = this.parts
+        .filter(p => PARTS[p.type].wing)
+        .map(p => {
+          const d = PARTS[p.type];
+          const target = d.flapAngles
+            ? flapDeflection(p, this.flapStage)
+            : controlDeflection(p, st.com, commands);
+          const previous = this.deflections.get(p.id) || 0;
+          const angle = previous + T.MathUtils.clamp(target - previous, -dt * 1.6, dt * 1.6);
+          this.deflections.set(p.id, angle);
+          const orientation = this.q.clone().multiply(partRotation(p));
+          const point = aeroPoint(p).applyQuaternion(this.q).add(this.pos);
+          const velocity = relativeVelocity.clone().add(relativeOmega.clone().cross(point.clone().sub(com)));
+          const sub = surfaceSubmersion(p, point);
+          return {
+            orientation,
+            point,
+            velocity,
+            sub,
+            medium: mediumDensity(density, sub),
+            angle,
+            area: d.wing ?? 0
+          };
+        }),
+      loads = wingLoads(surfaces),
+      submergedSurfaces = surfaces.filter(s => s.sub > 0).length,
       // Surfaces sharing the stability limit: those in water when any is, otherwise all of them.
       surfaceShare = submergedSurfaces || surfaces.length;
+    let surfaceIndex = 0;
     // Craft inertia in the world frame, read once per step from the solver for the surface force limit.
     let principal: {inertia: T.Vector3; toPrincipal: T.Quaternion} | null = null;
     const inverseEffectiveMass = (point: T.Vector3, direction: T.Vector3): number => {
@@ -1089,7 +1112,7 @@ export class Flight {
     };
     for (const p of this.parts) {
       const d = PARTS[p.type],
-        orientation = this.q.clone().multiply(partRotation(p)),
+        orientation = d.wing ? surfaces[surfaceIndex].orientation : this.q.clone().multiply(partRotation(p)),
         wp = partCenter(p).applyQuaternion(this.q).add(this.pos),
         r = wp.clone().sub(com),
         pv = relativeVelocity.clone().add(relativeOmega.clone().cross(r));
@@ -1152,14 +1175,8 @@ export class Flight {
         apply(parachuteDrag(pv, density, d.parachute, state.fraction, mass, dt), wp);
       }
       if (d.wing) {
-        let angle = this.deflections.get(p.id) || 0,
-          target = d.flapAngles ? flapDeflection(p, this.flapStage) : controlDeflection(p, st.com, commands);
-        angle += T.MathUtils.clamp(target - angle, -dt * 1.6, dt * 1.6);
-        this.deflections.set(p.id, angle);
-        const point = aeroPoint(p).applyQuaternion(this.q).add(this.pos),
-          velocity = relativeVelocity.clone().add(relativeOmega.clone().cross(point.clone().sub(com))),
-          medium = mediumDensity(density, surfaceSubmersion(p, point)),
-          aero = surfaceForce(p, orientation, velocity, medium, angle);
+        const {point, velocity, medium} = surfaces[surfaceIndex];
+        const aero = loads[surfaceIndex++];
         if (aero.force.lengthSq() > 0)
           aero.force.multiplyScalar(
             surfaceForceScale(
