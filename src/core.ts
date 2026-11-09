@@ -1448,21 +1448,25 @@ export class Flight {
     );
     this.telemetry.atmosphere = air;
     this.telemetry.surfaceSpeed = endRelativeVelocity.length();
-    const ground = this.ground,
-      supported =
-        !freeFlight &&
-        ground &&
-        [...this.colliderGroups.values()].flat().some(({collider: c}) => {
-          let contact = false;
-          this.world.contactPair(c, ground, m => {
-            for (let i = 0; i < m.numContacts(); i++) if (m.contactImpulse(i) > 0) contact = true;
-          });
-          return contact;
-        });
+    const ground = this.ground;
+    // Suspension contact already establishes support, including on a hard touchdown.
+    const supported =
+      contacts > 0 ||
+      (!freeFlight &&
+        !!ground &&
+        [...this.colliderGroups.values()].some(group =>
+          group.some(({collider}) => {
+            let contact = false;
+            this.world.contactPair(collider, ground, m => {
+              for (let i = 0; i < m.numContacts(); i++) if (m.contactImpulse(i) > 0) contact = true;
+            });
+            return contact;
+          })
+        ));
     // Suspension may absorb a hard touchdown over several solver steps.
     // Measure incoming contact-point speed before spring/solver impulses too.
     if (
-      (!coast || coast.distance > craftRadius || supported || contacts > 0) &&
+      (!coast || coast.distance > craftRadius || supported) &&
       !freeFlight &&
       (wheelImpactSpeed < -9 || (impactSpeed < -9 && endRelativeVelocity.dot(normal) > impactSpeed * 0.4))
     ) {
@@ -1512,9 +1516,9 @@ export class Flight {
           bodyAltitude(point, this.universalTime, reference) - extent < 0.1
         );
       });
-    this.telemetry.groundContact = touching || supported || contacts > 0;
+    this.telemetry.groundContact = touching || supported;
     this.landedTime =
-      (touching || supported || contacts > 0) && endRelativeVelocity.length() < 0.8 && this.lastThrust === 0
+      (touching || supported) && endRelativeVelocity.length() < 0.8 && this.lastThrust === 0
         ? this.landedTime + dt
         : 0;
     this.landed = this.landedTime > 0.5;
