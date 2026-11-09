@@ -1,6 +1,7 @@
 //! Migration diagnostic kernel. Not yet the authoritative game simulation.
 use rapier3d::prelude::*;
 use std::cell::RefCell;
+mod celestial;
 mod charge;
 mod coast_cooling;
 mod craft;
