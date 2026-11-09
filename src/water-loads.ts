@@ -16,83 +16,110 @@ interface WaterFrame {
   gravity(point: Vector3): Vector3;
   inverseEffectiveMass(point: Vector3, direction: Vector3): number;
 }
-interface WaterLoad {
-  point: Vector3;
-  buoyancy: Vector3;
-  resistance: Vector3;
-  planing: Vector3 | null;
+
+const stride = 15;
+
+function waterPart(part: AeroPart) {
+  const d = PARTS[part.type];
+  const rotation = partRotation(part);
+  const center = partCenter(part);
+  return {
+    definition: d,
+    rotation,
+    center,
+    volume: displacedVolume(part),
+    orientation: new Quaternion(),
+    worldCenter: new Vector3(),
+    samples: [-0.32, 0.32].map(side => ({
+      localPoint: new Vector3(0, side * d.size[1], 0).applyQuaternion(rotation).add(center),
+      point: new Vector3(),
+      wet: false,
+      buoyancy: new Vector3(),
+      resistance: new Vector3(),
+      planing: new Vector3()
+    }))
+  };
 }
 
-export function waterLoads(parts: readonly AeroPart[], frame: WaterFrame, dt: number) {
-  const result = new Map<AeroPart, WaterLoad[]>();
-  const samples = [];
-  let planingSamples = 0;
-  for (const part of parts) {
-    const d = PARTS[part.type],
-      volume = displacedVolume(part);
-    const orientation = frame.q.clone().multiply(partRotation(part)),
-      inverse = orientation.clone().invert();
-    const center = partCenter(part).applyQuaternion(frame.q).add(frame.pos);
-    const normal = new Vector3(0, 0, -1).applyQuaternion(orientation);
-    if (d.planingArea) planingSamples += 2;
-    for (const side of [-0.32, 0.32]) {
-      const point = new Vector3(0, side * d.size[1], 0).applyQuaternion(orientation).add(center);
-      if (!frame.waterAt(point)) continue;
-      const up = frame.localUp(point).applyQuaternion(inverse);
-      const extent =
-        (Math.abs(up.x) * d.size[0] + Math.abs(up.y) * d.size[1] + Math.abs(up.z) * d.size[2]) / 2;
-      const height = frame.altitude(point);
-      if (height >= Math.max(0.12, extent * 1.2) / 2) continue;
-      const velocity = frame.relativeOmega
-        .clone()
-        .cross(point.clone().sub(frame.com))
-        .add(frame.relativeVelocity)
-        .applyQuaternion(inverse);
-      const inverseMass = d.planingArea ? frame.inverseEffectiveMass(point, normal) : 0;
-      samples.push({
-        part,
-        point,
-        orientation,
-        volume,
-        height,
-        extent,
-        velocity,
-        up,
-        inverseMass,
-        gravity: frame.gravity(point).length()
-      });
+/** Owned by one flight until its collider geometry is rebuilt. Returned vectors are valid for the current step. */
+export class WaterGeometry {
+  private readonly parts;
+  private readonly inputs;
+  private readonly planingSamples;
+  constructor(parts: readonly AeroPart[]) {
+    this.parts = parts.map(waterPart);
+    this.inputs = new Float64Array(this.parts.length * 2 * stride);
+    this.planingSamples = this.parts.filter(p => p.definition.planingArea).length * 2;
+    for (const [i, p] of this.parts.entries()) {
+      for (let k = 0; k < 2; k++) {
+        const j = (2 * i + k) * stride;
+        this.inputs[j + 2] = p.volume;
+        this.inputs.set(p.definition.waterResistance ?? [1, 1, 1], j + 10);
+        this.inputs[j + 13] = p.definition.planingArea ?? 0;
+      }
     }
   }
-  if (!samples.length) return result;
-  const wasm = sharedPhysics();
-  if (!wasm) throw Error('水力エンジンが未初期化です');
-  const stride = 15,
-    ptr = wasm.water_prepare(samples.length);
-  const rows = new Float64Array(wasm.memory.buffer, ptr, stride * samples.length);
-  for (const [i, s] of samples.entries()) {
-    const offset = i * stride,
-      d = PARTS[s.part.type];
-    rows[offset] = s.height;
-    rows[offset + 1] = s.extent;
-    rows[offset + 2] = s.volume;
-    rows[offset + 3] = s.gravity;
-    s.velocity.toArray(rows, offset + 4);
-    s.up.toArray(rows, offset + 7);
-    rows.set(d.waterResistance ?? [1, 1, 1], offset + 10);
-    rows[offset + 13] = d.planingArea ?? 0;
-    rows[offset + 14] = s.inverseMass;
+
+  update(frame: WaterFrame, dt: number) {
+    const inputs = this.inputs;
+    const inverse = new Quaternion(),
+      normal = new Vector3(),
+      lever = new Vector3(),
+      velocity = new Vector3();
+    let anyWet = false,
+      offset = 0;
+    for (const p of this.parts) {
+      const q = p.orientation.copy(frame.q).multiply(p.rotation);
+      p.worldCenter.copy(p.center).applyQuaternion(frame.q).add(frame.pos);
+      inverse.copy(q).invert();
+      normal.set(0, 0, -1).applyQuaternion(q);
+      for (const sample of p.samples) {
+        const j = offset;
+        offset += stride;
+        const point = sample.point.copy(sample.localPoint).applyQuaternion(frame.q).add(frame.pos);
+        sample.wet = false;
+        // A dry row must replace any wet input left over from the previous step.
+        inputs[j] = 1;
+        inputs[j + 1] = 0;
+        if (!frame.waterAt(point)) continue;
+        const up = frame.localUp(point).applyQuaternion(inverse),
+          size = p.definition.size;
+        const extent = (Math.abs(up.x) * size[0] + Math.abs(up.y) * size[1] + Math.abs(up.z) * size[2]) / 2;
+        const height = frame.altitude(point);
+        if (height >= Math.max(0.12, extent * 1.2) / 2) continue;
+        anyWet = true;
+        sample.wet = true;
+        inputs[j] = height;
+        inputs[j + 1] = extent;
+        inputs[j + 3] = frame.gravity(point).length();
+        lever.copy(point).sub(frame.com);
+        velocity
+          .crossVectors(frame.relativeOmega, lever)
+          .add(frame.relativeVelocity)
+          .applyQuaternion(inverse)
+          .toArray(inputs, j + 4);
+        up.toArray(inputs, j + 7);
+        inputs[j + 14] = p.definition.planingArea ? frame.inverseEffectiveMass(point, normal) : 0;
+      }
+    }
+    if (!anyWet) return this.parts;
+    const wasm = sharedPhysics();
+    if (!wasm) throw Error('水力エンジンが未初期化です');
+    const ptr = wasm.water_prepare(this.parts.length * 2);
+    const rows = new Float64Array(wasm.memory.buffer, ptr, inputs.length);
+    rows.set(inputs);
+    wasm.water_step(dt, this.planingSamples);
+    offset = 0;
+    for (const p of this.parts) {
+      for (const sample of p.samples) {
+        const j = offset;
+        offset += stride;
+        if (!sample.wet) continue;
+        sample.buoyancy.fromArray(rows, j + 1).applyQuaternion(p.orientation);
+        sample.resistance.fromArray(rows, j + 4).applyQuaternion(p.orientation);
+        sample.planing.set(0, 0, -rows[j + 7]).applyQuaternion(p.orientation);
+      }
+    }
+    return this.parts;
   }
-  wasm.water_step(dt, planingSamples);
-  for (const [i, s] of samples.entries()) {
-    const j = i * stride;
-    const loads = result.get(s.part) ?? [];
-    loads.push({
-      point: s.point,
-      buoyancy: new Vector3().fromArray(rows, j + 1).applyQuaternion(s.orientation),
-      resistance: new Vector3().fromArray(rows, j + 4).applyQuaternion(s.orientation),
-      planing: rows[j + 7] > 0 ? new Vector3(0, 0, -rows[j + 7]).applyQuaternion(s.orientation) : null
-    });
-    result.set(s.part, loads);
-  }
-  return result;
 }

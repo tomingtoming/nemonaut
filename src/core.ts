@@ -19,7 +19,7 @@ import {createBodyAerodynamics, bodyDrag, type BodyAerodynamics} from './body-dr
 import {foldedGearCenter, gearMassCenter, gearRetracted, suspensionTravel} from './landing-gear.js';
 import {separationName} from './separation-name.js';
 import {mediumDensity, submergedFraction} from './buoyancy.js';
-import {waterLoads} from './water-loads.js';
+import {WaterGeometry} from './water-loads.js';
 import {engineSubmersion} from './engine-medium.js';
 import {angularMomentum, angularVelocity} from './angular-momentum.js';
 import {transferFuel} from './fuel-transfer.js';
@@ -385,6 +385,7 @@ export class Flight {
   declare active: Set<string>;
   declare ballast: number;
   declare body: import('./physics.js').RigidBody;
+  private waterGeometry?: WaterGeometry;
   declare bodyAerodynamics: BodyAerodynamics;
   declare brake: boolean;
   declare charge: ChargeMap;
@@ -622,6 +623,7 @@ export class Flight {
     return statistics(this.parts, this.fuel, this.ballast, this.thermal, this.gearDeployed);
   }
   buildColliders(): void {
+    this.waterGeometry = undefined;
     // Retracted gear is inside the body: no drag of its own (BACKLOG 9c).
     const nextDrag = createBodyAerodynamics(this.parts, this.gearDeployed);
     this.bodyAerodynamics?.dispose();
@@ -1107,8 +1109,7 @@ export class Flight {
     };
     const water =
       coast && coast.distance <= craftRadius
-        ? waterLoads(
-            this.parts,
+        ? (this.waterGeometry ??= new WaterGeometry(this.parts)).update(
             {
               pos: this.pos,
               q: this.q,
@@ -1124,10 +1125,14 @@ export class Flight {
             dt
           )
         : null;
+    let waterIndex = 0;
     for (const p of this.parts) {
-      const d = PARTS[p.type],
-        orientation = d.wing ? surfaces[surfaceIndex].orientation : this.q.clone().multiply(partRotation(p)),
-        wp = partCenter(p).applyQuaternion(this.q).add(this.pos),
+      const waterPart = water?.[waterIndex++],
+        d = PARTS[p.type],
+        orientation =
+          waterPart?.orientation ??
+          (d.wing ? surfaces[surfaceIndex].orientation : this.q.clone().multiply(partRotation(p))),
+        wp = waterPart?.worldCenter ?? partCenter(p).applyQuaternion(this.q).add(this.pos),
         r = wp.clone().sub(com),
         pv = relativeVelocity.clone().add(relativeOmega.clone().cross(r));
       if (d.gimbal) {
@@ -1209,12 +1214,13 @@ export class Flight {
         }
         if (density > 1e-8 && aero.stalled && velocity.length() > 5) stallCount++;
       }
-      const wetLoads = water?.get(p);
+      const wetLoads = waterPart?.samples;
       if (wetLoads)
         for (const load of wetLoads) {
+          if (!load.wet) continue;
           apply(load.buoyancy, load.point);
           apply(load.resistance, load.point);
-          if (load.planing) apply(load.planing, load.point);
+          if (load.planing.lengthSq() > 0) apply(load.planing, load.point);
         }
       // A wheel may overlap the bank before its axle crosses the shoreline.
       // An axle below the bank still cannot climb the vertical edge.

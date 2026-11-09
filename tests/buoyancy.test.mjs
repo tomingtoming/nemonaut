@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {buoyancyBalance, displacedVolume} from '../dist/buoyancy.js';
-import {waterLoads} from '../dist/water-loads.js';
+import {WaterGeometry} from '../dist/water-loads.js';
 import {PARTS, preset} from '../dist/catalog.js';
 import {statistics} from '../dist/core.js';
 
@@ -24,7 +24,7 @@ function sampleLoads({type}, q, velocity, up, wet, inverseMass = 1e-12) {
     gravity: () => up.clone().multiplyScalar(-9.81),
     inverseEffectiveMass: () => inverseMass
   };
-  return waterLoads([p], frame, 1 / 120).get(p)?.[0];
+  return new WaterGeometry([p]).update(frame, 1 / 120)[0].samples.find(s => s.wet);
 }
 function planingForce(p, q, velocity, up, wet) {
   return sampleLoads(p, q, velocity, up, wet)?.planing ?? new T.Vector3();
@@ -43,24 +43,29 @@ test('two wetted samples share the planing impulse limit on a light float', () =
 test('a part straddling the bank receives water force only at its seaward sample', () => {
   const p = {type: 'pontoon', p: [0, 0, 0], r: [0, 0, Math.PI / 2]},
     zero = new T.Vector3();
-  const loads = waterLoads(
-    [p],
-    {
-      pos: zero,
-      q: new T.Quaternion(),
-      com: zero,
-      relativeVelocity: zero,
-      relativeOmega: zero,
-      waterAt: point => point.x < 0,
-      altitude: () => -2,
-      localUp: () => new T.Vector3(0, 1, 0),
-      gravity: () => new T.Vector3(0, -9.81, 0),
-      inverseEffectiveMass: () => 1
-    },
-    1 / 120
-  ).get(p);
+  const geometry = new WaterGeometry([p]);
+  const frame = {
+    pos: zero,
+    q: new T.Quaternion(),
+    com: zero,
+    relativeVelocity: zero,
+    relativeOmega: zero,
+    waterAt: point => point.x < 0,
+    altitude: () => -2,
+    localUp: () => new T.Vector3(0, 1, 0),
+    gravity: () => new T.Vector3(0, -9.81, 0),
+    inverseEffectiveMass: () => 1
+  };
+  const wet = () => geometry.update(frame, 1 / 120)[0].samples.filter(s => s.wet);
+  const loads = wet();
   assert.equal(loads.length, 1);
   assert.ok(loads[0].point.x < 0 && loads[0].buoyancy.y > 0);
+  frame.waterAt = () => false;
+  assert.equal(wet().length, 0);
+  frame.waterAt = point => point.x > 0;
+  const opposite = wet();
+  assert.equal(opposite.length, 1);
+  assert.ok(opposite[0].point.x > 0 && opposite[0].buoyancy.y > 0);
 });
 test('planing pressure supports an entering bottom without propelling it or lifting a submerged hull', () => {
   const p = {type: 'pontoon'},

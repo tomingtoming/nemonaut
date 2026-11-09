@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {cases, reading} from '../tools/golden/water-scenario.mjs';
+import {Vector3} from 'three';
+import {Flight} from '../dist/core.js';
+import {preset, PARTS} from '../dist/catalog.js';
+import {bodyUp} from '../dist/celestial.js';
+import {partCenter, partRotation} from '../dist/aero.js';
+import {fleet} from '../dist/fleet.js';
+import {cases, observeFlight, reading} from '../tools/golden/water-scenario.mjs';
 import golden from './golden/water-loads.json' with {type: 'json'};
 
 for (const [name, scenario] of Object.entries(cases)) {
@@ -17,3 +23,30 @@ for (const [name, scenario] of Object.entries(cases)) {
     }
   });
 }
+
+test('submerged fracture moves water loads to the surviving parts of each vessel', () => {
+  const f = new Flight(preset('sub'), 'water', 161700);
+  try {
+    f.pos.addScaledVector(bodyUp(f.pos, f.universalTime), -8);
+    f.step(1 / 120);
+    f.fractureParts([f.parts.find(p => p.type === 'ballast').id]);
+    const vessels = fleet(f);
+    assert.ok(vessels.length > 1);
+    for (const vessel of vessels) {
+      const samples = vessel.parts.flatMap(p =>
+        [-0.32, 0.32].map(side => ({
+          world: new Vector3(0, side * PARTS[p.type].size[1], 0)
+            .applyQuaternion(partRotation(p))
+            .add(partCenter(p))
+            .applyQuaternion(vessel.q)
+            .add(vessel.pos),
+          force: new Vector3()
+        }))
+      );
+      observeFlight(vessel, samples, vessel.q.clone().invert());
+      assert.ok(samples.every(s => s.force.lengthSq() > 0));
+    }
+  } finally {
+    f.dispose();
+  }
+});
