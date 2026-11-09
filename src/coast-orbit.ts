@@ -1,5 +1,8 @@
+import RAPIER, {sharedPhysics} from './physics.js';
 import * as T from 'three';
 import {MOON, MOON_RATE, bodyState, relativeMotion} from './celestial.js';
+
+await RAPIER.init();
 
 export interface StumpffValues {
   c: number;
@@ -48,67 +51,30 @@ export function keplerDrift(
   mu: number,
   dt: number
 ): import('./celestial.js').BodyState {
-  if (
-    ![...position.toArray(), ...velocity.toArray(), mu, dt].every(Number.isFinite) ||
-    mu <= 0 ||
-    position.length() <= 0
-  )
-    throw Error('惰性飛行の条件が不正です');
-  if (dt === 0) return {position: position.clone(), velocity: velocity.clone()};
-  const r0 = position.length(),
-    root = Math.sqrt(mu),
-    rv = position.dot(velocity) / root,
-    alpha = 2 / r0 - velocity.lengthSq() / mu;
-  const equation = (x: number) => {
-    const z = alpha * x * x,
-      {c, s} = stumpff(z);
-    return {
-      value: rv * x * x * c + (1 - alpha * r0) * x * x * x * s + r0 * x - root * dt,
-      derivative: rv * x * (1 - z * s) + (1 - alpha * r0) * x * x * c + r0,
-      c,
-      s
-    };
-  };
-  let lo = 0,
-    hi = Math.max(1, (root * Math.abs(dt)) / r0);
-  if (dt < 0) {
-    lo = -hi;
-    hi = 0;
+  const wasm = sharedPhysics();
+  if (!wasm) throw Error('Rust物理エンジンを読み込めません');
+  const address = wasm.kepler_drift(
+    position.x,
+    position.y,
+    position.z,
+    velocity.x,
+    velocity.y,
+    velocity.z,
+    mu,
+    dt
+  );
+  switch (address) {
+    case -1:
+      throw Error('惰性飛行の条件が不正です');
+    case -2:
+      throw Error('惰性飛行の解を囲めません');
+    case -3:
+      throw Error('惰性飛行の計算が収束しません');
+    case -4:
+      throw Error('惰性飛行の結果が不正です');
   }
-  let bracketed = false;
-  for (let i = 0; i < 128; i++) {
-    if (equation(lo).value <= 0 && equation(hi).value >= 0) {
-      bracketed = true;
-      break;
-    }
-    if (dt > 0) hi *= 2;
-    else lo *= 2;
-  }
-  if (!bracketed) throw Error('惰性飛行の解を囲めません');
-  let x = (lo + hi) / 2,
-    solved = false;
-  for (let i = 0; i < 128; i++) {
-    const e = equation(x);
-    if (Math.abs(e.value) / root < 1e-12 * Math.max(1, Math.abs(dt))) {
-      solved = true;
-      break;
-    }
-    if (e.value > 0) hi = x;
-    else lo = x;
-    const candidate = x - e.value / e.derivative;
-    x = Number.isFinite(candidate) && candidate > lo && candidate < hi ? candidate : (lo + hi) / 2;
-  }
-  if (!solved) throw Error('惰性飛行の計算が収束しません');
-  const {c, s} = stumpff(alpha * x * x),
-    f = 1 - (x * x * c) / r0,
-    g = dt - (x * x * x * s) / root;
-  const p = position.clone().multiplyScalar(f).addScaledVector(velocity, g),
-    r = p.length();
-  const fdot = (root / (r * r0)) * (alpha * x * x * x * s - x),
-    gdot = 1 - (x * x * c) / r;
-  const v = position.clone().multiplyScalar(fdot).addScaledVector(velocity, gdot);
-  if (![...p.toArray(), ...v.toArray()].every(Number.isFinite)) throw Error('惰性飛行の結果が不正です');
-  return {position: p, velocity: v};
+  const result = new Float64Array(wasm.memory.buffer, address, 6);
+  return {position: new T.Vector3().fromArray(result), velocity: new T.Vector3().fromArray(result, 3)};
 }
 
 export function coastDrift(

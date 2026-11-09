@@ -1,10 +1,8 @@
-// After npm run build, compile the standalone prototype from the repository root:
-// rustc --edition 2024 --crate-type cdylib --target wasm32-unknown-unknown -C opt-level=3 tools/kepler-kernel.rs -o artifacts/kepler-kernel.wasm
 import assert from 'node:assert/strict';
-import {rustDrift as rust} from './kepler-prototype.mjs';
+import {referenceDrift as keplerDrift} from './kepler-reference.mjs';
 import {Vector3} from 'three';
 import {PRIMARY, MOON} from '../dist/celestial.js';
-import {keplerDrift} from '../dist/coast-orbit.js';
+import {keplerDrift as rust} from '../dist/coast-orbit.js';
 let maxPosition = 0,
   maxVelocity = 0,
   cases = 0;
@@ -34,7 +32,7 @@ for (const body of [PRIMARY, MOON]) {
     }
   }
 }
-assert.throws(() => rust(new Vector3(), new Vector3(), 1, 1), /status -1/);
+assert.throws(() => rust(new Vector3(), new Vector3(), 1, 1), /条件が不正/);
 for (const dt of [5, 28800]) {
   const p = new Vector3(680000, 0, 0),
     v = new Vector3(0, Math.sqrt(PRIMARY.mu / 680000), 0);

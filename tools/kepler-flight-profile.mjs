@@ -1,10 +1,10 @@
-// Run after the build and standalone compilation described in kepler-kernel-profile.mjs.
+// Run after npm run build.
 // Inject the selectable solver into the loaded module only. Both paths use identical game callers.
 import assert from 'node:assert/strict';
 import {registerHooks} from 'node:module';
 import {readFileSync} from 'node:fs';
 import {Vector3} from 'three';
-import {rustDrift} from './kepler-prototype.mjs';
+import {referenceDrift} from './kepler-reference.mjs';
 
 const orbitUrl = new URL('../dist/coast-orbit.js', import.meta.url).href;
 const hooks = registerHooks({
@@ -22,7 +22,7 @@ const hooks = registerHooks({
     };
   }
 });
-const {setSolver} = await import(orbitUrl);
+const {setSolver, keplerDrift: rustDrift} = await import(orbitUrl);
 hooks.deregister();
 const {Flight} = await import('../dist/core.js');
 const {preset} = await import('../dist/catalog.js');
@@ -53,7 +53,7 @@ for (const [site, stop] of [
           calls++;
           return rustDrift(...args);
         });
-      else setSolver(index ? rustDrift : null);
+      else setSolver(index ? rustDrift : referenceDrift);
       const f = new Flight(preset('orbiter'), stop === 'surface' || stop === 'soi' ? 'orbit' : site, epoch);
       try {
         if (stop === 'surface' || stop === 'soi') {

@@ -95,3 +95,14 @@ test('Fast approaches cannot jump the atmospheric or lunar boundary in one permi
     );
   }
 });
+
+test('Kepler failures preserve the diagnostic for each solver stage', () => {
+  for (const [radius, dt, message] of [
+    [0, 1, '惰性飛行の条件が不正です'],
+    [1, 1e200, '惰性飛行の解を囲めません'],
+    [1e150, 1, '惰性飛行の計算が収束しません'],
+    [1e-100, 1, '惰性飛行の結果が不正です']
+  ]) {
+    assert.throws(() => keplerDrift(vec(radius, 0, 0), vec(0, 0, 0), 1, dt), {message});
+  }
+});
