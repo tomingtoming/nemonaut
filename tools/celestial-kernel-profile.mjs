@@ -1,6 +1,25 @@
-// Run after the standalone build documented in celestial-kernel-preload.mjs.
-import {selectStep, prototypeStep} from './celestial-kernel-preload.mjs';
+import {readFileSync} from 'node:fs';
+import {registerHooks} from 'node:module';
 import assert from 'node:assert/strict';
+const url = new URL('../dist/celestial.js', import.meta.url);
+const hook = registerHooks({
+  load(path, context, next) {
+    if (path !== url.href) return next(path, context);
+    const source = readFileSync(url, 'utf8'),
+      marker = 'function advanceCelestialOrbit(';
+    assert.equal(source.split(marker).length, 2);
+    return {
+      format: 'module',
+      shortCircuit: true,
+      source:
+        source.replace(marker, 'function productStep(') +
+        '\nlet advanceCelestialOrbit = productStep; export function selectStep(step){advanceCelestialOrbit=step ?? productStep;}'
+    };
+  }
+});
+const {selectStep, advanceCelestialOrbit: productStep} = await import(url);
+hook.deregister();
+const {referenceStep} = await import('./celestial-reference.mjs');
 import {Vector3} from 'three';
 const {Flight} = await import('../dist/core.js');
 const {preset} = await import('../dist/catalog.js');
@@ -21,9 +40,9 @@ for (const path of ['flight', 'burn', 'flyby']) {
       if (trace)
         selectStep((...args) => {
           calls++;
-          return prototypeStep(...args);
+          return productStep(...args);
         });
-      else selectStep(index ? prototypeStep : null);
+      else selectStep(index ? productStep : referenceStep);
       const flight = new Flight(
         preset(path === 'burn' ? 'returner' : 'orbiter'),
         path === 'flight' ? 'moon-orbit' : 'orbit',
@@ -56,7 +75,7 @@ for (const path of ['flight', 'burn', 'flyby']) {
           );
         }
         if (trial >= 4) samples[index].push(performance.now() - start);
-        if (trace) assert.ok(calls > 0, path + ' did not call the prototype');
+        if (trace) assert.ok(calls > 0, path + ' did not call the product engine');
         ends[index] = {pos: pos.clone(), vel: vel.clone()};
       } finally {
         flight.dispose();

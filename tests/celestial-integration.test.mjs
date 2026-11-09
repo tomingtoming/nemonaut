@@ -1,10 +1,18 @@
+import {referenceStep} from '../tools/celestial-reference.mjs';
 import {keplerDrift} from '../dist/coast-orbit.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Vector3} from 'three';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
-import {advanceCelestialOrbit, referenceBody, bodyState, MOON, PRIMARY} from '../dist/celestial.js';
+import {
+  advanceCelestialOrbit,
+  referenceBody,
+  bodyState,
+  MOON,
+  MOON_PERIOD,
+  PRIMARY
+} from '../dist/celestial.js';
 import {finiteBurnPreview} from '../dist/finite-burn.js';
 import {predictTrajectory} from '../dist/trajectory.js';
 
@@ -120,5 +128,22 @@ test('a crossing step integrates in its initial body frame and reports its final
     );
     vectorNear(next.pos.toArray(), local.position.add(end.position).toArray(), 0.001, 'crossing position');
     vectorNear(next.vel.toArray(), local.velocity.add(end.velocity).toArray(), 0.00001, 'crossing velocity');
+  }
+});
+
+test('the exact lunar boundary belongs to the planet, including at the ephemeris wrap', () => {
+  for (const time of [0, MOON_PERIOD - 0.25, MOON_PERIOD, 2 * MOON_PERIOD + 0.25]) {
+    const moon = bodyState(MOON, time);
+    for (const offset of [-0.001, 0, 0.001]) {
+      const pos = moon.position.clone().add(new Vector3(MOON.sphereOfInfluence + offset, 0, 0));
+      const vel = moon.velocity.clone().add(new Vector3(-50, 5, 1)),
+        accel = new Vector3(0.3, -0.1, 0.2);
+      assert.equal(advanceCelestialOrbit(pos, vel, accel, 0, time).bodyId, offset < 0 ? 'moon' : 'planet');
+      const next = advanceCelestialOrbit(pos, vel, accel, 1, time),
+        expected = referenceStep(pos, vel, accel, 1, time);
+      assert.equal(next.bodyId, expected.bodyId);
+      vectorNear(next.pos.toArray(), expected.pos.toArray(), 1e-6, 'wrapped position');
+      vectorNear(next.vel.toArray(), expected.vel.toArray(), 1e-9, 'wrapped velocity');
+    }
   }
 });

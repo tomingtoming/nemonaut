@@ -1,5 +1,8 @@
+import RAPIER, {sharedPhysics} from './physics.js';
 import * as T from 'three';
 import {PLANET, center} from './planet.js';
+
+await RAPIER.init();
 
 // Physical/orbit parameters: KittopiaTech stock Mun dump (see CELESTIAL.md).
 export type CelestialBodyId = 'planet' | 'moon';
@@ -171,13 +174,6 @@ export function bodyOrbitState(
   };
 }
 
-function localStep(r: T.Vector3, v: T.Vector3, acceleration: T.Vector3, mu: number, dt: number): BodyState {
-  const gravity = (r: T.Vector3) => r.clone().multiplyScalar(-mu / Math.max(1, r.length()) ** 3);
-  const half = v.clone().addScaledVector(gravity(r).add(acceleration), dt / 2),
-    next = r.clone().addScaledVector(half, dt);
-  return {position: next, velocity: half.addScaledVector(gravity(next).add(acceleration), dt / 2)};
-}
-
 // Patched conics in a common, nonrotating parent frame. Moon-relative motion
 // is integrated locally, then translated with exact ephemerides at the end.
 // No instantaneous position/velocity change occurs when the selected body changes.
@@ -188,13 +184,40 @@ export function advanceCelestialOrbit(
   dt: number,
   time = 0
 ): CelestialStep {
-  const relative = relativeMotion(position, velocity, time),
-    body = relative.body;
-  const next = localStep(relative.r, relative.velocity, acceleration, body.mu, dt),
-    end = bodyState(body, time + dt);
-  const pos = next.position.add(end.position),
-    vel = next.velocity.add(end.velocity);
-  return {pos, vel, bodyId: referenceBody(pos, time + dt).id};
+  const wasm = sharedPhysics();
+  if (!wasm) throw Error('Rust物理エンジンを読み込めません');
+  const start = bodyState(MOON, time),
+    end = bodyState(MOON, time + dt);
+  const address = wasm.celestial_advance(
+    position.x,
+    position.y,
+    position.z,
+    velocity.x,
+    velocity.y,
+    velocity.z,
+    acceleration.x,
+    acceleration.y,
+    acceleration.z,
+    dt,
+    center.y,
+    PRIMARY.mu,
+    MOON.mu,
+    MOON.sphereOfInfluence,
+    start.position.y,
+    start.position.z,
+    start.velocity.y,
+    start.velocity.z,
+    end.position.y,
+    end.position.z,
+    end.velocity.y,
+    end.velocity.z
+  );
+  const result = new Float64Array(wasm.memory.buffer, address, 7);
+  return {
+    pos: new T.Vector3().fromArray(result),
+    vel: new T.Vector3().fromArray(result, 3),
+    bodyId: result[6] ? 'moon' : 'planet'
+  };
 }
 
 export function lunarTrial(time = 0, altitude = 20000): CelestialPose {
