@@ -5,7 +5,8 @@ async page => {
   if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw Error('Expected local build');
   const importMap = await page.locator('script[type=importmap]').textContent();
   const browser = page.context().browser();
-  const rows = [];
+  const rows = [],
+    fleets = [];
   for (const rate of [1, 4, 4, 1, 1, 4]) {
     const context = await browser.newContext({
       viewport: {width: 844, height: 390},
@@ -82,9 +83,62 @@ async page => {
         });
         rows.push({rate, design, ...startup, ...setup, ...tick, threadTaskMs});
       }
+      const fleetRows = await tab.evaluate(async () => {
+        const {Flight} = await import('/core.js');
+        const {preset} = await import('/catalog.js');
+        const {WorldRuntime} = await import('/world-runtime.js');
+        const {PhysicsClock} = await import('/physics-clock.js');
+        const results = [];
+        for (const size of [1, 2]) {
+          for (const warp of [1, 4, 1000]) {
+            const root = new Flight(preset('orbiter'), 'orbit');
+            try {
+              if (size === 2) {
+                const other = new Flight(preset('orbiter'), 'orbit');
+                other.pos.x += 10000;
+                root.detached.push(other);
+              }
+              const runtime = new WorldRuntime(root);
+              const clock = new PhysicsClock();
+              const start = performance.now();
+              let steps = 0;
+              for (let frame = 0; frame < 60; frame++) {
+                if (warp === 1000) {
+                  const result = runtime.coast(warp / 60, {maxSteps: 64});
+                  if (result.reason || result.remaining > 1e-8) throw Error('Coast stopped early');
+                  steps += result.steps;
+                } else {
+                  const result = clock.advance(1 / 60, warp, dt => runtime.step(dt));
+                  if (result.limited) throw Error('Physics clock limited');
+                  steps += result.steps;
+                }
+              }
+              const ms = performance.now() - start;
+              const vessels = [...runtime.vessels.values()];
+              if (
+                vessels.length !== size ||
+                Math.abs(runtime.universalTime - warp) > 1e-7 ||
+                vessels.some(v => v.crashed || v.universalTime !== runtime.universalTime)
+              )
+                throw Error('Fleet diverged');
+              results.push({
+                size,
+                warp,
+                steps,
+                ms,
+                worldBytes: vessels.reduce((n, v) => n + v.world.exports.memory.buffer.byteLength, 0)
+              });
+            } finally {
+              root.dispose();
+            }
+          }
+        }
+        return results;
+      });
+      fleets.push(...fleetRows.map(result => ({rate, ...result})));
     } finally {
       await context.close();
     }
   }
-  return {browser: browser.version(), rows};
-}
+  return {browser: browser.version(), rows, fleets};
+};
