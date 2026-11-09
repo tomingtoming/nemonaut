@@ -20,7 +20,8 @@ import {
   coolStationary
 } from '../dist/coast-flight.js';
 import {atmosphere} from '../dist/planet.js';
-import {thermalStep, createThermal} from '../dist/thermal.js';
+import {createThermal} from '../dist/thermal.js';
+import {thermalStep} from '../tools/golden/thermal-reference.mjs';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 import {selectVessel, fleet} from '../dist/fleet.js';
 

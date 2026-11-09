@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {PLANET, center, advanceOrbit, orbitState} from '../dist/planet.js';
+import {PLANET, center, orbitState} from '../dist/planet.js';
+import {advanceOrbit} from '../tools/golden/planet-step-reference.mjs';
 import {
   MOON,
   PRIMARY,

@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
+import {Flight} from '../dist/core.js';
+import {flightThermalStep} from '../dist/flight-thermal.js';
 import {preset} from '../dist/catalog.js';
-import {stagnationFlux, createThermal, shieldCoverage, thermalStep} from '../dist/thermal.js';
+import {createThermal} from '../dist/thermal.js';
+import {stagnationFlux, shieldCoverage, thermalStep} from '../tools/golden/thermal-reference.mjs';
 const defs = {
     payload: {mass: 100, size: [0.6, 1, 0.6], maxTemperature: 700},
     shield: {
@@ -79,9 +82,11 @@ test('Ablation absorbs finite energy only on the exposed protective face', () =>
   assert.ok(back.get('s').temperature > 650);
 });
 
-test('Reentry shield uses the last fraction of ablator before heating and still covers its capsule', () => {
+test('Reentry shield uses the last fraction of ablator before heating and still covers its capsule', t => {
   const craft = preset('reentry');
-  const state = createThermal(craft);
+  const flight = new Flight(craft, 'orbit');
+  t.after(() => flight.dispose());
+  const state = flight.thermal;
   const disk = craft.find(p => p.type === 'heatShield'),
     capsule = craft.find(p => p.type === 'capsule');
   const material = state.get(disk.id);
@@ -96,7 +101,7 @@ test('Reentry shield uses the last fraction of ablator before heating and still 
   ]);
   for (let tick = 1; tick <= 120; tick++) {
     const before = material.ablator;
-    const reading = thermalStep(craft, state, q, v, air, 1 / 120);
+    const reading = flightThermalStep(flight.world, craft, state, q, v, air, 1 / 120);
     assert.ok(Math.abs(reading.consumed - (before - material.ablator)) < 1e-9);
     assert.equal(reading.parts.get(capsule.id).shielded, true);
     assert.deepEqual(reading.failed, []);

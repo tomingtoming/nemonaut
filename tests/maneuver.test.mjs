@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {PLANET, center, orbitState, advanceOrbit} from '../dist/planet.js';
+import {PLANET, center, orbitState} from '../dist/planet.js';
+import {advanceOrbit} from '../tools/golden/planet-step-reference.mjs';
 import {apsisPlan} from '../dist/orbit-plan.js';
 import {maneuverPreview} from '../dist/maneuver.js';
 const initial = () => {

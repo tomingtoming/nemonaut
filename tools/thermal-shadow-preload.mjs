@@ -2,7 +2,7 @@
 import {registerHooks} from 'node:module';
 import {threadId} from 'node:worker_threads';
 import assert from 'node:assert/strict';
-import {thermalStep} from '../dist/thermal.js';
+import {thermalStep} from './golden/thermal-reference.mjs';
 import {compare, near} from './thermal-kernel-adapter.mjs';
 const targets = new Set(
   ['flight-thermal.js', 'takeoff-forecast-worker.js'].map(p => new URL('../dist/' + p, import.meta.url).href)

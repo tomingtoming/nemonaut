@@ -99,9 +99,3 @@ export function orbitState(pos: T.Vector3, vel: T.Vector3) {
     stable: energy < 0 && pe > PLANET.atmosphereTop
   };
 }
-// Double precision kick-drift-kick; no float32 planetary positions or velocity cap.
-export function advanceOrbit(pos: T.Vector3, vel: T.Vector3, acceleration: T.Vector3, dt: number) {
-  const half = vel.clone().addScaledVector(gravity(pos).add(acceleration), dt / 2);
-  const next = pos.clone().addScaledVector(half, dt);
-  return {pos: next, vel: half.addScaledVector(gravity(next).add(acceleration), dt / 2)};
-}

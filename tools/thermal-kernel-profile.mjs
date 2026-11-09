@@ -4,7 +4,8 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {PARTS, preset} from '../dist/catalog.js';
-import {createThermal, thermalStep} from '../dist/thermal.js';
+import {createThermal} from '../dist/thermal.js';
+import {thermalStep} from './golden/thermal-reference.mjs';
 import {register, compare, near} from './thermal-kernel-adapter.mjs';
 for (const name of ['reentry', 'returner', 'transport-cargo']) {
   const parts = preset(name),

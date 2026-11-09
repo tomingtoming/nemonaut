@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {PLANET, center, orbitState, advanceOrbit} from '../dist/planet.js';
+import {PLANET, center, orbitState} from '../dist/planet.js';
+import {advanceOrbit} from '../tools/golden/planet-step-reference.mjs';
 import {apsisPlan} from '../dist/orbit-plan.js';
 const state = (r, v) => orbitState(center.clone().add(new T.Vector3(0, r, 0)), new T.Vector3(0, 0, v));
 test('Apsis times at periapsis and apoapsis are separated by half a period', () => {

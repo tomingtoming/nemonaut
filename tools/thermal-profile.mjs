@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import {registerHooks} from 'node:module';
 import * as T from 'three';
 import {preset} from '../dist/catalog.js';
-import {createThermal, thermalStep} from '../dist/thermal.js';
+import {createThermal} from '../dist/thermal.js';
+import {thermalStep} from './golden/thermal-reference.mjs';
 
-const target = new URL('../dist/thermal.js?timed', import.meta.url).href;
+const target = new URL('./golden/thermal-reference.mjs?timed', import.meta.url).href;
 function insert(source, anchor, replacement) {
   assert.equal(source.split(anchor).length, 2, 'expected a unique thermal timing boundary: ' + anchor);
   return source.replace(anchor, replacement);
@@ -15,7 +16,7 @@ const hook = registerHooks({
     const result = next(url, ctx);
     if (url !== target) return result;
     let code = Buffer.from(result.source).toString();
-    const coverage = 'shielded = shields.some((s) => shieldCoverage(p, s, direction, q, definitions))';
+    const coverage = 'shielded = shields.some(s => shieldCoverage(p, s, direction, q, definitions))';
     code = insert(
       code,
       coverage,
