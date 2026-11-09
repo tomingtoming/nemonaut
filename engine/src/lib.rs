@@ -10,6 +10,7 @@ mod fuel;
 mod kepler;
 mod pair;
 mod thermal;
+mod water;
 mod wing;
 
 struct Kernel {
