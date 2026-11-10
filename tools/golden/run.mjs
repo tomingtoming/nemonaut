@@ -1,18 +1,25 @@
 import {readFile,writeFile} from 'node:fs/promises';import {execFileSync} from 'node:child_process';import {createHash} from 'node:crypto';
-import {scenarios as v1} from './scenarios.mjs';import {scenarios as v2} from './scenarios-v2.mjs';import {scenarios as v3} from './scenarios-v3.mjs';import {replay} from './replay-js.mjs';import {assertGolden,tolerances} from './compare.mjs';
-const version=process.argv.includes('--v3')?3:process.argv.includes('--v2')?2:1,scenarios=[v1,v2,v3][version-1];
+import {assertGolden,tolerances} from './compare.mjs';
+const version=process.argv.includes('--v3')?3:process.argv.includes('--v2')?2:1;
 // v1/v2 were recorded on the retired JS solver: they can be replayed (checked) but not re-recorded.
 if(version<3&&process.argv.includes('--record'))throw Error('Golden v1/v2 are frozen: their recording solver (JS Rapier) is retired');
 const file=new URL(`../../tests/golden/js-v${version}.json`,import.meta.url),record=process.argv.includes('--record');
 if(record){
- const revision=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
- if(execFileSync('git',['status','--porcelain','--','dist'],{encoding:'utf8'}).trim())throw Error('Commit the runtime before recording a baseline');
- const paths=execFileSync('git',['ls-files','dist'],{encoding:'utf8'}).trim().split(/\r?\n/).filter(p=>p.endsWith('.js'));
- const hash=createHash('sha256');for(const path of paths){hash.update(path+'\0');hash.update(await readFile(path));}
+ // A recording is determined by the committed sources and the committed engine Wasm. dist/ is their
+ // untracked build, so it is rebuilt here, before anything is imported from it.
+ const root=new URL('../../',import.meta.url),git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
+ const revision=git('rev-parse','HEAD');
+ if(git('status','--porcelain','--','src','engine','tools/golden'))throw Error('Commit src/, engine/ and tools/golden/ before recording a baseline');
+ const rapierRevision=/^rapier3d\s*=.*\brev\s*=\s*"([0-9a-f]{40})"/m.exec(await readFile(new URL('engine/Cargo.toml',root),'utf8'))?.[1];
+ if(!rapierRevision)throw Error('engine/Cargo.toml does not pin rapier3d by git rev');
+ const engineWasmSHA256=createHash('sha256').update(await readFile(new URL('src/engine/orbital_engine.wasm',root))).digest('hex');
+ execFileSync(process.execPath,['tools/build.mjs','--quiet'],{cwd:root,stdio:'inherit'});
+ const {scenarios}=await import('./scenarios-v3.mjs'),{replay}=await import('./replay-js.mjs');
  const definitions=scenarios(),cases=definitions.map(definition=>({definition,expected:replay(definition)}));
- const baseline={version,provenance:{revision,node:process.version,platform:process.platform,arch:process.arch,rapier:'0.21.0',physics:'rust-wasm',runtimeJavaScriptSHA256:hash.digest('hex'),recordedAt:new Date().toISOString()},tolerances,cases};
+ const baseline={version,provenance:{revision,node:process.version,platform:process.platform,arch:process.arch,physics:'rust-wasm',rapierRevision,engineWasmSHA256,recordedAt:new Date().toISOString()},tolerances,cases};
  await writeFile(file,JSON.stringify(baseline,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({recorded:cases.length,revision}));
 }else{
+ const {replay}=await import('./replay-js.mjs');
  const baseline=JSON.parse((await readFile(file,'utf8')).replace(/^\uFEFF/,''));
  for(const {definition,expected} of baseline.cases){const result=assertGolden(expected,replay(definition),{mode:definition.mode,limits:baseline.tolerances});console.log(JSON.stringify({case:definition.name,pass:true,maxToleranceRatio:result.maxRatio}));}
 }

@@ -4,7 +4,7 @@ import {part,preset} from '../../dist/catalog.js';
 import {saveFlight} from '../../dist/flight-save.js';
 import {bodyUp} from '../../dist/celestial.js';
 // Golden v3 (sprint 307): vessel-vessel collision enabled. Recorded on Rust physics, the only
-// game solver since sprint 306 (record with --import ./tools/golden/rust-preload.mjs).
+// game solver since sprint 306.
 export function scenarios(){
  const result=[];
  const add=(name,f,ticks,mode,actions=[])=>{result.push({name,dt:1/120,ticks,mode,vesselCollision:true,initial:saveFlight(f),actions,checkpoints:[0,Math.floor(ticks/4),Math.floor(ticks/2),ticks]});f.dispose();};

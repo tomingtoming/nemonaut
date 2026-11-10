@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/**'
       - 'tools/**'
+      - 'tests/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig.json'
@@ -17,6 +18,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
       - name: Install
         run: npm ci --ignore-scripts
       - name: Build dist (copy src, generate the bundles)

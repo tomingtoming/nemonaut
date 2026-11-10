@@ -15,9 +15,12 @@ jobs:
         shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
       - name: Run shard ${{ matrix.shard }}/4 with src/engine Wasm
         run: |
           npm ci --ignore-scripts
           npm run build
           node --version
-          node --import ./tools/golden/rust-preload.mjs --test --test-shard=${{ matrix.shard }}/4 tests/*.test.mjs
+          node --test --test-shard=${{ matrix.shard }}/4 tests/*.test.mjs
