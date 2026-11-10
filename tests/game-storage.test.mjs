@@ -1,13 +1,11 @@
-import {convertSavedPartFrame} from '../dist/part-save-frame.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {WORKSPACE_KEY, workspaceRecord} from '../dist/workspace-save.js';
 import {GAME_KEY, readStoredGame, writeStoredGame, backupStoredGame} from '../dist/game-storage.js';
-import {editingParts, migrateWorkspace} from '../dist/game-save.js';
+import {editingParts, gameRecord} from '../dist/game-save.js';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {saveFlight} from '../dist/flight-save.js';
-import {flightFromWorld} from '../dist/world-save.js';
+import {flightFromWorld, worldFromFlight} from '../dist/world-save.js';
 
 function storage() {
   const values = new Map();
@@ -22,38 +20,33 @@ function storage() {
   };
 }
 const empty = time =>
-  workspaceRecord({parts: [], name: 'Next craft', bay: 'vab', environment: 'land', universalTime: time});
+  gameRecord({
+    world: worldFromFlight(null, {universalTime: time}),
+    draft: {parts: [], name: 'Next craft', bay: 'vab', environment: 'land'}
+  });
 
-test('old workspace migrates to new key while original and independent flight quicksave remain untouched', () => {
+test('a written game reads back with its world, draft and flight, leaving other keys untouched', () => {
   const f = new Flight(preset('twin'), 'orbit', 4000),
     s = storage();
   try {
     f.stageNext();
     f.stageNext();
     f.step(1 / 120);
-    const legacy = workspaceRecord({
-        parts: preset('plane'),
-        name: 'Draft',
-        bay: 'sph',
-        environment: 'runway',
-        flight: saveFlight(f)
-      }),
-      raw = JSON.stringify(legacy);
-    s.setItem(WORKSPACE_KEY, raw);
+    const draft = preset('plane');
     s.setItem('flight-quicksave', 'unrelated');
-    const before = new Map(s.values),
-      loaded = readStoredGame(s);
-    assert.equal(loaded.migrated, true);
-    assert.deepEqual(s.values, before);
-    writeStoredGame(s, loaded.game);
-    assert.equal(s.getItem(WORKSPACE_KEY), raw);
+    writeStoredGame(
+      s,
+      gameRecord({
+        world: worldFromFlight(saveFlight(f)),
+        draft: {parts: draft, name: 'Draft', bay: 'sph', environment: 'runway'}
+      })
+    );
     assert.equal(s.getItem('flight-quicksave'), 'unrelated');
     const next = readStoredGame(s);
-    assert.equal(next.migrated, false);
-    assert.equal(next.game.world.vessels.length, 2);
-    assert.equal(next.game.world.universalTime, f.universalTime);
-    assert.deepEqual(editingParts(next.game), convertSavedPartFrame(legacy.parts, 'encode'));
-    const flight = flightFromWorld(next.game.world);
+    assert.equal(next.world.vessels.length, 2);
+    assert.equal(next.world.universalTime, f.universalTime);
+    assert.deepEqual(editingParts(next), draft);
+    const flight = flightFromWorld(next.world);
     assert.equal(flight.vesselId, f.vesselId);
     assert.deepEqual(flight.fuel, saveFlight(f).fuel);
   } finally {
@@ -61,11 +54,10 @@ test('old workspace migrates to new key while original and independent flight qu
   }
 });
 
-test('current world wins over stale legacy data, including empty world after final recovery', () => {
+test('a broken current save is reported, never replaced by a default game', () => {
   const s = storage();
-  s.setItem(WORKSPACE_KEY, JSON.stringify(empty(100)));
-  writeStoredGame(s, migrateWorkspace(empty(500)));
-  assert.equal(readStoredGame(s).game.world.universalTime, 500);
+  writeStoredGame(s, empty(500));
+  assert.equal(readStoredGame(s).world.universalTime, 500);
   s.setItem(GAME_KEY, '{broken');
   const before = new Map(s.values);
   assert.throws(() => readStoredGame(s));
@@ -74,12 +66,10 @@ test('current world wins over stale legacy data, including empty world after fin
   assert.throws(() => readStoredGame(s));
 });
 
-test('quota failures leave old/current saves intact and corrupt new data is never written', () => {
+test('quota failures leave the current save intact and corrupt new data is never written', () => {
   const s = storage(),
-    first = migrateWorkspace(empty(100)),
-    next = migrateWorkspace(empty(200));
-  s.setItem(WORKSPACE_KEY, JSON.stringify(empty(90)));
-  writeStoredGame(s, first);
+    next = empty(200);
+  writeStoredGame(s, empty(100));
   const before = new Map(s.values);
   s.fail = true;
   assert.throws(() => writeStoredGame(s, next), /Quota/);
@@ -93,15 +83,12 @@ test('quota failures leave old/current saves intact and corrupt new data is neve
 test('backup retains exact broken bytes and never overwrites an existing backup', () => {
   const s = storage();
   assert.equal(backupStoredGame(s, 10), null);
-  s.setItem(WORKSPACE_KEY, 'broken legacy');
+  s.setItem(GAME_KEY, 'broken current');
   const a = backupStoredGame(s, 10),
     b = backupStoredGame(s, 10);
   assert.notEqual(a, b);
-  assert.equal(s.getItem(a), 'broken legacy');
-  s.setItem(GAME_KEY, 'broken current');
-  const c = backupStoredGame(s, 10);
-  assert.equal(s.getItem(c), 'broken current');
-  assert.equal(s.getItem(WORKSPACE_KEY), 'broken legacy');
+  assert.equal(s.getItem(a), 'broken current');
+  assert.equal(s.getItem(b), 'broken current');
   const before = new Map(s.values);
   s.fail = true;
   assert.throws(() => backupStoredGame(s, 20));
@@ -111,8 +98,6 @@ test('backup retains exact broken bytes and never overwrites an existing backup'
 test('absent or oversized saves do not silently become a default game', () => {
   const s = storage();
   assert.equal(readStoredGame(s), null);
-  s.setItem(WORKSPACE_KEY, 'x'.repeat(4000001));
-  assert.throws(() => readStoredGame(s), /大きすぎ/);
   s.setItem(GAME_KEY, 'x'.repeat(4000001));
   assert.throws(() => readStoredGame(s), /大きすぎ/);
 });

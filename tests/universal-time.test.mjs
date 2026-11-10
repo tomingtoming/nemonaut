@@ -5,8 +5,6 @@ import {preset} from '../dist/catalog.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 import {fleet, selectVessel} from '../dist/fleet.js';
 import {launchIntoFleet} from '../dist/launch-fleet.js';
-import {workspaceRecord, validateWorkspace} from '../dist/workspace-save.js';
-import {retireVessel} from '../dist/vessel-recovery.js';
 import {setUniversalTime, formatUniversalTime} from '../dist/universal-time.js';
 import {undockVessel, dockVessels} from '../dist/docking.js';
 
@@ -101,47 +99,8 @@ test('Legacy saves migrate from maximum retained mission time without rewriting 
     assert.equal(restored.detached[0].universalTime, 90);
     assert.equal(restored.time, 10);
     assert.equal(restored.detached[0].time, 90);
-    const w = {
-      ...workspaceRecord({parts: preset('plane'), name: 'draft', bay: 'sph', environment: 'runway'}),
-      flight: saved
-    };
-    delete w.universalTime;
-    assert.equal(validateWorkspace(w).universalTime, 90);
   } finally {
     restored?.dispose();
-    f.dispose();
-  }
-});
-
-test('Last-vessel retirement keeps time in empty workspace and next launch', () => {
-  const f = new Flight(preset('rocket'), 'orbit');
-  let next;
-  try {
-    setUniversalTime(f, 900);
-    const result = retireVessel(saveFlight(f), f.parts[0].id, 'terminate');
-    assert.equal(result.record, null);
-    const w = validateWorkspace(
-      workspaceRecord({
-        parts: [],
-        name: 'empty',
-        bay: 'vab',
-        environment: 'land',
-        flight: null,
-        universalTime: 900
-      })
-    );
-    assert.equal(w.universalTime, 900);
-    next = launchIntoFleet(null, {
-      parts: preset('rocket'),
-      name: 'next',
-      environment: 'land',
-      universalTime: w.universalTime
-    });
-    assert.equal(next.universalTime, 900);
-    assert.equal(next.time, 0);
-    assert.equal(formatUniversalTime(900), 'UT 900.0 s');
-  } finally {
-    next?.dispose();
     f.dispose();
   }
 });
@@ -159,4 +118,8 @@ test('Docking and undocking retain the shared epoch', () => {
   } finally {
     f.dispose();
   }
+});
+
+test('Universal time is shown to a tenth of a second', () => {
+  assert.equal(formatUniversalTime(900), 'UT 900.0 s');
 });

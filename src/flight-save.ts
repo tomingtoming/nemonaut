@@ -9,7 +9,8 @@ import {copyObservationQuality} from './observation-quality.js';
 import {DELIVERY_SITE, deliverySite} from './delivery-sites.js';
 import {createObservations, type ObservationState, type ObservationMap} from './observation.js';
 import {restoreSeparationCounters} from './separation-name.js';
-import {PHYSICS_MODEL, migrateLegacySurface, type PhysicsMigrationSummary} from './physics-migration.js';
+/** Saved state is in the frame of the rotating home planet; saves from before it are not read. */
+export const PHYSICS_MODEL = 'rotating-primary-v1';
 import {validUniversalTime, setUniversalTime} from './universal-time.js';
 import {fleet} from './fleet.js';
 import {createThermal, type ThermalState} from './thermal.js';
@@ -57,7 +58,6 @@ export interface SavedFlight {
   partFrame?: string;
   vesselId?: string;
   physicsModel?: string;
-  physicsMigration?: PhysicsMigrationSummary | null;
   universalTime?: number;
   vesselName?: string;
   separationCount?: number;
@@ -173,7 +173,6 @@ export function saveFlight(f: Flight, meta: SavedFlightMeta = {}): SavedFlight {
     partFrame: SAVED_PART_FRAME,
     vesselId: f.vesselId,
     physicsModel: PHYSICS_MODEL,
-    physicsMigration: f.physicsMigration ?? null,
     universalTime: f.universalTime,
     vesselName: f.vesselName,
     separationCount: f.separationCount,
@@ -230,16 +229,7 @@ export function loadFlight(
   // Version 2 prevents older readers from treating centre coordinates as authored
   // coordinates. Version 1 with a marker was written during the migration.
   check(value.partFrame === SAVED_PART_FRAME || (value.version === 1 && value.partFrame === undefined));
-  check(value.physicsModel === undefined || value.physicsModel === PHYSICS_MODEL);
-  {
-    const migration = value.physicsMigration;
-    if (migration != null)
-      check(
-        (['surface', 'inertial'] as const).every(
-          k => Number.isInteger(migration[k]) && migration[k] >= 0 && migration[k] <= 400
-        )
-      );
-  }
+  check(value.physicsModel === PHYSICS_MODEL);
   const parts = validateCraft({
       version: 1,
       parts: value.partFrame === SAVED_PART_FRAME ? value.parts : convertSavedPartFrame(value.parts, 'encode')
@@ -453,10 +443,6 @@ export function loadFlight(
   f.runwayEnd = arrivalEnd;
   f.vesselId = vesselId;
   f.separationCount = value.separationCount ?? 0;
-  f.legacyPhysics = value.physicsModel === undefined;
-  f.physicsMigration = value.physicsMigration
-    ? {surface: value.physicsMigration.surface, inertial: value.physicsMigration.inertial}
-    : null;
   f.universalTime = value.universalTime ?? value.state.time;
   f.vesselName =
     value.vesselName ?? (typeof value.meta?.name === 'string' ? value.meta.name.slice(0, 80) : '機体');
@@ -522,12 +508,6 @@ export function loadFlight(
       if (value.universalTime !== undefined) checkTimes(value);
       setUniversalTime(f, time);
       restoreSeparationCounters(all);
-      const migrated = {surface: 0, inertial: 0};
-      for (const v of all) {
-        if (v.legacyPhysics) migrated[migrateLegacySurface(v) ? 'surface' : 'inertial']++;
-        delete v.legacyPhysics;
-      }
-      if (migrated.surface + migrated.inertial) f.physicsMigration = migrated;
       for (const v of all)
         v.orbit = bodyOrbitState(v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)), v.vel, time);
       for (const v of all) updateNavigationFrame(v);

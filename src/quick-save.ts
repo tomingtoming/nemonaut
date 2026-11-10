@@ -3,7 +3,6 @@ import {showBrakeState} from './flight-controls.js';
 // session's temporary save, the browser save slot, and restoring a saved flight with its controls and
 // autopilot. No import-time side effects (the storage key is a constant string); app.ts calls wireQuickSave.
 import {storageKey} from './app-id.js';
-import {needsPhysicsMigration, physicsMigrationMessage} from './physics-migration.js';
 import {worldFromFlight} from './world-save.js';
 import {saveFlight, loadFlight, type SavedFlight} from './flight-save.js';
 import {ReturnPilot} from './return-pilot.js';
@@ -57,10 +56,7 @@ export function quickLoad() {
     const raw = localStorage.getItem(flightSaveKey);
     if (!raw) throw Error('保存された飛行がありません');
     if (raw.length > 2000000) throw Error('保存データが大きすぎます');
-    const data = JSON.parse(raw);
-    if (needsPhysicsMigration(data))
-      localStorage.setItem(flightSaveKey + '-before-rotation-' + Date.now(), raw);
-    restoreFlight(data);
+    restoreFlight(JSON.parse(raw));
   } catch (e) {
     notify(errorMessage(e));
   }
@@ -122,13 +118,8 @@ export function restoreFlight(data: SavedFlight) {
       state.launchPilot.released = pilot.released;
       $('#autoLaunch', 'button').textContent = '自動実演を解除';
     }
-    if (restoredFlight.physicsMigration)
-      $('#centerNotice', 'p').textContent = physicsMigrationMessage(restoredFlight.physicsMigration);
     flightPanels().flightPause.set(true);
-    notify(
-      physicsMigrationMessage(restoredFlight.physicsMigration) ||
-        '飛行を復元しました · 一時停止 · T+ ' + restoredFlight.time.toFixed(1) + 's'
-    );
+    notify('飛行を復元しました · 一時停止 · T+ ' + restoredFlight.time.toFixed(1) + 's');
     return true;
   } catch (e) {
     if (restored && restored !== state.flight) restored.dispose();

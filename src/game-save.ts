@@ -1,8 +1,7 @@
 import {saveKind, isSaveKind} from './app-id.js';
 import {convertSavedPartFrame, SAVED_PART_FRAME} from './part-save-frame.js';
 import {validateCraft, type FlightPart} from './core.js';
-import {validateWorkspace, type LegacyWorkspace} from './workspace-save.js';
-import {validateWorld, worldFromFlight, type SavedWorld} from './world-save.js';
+import {validateWorld, type SavedWorld} from './world-save.js';
 
 export interface WorkshopDraft {
   name: string;
@@ -55,15 +54,6 @@ export function gameRecord({world, draft}: GameRecordInput): CenteredGame {
     world: validateWorld(world),
     workshop: workshop(draft, true)
   };
-}
-// Pure migration; browser storage is not touched. The caller must retain the
-// original save before replacing it with this validated game record.
-export function migrateWorkspace(value: LegacyWorkspace): CenteredGame {
-  const legacy = validateWorkspace(value);
-  return gameRecord({
-    world: worldFromFlight(legacy.flight, {universalTime: legacy.universalTime}),
-    draft: {...legacy, parts: convertSavedPartFrame(legacy.parts, 'encode')}
-  });
 }
 export function validateGame(value: SavedGame): CenteredGame {
   if (

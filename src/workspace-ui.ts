@@ -5,9 +5,8 @@
 import {ReturnPilot} from './return-pilot.js';
 import {saveFlight} from './flight-save.js';
 import {editingParts, gameRecord} from './game-save.js';
-import {worldFromFlight, flightFromWorld} from './world-save.js';
+import {worldFromFlight} from './world-save.js';
 import {readStoredGame, writeStoredGame, backupStoredGame} from './game-storage.js';
-import {physicsMigrationMessage} from './physics-migration.js';
 import {updateDepartureButton} from './departure-mode.js';
 import {state} from './app-state.js';
 import {$, errorMessage} from './ui-common.js';
@@ -72,18 +71,10 @@ export function persistWorkspace() {
 }
 export function restoreWorkspace() {
   try {
-    const saved = readStoredGame(localStorage);
-    if (!saved) return;
-    const {game, migrated} = saved,
-      w = game.workshop,
-      record = flightFromWorld(game.world),
-      notices = [];
-    if (migrated)
-      notices.push(
-        '旧保存を読み込みました。次の自動保存から世界と設計を分けて記録します。旧保存はブラウザ内に残します。'
-      );
-    if (record?.physicsMigration) notices.push(physicsMigrationMessage(record.physicsMigration));
-    $('#centerNotice', 'p').textContent = notices.join(' ');
+    const game = readStoredGame(localStorage);
+    if (!game) return;
+    const w = game.workshop;
+    $('#centerNotice', 'p').textContent = '';
     state.universalTime = game.world.universalTime;
     state.parts = editingParts(game);
     $('#craftName', 'input').value = w.name;

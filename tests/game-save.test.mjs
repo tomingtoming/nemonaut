@@ -1,36 +1,29 @@
-import {convertSavedPartFrame} from '../dist/part-save-frame.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {saveFlight} from '../dist/flight-save.js';
-import {workspaceRecord} from '../dist/workspace-save.js';
-import {editingParts, migrateWorkspace, validateGame} from '../dist/game-save.js';
+import {worldFromFlight} from '../dist/world-save.js';
+import {editingParts, gameRecord, validateGame} from '../dist/game-save.js';
 
-test('whole-game migration separates editable design from persistent world without changing the source', () => {
+test('a game record separates the editable design from the persistent world without changing the source', () => {
   const f = new Flight(preset('twin'), 'orbit', 5000);
   try {
     f.stageNext();
     f.stageNext();
     f.step(1 / 120);
-    const legacy = workspaceRecord({
-        parts: preset('plane'),
-        name: 'Next plane',
-        bay: 'sph',
-        environment: 'runway',
-        flight: saveFlight(f)
-      }),
-      before = structuredClone(legacy);
-    const game = migrateWorkspace(legacy),
+    const draft = {parts: preset('plane'), name: 'Next plane', bay: 'sph', environment: 'runway'},
+      before = structuredClone(draft);
+    const game = gameRecord({world: worldFromFlight(saveFlight(f)), draft}),
       restored = validateGame(JSON.parse(JSON.stringify(game)));
     assert.equal(restored.world.vessels.length, 2);
     assert.equal(restored.world.universalTime, f.universalTime);
-    assert.deepEqual(editingParts(restored), convertSavedPartFrame(legacy.parts, 'encode'));
-    assert.deepEqual(legacy, before);
+    assert.deepEqual(editingParts(restored), draft.parts);
+    assert.deepEqual(draft, before);
     const world = structuredClone(restored.world);
     restored.workshop.parts[0].p[0] += 10;
     assert.deepEqual(restored.world, world);
-    assert.deepEqual(legacy, before);
+    assert.deepEqual(draft, before);
     assert.deepEqual(
       restored.world.vessels.map(v => v.vesselId),
       game.world.vessels.map(v => v.vesselId)
@@ -41,14 +34,10 @@ test('whole-game migration separates editable design from persistent world witho
 });
 
 test('empty worlds and empty drafts remain valid independently; invalid saves fail atomically', () => {
-  const legacy = workspaceRecord({
-    parts: [],
-    name: 'Empty',
-    bay: 'vab',
-    environment: 'land',
-    universalTime: 6000
+  const game = gameRecord({
+    world: worldFromFlight(null, {universalTime: 6000}),
+    draft: {parts: [], name: 'Empty', bay: 'vab', environment: 'land'}
   });
-  const game = migrateWorkspace(legacy);
   assert.equal(game.world.universalTime, 6000);
   assert.deepEqual(game.world.vessels, []);
   assert.deepEqual(game.workshop.parts, []);

@@ -1,4 +1,3 @@
-import './storage-migration.js';
 import {watchTouchDevice} from './touch-device.js';
 import {mountTouchFlight} from './touch-flight.js';
 import {mountVesselControls} from './vessel-controls-panel.js';

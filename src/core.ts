@@ -467,8 +467,6 @@ export class Flight {
   > | null;
   declare cruiseSettings: import('./cruise-pilot.js').CruiseSettings | null;
   declare runwayEnd: import('./runway-selection.js').RunwayEnd;
-  declare legacyPhysics?: boolean;
-  declare physicsMigration: import('./physics-migration.js').PhysicsMigrationSummary | null;
   constructor(parts: FlightPart[], environment: string, universalTime = 0) {
     this.vesselId = crypto.randomUUID();
     this.parts = structuredClone(parts);

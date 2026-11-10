@@ -39,7 +39,7 @@ test('game writer changes only workshop coordinates and repeated storage resumes
       assert.equal(encoded.partFrame, 'nominal-center-v1');
       assert.deepEqual(encoded.workshop.parts, original.workshop.parts);
       assert.deepEqual(encoded.world, before.world);
-      game = readStoredGame(storage).game;
+      game = readStoredGame(storage);
       equalParts(game.workshop.parts, before.workshop.parts);
       assert.deepEqual(game.world, before.world);
     }
@@ -48,7 +48,7 @@ test('game writer changes only workshop coordinates and repeated storage resumes
     flight.dispose();
   }
 });
-test('empty drafts and legacy games remain valid and invalid frame combinations reject', () => {
+test('empty drafts remain valid and invalid frame combinations reject', () => {
   const legacy = gameRecord({
     world: worldFromFlight(null, {universalTime: 9}),
     draft: {...draft(), parts: []}
