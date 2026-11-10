@@ -317,3 +317,20 @@ test('docking uses the active probe reference and undocking restores both world 
     flight.dispose();
   }
 });
+test('Docking and undocking keep the separation count, ascent settings and runway end', () => {
+  const [a, b, ai, bi] = pair();
+  a.detached = [b];
+  a.separationCount = 1;
+  b.separationCount = 3;
+  a.runwayEnd = '27';
+  a.orbitalAscentSettings = {altitude: 200000, inclination: 30};
+  const merged = dockVessels(a, b, ai, bi);
+  assert.equal(merged.separationCount, 3);
+  assert.equal(merged.runwayEnd, '27');
+  assert.deepEqual(merged.orbitalAscentSettings, {altitude: 200000, inclination: 30});
+  const result = undockVessel(merged, ai);
+  assert.equal(result.separationCount, 3);
+  assert.equal(result.runwayEnd, '27');
+  assert.deepEqual(result.orbitalAscentSettings, {altitude: 200000, inclination: 30});
+  result.dispose();
+});

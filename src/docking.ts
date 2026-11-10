@@ -126,6 +126,11 @@ function rebuilt(source: Flight, parts: FlightPart[], sources: readonly Flight[]
   out.throttle = 0;
   out.maneuver = null;
   out.targetPartId = source.targetPartId;
+  // A later separation must not reuse a name an earlier one already took.
+  out.separationCount = Math.max(...sources.map(v => v.separationCount));
+  out.orbitalAscentSettings = source.orbitalAscentSettings;
+  out.cruiseSettings = source.cruiseSettings;
+  out.runwayEnd = source.runwayEnd;
   // Every source's entries in order (a later duplicate id overwrites the value in place), kept for this vessel's parts.
   function merged<V>(pick: (v: Flight) => ReadonlyMap<string, V>): Map<string, V> {
     return copyPartState(new Map<string, V>(sources.flatMap(v => [...pick(v)])), ids);

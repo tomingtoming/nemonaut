@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as T from 'three';
 import {Flight, statistics} from '../dist/core.js';
 import {preset, PARTS} from '../dist/catalog.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';

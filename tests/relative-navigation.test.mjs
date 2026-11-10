@@ -87,10 +87,12 @@ test('Relative braking direction and real RCS translation reduce relative speed'
   f.reactionEnabled = false;
   setTarget(f, f, g);
   f.sasMode = 'relativeRetrograde';
-  const before = relativeState(f, g).speed;
+  const before = relativeState(f, g).speed,
+    fuel = () => [...f.fuel.values()].reduce((a, b) => a + b, 0),
+    fuelBefore = fuel();
   for (let i = 0; i < 90; i++) f.step(1 / 120, {translateZ: 1});
   assert.ok(relativeState(f, g).speed < before * 0.5);
-  assert.ok(f.fuel.size > 0);
+  assert.ok(fuel() < fuelBefore);
   f.dispose();
 });
 test('Target SAS rotates using installed RCS and cannot rotate a powerless unequipped craft', () => {

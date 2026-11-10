@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {PRIMARY, bodyOrbitState} from '../dist/celestial.js';
+import {PRIMARY} from '../dist/celestial.js';
 import {center} from '../dist/planet.js';
 import {deorbitPlan} from '../dist/deorbit-plan.js';
 import {Flight} from '../dist/core.js';

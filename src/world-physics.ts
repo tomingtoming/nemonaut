@@ -36,8 +36,14 @@ export function advanceWorldPhysics(
   );
   const endTime = universalTime + dt;
   for (const v of vessels) v.universalTime = endTime;
-  for (const v of vessels)
-    v.stepBody(dt, v.vesselId === activeVesselId ? input : {}, snapshots.get(v.navigationTarget) ?? null);
+  try {
+    for (const v of vessels)
+      v.stepBody(dt, v.vesselId === activeVesselId ? input : {}, snapshots.get(v.navigationTarget) ?? null);
+  } catch (error) {
+    // The caller keeps its clock when a step fails; vessels left ahead of it would be rejected forever.
+    for (const v of vessels) v.universalTime = universalTime;
+    throw error;
+  }
   // Vessels step in separate worlds; contacts between them are resolved afterwards.
   resolveVesselCollisions(vessels, dt);
   return endTime;

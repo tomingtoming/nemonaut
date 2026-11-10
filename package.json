@@ -13,10 +13,10 @@
     "format": "prettier --write \"src/**/*.ts\" \"tools/*.mjs\" \"tests/*.mjs\""
   },
   "dependencies": {
-    "@dimforge/rapier3d-compat": "0.21.0",
     "three": "0.180.0"
   },
   "devDependencies": {
+    "@dimforge/rapier3d-compat": "0.21.0",
     "@types/three": "0.180.0",
     "esbuild": "0.28.2",
     "prettier": "3.9.10",

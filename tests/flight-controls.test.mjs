@@ -25,7 +25,7 @@ test('flight controls follow real separation and vessel switching without changi
       id: crypto.randomUUID(),
       type,
       parent: separator.id,
-      pos: [2, -6, 0]
+      p: [2, -6, 0]
     });
   let flight = new Flight(parts, 'orbit');
   const ui = controls();

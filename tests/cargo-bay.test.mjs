@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ShapeType} from '../dist/physics.js';
 import * as T from 'three';
-import {PARTS, preset, part, nodes} from '../dist/catalog.js';
+import {preset, part, nodes} from '../dist/catalog.js';
 import {Flight, validateCraft, statistics} from '../dist/core.js';
 import {nodeConnection} from '../dist/attachment-nodes.js';
 import {setPartAction} from '../dist/part-actions.js';

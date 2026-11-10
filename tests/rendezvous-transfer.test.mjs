@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as T from 'three';
 import {rendezvousTransfer} from '../dist/rendezvous-transfer.js';
 import {maneuverPreview} from '../dist/maneuver.js';
-import {bodyOrbitState, bodyState} from '../dist/celestial.js';
+import {bodyOrbitState} from '../dist/celestial.js';
 import {keplerDrift} from '../dist/coast-orbit.js';
 import {PLANET, center} from '../dist/planet.js';
 const radius = 800000,

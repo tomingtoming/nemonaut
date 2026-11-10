@@ -13,7 +13,8 @@ export async function extract(root = new URL('../dist/', import.meta.url)) {
     // A template piece may end inside a tag (`<input aria-label="位置 ${...}">`): take the open
     // attribute value and the text before the tag.
     if (/<[a-zA-Z/]/.test(s)) {
-      for (const m of s.matchAll(/\s(?:title|aria-label|placeholder)="([^"]*)(?:"|$)/g)) add(m[1], where);
+      for (const m of s.matchAll(/\s(?:title|aria-label|placeholder|label)="([^"]*)(?:"|$)/g))
+        add(m[1], where);
       for (const piece of s.replace(/<[^>]*(?:>|$)/g, '\u0000').split('\u0000')) add(piece, where);
       return;
     }
@@ -45,7 +46,8 @@ export async function extract(root = new URL('../dist/', import.meta.url)) {
   }
   const html = await readFile(new URL('index.html', root), 'utf8');
   for (const m of html.matchAll(/>([^<]+)</g)) add(m[1], 'index.html');
-  for (const m of html.matchAll(/\s(?:title|aria-label|placeholder)="([^"]*)"/g)) add(m[1], 'index.html');
+  for (const m of html.matchAll(/\s(?:title|aria-label|placeholder|label)="([^"]*)"/g))
+    add(m[1], 'index.html');
   return found;
 }
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

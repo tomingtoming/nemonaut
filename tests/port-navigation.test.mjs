@@ -4,7 +4,7 @@ import * as T from 'three';
 import {Flight} from '../dist/core.js';
 import {preset, part} from '../dist/catalog.js';
 import {undockVessel, dockVessels, dockingStatus} from '../dist/docking.js';
-import {portGuidance, portTranslation, portPose} from '../dist/port-navigation.js';
+import {portGuidance, portTranslation} from '../dist/port-navigation.js';
 import {setTarget, resolveTargets} from '../dist/relative-navigation.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 function pair() {

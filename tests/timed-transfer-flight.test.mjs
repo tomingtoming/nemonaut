@@ -7,7 +7,6 @@ import {preset} from '../dist/catalog.js';
 import {bodyOrbitState} from '../dist/celestial.js';
 import {center} from '../dist/planet.js';
 import {centerOfVessel, relativeState} from '../dist/relative-navigation.js';
-import {rendezvousTransfer} from '../dist/rendezvous-transfer.js';
 import {maneuverPreview} from '../dist/maneuver.js';
 import {createManeuverNode, maneuverDirection} from '../dist/maneuver-node.js';
 import {advanceCoastFleet} from '../dist/coast-flight.js';

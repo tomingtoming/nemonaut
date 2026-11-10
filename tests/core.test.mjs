@@ -8,8 +8,8 @@ const surfaceSpeed = f =>
   ).length();
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {PARTS, preset, part} from '../dist/catalog.js';
-import {Flight, statistics, validateCraft, descendants} from '../dist/core.js';
+import {preset, part} from '../dist/catalog.js';
+import {Flight, validateCraft, descendants} from '../dist/core.js';
 const run = (f, seconds, input = () => ({}), hz = 120) => {
   for (let i = 0; i < seconds * hz; i++) f.step(1 / hz, input(i / hz));
   return f;

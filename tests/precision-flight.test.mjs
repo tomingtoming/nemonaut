@@ -5,12 +5,7 @@ import {preset} from '../dist/catalog.js';
 import {launchWorld} from '../dist/world-operations.js';
 import {worldFromFlight, flightFromWorld, validateWorld} from '../dist/world-save.js';
 import {loadFlight, saveFlight} from '../dist/flight-save.js';
-import {
-  deliverySitePosition,
-  deliveryDistance,
-  DELIVERY_SITE,
-  DELIVERY_SITES
-} from '../dist/delivery-sites.js';
+import {deliverySitePosition, DELIVERY_SITE, DELIVERY_SITES} from '../dist/delivery-sites.js';
 import {recordFlightChallenges} from '../dist/precision-landing.js';
 import {surfaceRelativeVelocity, PRIMARY_ROTATION_PERIOD} from '../dist/surface-frame.js';
 import {descentTelemetry} from '../dist/descent.js';

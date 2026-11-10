@@ -863,7 +863,7 @@ export class Flight {
       freeFlight = height > craftRadius + 25;
     // Large length units also enlarge internal contact tolerances. Use metre-scale
     // contact at low speed, keeping headroom above the solver's velocity limit.
-    const solverScale = freeFlight ? 100 : Math.max(1, relativeVelocity.length() / 100);
+    const solverScale = freeFlight ? 100 : Math.min(100, Math.max(1, relativeVelocity.length() / 100));
     this.world.integrationParameters.lengthUnit = solverScale;
     this.world.integrationParameters.normalizedAllowedLinearError = 0.001 / solverScale;
     this.world.integrationParameters.normalizedPredictionDistance = 0.005 / solverScale;

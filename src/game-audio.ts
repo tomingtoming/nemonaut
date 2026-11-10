@@ -214,7 +214,9 @@ export function mountGameAudio(): GameAudio {
     if (!ctx) return;
     const now = ctx.currentTime;
     for (const {osc, gain} of musicVoices) {
-      gain.gain.cancelAndHoldAtTime(now);
+      // Firefox has no cancelAndHoldAtTime; a throw here would stop the whole frame loop.
+      if (gain.gain.cancelAndHoldAtTime) gain.gain.cancelAndHoldAtTime(now);
+      else gain.gain.cancelScheduledValues(now);
       gain.gain.setTargetAtTime(0, now, 0.12);
       osc.stop(now + 0.6);
     }

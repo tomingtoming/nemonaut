@@ -63,7 +63,9 @@ test('two fingers pinch; one finger or a third finger does not', () => {
   assert.equal(p.move(2, 0, 0), null);
   p.up(2);
   assert.equal(p.count, 0);
-  assert.equal(new Pinch().down(1, 0, 0, null) || new Pinch().active, false);
+  const blocked = new Pinch();
+  assert.equal(blocked.down(1, 0, 0, null), false);
+  assert.equal(blocked.active, false);
   const q = new Pinch();
   q.down(1, 0, 0, null);
   assert.equal(q.down(2, 10, 0, null), false, 'no extent yet: no pinch');

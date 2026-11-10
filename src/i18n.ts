@@ -26,7 +26,7 @@ const isElementNode = <N extends Node>(node: N): node is N & ElementLike => node
 type CanvasTextMethod = (this: CanvasRenderingContext2D, text: string, ...rest: never[]) => unknown;
 const JA = /[぀-ヿ㐀-鿿！-｠]/;
 const LANG_KEY = storageKey('lang');
-const ATTRIBUTES = ['title', 'aria-label', 'placeholder'];
+const ATTRIBUTES = ['title', 'aria-label', 'placeholder', 'label'];
 // Labels on form fields translate; what the player typed (their value/content) never does.
 const SKIP = new Set(['SCRIPT', 'STYLE']),
   FIELDS = new Set(['TEXTAREA', 'INPUT']);

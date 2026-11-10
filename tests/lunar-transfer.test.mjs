@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as T from 'three';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {lunarTransferSeed} from '../dist/lunar-transfer.js';

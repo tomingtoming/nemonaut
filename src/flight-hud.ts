@@ -51,7 +51,7 @@ export function mountWarpGuard() {
           !control ||
           control.id === 'warp' ||
           !state.flight ||
-          !control.closest('#flightHud,#inspector,#orbitOverlay')
+          !control.closest('#flightHud,#inspector,#orbitOverlay,#stageDock')
         )
           return;
         if (Number($('#warp', 'select').value) > 1) {
