@@ -81,9 +81,6 @@ export function mountDockingWindow(
     return {key, unit, factor, digits, row, value};
   });
   axes.after(conditions);
-  view.element.addEventListener('click', e => {
-    if (e.target instanceof Element) e.target.closest<HTMLElement>('button,input[type=checkbox]')?.blur();
-  });
   function update() {
     const flight = getFlight(),
       active = !!flight;

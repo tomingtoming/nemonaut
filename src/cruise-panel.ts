@@ -602,11 +602,11 @@ export function mountCruisePanel(
     'keydown',
     e => {
       if (!acceptsFlightKey(e.target, e.code)) return;
-      if (/^(Key[WASDQEZXTB]|Space|ShiftLeft|ShiftRight|ControlLeft|ControlRight)$/.test(e.code)) {
+      if (/^(Key[WASDQEZXCTB]|Space|ShiftLeft|ShiftRight)$/.test(e.code)) {
         const controlled = pilot || takeoff || landing.pilot || returning.owner ? owner : null;
         stop();
-        // Floating windows stop bubbling keyboard events. Preserve the throttle
-        // command that releases cruise even when a window button owns focus.
+        // The throttle command that releases cruise is applied here as well, so it also
+        // holds while paused, where the main key handler ignores keys.
         if (controlled && ['KeyX', 'KeyZ'].includes(e.code) && !e.ctrlKey && !e.metaKey && !e.altKey) {
           controlled.throttle = e.code === 'KeyX' ? 0 : 1;
           sync();

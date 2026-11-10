@@ -1,3 +1,4 @@
+import {acceptsFlightKey} from './flight-keyboard.js';
 let top = 30;
 export interface FloatingWindowOptions {
   title: string;
@@ -64,12 +65,20 @@ export function floatingWindow(
     if (drag) position(drag.left + e.clientX - drag.x, drag.top + e.clientY - drag.y);
   });
   for (const type of ['pointerup', 'pointercancel']) header.addEventListener(type, () => (drag = null));
+  // Escape closes this window only. Other keys stay inside while they belong to a field being edited;
+  // from a button, a slider's flight keys or the window itself they reach the flight and workshop
+  // handlers on window, so piloting keeps working after a click in here.
   element.addEventListener('keydown', e => {
     if (e.code === 'Escape') {
       onClose();
       e.preventDefault();
-    }
-    e.stopPropagation();
+      e.stopPropagation();
+    } else if (!acceptsFlightKey(e.target, e.code)) e.stopPropagation();
+  });
+  // A clicked button or checkbox gives focus back, so Space stages instead of pressing it again.
+  element.addEventListener('click', e => {
+    if (e.target instanceof Element)
+      e.target.closest<HTMLElement>('button,input[type=checkbox],input[type=radio]')?.blur();
   });
   const resize = () => position(element.offsetLeft, element.offsetTop);
   window.addEventListener('resize', resize);
