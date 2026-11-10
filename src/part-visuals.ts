@@ -180,7 +180,6 @@ export function rebuildCraft() {
         inner.position.copy(fold.position).negate();
       }
       wheel.updateMatrixWorld();
-      const world = mount.matrixWorld.clone();
       craftRoot.updateMatrixWorld(true);
       const holder = wheel.userData.gearInner;
       (holder instanceof T.Group ? holder : wheel).attach(mount);

@@ -31,10 +31,6 @@ export interface LunarDeparturePlan extends LunarDepartureSearchPlan {
   finite?: TrajectoryResult;
 }
 export interface LunarDepartureSearchOptions {
-  preparation?: number;
-  phases?: number;
-  periods?: number;
-  flybys?: number[];
   accept?: ((plan: LunarDepartureSearchPlan) => boolean) | null;
 }
 /** The vessel fields the lunar departure planner reads (a Flight satisfies it). */
@@ -55,34 +51,18 @@ export function searchLunarDeparture(
   position: import('three').Vector3,
   velocity: import('three').Vector3,
   time: number,
-  {
-    preparation = 120,
+  {accept = null}: LunarDepartureSearchOptions = {}
+): LunarDepartureSearchPlan {
+  // Seconds before the first candidate, departure phases per parking orbit, orbits searched, and
+  // the aim offsets beyond the Moon (m).
+  const preparation = 120,
     phases = 48,
     periods = 2,
-    flybys = [400000, 800000, 1200000],
-    accept = null
-  }: LunarDepartureSearchOptions = {}
-): LunarDepartureSearchPlan {
+    flybys = [400000, 800000, 1200000];
   const orbit = orbitState(position, velocity);
   if (!orbit.stable || orbit.apoapsis + PLANET.radius >= MOON.orbitRadius - MOON.sphereOfInfluence)
     throw Error('母星の安全な待機軌道から計画してください');
-  if (
-    !Number.isFinite(time) ||
-    time < 0 ||
-    !Number.isFinite(preparation) ||
-    preparation < 60 ||
-    !Number.isInteger(phases) ||
-    phases < 8 ||
-    phases > 96 ||
-    !Number.isInteger(periods) ||
-    periods < 1 ||
-    periods > 8 ||
-    !Array.isArray(flybys) ||
-    flybys.length > 8 ||
-    !flybys.length ||
-    flybys.some(x => !Number.isFinite(x) || Math.abs(x) > 2000000)
-  )
-    throw Error('月遷移探索の条件が不正です');
+  if (!Number.isFinite(time) || time < 0) throw Error('月遷移探索の条件が不正です');
   const candidates: LunarDepartureCandidate[] = [];
   for (let i = 0; i < phases * periods; i++) {
     const delay = preparation + (orbit.period * i) / phases,

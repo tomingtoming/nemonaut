@@ -41,7 +41,7 @@ export function select(id: string | null) {
   renderAssemblyTree();
 }
 export function isEditMode(value: string): value is EditMode {
-  return value === 'select' || value === 'translate' || value === 'rotate' || value === 'scale';
+  return value === 'select' || value === 'translate' || value === 'rotate';
 }
 export function setMode(next: EditMode) {
   const {gizmo} = editorMarkers();

@@ -105,7 +105,6 @@ export interface FlightLoadBudget {
   vesselIds: Set<string>;
 }
 export interface FlightLoadOptions {
-  debris?: boolean;
   depth?: number;
   budget?: FlightLoadBudget;
 }
@@ -218,11 +217,7 @@ export function saveFlight(f: Flight, meta: SavedFlightMeta = {}): SavedFlight {
 }
 export function loadFlight(
   value: SavedFlight,
-  {
-    debris = false,
-    depth = 0,
-    budget = {count: 0, ids: new Set(), vesselIds: new Set()}
-  }: FlightLoadOptions = {}
+  {depth = 0, budget = {count: 0, ids: new Set(), vesselIds: new Set()}}: FlightLoadOptions = {}
 ): Flight {
   check(depth <= 32);
   check(isSaveKind(value?.kind, 'flight') && (value.version === 1 || value.version === 2));
@@ -495,8 +490,7 @@ export function loadFlight(
     f.universalTime
   );
   try {
-    for (const child of children)
-      f.detached.push(loadFlight(child, {debris: true, depth: depth + 1, budget}));
+    for (const child of children) f.detached.push(loadFlight(child, {depth: depth + 1, budget}));
     if (depth === 0) {
       const all = fleet(f),
         time = value.universalTime ?? Math.max(...all.map(v => v.universalTime));

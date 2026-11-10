@@ -41,13 +41,7 @@ export function recordOrbitAchievements(
     if (!sources) continue;
     const center = vessel.stats.com.clone().applyQuaternion(vessel.q).add(vessel.pos);
     const orbit = bodyOrbitState(center, vessel.vel, vessel.universalTime);
-    if (
-      orbit.bodyId !== 'planet' ||
-      !orbit.stable ||
-      !Number.isFinite(orbit.apoapsis) ||
-      orbit.apoapsis < orbit.periapsis
-    )
-      continue;
+    if (orbit.bodyId !== 'planet' || !orbit.stable || !Number.isFinite(orbit.apoapsis)) continue;
     result = appendHistory(
       {history: result, universalTime: root.universalTime},
       'orbit',

@@ -72,7 +72,6 @@ function reach(v: Flight, point: T.Vector3): number {
 export class DockingAutopilot {
   declare elapsed: number;
   declare state: DockingAutopilotState;
-  declare held: number;
   declare message: string;
   declare ownParts: Set<string>;
   declare ownShape: string;
@@ -103,8 +102,8 @@ export class DockingAutopilot {
       other = bodyOrbitState(centerOfVessel(target), target.vel, target.universalTime);
     if (
       own.bodyId !== other.bodyId ||
-      own.altitude < Math.max(1000, own.body.atmosphereTop ?? 0) ||
-      other.altitude < Math.max(1000, other.body.atmosphereTop ?? 0)
+      own.altitude < Math.max(1000, own.body.atmosphereTop) ||
+      other.altitude < Math.max(1000, other.body.atmosphereTop)
     )
       throw Error('同じ天体の大気圏外で開始してください');
     const nav = portGuidance(f, ports.own, target, ports.target);
@@ -129,7 +128,6 @@ export class DockingAutopilot {
     this.targetShape = signature(target);
     this.elapsed = 0;
     this.stable = 0;
-    this.held = 0;
     this.state = 'aligning';
     this.message = 'ポート整列';
     this.peak = {speed: 0};
@@ -287,7 +285,6 @@ export class DockingAutopilot {
         atStandby ||
         (this.state === 'holding' && port.distanceTo(plan.point) < DOCKING_AUTOPILOT.holdTolerance * 2)
       ) {
-        this.held = this.state === 'holding' ? this.held + dt : 0;
         this.state = 'holding';
         this.message = '待機点で静止';
         desired.copy(plan.point).sub(port).multiplyScalar(0.3);

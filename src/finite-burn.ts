@@ -48,11 +48,7 @@ export function finiteBurnPreview(
 ): FiniteBurnPreview {
   const deltaV = impulse?.length();
   if (startTime < vessel.universalTime) throw Error('噴射開始が過去になります。計画地点を先へ移してください');
-  if (
-    !Number.isFinite(startTime) ||
-    startTime < vessel.universalTime ||
-    startTime - vessel.universalTime > 604800
-  )
+  if (!Number.isFinite(startTime) || startTime - vessel.universalTime > 604800)
     throw Error('噴射開始は現在から7日以内にしてください');
   if (
     !Number.isFinite(throttle) ||

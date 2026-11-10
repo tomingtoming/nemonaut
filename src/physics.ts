@@ -55,19 +55,8 @@ export function sharedPhysics() {
   if (!wasmModule) return null;
   return (shared ??= new WebAssembly.Instance(wasmModule, {}).exports as unknown as Exports);
 }
-export const physicsReady = () => wasmModule !== null;
 
 export const ShapeType = Object.freeze({Ball: 0, Cuboid: 1});
-
-/** RAPIER.Quaternion stand-in (game code only reads x, y, z, w). */
-export class Quaternion {
-  constructor(
-    public x: number,
-    public y: number,
-    public z: number,
-    public w: number
-  ) {}
-}
 
 export class RigidBodyDesc {
   translation: Vec3 = {x: 0, y: 0, z: 0};
@@ -144,9 +133,6 @@ export class Collider {
   private get(field: number) {
     return this.world.exports.shape_get(this.index, field);
   }
-  parent() {
-    return this.index < 0 ? null : this.world.body;
-  }
   shapeType() {
     return this.get(0) === 1 ? ShapeType.Ball : ShapeType.Cuboid;
   }
@@ -213,9 +199,6 @@ export class Collider {
   setRotation(q: Quat) {
     this.world.ground.rotation = {x: q.x, y: q.y, z: q.z, w: q.w};
     this.world.syncGround();
-  }
-  isEnabled() {
-    return this.world.ground.enabled;
   }
 }
 
@@ -454,4 +437,4 @@ export class World {
 }
 
 /** Drop-in for the default export of the Rapier module, as the game imports it. */
-export default {init, World, RigidBodyDesc, ColliderDesc, ShapeType, Quaternion};
+export default {init, World, RigidBodyDesc, ColliderDesc, ShapeType};

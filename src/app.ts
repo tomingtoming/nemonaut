@@ -5,18 +5,9 @@ import {wireHelp} from './help-dialog.js';
 import {wireTouchPartWindows} from './touch-part-windows.js';
 import {mountFailureLog} from './failure-feedback.js';
 import {FailureVisuals} from './failure-visuals.js';
-import './orbital-ascent-panel.js'; // keeps the module evaluation order (mounted in flight-panels)
-import './runway-panel.js'; // keeps the module evaluation order (mounted in flight-panels)
-import './docking-window.js'; // keeps the module evaluation order (mounted in flight-panels)
-import './delivery-panel.js'; // keeps the module evaluation order (mounted in flight-panels)
 import './overlay-panels.js'; // import-time DOM setup (panel dock); keeps its original evaluation order
-import './camera-up.js'; // keeps the module evaluation order
-import './practice-session.js'; // keeps the module evaluation order
 import {mountThrustOverlay} from './thrust-overlay.js';
-import './physics-clock.js'; // keeps the module evaluation order
-import './design-library.js'; // keeps the module evaluation order
 import {PARTS, preset} from './catalog.js';
-import './launch-pilot.js'; // keeps the module evaluation order
 import {loadPhysics} from './physics.js';
 import {installTranslation, currentLanguage, setLanguage} from './i18n.js';
 import {closest} from './dom.js';

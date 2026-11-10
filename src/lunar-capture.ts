@@ -10,7 +10,6 @@ export interface BurnEstimateVessel {
   parts: readonly Part[];
   started: boolean;
   active: EngineSet;
-  rocketAxes?: unknown;
   fuel: ReadonlyMap<string, number>;
   stats: {mass: number};
 }

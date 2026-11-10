@@ -70,13 +70,14 @@ export function validateFlightChallenge(
       phases,
       event.type === 'flight-touchdown' ? 'flight-ascent' : 'flight-touchdown'
     );
+    const site = deliverySite(event.siteId);
     if (
       !from ||
       !same(
         event.flightEventIds,
         from.map(e => e.id)
       ) ||
-      !deliverySite(event.siteId) ||
+      !site ||
       !Number.isFinite(event.distance) ||
       event.distance < 0 ||
       event.distance > 2e6 ||
@@ -84,8 +85,6 @@ export function validateFlightChallenge(
     )
       throw Error('接地記録の飛行元・地点・距離が不正です');
     if (event.type === 'precision-landing') {
-      const site = deliverySite(event.siteId);
-      if (!site) throw Error('接地記録の飛行元・地点・距離が不正です');
       if (
         completed.has(site.id) ||
         event.damaged ||

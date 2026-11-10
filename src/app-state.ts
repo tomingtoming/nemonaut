@@ -14,7 +14,7 @@ import type {LaunchPilot} from './launch-pilot.js';
 import type {ReturnPilot} from './return-pilot.js';
 import type {FlightScenery} from './flight-scenery.js';
 import type {CoastBlocker} from './coast-flight.js';
-export type EditMode = 'select' | 'translate' | 'rotate' | 'scale';
+export type EditMode = 'select' | 'translate' | 'rotate';
 export type AppState = {
   linkSymmetry: boolean;
   lastCoastBlocker: CoastBlocker | null;

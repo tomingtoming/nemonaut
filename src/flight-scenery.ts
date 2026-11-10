@@ -194,8 +194,6 @@ export class FlightScenery {
     #include <logdepthbuf_fragment>
     vec3 n=normalize(normalWorld),v=normalize(cameraPosition-worldPos);float rim=pow(1.-abs(dot(n,v)),5.);float day=smoothstep(-.25,.35,dot(n,sunDir));vec3 c=cameraPosition-vec3(0.,-600000.,0.);vec3 ray=normalize(worldPos-cameraPosition);float impact=length(c-ray*dot(c,ray));float column=smoothstep(0.,.85,clamp((612000.-impact)/12000.,0.,1.));gl_FragColor=vec4(vec3(.12,.38,.9),rim*column*day*.65);}`
     });
-    // Keep shader directives at line starts for WebGL implementations.
-    shell.vertexShader = shell.vertexShader.replace(';#include', ';\n#include');
     this.shell = new T.Mesh(new T.SphereGeometry(PLANET.radius + 12000, 128, 64), shell);
     this.shell.position.copy(center);
     group.add(this.shell);
