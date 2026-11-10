@@ -1,4 +1,6 @@
-// The transfer planner and executor must use the same low-thrust tail.
+// Throttle tail of rendezvous transfer and velocity-match burns without a fixed power (100 → 10 → 1 %
+// under 2 and 0.5 m/s); the planner and the automatic burn must use this same tail. Lunar departure and
+// return burns use terminalBurnThrottle.
 export const transferThrottle = (remaining: number): number =>
   remaining < 0.5 ? 0.01 : remaining < 2 ? 0.1 : 1;
 

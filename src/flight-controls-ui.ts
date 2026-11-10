@@ -97,7 +97,7 @@ export function wireFlightControls() {
     state.flight.brake = !state.flight.brake;
     showBrakeState($('#brake', 'button'), state.flight.brake);
   };
-  // Landing gear up / down (BACKLOG 9c): G and the touch 「ギア」 button press this button.
+  // Flaps step through four stages; the flap key presses this button.
   $('#' + flapControl.button, 'button').onclick = () => {
     const f = state.flight;
     if (!f || !canControl(f)) return;

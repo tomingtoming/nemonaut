@@ -27,7 +27,9 @@ type CanvasTextMethod = (this: CanvasRenderingContext2D, text: string, ...rest: 
 const JA = /[぀-ヿ㐀-鿿！-｠]/;
 const LANG_KEY = storageKey('lang');
 const ATTRIBUTES = ['title', 'aria-label', 'placeholder', 'label'];
-// Labels on form fields translate; what the player typed (their value/content) never does.
+// Labels on form fields translate; the value/content of a field the player types in does not. A name
+// the game then shows in a text node (or draws on a canvas) goes through the substring translator like
+// any other text, so Japanese words in it that are dictionary keys are translated.
 const SKIP = new Set(['SCRIPT', 'STYLE']),
   FIELDS = new Set(['TEXTAREA', 'INPUT']);
 

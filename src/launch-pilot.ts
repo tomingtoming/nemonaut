@@ -30,7 +30,7 @@ export class LaunchPilot {
   declare done: boolean;
   declare message: string;
   declare phase: string;
-  /** Set only when a saved demo is restored (app.ts); unused by the launch sequence itself. */ declare released?: boolean;
+  /** Set when a saved demo is restored (quick-save.ts) and saved by quick-save.ts and workspace-ui.ts; unused by the launch sequence. */ declare released?: boolean;
   constructor() {
     this.completionMessage = '周回達成。実演を終了しました。月遷移計画を作成できます。';
     this.phase = '離昇';

@@ -64,11 +64,11 @@ export function updateFlightControls(
   chute.hidden = !parts.some(p => PARTS[p.type][armChutes.capability]);
   chute.disabled = !controllable || chute.hidden;
   element(root, '#ballastControl', 'label').hidden = !parts.some(p => PARTS[p.type].ballast);
-  // The gear switch (BACKLOG 9c) shows only on a vessel with retractable gear, lit while the gear is down.
   const flaps = element(root, '#' + flapControl.button, 'button');
   flaps.hidden = !parts.some(p => PARTS[p.type][flapControl.capability]);
   flaps.disabled = !controllable || flaps.hidden;
   flaps.textContent = 'FLAP ' + flight.flapStage;
+  // The gear switch (BACKLOG 9c) shows only on a vessel with retractable gear, lit while the gear is down.
   const gear = element(root, '#gear', 'button');
   gear.hidden = !hasRetractableGear(parts);
   gear.disabled = !controllable || gear.hidden;

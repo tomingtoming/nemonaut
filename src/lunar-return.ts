@@ -74,7 +74,7 @@ export function lunarEscape(position: T.Vector3, velocity: T.Vector3, time: numb
     if (next.position.length() < MOON.sphereOfInfluence) low = mid;
     else high = mid;
   }
-  // A centimetre outside avoids ambiguous floating-point membership at the SOI.
+  // A millisecond past the crossing avoids ambiguous floating-point membership at the SOI.
   at = keplerDrift(r, v, MOON.mu, high + 0.001);
   const epoch = time + high + 0.001,
     endMoon = bodyState(MOON, epoch);

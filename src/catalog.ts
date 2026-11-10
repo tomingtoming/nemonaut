@@ -12,9 +12,9 @@ export type PartDefinition = {
   shroudSupport?: boolean;
   decoupler?: boolean;
   thrust?: number;
-  /** Medium required for thrust; independent engines carry their reaction mass. */
   screwBlades?: string;
   screwPivot?: number[];
+  /** Medium required for thrust; independent engines carry their reaction mass. */
   thrustMedium?: 'independent' | 'air' | 'water';
   oxidizerSource?: 'onboard' | 'atmosphere' | 'none';
   isp?: number;

@@ -1,4 +1,5 @@
-// Shared by lunar trajectory prediction and maneuver execution.
+// Throttle tail of lunar departure and return burns (100 → 10 → 1 % under 10 and 2 m/s): used by their
+// trajectory prediction and by the automatic burn of those nodes. Rendezvous burns use transferThrottle.
 export function terminalBurnThrottle(remaining: number): number {
   return remaining < 2 ? 0.01 : remaining < 10 ? 0.1 : 1;
 }
