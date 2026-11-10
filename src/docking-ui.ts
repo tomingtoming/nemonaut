@@ -17,6 +17,7 @@ import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
 import {$, blurActive, errorMessage, notify} from './ui-common.js';
 import {currentFlight} from './current-flight.js';
+import {signatureChanged} from './dom.js';
 /** What the docking UI uses from app.ts: the held flight keys and the audio and docking window, which are created later. */
 export type DockingUiDeps = {
   keys: Set<string>;
@@ -99,22 +100,26 @@ export function updateDocking() {
     state.dockingArmed = null;
     return;
   }
-  const bonds = $('#dockBonds', 'div');
-  bonds.replaceChildren();
-  for (const p of docked.parts.filter(p => p.dockPartner && p.parent === p.dockPartner)) {
-    const button = document.createElement('button');
-    button.textContent = '結合ポートを分離';
-    button.onclick = () => {
-      try {
-        hooks.refreshDockedFlight(undockVessel(currentFlight(), p.id));
-        uses().gameAudio().play('stage');
-        notify('再分離しました。相手機体を目標に指定できます。');
-      } catch (e) {
-        notify(errorMessage(e));
-      }
-    };
-    bonds.append(button);
-  }
+  const bonds = $('#dockBonds', 'div'),
+    bonded = docked.parts.filter(p => p.dockPartner && p.parent === p.dockPartner).map(p => p.id);
+  // One undock button per bond, rebuilt only when the bonds change.
+  if (signatureChanged(bonds, bonded.join('|')) || bonds.childElementCount !== bonded.length)
+    bonds.replaceChildren(
+      ...bonded.map(id => {
+        const button = document.createElement('button');
+        button.textContent = '結合ポートを分離';
+        button.onclick = () => {
+          try {
+            hooks.refreshDockedFlight(undockVessel(currentFlight(), id));
+            uses().gameAudio().play('stage');
+            notify('再分離しました。相手機体を目標に指定できます。');
+          } catch (e) {
+            notify(errorMessage(e));
+          }
+        };
+        return button;
+      })
+    );
   const target = docked.navigationTarget,
     own = docked.parts.filter(p => PARTS[p.type].docking && !p.dockPartner),
     other = target?.parts.filter(p => PARTS[p.type].docking && !p.dockPartner) || [];

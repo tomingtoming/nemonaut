@@ -1,4 +1,5 @@
-import {renderStageStack, type StackPart, type StageStackOptions} from './ksp-layout.js';
+import {renderStageStack, stagingSignature, type StackPart, type StageStackOptions} from './ksp-layout.js';
+import {signatureChanged} from './dom.js';
 import {PARTS} from './catalog.js';
 import {stagePlan} from './staging.js';
 import {stagingDiagnostics, type StagingDiagnostics} from './staging-diagnostics.js';
@@ -11,6 +12,8 @@ export function renderStagingPanel(
 ): void {
   const stack = document.querySelector('#stageStack');
   if (stack) renderStageStack(stack, parts, {flight, onSelect, onMove, onPreview, previewStage});
+  // Flight refreshes this on a timer and rebuilds only when the staging changes; the workshop always rebuilds.
+  if (!signatureChanged(host, flight ? stagingSignature(parts, flight) : '') && flight) return;
   host.replaceChildren();
   const note = document.createElement('p');
   note.className = 'muted';

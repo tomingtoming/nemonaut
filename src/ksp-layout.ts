@@ -1,9 +1,9 @@
-import {stageFuelLevels} from './stage-fuel.js';
+import {stageFuelLevels, type StageFuelLevel} from './stage-fuel.js';
 import {stagePerformance, type ResourcePart} from './resources.js';
 import {stagePlan, type StagePart} from './staging.js';
 import {PARTS} from './catalog.js';
 import {chuteNames, type ParachuteState} from './recovery.js';
-import {element, closest} from './dom.js';
+import {element, closest, setText, setTitle, signatureChanged} from './dom.js';
 export type StackPart = ResourcePart & StagePart;
 export interface StackFlight {
   fuel: ReadonlyMap<string, number>;
@@ -26,14 +26,63 @@ export interface SasDirectionFlight {
   sasMode: string;
 }
 const lastStages = new WeakMap<Element, number>();
+interface StageGauge {
+  row: HTMLElement;
+  gauge: HTMLElement;
+  meter: HTMLMeterElement;
+  value: HTMLElement;
+}
+const stageGauges = new WeakMap<Element, Map<number, StageGauge>>();
+/** Everything the staging lists show in flight except the fuel amounts, which are updated in place. */
+export function stagingSignature(parts: readonly StackPart[], flight: StackFlight): string {
+  return JSON.stringify([
+    flight.stage,
+    parts.map(p => [p.id, p.type, p.stage, !!p.parent, flight.chutes.get(p.id)?.status ?? ''])
+  ]);
+}
+function showStageFuel(
+  {row, gauge, meter, value}: StageGauge,
+  fuel: StageFuelLevel,
+  flight: StackFlight | null | undefined
+): void {
+  meter.max = Math.max(1, fuel.capacity);
+  meter.value = fuel.remaining;
+  setText(value, fuel.capacity ? Math.round((fuel.remaining / fuel.capacity) * 100) + '%' : '未供給');
+  setTitle(
+    gauge,
+    '使用可能燃料 ' +
+      Math.round(fuel.remaining) +
+      ' / ' +
+      fuel.capacity +
+      ' kg' +
+      (fuel.unfed ? ' · 未供給 ' + fuel.unfed + '基' : '')
+  );
+  gauge.classList.toggle('empty', fuel.remaining <= 0);
+  row.classList.toggle(
+    'engaged',
+    !!flight && fuel.remaining > 0 && fuel.engines.some(id => flight.active.has(id))
+  );
+}
 export function renderStageStack(
   host: Element,
   parts: readonly StackPart[],
   {flight, onSelect, onMove, onPreview, previewStage = null}: StageStackOptions
 ): void {
+  const fuelLevels = stageFuelLevels(parts, flight?.fuel);
+  // Flight refreshes this on a timer: the rows are rebuilt only when the staging changes, and the fuel
+  // gauges are updated on the existing rows. The workshop renders on edits and always rebuilds.
+  const shown = stageGauges.get(host);
+  if (!signatureChanged(host, flight ? stagingSignature(parts, flight) : '') && flight && shown) {
+    for (const [stage, gauge] of shown) {
+      const fuel = fuelLevels.get(stage);
+      if (fuel) showStageFuel(gauge, fuel, flight);
+    }
+    return;
+  }
   host.replaceChildren();
-  const fuelLevels = stageFuelLevels(parts, flight?.fuel),
-    performance = new Map((flight ? [] : stagePerformance(parts)).map(p => [p.stage, p]));
+  const gauges = new Map<number, StageGauge>();
+  stageGauges.set(host, gauges);
+  const performance = new Map((flight ? [] : stagePerformance(parts)).map(p => [p.stage, p]));
   for (const slot of stagePlan(parts).reverse()) {
     const row = document.createElement('section');
     row.className = 'stageStackRow';
@@ -93,25 +142,13 @@ export function renderStageStack(
       gauge.className = 'stageFuel';
       const meter = document.createElement('meter');
       meter.min = 0;
-      meter.max = Math.max(1, fuel.capacity);
-      meter.value = fuel.remaining;
       meter.setAttribute('aria-label', '段 ' + slot.stage + ' の使用可能燃料');
-      const value = document.createElement('span');
-      value.textContent = fuel.capacity ? Math.round((fuel.remaining / fuel.capacity) * 100) + '%' : '未供給';
-      gauge.title =
-        '使用可能燃料 ' +
-        Math.round(fuel.remaining) +
-        ' / ' +
-        fuel.capacity +
-        ' kg' +
-        (fuel.unfed ? ' · 未供給 ' + fuel.unfed + '基' : '');
-      gauge.classList.toggle('empty', fuel.remaining <= 0);
+      const value = document.createElement('span'),
+        shownGauge = {row, gauge, meter, value};
+      showStageFuel(shownGauge, fuel, flight);
+      gauges.set(slot.stage, shownGauge);
       gauge.append(meter, value);
       row.append(gauge);
-      row.classList.toggle(
-        'engaged',
-        !!flight && fuel.remaining > 0 && fuel.engines.some(id => flight.active.has(id))
-      );
     }
     const perf = performance.get(slot.stage);
     if (perf) {

@@ -37,3 +37,31 @@ export function closest<K extends Tag>(from: Element, selector: string, tag: K):
 export function missing(what: string): never {
   throw Error(what + 'が見つかりません');
 }
+const shownText = new WeakMap<Node, string>(),
+  shownSignature = new WeakMap<object, string>();
+/**
+ * Sets a node's text only when it differs from the text last set here. A list refreshed on a timer
+ * leaves unchanged nodes alone (also when a translator has rewritten what they show).
+ */
+export function setText(node: Node, text: string): void {
+  if (shownText.get(node) === text) return;
+  shownText.set(node, text);
+  node.textContent = text;
+}
+/**
+ * Whether what a list shows has changed since the last call for this host; records the new signature.
+ * A list refreshed on a timer rebuilds its buttons only then: a button replaced between press and
+ * release never receives its click.
+ */
+export function signatureChanged(host: object, signature: string): boolean {
+  if (shownSignature.get(host) === signature) return false;
+  shownSignature.set(host, signature);
+  return true;
+}
+const shownTitle = new WeakMap<Element, string>();
+/** Like setText, for the title attribute. */
+export function setTitle(el: HTMLElement, title: string): void {
+  if (shownTitle.get(el) === title) return;
+  shownTitle.set(el, title);
+  el.title = title;
+}

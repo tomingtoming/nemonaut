@@ -15,6 +15,7 @@ import {usesTankPropellant, fuelNetworks, stagePerformance} from './resources.js
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
 import {$, errorMessage, notify} from './ui-common.js';
+import {setText, signatureChanged} from './dom.js';
 import {objects, editorMarkers} from './scene.js';
 import {assets} from './asset-loader.js';
 import {updateExploration} from './exploration-ui.js';
@@ -132,8 +133,9 @@ export function designStatistics() {
     roots.length === 1,
     roots.length === 1 ? '接続ツリー正常' : `独立した機体が ${roots.length} 個あります`
   ]);
-  const unfed = fuelNetworks(viewParts)
-    .groups.filter(
+  const networks = fuelNetworks(viewParts);
+  const unfed = networks.groups
+    .filter(
       g =>
         g.engines.length &&
         !g.tanks.some(t =>
@@ -153,9 +155,12 @@ export function designStatistics() {
       (plan[0]?.twr || 0) > 1,
       (plan[0]?.twr || 0) > 1 ? '垂直離陸に必要な推力あり' : '垂直離陸には推力が不足'
     ]);
-  $('#checks', 'div').innerHTML = warnings
-    .map(([ok, s]) => `<div class="check ${ok ? '' : 'warn'}"><i>${ok ? '✓' : '!'}</i>${s}</div>`)
-    .join('');
+  // Flight refreshes the checks on a timer and rebuilds them only when they change; the workshop
+  // renders on edits and always rebuilds (its list of unfed engines has buttons).
+  if (signatureChanged($('#checks', 'div'), state.flight ? JSON.stringify(warnings) : '') || !state.flight)
+    $('#checks', 'div').innerHTML = warnings
+      .map(([ok, s]) => `<div class="check ${ok ? '' : 'warn'}"><i>${ok ? '✓' : '!'}</i>${s}</div>`)
+      .join('');
   if (!state.flight && unfed.length) {
     const list = document.createElement('details'),
       summary = document.createElement('summary');
@@ -177,15 +182,14 @@ export function designStatistics() {
     }
     $('#checks', 'div').append(list);
   }
-  const feedParts = state.flight ? state.flight.parts : state.parts,
-    feeds = fuelNetworks(feedParts).groups.filter(g => g.engines.length);
-  $('#fuelInfo', 'div').innerHTML =
-    feeds
+  const feedLines = [
+    ...networks.groups
+      .filter(g => g.engines.length)
       .map(g => {
         const capacity = g.tanks.reduce((s, p) => s + (PARTS[p.type].fuel ?? 0), 0),
           remaining = shown ? g.tanks.reduce((s, p) => s + (shown.fuel.get(p.id) || 0), 0) : capacity;
         return (
-          '<div>点火段 ' +
+          '点火段 ' +
           Math.min(...g.engines.map(p => p.stage)) +
           ' · ' +
           g.engines.length +
@@ -193,15 +197,16 @@ export function designStatistics() {
           Math.round(remaining) +
           ' / ' +
           capacity +
-          ' kg</div>'
+          ' kg'
         );
-      })
-      .join('') +
-    plan
-      .map(
-        p => '<div>段 ' + p.stage + ' · Δv ' + Math.round(p.dv) + ' m/s · TWR ' + p.twr.toFixed(2) + '</div>'
-      )
-      .join('');
+      }),
+    ...plan.map(p => '段 ' + p.stage + ' · Δv ' + Math.round(p.dv) + ' m/s · TWR ' + p.twr.toFixed(2))
+  ];
+  // The lines are kept and their text updated in place; they are recreated only when their number changes.
+  const fuelInfo = $('#fuelInfo', 'div');
+  if (fuelInfo.childElementCount !== feedLines.length)
+    fuelInfo.replaceChildren(...feedLines.map(() => document.createElement('div')));
+  for (const [i, line] of [...fuelInfo.children].entries()) setText(line, feedLines[i] ?? '');
   renderStagingPanel($('#stages', 'div'), viewParts, {
     flight: state.flight,
     previewStage: designDiagnostics.previewStage,

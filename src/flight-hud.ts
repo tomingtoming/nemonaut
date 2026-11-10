@@ -15,12 +15,23 @@ import {bodyUp} from './celestial.js';
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
 import {$} from './ui-common.js';
+import {setText} from './dom.js';
+import type {Flight} from './core.js';
 import {currentFlight, vesselCenter, flightCenter} from './current-flight.js';
 import {sceneCore, flightFocus, frame} from './scene.js';
 import {openTracking} from './tracking-recovery.js';
 import {updateDocking} from './docking-ui.js';
 import {physicsClock} from './flight-shared.js';
 import {allDebris} from './flight-visuals.js';
+interface DebrisRow {
+  vessel: Flight;
+  row: HTMLDivElement;
+  text: HTMLElement;
+  track: HTMLButtonElement;
+  take: HTMLButtonElement;
+  target: HTMLButtonElement;
+}
+let debrisRows: DebrisRow[] = [];
 let inspect: HTMLButtonElement | null = null;
 function inspectButton(): HTMLButtonElement {
   if (!inspect) throw Error('停止原因の確認ボタンがまだ作られていません');
@@ -85,48 +96,59 @@ export function updateDebrisList() {
   }
   const children = allDebris(controlled),
     list = $('#debrisList', 'div');
-  list.replaceChildren();
   $('#debrisCount', 'b').textContent = String(children.length);
-  for (const [index, f] of children.entries()) {
-    const row = document.createElement('div'),
-      text = document.createElement('small'),
-      button = document.createElement('button');
-    text.textContent =
+  // Rows are rebuilt only when the vessels change; every refresh updates their text and labels in place.
+  if (
+    children.length !== debrisRows.length ||
+    list.childElementCount !== debrisRows.length ||
+    children.some((f, i) => debrisRows[i]?.vessel !== f)
+  ) {
+    debrisRows = children.map(f => {
+      const row = document.createElement('div'),
+        text = document.createElement('small'),
+        track = document.createElement('button'),
+        take = document.createElement('button'),
+        target = document.createElement('button');
+      track.onclick = () => {
+        state.trackedDebris = f;
+        const center = vesselCenter(f);
+        frameTrackedVessel(sceneCore().controls, center, bodyUp(center, currentFlight().universalTime));
+        flightFocus.copy(center);
+        updateDebrisList();
+      };
+      take.onclick = () => hooks.switchVessel(f);
+      target.onclick = () => {
+        const live = currentFlight();
+        setTarget(live, live, f);
+        updateNavigation();
+        updateDebrisList();
+      };
+      row.append(text, track, take, target);
+      return {vessel: f, row, text, track, take, target};
+    });
+    list.replaceChildren(...debrisRows.map(r => r.row));
+  }
+  for (const [index, {vessel: f, text, track, take, target}] of debrisRows.entries()) {
+    setText(
+      text,
       (f.vesselName || '機体 ' + (index + 1)) +
-      ' · ' +
-      f.parts.length +
-      '部品 · ' +
-      ((f.orbit?.altitude || 0) / 1000).toFixed(1) +
-      ' km · 軌道 ' +
-      (f.orbit?.speed ?? 0).toFixed(0) +
-      ' m/s · 燃料 ' +
-      Math.round(f.fuelRatio * 100) +
-      '% · 電力 ' +
-      powerTotals(f.parts, f.charge).stored.toFixed(0) +
-      ' EC' +
-      (f.crashed ? ' · 損傷' : f.landed ? ' · 着地' : '');
-    button.textContent = state.trackedDebris === f ? '追跡中' : '追跡';
-    button.onclick = () => {
-      state.trackedDebris = f;
-      const target = vesselCenter(f);
-      frameTrackedVessel(sceneCore().controls, target, bodyUp(target, currentFlight().universalTime));
-      flightFocus.copy(target);
-      updateDebrisList();
-    };
-    const take = document.createElement('button');
-    take.textContent = canControl(f) ? '操縦' : '制御不可';
+        ' · ' +
+        f.parts.length +
+        '部品 · ' +
+        ((f.orbit?.altitude || 0) / 1000).toFixed(1) +
+        ' km · 軌道 ' +
+        (f.orbit?.speed ?? 0).toFixed(0) +
+        ' m/s · 燃料 ' +
+        Math.round(f.fuelRatio * 100) +
+        '% · 電力 ' +
+        powerTotals(f.parts, f.charge).stored.toFixed(0) +
+        ' EC' +
+        (f.crashed ? ' · 損傷' : f.landed ? ' · 着地' : '')
+    );
+    setText(track, state.trackedDebris === f ? '追跡中' : '追跡');
+    setText(take, canControl(f) ? '操縦' : '制御不可');
     take.disabled = !canControl(f);
-    take.onclick = () => hooks.switchVessel(f);
-    const targetButton = document.createElement('button');
-    targetButton.textContent = controlled.navigationTarget === f ? '目標指定中' : '目標にする';
-    targetButton.onclick = () => {
-      const live = currentFlight();
-      setTarget(live, live, f);
-      updateNavigation();
-      updateDebrisList();
-    };
-    row.append(text, button, take, targetButton);
-    list.append(row);
+    setText(target, controlled.navigationTarget === f ? '目標指定中' : '目標にする');
   }
 }
 export function wireFlightHud() {
