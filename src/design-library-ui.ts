@@ -7,7 +7,7 @@ import {loadCraft} from './craft-save.js';
 import {updateDepartureButton} from './departure-mode.js';
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
-import {$, errorMessage, notify, showModal} from './ui-common.js';
+import {$, errorMessage, notify, reportFailure, showModal} from './ui-common.js';
 export function loadDesigns(): import('./design-library.js').DesignLibrary {
   const raw = localStorage.getItem(DESIGN_LIBRARY_KEY);
   if (raw) {
@@ -99,7 +99,7 @@ export function openLaunchLibrary(facility: string) {
       list.append(row);
     }
   } catch (e) {
-    $('#centerNotice', 'p').textContent = '設計一覧を開けませんでした：' + errorMessage(e);
+    reportFailure('設計一覧を開けませんでした：' + errorMessage(e));
   }
 }
 function launchStoredDesign(
@@ -110,6 +110,6 @@ function launchStoredDesign(
   try {
     hooks.launchAdditional(designForLaunch(library, id, facility));
   } catch (e) {
-    $('#centerNotice', 'p').textContent = errorMessage(e);
+    reportFailure(errorMessage(e));
   }
 }

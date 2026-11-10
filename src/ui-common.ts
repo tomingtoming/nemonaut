@@ -26,6 +26,11 @@ export function notify(msg: string) {
   clearTimeout(state.timer);
   state.timer = setTimeout(() => $('#toast', 'div').classList.remove('show'), 3600);
 }
+/** Reports a failure where the player can see it: the centre notice on the space-centre screen, the toast elsewhere. */
+export function reportFailure(msg: string) {
+  if (state.atCenter) $('#centerNotice', 'p').textContent = msg;
+  else notify(msg);
+}
 export function showModal(html: string) {
   $('#modal', 'dialog').classList.remove('trackingDialog');
   $('#modalBody', 'div').innerHTML = html;

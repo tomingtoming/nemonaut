@@ -9,7 +9,7 @@ import {worldFromFlight} from './world-save.js';
 import {readStoredGame, writeStoredGame, backupStoredGame} from './game-storage.js';
 import {updateDepartureButton} from './departure-mode.js';
 import {state} from './app-state.js';
-import {$, errorMessage} from './ui-common.js';
+import {$, errorMessage, notify} from './ui-common.js';
 import {currentFlight} from './current-flight.js';
 import {updateExploration} from './exploration-ui.js';
 import {setBay} from './workshop-toolbar.js';
@@ -64,8 +64,11 @@ export function persistWorkspace() {
     );
     return true;
   } catch (e) {
-    $('#centerNotice', 'p').textContent =
+    const message =
       'ブラウザへの保存に失敗しました。ページを閉じず、機体JSON出力・飛行保存を確認してください。';
+    // The centre notice keeps the warning for the next visit; the toast shows it in the workshop and in flight.
+    $('#centerNotice', 'p').textContent = message;
+    if (!state.atCenter) notify(message);
     return false;
   }
 }
