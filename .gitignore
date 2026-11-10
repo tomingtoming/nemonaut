@@ -1,5 +1,4 @@
 node_modules/
-.sites-runtime/
 artifacts/
 dist/
 *.blend1
