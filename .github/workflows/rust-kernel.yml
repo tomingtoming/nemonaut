@@ -8,9 +8,7 @@ on:
       - 'tests/**'
       - 'tools/**'
       - 'package.json'
-      - 'tools/golden/**'
-      - 'tests/golden/**'
-      - 'tests/golden-replay.test.mjs'
+      - 'package-lock.json'
       - '.github/workflows/rust-kernel.yml'
 permissions:
   contents: read
@@ -20,21 +18,28 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
       - name: Install pinned compiler and Wasm target
         run: rustup toolchain install 1.97.0 --profile minimal --target wasm32-unknown-unknown
-      - name: Compile diagnostic Wasm
+      - name: Compile the diagnostics Wasm (parity-tool exports, not shipped)
+        run: |
+          cargo +1.97.0 build --manifest-path engine/Cargo.toml --locked --release --target wasm32-unknown-unknown --features diagnostics
+          cp engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm engine/target/orbital_engine_diagnostics.wasm
+      - name: Compile the product Wasm (default features)
         run: cargo +1.97.0 build --manifest-path engine/Cargo.toml --locked --release --target wasm32-unknown-unknown
-      - name: Compare Rust Wasm with JS Rapier (npm, its own solver)
+      - name: Compare the diagnostics Wasm with JS Rapier (npm, its own solver)
         run: |
           npm ci --ignore-scripts
           npm run build
           node tools/golden/compare-kernel.mjs
           node tools/golden/checkpoint-kernel.mjs
           node tools/golden/craft-kernel.mjs
-      - name: Check game baseline remains unchanged
+      - name: Check game baseline remains unchanged (committed src/engine Wasm)
         run: |
           # Golden v3 needs vessel-vessel collision, which exists only on Rust physics (src/engine).
-          node --import ./tools/golden/rust-preload.mjs --test tests/golden-replay.test.mjs tests/physics-facade.test.mjs
+          node --test tests/golden-replay.test.mjs tests/physics-facade.test.mjs
       - name: Check product Wasm matches this source build
         run: |
           sha256sum engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm src/engine/orbital_engine.wasm
@@ -42,6 +47,8 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: diagnostic-wasm
-          path: engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm
+          name: engine-wasm
+          path: |
+            engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm
+            engine/target/orbital_engine_diagnostics.wasm
           retention-days: 7

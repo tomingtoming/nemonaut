@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-const bytes=await readFile(new URL('../../engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm',import.meta.url));
+// The engine built with `--features diagnostics` (see .github/workflows/rust-kernel.yml); the game's Wasm lacks these exports.
+const bytes=await readFile(process.env.ENGINE_DIAGNOSTICS_WASM||new URL('../../engine/target/orbital_engine_diagnostics.wasm',import.meta.url));
 const fresh=async()=>(await WebAssembly.instantiate(bytes,{})).instance.exports;
 const state=a=>Array.from({length:14},(_,i)=>a.kernel_read(i));
 const save=a=>Array.from({length:a.kernel_save()},(_,i)=>a.kernel_save_read(i));

@@ -188,16 +188,28 @@ export class Collider {
   }
   // Ground only: pose and enabled state, sent together (the engine normalizes the rotation exactly
   // as coSetRotation does, from the value last given).
+  private groundState() {
+    if (this.index >= 0) fail('only the ground can be moved or disabled');
+    return this.world.ground;
+  }
   setEnabled(enabled: boolean) {
-    this.world.ground.enabled = enabled;
+    this.groundState().enabled = enabled;
     this.world.syncGround();
   }
   setTranslation(t: Vec3) {
-    this.world.ground.translation = {x: t.x, y: t.y, z: t.z};
+    this.groundState().translation = {x: t.x, y: t.y, z: t.z};
     this.world.syncGround();
   }
   setRotation(q: Quat) {
-    this.world.ground.rotation = {x: q.x, y: q.y, z: q.z, w: q.w};
+    this.groundState().rotation = {x: q.x, y: q.y, z: q.z, w: q.w};
+    this.world.syncGround();
+  }
+  /** setEnabled(true), setTranslation and setRotation in one engine call (not a Rapier JS method). */
+  setEnabledPose(t: Vec3, q: Quat) {
+    const ground = this.groundState();
+    ground.enabled = true;
+    ground.translation = {x: t.x, y: t.y, z: t.z};
+    ground.rotation = {x: q.x, y: q.y, z: q.z, w: q.w};
     this.world.syncGround();
   }
 }
@@ -426,6 +438,12 @@ export class World {
       n = this.exports.craft_contact_count(i);
     if (n > 0)
       callback({numContacts: () => n, contactImpulse: k => this.exports.craft_contact_impulse(i, k)}, false);
+  }
+  /** Whether any part collider has a ground contact with a positive impulse: contactPair over every
+   * part collider, in one engine call (not a Rapier JS method). */
+  groundSupported() {
+    this.flushRemovals();
+    return this.exports.craft_ground_support() === 1;
   }
   free() {
     if (!this.freed) {

@@ -7,6 +7,10 @@ publish = false
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# Exports that only the parity tools in tools/golden call. The game's Wasm is built without it.
+diagnostics = []
+
 [dependencies]
 rapier3d = { git = "https://github.com/dimforge/rapier", rev = "b716d375efc0201003f0cd9ef7168eee0b62c177" }
 

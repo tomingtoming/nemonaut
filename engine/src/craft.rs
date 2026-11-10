@@ -1,4 +1,5 @@
-//! Real craft geometry boundary, diagnostic only. No planetary/game ownership yet.
+//! The Rapier world of one vessel: its rigid body, part colliders and the static ground box.
+//! src/physics.ts drives it, one Wasm instance per vessel.
 use rapier3d::prelude::*;
 use std::cell::RefCell;
 struct Craft {
@@ -23,106 +24,6 @@ impl Craft {
     }
 }
 
-/// Shadow replay only: import the exact solver pre-state owned by the JS game.
-#[unsafe(no_mangle)]
-pub extern "C" fn craft_state(
-    px: f64,
-    py: f64,
-    pz: f64,
-    vx: f64,
-    vy: f64,
-    vz: f64,
-    qx: f64,
-    qy: f64,
-    qz: f64,
-    qw: f64,
-    wx: f64,
-    wy: f64,
-    wz: f64,
-) -> u32 {
-    if ![px, py, pz, vx, vy, vz, qx, qy, qz, qw, wx, wy, wz]
-        .iter()
-        .all(|v| v.is_finite() && v.abs() <= 1e9)
-        || (qx * qx + qy * qy + qz * qz + qw * qw - 1.0).abs() > 0.0001
-    {
-        return 0;
-    }
-    CRAFT.with(|s| {
-        let mut state = s.borrow_mut();
-        let Some(c) = state.as_mut() else {
-            return 0;
-        };
-        c.refresh_mass();
-        let b = &mut c.world.bodies[c.body];
-        b.set_translation(Vector::new(px as f32, py as f32, pz as f32), true);
-        b.set_rotation(
-            Rotation::from_xyzw(qx as f32, qy as f32, qz as f32, qw as f32),
-            true,
-        );
-        b.set_linvel(Vector::new(vx as f32, vy as f32, vz as f32), true);
-        b.set_angvel(Vector::new(wx as f32, wy as f32, wz as f32), true);
-        1
-    })
-}
-#[unsafe(no_mangle)]
-pub extern "C" fn craft_solver_step(
-    fx: f64,
-    fy: f64,
-    fz: f64,
-    tx: f64,
-    ty: f64,
-    tz: f64,
-    gx: f64,
-    gy: f64,
-    gz: f64,
-    dt: f64,
-    scale: f64,
-    error: f64,
-    prediction: f64,
-) -> u32 {
-    if ![
-        fx, fy, fz, tx, ty, tz, gx, gy, gz, dt, scale, error, prediction,
-    ]
-    .iter()
-    .all(|v| v.is_finite() && v.abs() <= 1e9)
-        || dt <= 0.0
-        // JS Rapier accepts any positive dt; coast updates use 0.25 s. Only guard runaway values.
-        || dt > 10000.0
-        || !(1.0..=100.0).contains(&scale)
-        || error < 0.0
-        || prediction < 0.0
-    {
-        return 0;
-    }
-    CRAFT.with(|s| {
-        let mut state = s.borrow_mut();
-        let Some(c) = state.as_mut() else {
-            return 0;
-        };
-        // No tick cap: the product steps for whole flights. craft_step keeps its diagnostic cap.
-        if c.shapes.is_empty() {
-            return 0;
-        }
-        c.refresh_mass();
-        let b = &mut c.world.bodies[c.body];
-        if b.mass() <= 0.0 {
-            return 0;
-        }
-        b.reset_forces(true);
-        b.reset_torques(true);
-        b.add_force(Vector::new(fx as f32, fy as f32, fz as f32), true);
-        b.add_torque(Vector::new(tx as f32, ty as f32, tz as f32), true);
-        c.world.gravity = Vector::new(gx as f32, gy as f32, gz as f32);
-        let p = &mut c.world.integration_parameters;
-        p.dt = dt as f32;
-        p.length_unit = scale as f32;
-        p.normalized_allowed_linear_error = error as f32;
-        p.normalized_prediction_distance = prediction as f32;
-        c.world.step();
-        c.ticks = c.ticks.saturating_add(1);
-        1
-    })
-}
 thread_local! { static CRAFT: RefCell<Option<Craft>> = const { RefCell::new(None) }; }
 #[unsafe(no_mangle)]
 pub extern "C" fn craft_reset() {
@@ -305,6 +206,8 @@ pub extern "C" fn craft_mass(index: u32, mass: f64) -> u32 {
         1
     })
 }
+/// Diagnostic: one fixed 120 Hz step under a single force at a point (tools/golden/craft-kernel.mjs).
+#[cfg(feature = "diagnostics")]
 #[unsafe(no_mangle)]
 pub extern "C" fn craft_step(fx: f64, fy: f64, fz: f64, px: f64, py: f64, pz: f64) -> u32 {
     if ![fx, fy, fz, px, py, pz]
@@ -338,7 +241,8 @@ pub extern "C" fn craft_step(fx: f64, fy: f64, fz: f64, px: f64, py: f64, pz: f6
         1
     })
 }
-/// xyz, velocity xyz, quaternion xyzw, omega xyz, mass, local COM xyz, ticks, shape count.
+/// Diagnostic: xyz, velocity xyz, quaternion xyzw, omega xyz, mass, local COM xyz, ticks, shape count.
+#[cfg(feature = "diagnostics")]
 #[unsafe(no_mangle)]
 pub extern "C" fn craft_read(index: u32) -> f64 {
     CRAFT.with(|s| {
@@ -381,16 +285,40 @@ pub extern "C" fn craft_read(index: u32) -> f64 {
 /// Returns 0 without ground or contact, NaN for a missing shape.
 #[unsafe(no_mangle)]
 pub extern "C" fn craft_contact_count(index: u32) -> f64 {
-    with_ground_contact(index, |points| points.len() as f64)
+    with_ground_contact(index, |impulses| impulses.count() as f64)
 }
 /// Normal impulse of the point-th ground contact point of a shape, in the order counted above.
 #[unsafe(no_mangle)]
 pub extern "C" fn craft_contact_impulse(index: u32, point: u32) -> f64 {
-    with_ground_contact(index, |points| {
-        points.get(point as usize).map_or(f64::NAN, |v| *v as f64)
+    with_ground_contact(index, |impulses| {
+        impulses.nth(point as usize).map_or(f64::NAN, f64::from)
     })
 }
-fn with_ground_contact(index: u32, f: impl FnOnce(&[f32]) -> f64) -> f64 {
+/// 1 when any craft shape has a ground contact point with a positive normal impulse: the same
+/// points, read the same way, as craft_contact_count/craft_contact_impulse over every shape.
+#[unsafe(no_mangle)]
+pub extern "C" fn craft_ground_support() -> u32 {
+    CRAFT.with(|s| {
+        let state = s.borrow();
+        let Some(c) = state.as_ref() else {
+            return 0;
+        };
+        let supported = c
+            .shapes
+            .iter()
+            .any(|shape| ground_impulses(c, *shape).any(|impulse| impulse > 0.0));
+        u32::from(supported)
+    })
+}
+/// Normal impulses of the contact points between a shape and the ground, manifold by manifold.
+fn ground_impulses(c: &Craft, shape: ColliderHandle) -> impl Iterator<Item = f32> + '_ {
+    c.ground
+        .and_then(|g| c.world.narrow_phase.contact_pair(shape, g))
+        .into_iter()
+        .flat_map(|pair| pair.manifolds())
+        .flat_map(|m| m.points.iter().map(|p| p.data.impulse))
+}
+fn with_ground_contact(index: u32, f: impl FnOnce(&mut dyn Iterator<Item = f32>) -> f64) -> f64 {
     CRAFT.with(|s| {
         let state = s.borrow();
         let Some(c) = state.as_ref() else {
@@ -399,16 +327,7 @@ fn with_ground_contact(index: u32, f: impl FnOnce(&[f32]) -> f64) -> f64 {
         let Some(shape) = c.shapes.get(index as usize) else {
             return f64::NAN;
         };
-        let mut points = Vec::new();
-        if let Some(pair) = c
-            .ground
-            .and_then(|g| c.world.narrow_phase.contact_pair(*shape, g))
-        {
-            for m in pair.manifolds() {
-                points.extend(m.points.iter().map(|p| p.data.impulse));
-            }
-        }
-        f(&points)
+        f(&mut ground_impulses(c, *shape))
     })
 }
 #[unsafe(no_mangle)]
@@ -645,7 +564,8 @@ pub extern "C" fn shape_get(index: i32, field: u32) -> f64 {
         values.get(field as usize).map_or(f64::NAN, |v| *v as f64)
     })
 }
-/// Steps with the forces already accumulated on the body (no reset, unlike craft_solver_step).
+/// Steps with the forces already accumulated on the body. No tick cap: the game steps for whole
+/// flights.
 #[unsafe(no_mangle)]
 pub extern "C" fn world_step(
     gx: f64,

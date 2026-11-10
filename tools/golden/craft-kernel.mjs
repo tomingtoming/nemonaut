@@ -4,7 +4,8 @@ import {Flight} from '../../dist/core.js';
 import {preset} from '../../dist/catalog.js';
 import R from '@dimforge/rapier3d-compat';
 await R.init();
-const bytes=await readFile(new URL('../../engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm',import.meta.url));
+// The engine built with `--features diagnostics` (see .github/workflows/rust-kernel.yml); the game's Wasm lacks these exports.
+const bytes=await readFile(process.env.ENGINE_DIAGNOSTICS_WASM||new URL('../../engine/target/orbital_engine_diagnostics.wasm',import.meta.url));
 const a=(await WebAssembly.instantiate(bytes,{})).instance.exports;
 const actual=()=>Array.from({length:19},(_,i)=>a.craft_read(i));
 function snapshot(b,tick,count){const p=b.translation(),v=b.linvel(),q=b.rotation(),w=b.angvel(),c=b.localCom();return [p.x,p.y,p.z,v.x,v.y,v.z,q.x,q.y,q.z,q.w,w.x,w.y,w.z,b.mass(),c.x,c.y,c.z,tick,count];}

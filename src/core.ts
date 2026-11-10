@@ -901,8 +901,8 @@ export class Flight {
           });
     if (this.ground) {
       const enabled = !freeFlight && (!coast || coast.distance >= -craftRadius);
-      this.ground.setEnabled(enabled);
-      if (enabled) {
+      if (!enabled) this.ground.setEnabled(false);
+      else {
         const center = this.pos
           .clone()
           .sub(origin)
@@ -915,8 +915,7 @@ export class Flight {
             new T.Matrix4().makeBasis(coast.inland, normal, coast.inland.clone().cross(normal))
           );
         }
-        this.ground.setTranslation(center);
-        this.ground.setRotation(rotation);
+        this.ground.setEnabledPose(center, rotation);
       }
     }
     this.body.setTranslation(this.pos.clone().sub(origin), true);
@@ -1446,21 +1445,8 @@ export class Flight {
     );
     this.telemetry.atmosphere = air;
     this.telemetry.surfaceSpeed = endRelativeVelocity.length();
-    const ground = this.ground;
     // Suspension contact already establishes support, including on a hard touchdown.
-    const supported =
-      contacts > 0 ||
-      (!freeFlight &&
-        !!ground &&
-        [...this.colliderGroups.values()].some(group =>
-          group.some(({collider}) => {
-            let contact = false;
-            this.world.contactPair(collider, ground, m => {
-              for (let i = 0; i < m.numContacts(); i++) if (m.contactImpulse(i) > 0) contact = true;
-            });
-            return contact;
-          })
-        ));
+    const supported = contacts > 0 || (!freeFlight && !!this.ground && this.world.groundSupported());
     // Suspension may absorb a hard touchdown over several solver steps.
     // Measure incoming contact-point speed before spring/solver impulses too.
     if (

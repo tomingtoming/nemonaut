@@ -1,40 +1,13 @@
 //! Batched wing loads for a single physics step. The caller supplies the deflected surface basis in world coordinates.
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::f64::consts::{FRAC_PI_2, PI};
 
 thread_local! {
-    static RESULT: Cell<[f64; 6]> = const { Cell::new([0.0; 6]) };
     static ROWS: RefCell<Vec<[f64; 14]>> = const { RefCell::new(Vec::new()) };
 }
 
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn wing_force(
-    vx: f64,
-    vy: f64,
-    vz: f64,
-    sx: f64,
-    sy: f64,
-    sz: f64,
-    nx: f64,
-    ny: f64,
-    nz: f64,
-    fx: f64,
-    fy: f64,
-    fz: f64,
-    density: f64,
-    area: f64,
-) -> *const f64 {
-    let result = calculate([
-        vx, vy, vz, sx, sy, sz, nx, ny, nz, fx, fy, fz, density, area,
-    ]);
-    RESULT.with(|out| {
-        out.set(result);
-        out.as_ptr().cast()
-    })
 }
 
 fn calculate(input: [f64; 14]) -> [f64; 6] {

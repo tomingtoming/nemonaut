@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import RAPIER from '@dimforge/rapier3d-compat';
 await RAPIER.init();
-const bytes=await readFile(new URL('../../engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm',import.meta.url));
+// The engine built with `--features diagnostics` (see .github/workflows/rust-kernel.yml); the game's Wasm lacks these exports.
+const bytes=await readFile(process.env.ENGINE_DIAGNOSTICS_WASM||new URL('../../engine/target/orbital_engine_diagnostics.wasm',import.meta.url));
 const {instance}=await WebAssembly.instantiate(bytes,{});
 const {fall_y}=instance.exports;
 assert.equal(typeof fall_y,'function');
