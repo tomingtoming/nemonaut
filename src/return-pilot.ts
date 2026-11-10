@@ -15,6 +15,13 @@ export interface ReturnPilotFlight {
   stageNext(): void;
   armParachutes(): void;
 }
+/** Runs stages until the given one; stops when stageNext no longer advances (nothing left to stage). */
+function stageUpTo(f: ReturnPilotFlight, stage: number): void {
+  for (let before = f.stage - 1; f.stage < stage && f.stage > before;) {
+    before = f.stage;
+    f.stageNext();
+  }
+}
 export class ReturnPilot {
   declare completionMessage: string;
   declare phase: string;
@@ -41,12 +48,12 @@ export class ReturnPilot {
       const alignment = new T.Vector3(0, 1, 0).applyQuaternion(f.q).dot(f.vel.clone().normalize());
       f.throttle = 0;
       if (alignment < -0.985) {
-        while (f.stage < 1) f.stageNext();
+        stageUpTo(f, 1);
         f.throttle = 0.4;
         this.phase = '逆噴射';
         if ((f.orbit?.periapsis ?? Infinity) < 25000) {
           f.throttle = 0;
-          while (f.stage < 2) f.stageNext();
+          stageUpTo(f, 2);
           f.armParachutes();
           f.sasMode = f.vel.length() > 300 ? 'retrograde' : 'radial';
           this.released = true;

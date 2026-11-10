@@ -10,6 +10,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {preset, part} from '../dist/catalog.js';
 import {Flight, validateCraft, descendants} from '../dist/core.js';
+import {saveFlight, loadFlight} from '../dist/flight-save.js';
 const run = (f, seconds, input = () => ({}), hz = 120) => {
   for (let i = 0; i < seconds * hz; i++) f.step(1 / hz, input(i / hz));
   return f;
@@ -120,6 +121,20 @@ test('Staging removes only the branch beneath a decoupler', () => {
     f.parts.map(p => p.type),
     ['capsule', 'solar']
   );
+});
+test('Staging stops counting once nothing is left to stage, so the flight stays saveable', () => {
+  const f = new Flight(preset('rocket'), 'land'),
+    last = Math.max(...f.parts.map(p => p.stage));
+  for (let i = 0; i < 1200; i++) f.stageNext();
+  assert.equal(f.stage, last);
+  assert.doesNotThrow(() => loadFlight(JSON.parse(JSON.stringify(saveFlight(f)))));
+  // Nothing staged at all: the first press still starts the flight at stage 0, later ones do not count.
+  const rover = new Flight(preset('rover'), 'land');
+  assert.equal(rover.brake, true);
+  for (let i = 0; i < 5; i++) assert.equal(rover.stageNext().size, 0);
+  assert.equal(rover.stage, 0);
+  assert.equal(rover.started, true);
+  assert.equal(rover.brake, false);
 });
 test('Flight is stable across fixed step sizes', () => {
   const fs = [60, 120].map(hz => {

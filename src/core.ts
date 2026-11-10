@@ -25,6 +25,7 @@ import {angularMomentum, angularVelocity} from './angular-momentum.js';
 import {transferFuel} from './fuel-transfer.js';
 import {advanceWorldPhysics} from './world-physics.js';
 import {fleet, canControl} from './fleet.js';
+import {hasNextStage} from './vessel-controls.js';
 import {
   launchSiteOrientation,
   overWater,
@@ -685,8 +686,11 @@ export class Flight {
   }
   stageNext() {
     if (!this.started) this.brake = false;
-    this.stage++;
     this.started = true;
+    // The first press starts the flight at stage 0 even with nothing staged. After that the number stops
+    // at the last staged part: it is saved, and a save rejects a runaway value.
+    if (this.stage >= 0 && !hasNextStage(this.parts, this.stage)) return new Set<string>();
+    this.stage++;
     for (const p of this.parts)
       if (PARTS[p.type].parachute && p.stage === this.stage) {
         const chute = this.chutes.get(p.id);
