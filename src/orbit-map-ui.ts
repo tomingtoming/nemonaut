@@ -13,7 +13,6 @@ import {maneuverEditValues, createManeuverNode, maneuverDirection} from './maneu
 import {mountFlightMap, mountMapPanels} from './flight-map.js';
 import {fleet} from './fleet.js';
 import {setTarget} from './relative-navigation.js';
-import {drawOrbit} from './orbit-view.js';
 import {apsisPlan, formatDuration} from './orbit-plan.js';
 import {maneuverPreview} from './maneuver.js';
 import {mountTrajectoryPanel} from './trajectory-panel.js';
@@ -72,7 +71,6 @@ export function updateOrbit() {
     ' m/s · 重力 ' +
     o.gravity.toFixed(2) +
     ' m/s²';
-  drawOrbit($('#orbitMap', 'canvas'), o);
   if (!$('#orbitOverlay', 'section').hidden) updateOrbitPlan(o);
   const sky = scene.background;
   if (!(sky instanceof T.Color)) throw Error('空の色が設定されていません');
@@ -164,8 +162,6 @@ export function wireOrbitMapControls() {
   $('#fixManeuver', 'button').onclick = () => {
     if (!state.flight) return;
     try {
-      const value = $('#planDeltaV', 'input').value;
-      if (value.trim() === '') throw Error('予定Δvを入力してください');
       const preview = maneuverPreview(
         flightCenter(),
         state.flight.vel,
@@ -258,8 +254,6 @@ function updateOrbitPlan(o: import('./celestial.js').OrbitState) {
   $('#maneuverResult', 'p').textContent = '比較プレビューはOFFです。';
   if ($('#planEnabled', 'input').checked) {
     try {
-      const value = $('#planDeltaV', 'input').value;
-      if (value.trim() === '') throw new Error('予定Δvを入力してください');
       preview = maneuverPreview(flightCenter(), fl.vel, planLocation(), planDeltaV(), fl.universalTime);
       const km = (x: number) => (Number.isFinite(x) ? (x / 1000).toFixed(1) + ' km' : 'なし（脱出）');
       $('#maneuverResult', 'p').textContent =

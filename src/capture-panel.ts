@@ -24,7 +24,6 @@ export function mountCapturePanel(
   notify: (message: string) => void
 ): CapturePanel {
   const panel = document.createElement('section');
-  panel.className = 'transferPanel';
   panel.id = 'capturePanel';
   panel.hidden = true;
   panel.innerHTML =

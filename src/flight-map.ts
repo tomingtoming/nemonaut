@@ -199,7 +199,6 @@ export function mountFlightMap(
   predict.textContent = '最接近を予測';
   predict.title = '無噴射の二体軌道。最大6時間。計算時点の予測を保持';
   const prediction = document.createElement('small');
-  prediction.className = 'mapEncounter';
   targetPanel.append(predict, prediction);
   predict.onclick = () => {
     plannedEncounter = null;
@@ -233,7 +232,6 @@ export function mountFlightMap(
   compare.textContent = '噴射後を比較';
   compare.title = '編集中の瞬間噴射と無噴射を、噴射時刻から同じ期間で比較';
   const comparison = document.createElement('small');
-  comparison.className = 'mapEncounter';
   targetPanel.append(compare, comparison);
   compare.onclick = () => {
     try {
@@ -457,14 +455,10 @@ export function mountFlightMap(
   };
   overlay.addEventListener('input', e => {
     const targetId = e.target instanceof Element ? e.target.id : '';
-    if (['planEnabled', 'planLocation', 'planDeltaV', 'planNormal', 'planRadial'].includes(targetId))
-      timedBinding.clear();
-    if (['planEnabled', 'planLocation', 'planDeltaV', 'planNormal', 'planRadial'].includes(targetId))
-      transferResult.textContent = '';
-    if (
-      ['planEnabled', 'planLocation', 'planDeltaV', 'planNormal', 'planRadial'].includes(targetId) &&
-      comparison.textContent
-    ) {
+    if (!['planEnabled', 'planLocation', 'planDeltaV', 'planNormal', 'planRadial'].includes(targetId)) return;
+    timedBinding.clear();
+    transferResult.textContent = '';
+    if (comparison.textContent) {
       plannedEncounter = null;
       encounter = null;
       comparison.textContent = '';
@@ -988,7 +982,6 @@ export function mountMapPanels() {
     existingText = closest(existing, 'label', 'label').firstChild;
   if (!existingText) throw Error('予定Δvの表示文字が見つかりません');
   existingText.textContent = '順行 / 逆行（m/s）';
-  closest(existing, 'label', 'label').title = '＋順行、−逆行';
   for (const [id, name, title] of [
     ['planNormal', '軌道面 ＋ / −（m/s）', '＋は位置×速度の方向、−はその逆'],
     ['planRadial', '外向き / 内向き（m/s）', '速度に垂直な軌道面内方向。＋外向き、−内向き']
@@ -1026,12 +1019,6 @@ export function mountMapPanels() {
   for (const id of ['orbitPeriod', 'apoapsisPlan', 'periapsisPlan', 'orbitPlanNote'])
     info.append(byId(id, 'p'));
   readings.append(info);
-  for (const small of plan.querySelectorAll('small')) {
-    small.previousElementSibling?.setAttribute('title', small.textContent);
-    small.hidden = true;
-  }
-  const note = readings.querySelector<HTMLElement>(':scope>p:last-of-type');
-  if (note && !note.id) note.hidden = true;
   const headingText = element(document, '.mapHeader h2', 'h2').firstChild;
   if (!headingText) throw Error('軌道マップ見出しの文字が見つかりません');
   headingText.textContent = '';

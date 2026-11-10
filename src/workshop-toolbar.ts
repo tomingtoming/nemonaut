@@ -2,7 +2,6 @@
 // craft, VAB/SPH bay, markers, edit modes, snap, symmetry, craft JSON save/load/export/import and the catalog
 // with categories and search. app.ts calls wireWorkshopToolbar and wireCatalog at their original places.
 // Calls up into app.ts through app-hooks. No import-time side effects.
-import {storageKey} from './app-id.js';
 import {examples, exampleGroups} from './examples.js';
 import {mountWorkshopSymmetry, type WorkshopSymmetry} from './workshop-symmetry.js';
 import {updateDepartureButton} from './departure-mode.js';
@@ -169,28 +168,6 @@ export function wireWorkshopToolbar() {
   $('#snap', 'input').onchange = applySnap;
   applySnap();
   $('#environment', 'select').onchange = hooks.updateInfo;
-  $('#save', 'button').onclick = () => {
-    try {
-      localStorage.setItem(storageKey('craft'), JSON.stringify(craftData()));
-      notify('このブラウザに機体を保存しました');
-    } catch {
-      notify('保存できませんでした。JSON出力を使ってください。');
-    }
-  };
-  $('#load', 'button').onclick = () => {
-    if (state.flight) return;
-    try {
-      const s = localStorage.getItem(storageKey('craft'));
-      if (!s) {
-        notify('保存された機体がありません');
-        return;
-      }
-      loadData(JSON.parse(s));
-      notify('保存した機体を読み込みました');
-    } catch (e) {
-      notify(errorMessage(e));
-    }
-  };
   $('#export', 'button').onclick = () => {
     const a = document.createElement('a');
     const url = URL.createObjectURL(
