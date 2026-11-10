@@ -6,11 +6,12 @@ import {
   leftKeys,
   upKeys,
   landingGear,
+  cameraFrameKey,
   pitchKeys,
   yawKeys
 } from './flight-keyboard.js';
 // Flight controls for touch devices (BACKLOG 8b): a virtual stick (W/S, A/D), roll (Q/E), full throttle /
-// cut (Z/X), stage (Space) and RCS translation (I/K, J/L, U/O). They feed the keyboard's own path: every
+// cut (Z/X), stage (Space), camera on the craft (V) and RCS translation (I/K, J/L, U/O). They feed the keyboard's own path: every
 // press and release is dispatched to window as the equivalent KeyboardEvent, so the held-key set, its gates
 // (pause, modal, observed vessel), the warp drop to 1×, the rocket-axes swap and the capture listeners that
 // cancel the launch pilot, autopilots and auto-docking all behave exactly as with the keyboard. The controls
@@ -79,6 +80,8 @@ const BUTTONS: readonly (readonly [
   aria: string,
   group: 'roll' | 'main' | 'rcs'
 ])[] = [
+  // The workshop's ⊙ is hidden in flight; this one sits in the roll row, which has room in both orientations.
+  [cameraFrameKey, '⊙', 'カメラを機体に合わせる', 'roll'],
   [rollKeys[0], '↺', '左にロール', 'roll'],
   [rollKeys[1], '↻', '右にロール', 'roll'],
   [throttleKeys[0], '全推力', 'スロットル全開', 'main'],

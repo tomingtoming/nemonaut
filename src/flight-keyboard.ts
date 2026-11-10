@@ -27,9 +27,11 @@ export const leftKeys = ['KeyJ', 'KeyL'] as const;
 export const upKeys = ['KeyU', 'KeyO'] as const;
 export const throttleKeys = ['KeyZ', 'KeyX'] as const;
 export const throttleUp = {codes: ['ShiftLeft', 'ShiftRight'], label: 'Shift'} as const;
-export const throttleDown = {codes: ['ControlLeft', 'ControlRight'], label: 'Ctrl'} as const;
+export const throttleDown = {codes: ['KeyC'], label: 'C'} as const;
 export const stageKey = 'Space';
 export const sasKey = 'KeyT';
+// Frames the camera on the craft. F is the flaps in flight, so the workshop's F is V here.
+export const cameraFrameKey = 'KeyV';
 type AxisKeys = readonly [string, string];
 export function keyAxis(held: ReadonlySet<string>, [positive, negative]: AxisKeys): number {
   return Number(held.has(positive)) - Number(held.has(negative));
@@ -58,7 +60,7 @@ const flightKeys = new Set([
   sasKey,
   flapControl.code,
   landingGear.code,
-  'KeyV',
+  cameraFrameKey,
   'CapsLock',
   ...throttleUp.codes,
   ...throttleDown.codes

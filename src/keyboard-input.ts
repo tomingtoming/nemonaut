@@ -6,8 +6,8 @@ import {
   flapControl,
   stageKey,
   sasKey,
+  cameraFrameKey,
   throttleKeys,
-  throttleDown,
   armChutes,
   toggleRcs,
   landingGear,
@@ -43,7 +43,7 @@ export function wireKeyboard() {
     )
       return;
     // Flight frames the camera with V; F is kept free for the flaps (BACKLOG 9d), G is the gear (9c).
-    if (state.flight && e.code === 'KeyV') {
+    if (state.flight && e.code === cameraFrameKey) {
       e.preventDefault();
       if (!e.repeat) frame();
       return;
@@ -67,12 +67,7 @@ export function wireKeyboard() {
       return;
     }
     if (state.flight && flightPanels().flightPause.paused) return;
-    if (
-      state.flight &&
-      (!canControl(state.flight) ||
-        ((e.ctrlKey || e.metaKey || e.altKey) && !throttleDown.codes.some(code => code === e.code)))
-    )
-      return;
+    if (state.flight && (!canControl(state.flight) || e.ctrlKey || e.metaKey || e.altKey)) return;
     keys.add(e.code);
     if ([stageKey, 'Delete', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
     if (e.repeat) return;
@@ -92,12 +87,14 @@ export function wireKeyboard() {
       }
       return;
     }
-    if (e.ctrlKey && e.code === 'KeyZ') {
-      e.preventDefault();
-      undo();
-    } else if (e.ctrlKey && e.code === 'KeyY') {
+    // Ctrl on Windows and Linux, Cmd on macOS; Cmd+Shift+Z is the macOS redo.
+    const command = e.ctrlKey || e.metaKey;
+    if (command && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.metaKey && e.shiftKey))) {
       e.preventDefault();
       redo();
+    } else if (command && e.code === 'KeyZ') {
+      e.preventDefault();
+      undo();
     } else if (e.code === 'Escape') {
       cancelPlacement();
       setMode('select');

@@ -46,15 +46,14 @@ const PILOT_KEYS = new Set([
   'KeyO',
   'KeyZ',
   'KeyX',
+  'KeyC',
   'KeyR',
   'KeyT',
   'KeyB',
   'KeyH',
   'Space',
   'ShiftLeft',
-  'ShiftRight',
-  'ControlLeft',
-  'ControlRight'
+  'ShiftRight'
 ]);
 export function initDockingUi(uses: DockingUiDeps) {
   deps = uses;

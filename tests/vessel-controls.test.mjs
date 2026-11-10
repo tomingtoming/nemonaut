@@ -27,7 +27,7 @@ test('the rover lists driving, steering and the brake, and no throttle or Space'
 test('the rocket lists throttle, the Space start and attitude, and no driving', () => {
   const rows = vesselControls(preset('rocket'));
   assert.equal(row(rows, '全推力 / 停止').how, 'Z / X');
-  assert.equal(row(rows, '推力を少しずつ').how, 'Shift / Ctrl');
+  assert.equal(row(rows, '推力を少しずつ').how, 'Shift / C');
   assert.equal(row(rows, 'エンジン始動 / 次段').how, 'Space');
   assert.equal(row(rows, '向きを変える').how, 'W/S · A/D · Q/E');
   assert.equal(row(rows, '前後に走る'), undefined);

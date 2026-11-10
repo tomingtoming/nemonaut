@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {acceptsFlightKey} from '../dist/flight-keyboard.js';
+import {acceptsFlightKey, throttleDown, throttleAdjustLabel} from '../dist/flight-keyboard.js';
 
 test('focused sliders allow piloting but retain native range keys', () => {
   const range = {tagName: 'INPUT', type: 'range'};
@@ -31,4 +31,16 @@ test('typing and selecting never becomes flight input', () => {
   ])
     assert.equal(acceptsFlightKey(target, 'KeyS'), false);
   assert.equal(acceptsFlightKey({tagName: 'BODY'}, 'KeyS'), true);
+});
+test('throttle down is C; Ctrl is not a flight key, so browser shortcuts stay with the browser', () => {
+  assert.deepEqual([...throttleDown.codes], ['KeyC']);
+  assert.equal(throttleAdjustLabel, 'Shift / C');
+  const range = {tagName: 'INPUT', type: 'range'};
+  assert.equal(acceptsFlightKey(range, 'KeyC'), true);
+  for (const code of ['ControlLeft', 'ControlRight']) assert.equal(acceptsFlightKey(range, code), false);
+});
+test('a focused button passes every key on: floating windows keep only the keys of fields', () => {
+  for (const code of ['KeyW', 'Space', 'KeyM', 'KeyP', 'KeyV', 'Enter'])
+    assert.equal(acceptsFlightKey({tagName: 'BUTTON'}, code), true);
+  assert.equal(acceptsFlightKey({tagName: 'INPUT', type: 'checkbox'}, 'KeyW'), false);
 });

@@ -199,7 +199,7 @@ export function mountManeuverPanel(
       if (
         !session.owner ||
         !acceptsFlightKey(e.target, e.code) ||
-        !/^(Key[WASDQEZXTBHRIJKLUO]|Space|ShiftLeft|ShiftRight|ControlLeft|ControlRight)$/.test(e.code)
+        !/^(Key[WASDQEZXCTBHRIJKLUO]|Space|ShiftLeft|ShiftRight)$/.test(e.code)
       )
         return;
       const f = session.owner;

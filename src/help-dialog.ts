@@ -2,6 +2,7 @@ import {
   flapControl,
   stageKey,
   sasKey,
+  cameraFrameKey,
   throttleKeys,
   attitudeKeyLabel,
   translationKeyLabel,
@@ -51,7 +52,7 @@ const FLIGHT_KEYS: Rows = [
   ['CapsLock', '精密操縦（姿勢操作を25%に）'],
   ['P', '一時停止'],
   ['M', '軌道マップ'],
-  ['V', 'カメラを機体に合わせる'],
+  [cameraFrameKey.slice(3), 'カメラを機体に合わせる'],
   ['矢印キー / 右ドラッグ', '視点を回す'],
   ['F5 / F9', '飛行保存 / 飛行復帰']
 ];
@@ -76,6 +77,7 @@ const FLIGHT_TOUCH: Rows = [
   ['「RCS並進」ボタン', 'RCSで平行移動（RCSを入れると出る）'],
   ['部品を長押し', '部品の操作窓'],
   ['画面をドラッグ · 2本指', '視点を回す · 拡大'],
+  ['「⊙」', 'カメラを機体に合わせる'],
   ['「軌道マップ」', 'ピンチで拡大、ダブルタップで中心へ'],
   ['「Ⅱ」', '一時停止']
 ];

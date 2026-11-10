@@ -181,7 +181,7 @@ export function mountOrbitalAscent(
       if (
         !session.owner ||
         !acceptsFlightKey(e.target, e.code) ||
-        !/^(Key[WASDQEZXTB]|Space|ShiftLeft|ShiftRight|ControlLeft|ControlRight)$/.test(e.code)
+        !/^(Key[WASDQEZXCTB]|Space|ShiftLeft|ShiftRight)$/.test(e.code)
       )
         return;
       const f = session.owner;
