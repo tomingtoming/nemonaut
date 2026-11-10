@@ -111,9 +111,9 @@ export function startFrameLoop(
           $('#warp', 'select').value = '1';
         }
         const selectedWarp = Number($('#warp', 'select').value);
-        if (selectedWarp > 50) {
-          physicsClock.reset();
-          try {
+        try {
+          if (selectedWarp > 50) {
+            physicsClock.reset();
             const world = currentWorldRuntime();
             world.replace(state.flight);
             const result = world.coast(Math.max(0.000001, Math.min(dt * selectedWarp, maneuverWarp)), {
@@ -127,78 +127,86 @@ export function startFrameLoop(
             if (result.reason) $('#warp', 'select').value = '1';
             else if (result.remaining > 0.01)
               $('#warpStatus', 'small').textContent += ' · 処理上限に合わせ減速';
-          } catch (error) {
-            $('#warp', 'select').value = '1';
-            $('#warpStatus', 'small').textContent = '通常速度へ：' + errorMessage(error);
-          }
-        } else {
-          const physicsResult = physicsClock.advance(dt, selectedWarp, () => {
-            if (state.launchPilot) {
-              const piloted = currentFlight();
-              if (keys.size || piloted.crashed) {
+          } else {
+            const physicsResult = physicsClock.advance(dt, selectedWarp, () => {
+              if (state.launchPilot) {
+                const piloted = currentFlight();
+                if (keys.size || piloted.crashed) {
+                  state.launchPilot = null;
+                  $('#autoLaunch', 'button').textContent = '自動軌道投入（見本用）';
+                } else {
+                  const ids = new Set(piloted.parts.map(p => p.id));
+                  state.launchPilot.update(piloted);
+                  showBrakeState($('#brake', 'button'), piloted.brake);
+                  $('#sas', 'button').classList.toggle('active', piloted.sas);
+                  $('#sas', 'button').textContent = 'SAS ' + (piloted.sas ? 'ON' : 'OFF');
+                  for (const id of ids)
+                    if (!piloted.parts.some(p => p.id === id)) {
+                      const object = objects.get(id);
+                      if (object) object.visible = false;
+                    }
+                }
+              }
+              maneuverPanel.step(currentFlight(), 1 / 120);
+              orbitalPanel.step(currentFlight(), 1 / 120);
+              const autopilotCommands = cruisePanel.step(currentFlight(), 1 / 120);
+              const dockingCommands = dockingPilot.active ? dockingPilot.step(currentFlight(), 1 / 120) : {};
+              const stepped = currentFlight(),
+                world = currentWorldRuntime(),
+                pitch = keyAxis(keys, pitchKeys);
+              // W/S with the brake on drives powered wheels off at once (BACKLOG 9a).
+              if (releaseBrakeForDrive(stepped, pitch)) {
+                showBrakeState($('#brake', 'button'), stepped.brake);
+                notify('ブレーキを解除しました');
+              }
+              world.replace(stepped);
+              world.step(1 / 120, {
+                ...manualTranslation(
+                  keys,
+                  stepped.rocketAxes,
+                  Number($('#portPower', 'select').value) / 100,
+                  stepped.instrumentRotation
+                ),
+                precision: $('#precisionControl', 'button').getAttribute('aria-pressed') === 'true',
+                drive: pitch,
+                pitch,
+                yaw: keyAxis(keys, yawKeys),
+                roll: keyAxis(keys, rollKeys),
+                assemblyAttitude: autopilotCommands,
+                ...dockingCommands
+              });
+              updateFlightChallenges();
+              if (state.launchPilot?.done) {
+                const completionMessage = state.launchPilot.completionMessage;
                 state.launchPilot = null;
                 $('#autoLaunch', 'button').textContent = '自動軌道投入（見本用）';
-              } else {
-                const ids = new Set(piloted.parts.map(p => p.id));
-                state.launchPilot.update(piloted);
-                showBrakeState($('#brake', 'button'), piloted.brake);
-                $('#sas', 'button').classList.toggle('active', piloted.sas);
-                $('#sas', 'button').textContent = 'SAS ' + (piloted.sas ? 'ON' : 'OFF');
-                for (const id of ids)
-                  if (!piloted.parts.some(p => p.id === id)) {
-                    const object = objects.get(id);
-                    if (object) object.visible = false;
-                  }
+                notify(completionMessage);
               }
-            }
-            maneuverPanel.step(currentFlight(), 1 / 120);
-            orbitalPanel.step(currentFlight(), 1 / 120);
-            const autopilotCommands = cruisePanel.step(currentFlight(), 1 / 120);
-            const dockingCommands = dockingPilot.active ? dockingPilot.step(currentFlight(), 1 / 120) : {};
-            const stepped = currentFlight(),
-              world = currentWorldRuntime(),
-              pitch = keyAxis(keys, pitchKeys);
-            // W/S with the brake on drives powered wheels off at once (BACKLOG 9a).
-            if (releaseBrakeForDrive(stepped, pitch)) {
-              showBrakeState($('#brake', 'button'), stepped.brake);
-              notify('ブレーキを解除しました');
-            }
-            world.replace(stepped);
-            world.step(1 / 120, {
-              ...manualTranslation(
-                keys,
-                stepped.rocketAxes,
-                Number($('#portPower', 'select').value) / 100,
-                stepped.instrumentRotation
-              ),
-              precision: $('#precisionControl', 'button').getAttribute('aria-pressed') === 'true',
-              drive: pitch,
-              pitch,
-              yaw: keyAxis(keys, yawKeys),
-              roll: keyAxis(keys, rollKeys),
-              assemblyAttitude: autopilotCommands,
-              ...dockingCommands
+              if (selectedWarp > 1 && physicalWarpStop(currentFlight(), keys.size > 0)) {
+                $('#warp', 'select').value = '1';
+                $('#warpStatus', 'small').textContent =
+                  '通常速度へ：' + physicalWarpStop(currentFlight(), keys.size > 0);
+                return false;
+              }
             });
-            updateFlightChallenges();
-            if (state.launchPilot?.done) {
-              const completionMessage = state.launchPilot.completionMessage;
-              state.launchPilot = null;
-              $('#autoLaunch', 'button').textContent = '自動軌道投入（見本用）';
-              notify(completionMessage);
-            }
-            if (selectedWarp > 1 && physicalWarpStop(currentFlight(), keys.size > 0)) {
-              $('#warp', 'select').value = '1';
+            if (Number($('#warp', 'select').value) > 1)
               $('#warpStatus', 'small').textContent =
-                '通常速度へ：' + physicalWarpStop(currentFlight(), keys.size > 0);
-              return false;
-            }
-          });
-          if (Number($('#warp', 'select').value) > 1)
-            $('#warpStatus', 'small').textContent =
-              '物理計算 ' +
-              selectedWarp +
-              '倍 · 推力・空力・熱・接地を継続' +
-              (physicsResult.limited ? ' · 処理上限に合わせ減速' : '');
+                '物理計算 ' +
+                selectedWarp +
+                '倍 · 推力・空力・熱・接地を継続' +
+                (physicsResult.limited ? ' · 処理上限に合わせ減速' : '');
+          }
+        } catch (error) {
+          // A throwing step must not end the frame before it renders. Coasting falls back to normal
+          // speed; at normal speed the step would throw again every frame, so the flight pauses.
+          if (selectedWarp > 50) {
+            $('#warp', 'select').value = '1';
+            $('#warpStatus', 'small').textContent = '通常速度へ：' + errorMessage(error);
+          } else {
+            console.error(error);
+            flightPause.set(true);
+            notify('物理計算を続けられないため一時停止しました：' + errorMessage(error));
+          }
         }
       }
       syncEngineShrouds(state.flight.parts, objects, assets.get('engine-shroud'));

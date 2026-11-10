@@ -1422,6 +1422,7 @@
  "胴体抵抗の物理エンジンが未初期化です": "Body drag physics engine is not initialized",
  "物理更新の時刻が不正です": "Invalid physics update time",
  "物理計算 ": "Physics ",
+ "物理計算を続けられないため一時停止しました：": "Paused because the physics step failed: ",
  "状態が変わりました · 再予測": "State changed · predict again",
  "状態が変わりました。離陸を再予測してください": "State changed. Re-predict the takeoff",
  "独立した機体が ": "There are ",
