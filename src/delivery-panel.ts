@@ -16,11 +16,8 @@ import {
   SURVEY_TARGET_SECONDS
 } from './delivery-sites.js';
 import {deliveryTelemetry} from './surface-delivery.js';
-import {element} from './dom.js';
+import {element, missing} from './dom.js';
 const key = storageKey('delivery-guide');
-function missing(what: string): never {
-  throw Error(what + 'が見つかりません');
-}
 export type DeliveryStationVessel = import('./surface-survey.js').SurveyVessel &
   import('./observation.js').ObservationStatusVessel;
 /** A saved world vessel as the station and survey lookups read it. */
@@ -68,7 +65,6 @@ export function mountDeliveryPanel(
   hud.id = 'deliveryGuide';
   hud.hidden = true;
   hud.setAttribute('aria-label', '観測点への案内');
-  element(root, '#flightHud', 'div').append(hud);
   const menuButton = document.createElement('button');
   menuButton.textContent = '探査計画';
   menuButton.id = 'flightDelivery';

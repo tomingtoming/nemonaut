@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {preserveManualControlEdit} from '../dist/manual-control-edit.js';
+import {preserveManualControlEdit, isControlTarget} from '../dist/manual-control-edit.js';
 // A built module as a script: drop its imports and exports (dist is esbuild output from src/*.ts).
 const script = url =>
   readFileSync(url, 'utf8')
@@ -63,6 +63,7 @@ function harness(kind = 'maneuver') {
     ManeuverSession: Session,
     AscentSession: Session,
     preserveManualControlEdit,
+    isControlTarget,
     window: {addEventListener() {}},
     floatingWindow() {
       throw Error('unused');
@@ -142,6 +143,7 @@ test('aircraft return release preserves the throttle edit through stop and updat
   };
   const context = vm.createContext({
     preserveManualControlEdit,
+    isControlTarget,
     TakeoffSession: IdleSession,
     LandingSession: IdleSession,
     ReturnSession: Returning,

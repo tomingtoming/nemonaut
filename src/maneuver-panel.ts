@@ -4,8 +4,8 @@ import {ManeuverSession, type ManeuverFlight, type ManeuverNode} from './maneuve
 import {maneuverWarpBudget} from './maneuver-warp.js';
 import {floatingWindow, type FloatingWindow} from './floating-window.js';
 import {acceptsFlightKey} from './flight-keyboard.js';
-import {preserveManualControlEdit, type ManualControl} from './manual-control-edit.js';
-import {element} from './dom.js';
+import {preserveManualControlEdit, isControlTarget} from './manual-control-edit.js';
+import {element, missing} from './dom.js';
 
 export interface ManeuverPanelFlight extends ManeuverFlight, ControllableVessel {}
 interface ManeuverWindow {
@@ -15,16 +15,6 @@ interface ManeuverWindow {
   start: HTMLButtonElement;
   status: HTMLOutputElement;
   readout: HTMLParagraphElement;
-}
-type ControlTarget = EventTarget & ManualControl & {closest?(selectors: string): Element | null};
-// The fields the capture listener reads: an optional string value, boolean checked and closest().
-const isControlTarget = (target: EventTarget | null): target is ControlTarget =>
-  target !== null &&
-  (!('value' in target) || target.value === undefined || typeof target.value === 'string') &&
-  (!('checked' in target) || target.checked === undefined || typeof target.checked === 'boolean') &&
-  (!('closest' in target) || target.closest === undefined || typeof target.closest === 'function');
-function missing(what: string): never {
-  throw Error(what + 'が見つかりません');
 }
 export interface ManeuverPanelState {
   flight: ManeuverPanelFlight | null | undefined;

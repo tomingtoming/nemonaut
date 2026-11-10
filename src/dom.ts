@@ -33,3 +33,7 @@ export function byId<K extends Tag>(
 export function closest<K extends Tag>(from: Element, selector: string, tag: K): HTMLElementTagNameMap[K] {
   return checked(from.closest(selector), selector, tag);
 }
+/** Fails for something that should exist; `what` names it in the message. */
+export function missing(what: string): never {
+  throw Error(what + 'が見つかりません');
+}

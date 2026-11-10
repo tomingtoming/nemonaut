@@ -17,7 +17,7 @@ import {
   setPartThrustLimit,
   setPartControlLimit
 } from './part-actions.js';
-import {element, closest} from './dom.js';
+import {element, closest, missing} from './dom.js';
 type Flight = import('./core.js').Flight;
 export interface PartWindowPort {
   select: HTMLSelectElement;
@@ -55,9 +55,6 @@ export interface PartWindows {
   open(id: string, x: number, y: number): void;
   update(): void;
   clear(): void;
-}
-function missing(what: string): never {
-  throw Error(what + 'が見つかりません');
 }
 export type ReplaceFlight = (next: Flight, message?: string) => void;
 export function mountPartWindows(
