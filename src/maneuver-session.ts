@@ -1,15 +1,26 @@
+// Automatic burn of a fixed maneuver node: holds the burn attitude, waits for the planned start,
+// throttles to the plan, and stops when the node completes or the vessel or plan changes.
 import * as T from 'three';
-import {transferBurnTiming} from '../dist/timed-rendezvous.js';
-import {canControl} from '../dist/fleet.js';
-import {PARTS} from '../dist/catalog.js';
-import {attitudeTarget} from '../dist/navigation.js';
-import {bodyOrbitState} from '../dist/celestial.js';
-import {terminalBurnDuration} from '../dist/maneuver-thrust-profile.js';
-import {captureBurnEstimate} from '../dist/lunar-capture.js';
-import {maneuverDirection, validateManeuverNode} from '../dist/maneuver-node.js';
-import {maneuverExecutionPlan, maneuverExecutionThrottle} from './maneuver-execution-plan.mjs';
+import {transferBurnTiming} from './timed-rendezvous.js';
+import {canControl} from './fleet.js';
+import {PARTS} from './catalog.js';
+import {attitudeTarget} from './navigation.js';
+import {bodyOrbitState} from './celestial.js';
+import {terminalBurnDuration} from './maneuver-thrust-profile.js';
+import {captureBurnEstimate} from './lunar-capture.js';
+import {maneuverDirection, validateManeuverNode, type ManeuverNodeRecord} from './maneuver-node.js';
+import {
+  maneuverExecutionPlan,
+  maneuverExecutionThrottle,
+  type ManeuverExecutionPlan,
+  type ManeuverSettings
+} from './maneuver-execution-plan.js';
+import type {Flight} from './core.js';
+export type {ManeuverExecutionPlan, ManeuverSettings} from './maneuver-execution-plan.js';
+/** The pilot settings a burn takes over and gives back when it stops. */
+export type ManeuverControlState = Pick<Flight, 'sas' | 'sasMode' | 'navigationAuto' | 'navigationFrame'>;
 
-const planKey = n =>
+const planKey = (n: ManeuverNodeRecord): string =>
   JSON.stringify([
     n.universalTime,
     n.time,
@@ -21,19 +32,33 @@ const planKey = n =>
     n.departure,
     n.rendezvous
   ]);
-const craftKey = f =>
+const craftKey = (f: Flight): string =>
   JSON.stringify([
     f.stage,
     [...f.active],
     f.parts.map(p => [p.id, p.thrustLimit, p.fuelEnabled, p.fuelCrossfeed])
   ]);
 export class ManeuverSession {
+  declare owner: Flight | null;
+  declare state: string;
+  declare message: string;
+  // The fields below are assigned by start() and describe the burn only while owner is set.
+  declare plan: ManeuverExecutionPlan | undefined;
+  declare previous: ManeuverControlState | undefined;
+  declare node: ManeuverNodeRecord | null | undefined;
+  declare previousStop: boolean | undefined;
+  declare signature: string | undefined;
+  declare craft: string | undefined;
+  declare body: string | undefined;
+  declare stable: number;
+  declare offAxis: number;
+  declare lit: boolean | undefined;
   constructor() {
     this.owner = null;
     this.state = 'idle';
     this.message = '待機';
   }
-  start(f, settings = {}) {
+  start(f: Flight | null | undefined, settings: ManeuverSettings = {}): void {
     if (this.owner) throw Error('実行中の噴射を停止してください');
     if (!f || !canControl(f)) throw Error('操縦可能な機体が必要です');
     if (f.throttle !== 0) throw Error('スロットルを0にしてください');
@@ -75,6 +100,7 @@ export class ManeuverSession {
       navigationFrame: f.navigationFrame
     };
     this.node = f.maneuver;
+    if (!this.node) throw TypeError('The validated maneuver is no longer on the vessel');
     this.previousStop = this.node.stopAtTarget;
     this.signature = planKey(this.node);
     this.craft = craftKey(f);
@@ -86,20 +112,21 @@ export class ManeuverSession {
     this.offAxis = 0;
     this.lit = false;
   }
-  stop(state = 'cancelled', message = '中止') {
+  stop(state = 'cancelled', message = '中止'): void {
     const f = this.owner;
     if (!f) return;
     f.throttle = 0;
     Object.assign(f, this.previous);
     f.holdQ = f.q.clone();
     if (!f.maneuver && f.sasMode === 'maneuver') f.sasMode = 'hold';
+    if (!this.node) throw TypeError('No maneuver node to restore');
     if (this.previousStop === undefined) delete this.node.stopAtTarget;
     else this.node.stopAtTarget = this.previousStop;
     this.owner = null;
     this.state = state;
     this.message = message;
   }
-  step(f, dt) {
+  step(f: Flight, dt: number): void {
     if (!this.owner) return;
     if (f !== this.owner) {
       this.stop('cancelled', '機体切替');
@@ -114,7 +141,12 @@ export class ManeuverSession {
       this.stop('failed', '機体の制御を失いました');
       return;
     }
-    if (f.maneuver !== this.node || planKey(this.node) !== this.signature || craftKey(f) !== this.craft) {
+    if (
+      f.maneuver !== this.node ||
+      !this.node ||
+      planKey(this.node) !== this.signature ||
+      craftKey(f) !== this.craft
+    ) {
       this.stop('cancelled', '機体または計画が変更されました');
       return;
     }
@@ -140,6 +172,7 @@ export class ManeuverSession {
       this.stop('failed', '噴射の適用範囲を外れました');
       return;
     }
+    if (!this.plan) throw TypeError('No execution plan');
     if (f.universalTime > this.plan.startTime + this.plan.duration * 2 + 60) {
       this.stop('failed', '予定噴射を完了できませんでした');
       return;
@@ -150,7 +183,10 @@ export class ManeuverSession {
     const thrustAxis = new T.Vector3(0, 1, 0),
       direction = maneuverDirection(this.node);
     f.sasMode = 'hold';
-    f.holdQ = attitudeTarget(f.q, thrustAxis, direction);
+    // Both are null only without a node, and the node was checked above.
+    const hold = attitudeTarget(f.q, thrustAxis, direction);
+    if (!direction || !hold) throw TypeError('A maneuver node always has a burn direction');
+    f.holdQ = hold;
     f.navigationAuto = false;
     f.navigationFrame = 'orbit';
     this.node.stopAtTarget = true;

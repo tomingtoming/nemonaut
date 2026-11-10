@@ -1,11 +1,40 @@
-import {transferThrottle} from '../dist/rendezvous-burn.js';
-import {terminalBurnThrottle} from '../dist/maneuver-thrust-profile.js';
+import {transferThrottle} from './rendezvous-burn.js';
+import {terminalBurnThrottle} from './maneuver-thrust-profile.js';
+import type {ManeuverNodeRecord} from './maneuver-node.js';
+/** The node fields that fix a burn's start and power; a full ManeuverNodeRecord satisfies it. */
+export type ManeuverPlanNode = Pick<
+  ManeuverNodeRecord,
+  | 'universalTime'
+  | 'complete'
+  | 'capture'
+  | 'returnPlan'
+  | 'departure'
+  | 'rendezvous'
+  | 'plannedThrottle'
+  | 'onAlignment'
+>;
+export interface ManeuverSettings {
+  throttle?: number;
+  timing?: string;
+}
+export interface ManeuverExecutionPlan {
+  startTime: number;
+  duration: number;
+  throttle: number;
+  timing: string;
+  onAlignment?: boolean;
+}
 // A node fixed for "now" (onAlignment) starts as soon as the attitude settles; its startTime is
 // only the alignment deadline, ALIGNMENT_WINDOW seconds ahead.
 export const ALIGNMENT_WINDOW = 120;
 // Ordinary nodes name an impulse epoch. Finite-return and lunar nodes already
 // name a burn start; never apply the half-duration correction to those twice.
-export function maneuverExecutionPlan(node, now, fullDuration, {throttle, timing = 'center'} = {}) {
+export function maneuverExecutionPlan(
+  node: ManeuverPlanNode | null | undefined,
+  now: number,
+  fullDuration: number,
+  {throttle, timing = 'center'}: ManeuverSettings = {}
+): ManeuverExecutionPlan {
   if (!node || node.complete) throw Error('未実行のマニューバを固定してください');
   if (
     !Number.isFinite(now) ||
@@ -43,7 +72,11 @@ export function maneuverExecutionPlan(node, now, fullDuration, {throttle, timing
 
 // Lunar return/departure predictions include this terminal throttle sequence.
 // Capture and explicit finite-return nodes use their constant planned power.
-export function maneuverExecutionThrottle(node, plan, remaining) {
+export function maneuverExecutionThrottle(
+  node: Pick<ManeuverNodeRecord, 'rendezvous' | 'returnPlan' | 'departure'>,
+  plan: Pick<ManeuverExecutionPlan, 'throttle'>,
+  remaining: number
+): number {
   return node.rendezvous
     ? (node.rendezvous.burnThrottle ?? transferThrottle(remaining))
     : node.returnPlan || node.departure

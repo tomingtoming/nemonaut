@@ -1,22 +1,45 @@
+// Automatic landing lifecycle: admission to the capture envelope (landingReadiness), a trim plan
+// from the landing plan worker, the approach itself, and the climb-out after a go-around.
 import * as T from 'three';
 import {
   CruisePilot,
+  cruiseSettings,
   cruiseReadiness,
   cruiseTargetReadiness,
   cruiseAuthority,
-  cruisePropulsion
-} from '../dist/cruise-pilot.js';
-import {bodyAltitude, bodyUp, referenceBody} from '../dist/celestial.js';
-import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
-import {compassHeading} from '../dist/navigation.js';
-import {runwayApproach} from '../dist/runway-navigation.js';
-import {PARTS} from '../dist/catalog.js';
-import {landingPlanCurrent, landingPlanMatches} from './landing-plan-client.mjs';
-import {LandingPrototype} from './landing-prototype.mjs';
+  cruisePropulsion,
+  type CruisePrevious,
+  type CruiseTelemetry
+} from './cruise-pilot.js';
+import {bodyAltitude, bodyUp, referenceBody} from './celestial.js';
+import {surfaceRelativeVelocity} from './surface-frame.js';
+import {compassHeading} from './navigation.js';
+import {runwayApproach} from './runway-navigation.js';
+import {PARTS} from './catalog.js';
+import {
+  landingPlanCurrent,
+  landingPlanMatches,
+  type LandingPlanClient,
+  type LandingPlanContext,
+  type LandingPlanResult
+} from './landing-plan-client.js';
+import {LandingPrototype, type LandingTelemetry} from './landing-prototype.js';
+import type {AutopilotCommands} from './takeoff-prototype.js';
+import type {LandingPlan} from './landing-trim.js';
+import type {Flight} from './core.js';
+/** The pilot of a running landing, as the flight loop and panel see it. */
+export type LandingPilot = LandingPrototype;
+export type LandingPrepareResult = LandingPlanResult;
+interface PreparedLanding {
+  f: Flight;
+  plan: LandingPlan;
+  context: LandingPlanContext;
+  end: string;
+}
 
 // Initial capture envelope, based on the approach and normal-return trials.
 // This is not a route planner from arbitrary positions or a landing guarantee.
-export function landingReadiness(f, end = '09') {
+export function landingReadiness(f: Flight, end = '09'): string | null {
   if (!['09', '27'].includes(end)) return '着陸方向を選択してください';
   const problem = cruiseAuthority(f) || cruisePropulsion(f);
   if (problem) return problem;
@@ -31,6 +54,7 @@ export function landingReadiness(f, end = '09') {
     heading = compassHeading(new T.Vector3(0, 0, 1).applyQuaternion(f.q), center, f.universalTime);
   if (
     !r ||
+    heading === null ||
     ![h, heading, r.remaining, r.crossTrack, v.length(), v.dot(up)].every(Number.isFinite) ||
     h < 300 ||
     h > 400 ||
@@ -51,7 +75,18 @@ export function landingReadiness(f, end = '09') {
 }
 
 export class LandingSession {
-  constructor(client) {
+  declare client: LandingPlanClient;
+  declare generation: number;
+  declare state: string;
+  declare prepared: PreparedLanding | null;
+  declare pilot: LandingPilot | null;
+  declare owner: Flight | null;
+  declare previous: CruisePrevious | undefined;
+  declare recovery: CruisePilot | null | undefined;
+  declare reason: string | null | undefined;
+  declare faultMessage: string | null | undefined;
+  declare telemetry: LandingTelemetry | CruiseTelemetry | undefined;
+  constructor(client: LandingPlanClient) {
     this.client = client;
     this.generation = 0;
     this.state = 'idle';
@@ -59,13 +94,13 @@ export class LandingSession {
     this.pilot = null;
     this.owner = null;
   }
-  cancel() {
+  cancel(): void {
     this.generation++;
     this.client.cancel();
     this.prepared = null;
     if (!this.pilot) this.state = 'idle';
   }
-  async prepare(f, {end = '09'} = {}) {
+  async prepare(f: Flight, {end = '09'}: {end?: string} = {}): Promise<LandingPrepareResult> {
     if (this.pilot) throw Error('着陸制御を停止してから再準備してください');
     this.cancel();
     const generation = this.generation,
@@ -75,6 +110,7 @@ export class LandingSession {
     try {
       const result = await this.client.request(f);
       if (generation !== this.generation) return {status: 'cancelled'};
+      if (!result) throw TypeError('The landing plan request ended without a result');
       if (result.status !== 'ready') {
         this.state = result.status === 'unavailable' ? 'rejected' : 'idle';
         return result;
@@ -88,7 +124,7 @@ export class LandingSession {
         this.state = 'idle';
         return {status: 'stale'};
       }
-      this.prepared = {f, ...result, end};
+      this.prepared = {f, ...result, plan: result.plan, context: result.context, end};
       this.state = 'ready';
       return result;
     } catch (error) {
@@ -97,16 +133,17 @@ export class LandingSession {
       throw error;
     }
   }
-  readyFor(f) {
+  readyFor(f: Flight): boolean {
     if (this.state !== 'ready' || !this.prepared) return false;
     const p = this.prepared,
       valid = p.f === f && landingPlanCurrent(f, p.context) && !landingReadiness(f, p.end);
     if (!valid) this.cancel();
     return valid;
   }
-  start(f) {
+  start(f: Flight): LandingPilot {
     if (!this.readyFor(f)) throw Error('進入状態が変わりました。着陸を再準備してください');
     const p = this.prepared;
+    if (!p) throw TypeError('No prepared landing');
     const pilot = new LandingPrototype(f, {end: p.end, preparedPlan: p.plan, preparedContext: p.context});
     this.previous = {sas: f.sas, sasMode: f.sasMode, trim: f.trim};
     this.owner = f;
@@ -118,7 +155,7 @@ export class LandingSession {
     this.faultMessage = null;
     return pilot;
   }
-  stop(reason = 'manual') {
+  stop(reason = 'manual'): void {
     this.cancel();
     const f = this.owner;
     if (f && this.pilot) {
@@ -133,13 +170,13 @@ export class LandingSession {
     this.state = reason === 'fault' ? 'failed' : reason === 'landed' ? 'landed' : 'idle';
     this.reason = reason;
   }
-  goAround(f) {
+  goAround(f: Flight): boolean {
     if (f !== this.owner || !this.pilot || this.pilot.phase !== 'approach') return false;
     this.pilot.phase = 'go-around';
     this.pilot.reason = 'requested';
     return true;
   }
-  step(f, dt, {manual = false} = {}) {
+  step(f: Flight, dt: number, {manual = false}: {manual?: boolean} = {}): AutopilotCommands {
     if (!this.pilot) return {};
     if (f !== this.owner || manual) {
       this.stop(manual ? 'manual' : 'vessel changed');
@@ -167,7 +204,11 @@ export class LandingSession {
           vertical: 0
         };
         if (!cruiseTargetReadiness(f, target)) {
-          this.recovery = new CruisePilot(f, target);
+          // A target without a compass heading is refused by cruiseSettings, as CruisePilot would refuse it.
+          this.recovery = new CruisePilot(
+            f,
+            cruiseSettings({...target, heading: target.heading ?? undefined})
+          );
           this.pilot.phase = 'recovery';
         }
       }

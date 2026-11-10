@@ -93,7 +93,7 @@ export function cruiseSettings(value: Partial<CruiseSettingsInput> | null | unde
 // 20-degree bank. This is an admission check, not a certified stall speed.
 export function cruiseTargetReadiness(
   f: Pick<CruiseFlight, 'pos' | 'universalTime' | 'stats'>,
-  target: CruiseSettings
+  target: {speed: number; altitude: number; mode?: string; heading?: number | null; vertical?: number}
 ): string | null {
   const height = Math.max(
     bodyAltitude(f.pos, f.universalTime),

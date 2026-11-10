@@ -1,13 +1,28 @@
-import {ascentPlane, orbitInclination} from './ascent-plane.mjs';
-import {availableEngineForce} from '../dist/descent.js';
+// Automatic ascent guidance to a circular orbit at a target altitude and inclination: gravity turn
+// to 35 km, then a closed-loop insertion. Commands the same throttle, staging and attitude
+// actuators as the player.
+import {ascentPlane, orbitInclination} from './ascent-plane.js';
+import {availableEngineForce} from './descent.js';
 import * as T from 'three';
-import {PARTS} from '../dist/catalog.js';
-import {atmosphere, localUp, orbitState, radial} from '../dist/planet.js';
-// Independent target-altitude experiment, not connected to the product UI.
-// Commands only the existing actuators. Based on this repository's demonstration pilot.
-// Optional demonstration pilot: commands the same throttle, staging and attitude actuators as the player.
+import {PARTS} from './catalog.js';
+import {atmosphere, localUp, orbitState, radial} from './planet.js';
+import type {Flight} from './core.js';
+export interface AscentTarget {
+  altitude?: number;
+  tolerance?: number;
+  inclination?: number;
+}
 export class AscentPrototype {
-  constructor({altitude = 90000, tolerance = 2000, inclination = 0} = {}) {
+  declare inclination: number;
+  declare plane: T.Vector3 | null;
+  declare altitude: number;
+  declare tolerance: number;
+  declare completionMessage: string;
+  declare phase: string;
+  declare done: boolean;
+  declare message: string;
+  declare actualInclination: number | null | undefined;
+  constructor({altitude = 90000, tolerance = 2000, inclination = 0}: AscentTarget = {}) {
     if (!Number.isFinite(altitude) || altitude < 80000 || altitude > 500000)
       throw Error('Target altitude outside 80–500 km');
     if (!Number.isFinite(tolerance) || tolerance <= 0 || tolerance > 5000)
@@ -23,7 +38,7 @@ export class AscentPrototype {
     this.done = false;
     this.message = '自動投入：離昇';
   }
-  update(f) {
+  update(f: Flight): void {
     f.navigationAuto = false;
     f.navigationFrame = 'orbit';
     if (this.done || f.crashed) {

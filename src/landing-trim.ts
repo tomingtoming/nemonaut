@@ -1,11 +1,48 @@
-// Longitudinal steady-flight estimate, not an admission or safety guarantee.
+// Longitudinal trim for the approach: the steady speed, angle of attack, elevator and throttle on a
+// 3° descent, searched over speed. An estimate, not an admission or safety guarantee.
 import * as T from 'three';
-import {PARTS} from '../dist/catalog.js';
-import {partRotation, partCenter, aeroPoint, surfaceForce, controlDeflection} from '../dist/aero.js';
-import {engineMaxThrust, fuelNetworks} from '../dist/resources.js';
-import {bodyDrag} from '../dist/body-drag.js';
+import {PARTS} from './catalog.js';
+import {partRotation, partCenter, aeroPoint, surfaceForce, controlDeflection} from './aero.js';
+import {engineMaxThrust, fuelNetworks} from './resources.js';
+import {bodyDrag, type BodyAerodynamics} from './body-drag.js';
+import type {ControlPart} from './aero.js';
+import type {ResourcePart, EngineSet} from './resources.js';
+export interface LandingTrimFlight {
+  bodyAerodynamics: BodyAerodynamics;
+  parts: readonly (ControlPart & ResourcePart)[];
+  stats: {mass: number; com: T.Vector3};
+  fuel: ReadonlyMap<string, number>;
+  active: EngineSet;
+}
+export interface TrimAir {
+  density?: number;
+  gravity?: number;
+}
+export interface TrimPoint extends TrimAir {
+  speed: number;
+  alpha: number;
+  slope?: number;
+}
+export interface TrimForces {
+  speed: number;
+  alpha: number;
+  pitchCommand: number;
+  throttle: number;
+  stalled: boolean;
+  liftError: number;
+  pitchTorque: number;
+}
+export interface LandingPlan extends TrimForces {
+  minimumSample: number;
+  density: number;
+  gravity: number;
+  mass: number;
+}
 const rad = Math.PI / 180;
-export function planLandingTrim(f, {density = 1.225, gravity = 9.81} = {}) {
+export function planLandingTrim(
+  f: LandingTrimFlight,
+  {density = 1.225, gravity = 9.81}: TrimAir = {}
+): LandingPlan | null {
   // Bounded diagnostic search with 20% elevator travel held in reserve by
   // landingTrim. The additional speed margin is a candidate for flight testing.
   for (let speed = 40; speed <= 160; speed += 2) {
@@ -15,7 +52,17 @@ export function planLandingTrim(f, {density = 1.225, gravity = 9.81} = {}) {
   }
   return null;
 }
-export function trimForces(f, {speed, alpha, pitchCommand, density = 1.225, gravity = 9.81, slope = -3}) {
+export function trimForces(
+  f: LandingTrimFlight,
+  {
+    speed,
+    alpha,
+    pitchCommand,
+    density = 1.225,
+    gravity = 9.81,
+    slope = -3
+  }: TrimPoint & {pitchCommand: number}
+): TrimForces {
   const flow = new T.Vector3(0, -Math.sin(alpha * rad), Math.cos(alpha * rad)),
     velocity = flow.clone().multiplyScalar(speed);
   const pitch = (alpha + slope) * rad,
@@ -66,7 +113,7 @@ export function trimForces(f, {speed, alpha, pitchCommand, density = 1.225, grav
     pitchTorque: torque.x
   };
 }
-function pitchTrim(f, options) {
+function pitchTrim(f: LandingTrimFlight, options: TrimPoint): TrimForces | null {
   let lo = -0.8,
     hi = 0.8,
     left = trimForces(f, {...options, pitchCommand: lo}),
@@ -82,14 +129,18 @@ function pitchTrim(f, options) {
   }
   return trimForces(f, {...options, pitchCommand: (lo + hi) / 2});
 }
-export function landingTrim(f, {speed, density = 1.225, gravity = 9.81, slope = -3} = {}) {
-  let previous = null;
+// A call without a speed has no trim: NaN makes every candidate non-finite, so the search returns null.
+export function landingTrim(
+  f: LandingTrimFlight,
+  {speed = NaN, density = 1.225, gravity = 9.81, slope = -3}: TrimAir & {speed?: number; slope?: number} = {}
+): TrimForces | null {
+  let previous: TrimForces | null = null;
   for (let alpha = 0; alpha <= 12; alpha += 0.5) {
     const value = pitchTrim(f, {speed, alpha, density, gravity, slope});
     if (value && previous && value.liftError * previous.liftError <= 0) {
       let lo = previous.alpha,
         hi = alpha,
-        result = value;
+        result: TrimForces | null = value;
       for (let i = 0; i < 18; i++) {
         const mid = (lo + hi) / 2;
         result = pitchTrim(f, {speed, alpha: mid, density, gravity, slope});

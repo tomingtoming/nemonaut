@@ -1,15 +1,18 @@
+// Admission check for the automatic ascent: a controllable rocket standing upright on the home
+// planet whose ignition stage lifts its weight along the vessel's up axis.
 import * as T from 'three';
-import {PARTS} from '../dist/catalog.js';
-import {saveFlight, loadFlight} from '../dist/flight-save.js';
-import {bodyAltitude, bodyUp, bodyGravity, referenceBody} from '../dist/celestial.js';
-import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
-import {atmosphere} from '../dist/planet.js';
-import {engineBurn} from '../dist/resources.js';
-import {partRotation} from '../dist/aero.js';
+import {PARTS} from './catalog.js';
+import {saveFlight, loadFlight} from './flight-save.js';
+import {bodyAltitude, bodyUp, bodyGravity, referenceBody} from './celestial.js';
+import {surfaceRelativeVelocity} from './surface-frame.js';
+import {atmosphere} from './planet.js';
+import {engineBurn} from './resources.js';
+import {partRotation} from './aero.js';
+import type {Flight} from './core.js';
 
 // Run on explicit start, not each display frame. The isolated snapshot exercises
 // actual staging, including separators, without changing the player's vessel.
-export function ascentReadiness(f) {
+export function ascentReadiness(f: Flight | null | undefined): string | null {
   if (
     !f ||
     f.crashed ||
@@ -31,9 +34,8 @@ export function ascentReadiness(f) {
   data.detached = [];
   data.targetPartId = null;
   data.dockingPorts = null;
-  let copy;
+  const copy = loadFlight(data);
   try {
-    copy = loadFlight(data);
     const last = Math.max(-1, ...copy.parts.filter(p => PARTS[p.type].thrust).map(p => p.stage));
     while (!copy.active.size && copy.stage < last) copy.stageNext();
     if (!copy.parts.some(p => PARTS[p.type].control)) return '点火までの段分離で制御装置を失います';
@@ -68,6 +70,6 @@ export function ascentReadiness(f) {
     if (!reaction && !gimbal) return '作動できる姿勢制御装置が必要';
     return null;
   } finally {
-    copy?.dispose();
+    copy.dispose();
   }
 }

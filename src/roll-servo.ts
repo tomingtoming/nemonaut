@@ -1,7 +1,11 @@
 import * as T from 'three';
-import {surfaceAngularVelocity} from '../dist/surface-frame.js';
-// Experimental comparison with the existing quaternion servo (gain=4).
-export function rollServo(f, target, gain = 4) {
+import {surfaceAngularVelocity} from './surface-frame.js';
+export interface RollServoVessel {
+  q: T.Quaternion;
+  omega: T.Vector3;
+}
+// Roll command toward a target attitude: quaternion error with rate damping. The SAS servo uses gain 4.
+export function rollServo(f: RollServoVessel, target: T.Quaternion, gain = 4): number {
   const inverse = f.q.clone().invert(),
     error = target.clone().multiply(inverse);
   if (error.w < 0) {

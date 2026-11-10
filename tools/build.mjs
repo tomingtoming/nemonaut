@@ -1,23 +1,19 @@
 // Builds the delivered site: src/ → dist/ (dist is output only, never edited or committed).
 // JS and static files are copied byte for byte; .ts files are transformed one by one (no bundling,
 // import paths stay as written, e.g. './celestial.js'; every import is kept, as
-// verbatimModuleSyntax asks, so an import kept only for its side effects still runs). Then the five bundles are generated.
+// verbatimModuleSyntax asks, so an import kept only for its side effects still runs).
+// The two module workers are then bundled in place from the transformed modules: an import map does
+// not apply inside a worker, so they cannot share the page's 'three' specifier or its modules.
 // Usage: node tools/build.mjs [--quiet]
-import {transform} from 'esbuild';
+import {build, transform} from 'esbuild';
 import {readdir, readFile, writeFile, mkdir, rm, copyFile} from 'node:fs/promises';
 import path from 'node:path';
-import {fileURLToPath, pathToFileURL} from 'node:url';
+import {fileURLToPath} from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(root, 'src'),
   OUT = path.join(root, 'dist');
-const BUNDLES = [
-  'build-takeoff-worker.mjs',
-  'build-takeoff-controller.mjs',
-  'build-maneuver.mjs',
-  'build-orbital-ascent.mjs',
-  'build-landing-worker.mjs'
-];
+export const WORKERS = ['takeoff-forecast-worker.js', 'landing-plan-worker.js'];
 const isDeclaration = f => /\.d\.m?ts$/.test(f);
 
 async function* walk(dir) {
@@ -56,18 +52,30 @@ export async function buildSite({quiet = false} = {}) {
       copied++;
     }
   }
-  // The bundle scripts resolve their paths (tools/…, dist/…) from the repository root.
-  const cwd = process.cwd();
-  process.chdir(root);
-  try {
-    for (const script of BUNDLES)
-      await import(pathToFileURL(path.join(root, 'tools', script)).href + '?' + Date.now());
-  } finally {
-    process.chdir(cwd);
-  }
+  await build({
+    absWorkingDir: OUT,
+    entryPoints: WORKERS,
+    outdir: '.',
+    allowOverwrite: true,
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    target: 'es2022',
+    charset: 'utf8',
+    legalComments: 'inline',
+    logLevel: 'silent',
+    plugins: [
+      {
+        name: 'vendored-three',
+        setup(b) {
+          b.onResolve({filter: /^three$/}, () => ({path: './vendor/three/three.module.js', external: true}));
+        }
+      }
+    ]
+  });
   if (!quiet)
     console.log(
-      `built dist: ${copied} copied, ${transformed} transformed, ${BUNDLES.length} bundles, ${Math.round(performance.now() - started)} ms`
+      `built dist: ${copied} copied, ${transformed} transformed, ${WORKERS.length} worker bundles, ${Math.round(performance.now() - started)} ms`
     );
 }
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]))

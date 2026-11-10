@@ -1,23 +1,96 @@
-// Landing guidance commands actuators only; runway end is fixed per attempt.
+// Landing guidance from the final approach to a stop: a 3° glide path, centreline capture, flare,
+// rollout braking, and a go-around when the final is unstable. Commands the existing actuators
+// only; the runway end is fixed per attempt.
 import * as T from 'three';
-import {bodyUp, bodyAltitude, bodyGravity} from '../dist/celestial.js';
-import {surfaceRelativeVelocity, surfaceAngularVelocity} from '../dist/surface-frame.js';
-import {compassFrame, compassHeading} from '../dist/navigation.js';
-import {runwayApproach, RUNWAY} from '../dist/runway-navigation.js';
-import {atmosphere} from '../dist/planet.js';
-import {PARTS} from '../dist/catalog.js';
-import {partCenter} from '../dist/aero.js';
-import {TakeoffPrototype} from './takeoff-prototype.mjs';
-import {extendWheelTrack} from '../dist/runway-wheel-track.js';
-import {RolloutControl} from './rollout-control.mjs';
-import {rollServo} from './roll-servo.mjs';
-import {planLandingTrim} from './landing-trim.mjs';
-import {landingPlanMatches, landingPlanCurrent} from './landing-plan-client.mjs';
+import {bodyUp, bodyAltitude, bodyGravity} from './celestial.js';
+import {surfaceRelativeVelocity, surfaceAngularVelocity} from './surface-frame.js';
+import {compassFrame, compassHeading} from './navigation.js';
+import {runwayApproach, RUNWAY} from './runway-navigation.js';
+import {atmosphere} from './planet.js';
+import {PARTS} from './catalog.js';
+import {partCenter} from './aero.js';
+import {TakeoffPrototype, type AutopilotCommands} from './takeoff-prototype.js';
+import {extendWheelTrack, type WheelTrack} from './runway-wheel-track.js';
+import {RolloutControl} from './rollout-control.js';
+import {rollServo} from './roll-servo.js';
+import {planLandingTrim, type LandingPlan} from './landing-trim.js';
+import {landingPlanMatches, landingPlanCurrent, type LandingPlanContext} from './landing-plan-client.js';
+import type {Flight} from './core.js';
 const rad = Math.PI / 180,
   clamp = T.MathUtils.clamp;
+export interface LandingOptions {
+  end?: string;
+  rolloutControl?: boolean;
+  rollIntegral?: boolean;
+  lateralMode?: string;
+  lateralTime?: number;
+  rollGain?: number;
+  speedFloor?: number;
+  approachAlpha?: number;
+  useTrimPlan?: boolean;
+  preparedPlan?: LandingPlan;
+  preparedContext?: LandingPlanContext;
+}
+/** The pitch command (degrees) the approach hands to the attitude inner loop. */
+interface ApproachGuidance {
+  running: boolean;
+  telemetry: {pitch: number};
+}
+export interface LandingTelemetry {
+  h: number;
+  agl: number;
+  speed: number;
+  vs: number;
+  remaining: number;
+  cross: number;
+  heading: number | null;
+  crossRate?: number;
+  course?: number;
+  targetHeading?: number;
+  targetBank?: number;
+  pitch?: number;
+  approachSpeed?: number;
+  targetVs?: number;
+  desiredHeight?: number;
+}
+export interface LandingAbort {
+  reasons: string[];
+  time: number;
+  agl: number;
+  speed: number;
+  vs: number;
+  pitchShortfall: number;
+  controlLossDuration: number;
+  cross: number;
+  remaining: number;
+  heading: number | null;
+}
 export class LandingPrototype {
+  declare end: string;
+  declare heading: number;
+  declare approachAlpha: number;
+  declare speedFloor: number;
+  declare rollGain: number;
+  declare lateralTime: number;
+  declare lateralMode: string;
+  declare rollIntegral: boolean;
+  declare owner: string;
+  declare phase: string;
+  declare elapsed: number;
+  declare powerBias: number;
+  declare verticalBias: number;
+  declare rolloutControl: RolloutControl | null;
+  declare inner: TakeoffPrototype<ApproachGuidance>;
+  declare trimPlan: LandingPlan | null | undefined;
+  /** Assigned together with trimPlan and read only while a trim plan is in use. */
+  declare commandedSpeed: number;
+  declare reason: string | undefined;
+  declare track: WheelTrack | null | undefined;
+  declare telemetry: LandingTelemetry | undefined;
+  declare sinkDuration: number | undefined;
+  declare abort: LandingAbort | undefined;
   constructor(
-    f,
+    f: Flight,
     {
       end = '09',
       rolloutControl = true,
@@ -30,7 +103,7 @@ export class LandingPrototype {
       useTrimPlan = true,
       preparedPlan,
       preparedContext
-    } = {}
+    }: LandingOptions = {}
   ) {
     if (!['09', '27'].includes(end)) throw Error('Unknown runway end');
     this.end = end;
@@ -47,7 +120,7 @@ export class LandingPrototype {
     this.powerBias = f.throttle;
     this.verticalBias = 0;
     this.rolloutControl = rolloutControl ? new RolloutControl() : null;
-    this.inner = new TakeoffPrototype(f, {speed: 90, integral: true, handoff: 'attitude'});
+    this.inner = new TakeoffPrototype<ApproachGuidance>(f, {speed: 90, integral: true, handoff: 'attitude'});
     this.inner.cruise = {running: true, telemetry: {pitch: 0}};
     if (useTrimPlan) {
       const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
@@ -71,7 +144,7 @@ export class LandingPrototype {
       }
     }
   }
-  update(f, dt) {
+  update(f: Flight, dt: number): AutopilotCommands {
     if (f.vesselId !== this.owner || f.crashed || !Number.isFinite(dt) || dt < 0) {
       this.phase = 'failed';
       return {};
@@ -85,7 +158,11 @@ export class LandingPrototype {
       vs = v.dot(up);
     const r = runwayApproach(center, f.universalTime, this.end, f.vel),
       heading = compassHeading(new T.Vector3(0, 0, 1).applyQuaternion(f.q), center, f.universalTime);
-    const headingError = ((this.heading - heading + 540) % 360) - 180;
+    // Landing guidance exists only around the home planet's runway.
+    if (!r) throw TypeError('No runway approach away from the home planet');
+    // Where the compass is undefined the heading arithmetic has always used 0 for it.
+    const compass = heading ?? 0;
+    const headingError = ((this.heading - compass + 540) % 360) - 180;
     const groundHeight =
       Math.max(
         ...f.parts
@@ -129,11 +206,13 @@ export class LandingPrototype {
       };
     }
     const actualPitch = Math.asin(clamp(new T.Vector3(0, 0, 1).applyQuaternion(f.q).dot(up), -1, 1)) / rad;
-    const pitchShortfall = (this.inner.cruise.telemetry.pitch ?? actualPitch) - actualPitch;
+    const guidance = this.inner.cruise;
+    if (!guidance) throw TypeError('The approach guidance was removed');
+    const pitchShortfall = (guidance.telemetry.pitch ?? actualPitch) - actualPitch;
     const lostVerticalControl = vs < -8 && (f.telemetry.commands?.pitch ?? 0) < -0.95 && pitchShortfall > 3;
     this.sinkDuration = lostVerticalControl ? (this.sinkDuration ?? 0) + dt : 0;
     if (this.phase === 'approach') {
-      const reasons = [];
+      const reasons: string[] = [];
       // Loss of vertical control can occur before reaching the final corridor.
       if (this.sinkDuration > 2 || (agl < 100 && r.remaining < 2000 && vs < -8)) reasons.push('sink-rate');
       if (agl < 100 && r.remaining < 2000) {
@@ -198,7 +277,7 @@ export class LandingPrototype {
       const targetHeading =
         this.heading -
         clamp(Math.atan2(r.crossTrack + (r.track?.x ?? 0) * 8, Math.max(500, speed * 8)) / rad, -30, 30);
-      const turn = ((targetHeading - heading + 540) % 360) - 180;
+      const turn = ((targetHeading - compass + 540) % 360) - 180;
       const crossRate = r.track?.x ?? 0,
         alongRate = -(r.track?.y ?? -speed);
       const course = this.heading + Math.atan2(crossRate, Math.max(alongRate, 1)) / rad;
@@ -210,9 +289,10 @@ export class LandingPrototype {
         this.lateralMode === 'acceleration'
           ? clamp(Math.atan2(acceleration, g), -20 * rad, 20 * rad)
           : clamp(turn * 0.7, -20, 20) * rad;
-      const yawError = this.lateralMode === 'acceleration' ? ((course - heading + 540) % 360) - 180 : turn;
+      const yawError = this.lateralMode === 'acceleration' ? ((course - compass + 540) % 360) - 180 : turn;
       const frame = compassFrame(center, f.universalTime),
-        yaw = (heading + clamp(yawError, -5, 5)) * rad;
+        yaw = (compass + clamp(yawError, -5, 5)) * rad;
+      if (!frame) throw TypeError('No compass frame at a pole');
       const forward = frame.north
           .clone()
           .multiplyScalar(Math.cos(yaw))
@@ -224,7 +304,7 @@ export class LandingPrototype {
           new T.Matrix4().makeBasis(right, forward.clone().cross(right).normalize(), forward)
         )
         .multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), bank));
-      this.inner.cruise.telemetry = {pitch};
+      guidance.telemetry = {pitch};
       this.powerBias = clamp(this.powerBias + (approachSpeed - speed) * 0.005 * elapsed, 0, 1);
       f.throttle =
         this.phase === 'go-around' ? 1 : clamp(this.powerBias + (approachSpeed - speed) * 0.025, 0, 1);
@@ -252,7 +332,10 @@ export class LandingPrototype {
     // Keep the comparison available; pitch/yaw trim and the product servo are unchanged.
     if (!this.rollIntegral && this.inner.lateralBias) this.inner.lateralBias.z = 0;
     const commands = this.inner.cruiseCommands(f, dt);
-    if (this.rollGain !== 4) commands.roll = rollServo(f, this.inner.attitudeTarget, this.rollGain);
+    if (this.rollGain !== 4) {
+      if (!this.inner.attitudeTarget) throw TypeError('No attitude target retained');
+      commands.roll = rollServo(f, this.inner.attitudeTarget, this.rollGain);
+    }
     return commands;
   }
 }

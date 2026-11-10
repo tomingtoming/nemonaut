@@ -1,18 +1,36 @@
-import {
-  cruiseAuthority,
-  cruisePropulsion,
-  cruiseSettings,
-  cruiseTargetReadiness
-} from '../dist/cruise-pilot.js';
-import {surfaceRelativeVelocity, inertialToFixed, surfaceOrientation} from '../dist/surface-frame.js';
-import {compassHeading} from '../dist/navigation.js';
+// Automatic takeoff lifecycle: admission (departureReadiness), a forecast of the ground roll in the
+// forecast worker, and a start that is accepted only while the forecast still describes the vessel.
+import {cruiseAuthority, cruisePropulsion, cruiseSettings, cruiseTargetReadiness} from './cruise-pilot.js';
+import {surfaceRelativeVelocity, inertialToFixed, surfaceOrientation} from './surface-frame.js';
+import {compassHeading} from './navigation.js';
 import * as T from 'three';
-import {runwayApproach, RUNWAY} from '../dist/runway-navigation.js';
-import {bodyAltitude} from '../dist/celestial.js';
-import {TakeoffPrototype} from './takeoff-prototype.mjs';
+import {runwayApproach, RUNWAY} from './runway-navigation.js';
+import {bodyAltitude} from './celestial.js';
+import {TakeoffPrototype} from './takeoff-prototype.js';
+import type {TakeoffPreviewClient, TakeoffForecast} from './takeoff-preview-client.js';
+import type {CruiseSettings, CruiseSettingsInput} from './cruise-pilot.js';
+import type {Flight} from './core.js';
+export type {AutopilotCommands} from './takeoff-prototype.js';
+/** The pilot a started takeoff hands to the flight loop. */
+export type TakeoffPilot = TakeoffPrototype;
+export interface TakeoffPrepareResult extends TakeoffForecast {
+  accepted?: boolean;
+}
+interface VesselPose {
+  position: T.Vector3;
+  rotation: T.Quaternion;
+}
+interface PreparedTakeoff {
+  f: Flight;
+  stamp: string;
+  target: CruiseSettings;
+  result: TakeoffForecast;
+  initialPose: VesselPose;
+  epoch: number;
+}
 // Runway-end reserve is experimental; obstacle clearance is a separate gate.
 export const TAKEOFF_END_MARGIN = 75;
-export function departureReadiness(f, target) {
+export function departureReadiness(f: Flight, target: CruiseSettings): string | null {
   const problem = cruiseAuthority(f) || cruisePropulsion(f);
   if (problem) return problem;
   if (f.environment !== 'runway' || !f.telemetry.contacts || bodyAltitude(f.pos, f.universalTime) > 20)
@@ -36,7 +54,7 @@ export function departureReadiness(f, target) {
   if (target.mode !== 'altitude') return '離陸目標には高度保持を選んでください';
   return cruiseTargetReadiness(f, target);
 }
-const fingerprint = f =>
+const fingerprint = (f: Flight): string =>
   JSON.stringify({
     parts: f.parts,
     fuel: [...f.fuel],
@@ -49,30 +67,34 @@ const fingerprint = f =>
     sas: f.sas,
     sasMode: f.sasMode
   });
-const pose = f => ({
+const pose = (f: Flight): VesselPose => ({
   position: inertialToFixed(f.pos, f.universalTime),
   rotation: surfaceOrientation(f.universalTime).invert().multiply(f.q)
 });
-const matchesPose = (f, before) => {
+const matchesPose = (f: Flight, before: VesselPose): boolean => {
   const now = pose(f);
   return (
     now.position.distanceTo(before.position) < 0.5 && now.rotation.angleTo(before.rotation) < Math.PI / 360
   );
 };
 export class TakeoffSession {
-  constructor(client) {
+  declare client: TakeoffPreviewClient;
+  declare generation: number;
+  declare state: string;
+  declare prepared: PreparedTakeoff | null;
+  constructor(client: TakeoffPreviewClient) {
     this.client = client;
     this.generation = 0;
     this.state = 'idle';
     this.prepared = null;
   }
-  cancel() {
+  cancel(): void {
     this.generation++;
     this.client.cancel();
     this.prepared = null;
     this.state = 'idle';
   }
-  async prepare(f, settings) {
+  async prepare(f: Flight, settings: Partial<CruiseSettingsInput>): Promise<TakeoffPrepareResult> {
     this.cancel();
     const generation = this.generation,
       target = cruiseSettings(settings),
@@ -86,6 +108,7 @@ export class TakeoffSession {
     try {
       const result = await this.client.request(f, pilot, {seconds: 40});
       if (generation !== this.generation) return {status: 'cancelled'};
+      if (!result) throw TypeError('The forecast request ended without a result');
       if (
         ['cancelled', 'stale'].includes(result.status) ||
         stamp !== fingerprint(f) ||
@@ -99,7 +122,7 @@ export class TakeoffSession {
       if (
         result.status !== 'airborne' ||
         !track ||
-        !['minAlong', 'maxAlong', 'maxCross', 'samples'].every(k => Number.isFinite(track[k])) ||
+        !(['minAlong', 'maxAlong', 'maxCross', 'samples'] as const).every(k => Number.isFinite(track[k])) ||
         track.samples <= 0 ||
         track.minAlong < 0 ||
         track.maxAlong > RUNWAY.length - TAKEOFF_END_MARGIN ||
@@ -118,7 +141,7 @@ export class TakeoffSession {
       throw error;
     }
   }
-  readyFor(f, settings) {
+  readyFor(f: Flight, settings: Partial<CruiseSettingsInput>): boolean {
     const ready = this.prepared;
     if (this.state !== 'ready' || !ready) return false;
     const valid =
@@ -132,7 +155,7 @@ export class TakeoffSession {
     if (!valid) this.cancel();
     return valid;
   }
-  start(f, settings) {
+  start(f: Flight, settings: Partial<CruiseSettingsInput>): TakeoffPilot {
     const target = cruiseSettings(settings);
     if (!this.readyFor(f, target)) {
       this.cancel();

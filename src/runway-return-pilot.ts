@@ -1,22 +1,53 @@
+// Return-to-runway guidance for aircraft: flies a planned route (return-route.ts) to the start of
+// the final approach at 350 m, then holds the centreline until the landing session takes over.
+// (return-pilot.ts is the orbital capsule return demonstration, a different pilot.)
 import * as T from 'three';
-import {PRIMARY, bodyAltitude} from '../dist/celestial.js';
+import {PRIMARY, bodyAltitude} from './celestial.js';
 import {
   fixedToInertial,
   inertialToFixed,
   launchSiteOrientation,
   surfaceRelativeVelocity,
   surfaceOrientation
-} from '../dist/surface-frame.js';
-import {compassHeading} from '../dist/navigation.js';
-import {runwayApproach, RUNWAY} from '../dist/runway-navigation.js';
-import {CruisePilot, cruiseReadiness, cruiseTargetReadiness} from '../dist/cruise-pilot.js';
-import {TakeoffPrototype} from './takeoff-prototype.mjs';
-import {landingReadiness} from './landing-session.mjs';
-import {planReturnRoute, routePoint} from './return-route.mjs';
-import {rollServo} from './roll-servo.mjs';
+} from './surface-frame.js';
+import {compassHeading} from './navigation.js';
+import {runwayApproach, RUNWAY} from './runway-navigation.js';
+import {
+  CruisePilot,
+  cruiseReadiness,
+  cruiseSettings,
+  cruiseTargetReadiness,
+  type CruisePrevious,
+  type CruiseTelemetry
+} from './cruise-pilot.js';
+import {TakeoffPrototype, type AutopilotCommands} from './takeoff-prototype.js';
+import {landingReadiness} from './landing-session.js';
+import {planReturnRoute, routePoint, type ReturnRoute} from './return-route.js';
+import {rollServo} from './roll-servo.js';
+import type {Flight} from './core.js';
+export interface ReturnSettings {
+  speed?: number;
+  end?: string;
+}
+/** The cruise sample (absent until the cruise pilot's first guidance sample) plus the route progress. */
+export interface ReturnTelemetry extends Partial<CruiseTelemetry> {
+  remaining: number;
+  cross: number;
+  progress: number;
+  length: number;
+  error: number;
+}
 
+// A cruise target must hold a number: a missing compass heading becomes NaN, which the cruise
+// pilot's target check rejects on its next guidance sample exactly as it rejected null.
+const unknownHeading = (heading: number | null): number => heading ?? NaN;
+// The driver's cruise pilot is installed by the constructor and never removed.
+function cruisePilot(driver: TakeoffPrototype): CruisePilot {
+  if (!driver.cruise) throw TypeError('The return guidance has no cruise pilot');
+  return driver.cruise;
+}
 // Initial local return envelope; no terrain/obstacle avoidance.
-export function returnReadiness(f, speed = 90, end = '09') {
+export function returnReadiness(f: Flight, speed = 90, end = '09'): string | null {
   if (!['09', '27'].includes(end)) return '着陸方向を選択してください';
   const problem = cruiseReadiness(f);
   if (problem) return problem;
@@ -26,7 +57,24 @@ export function returnReadiness(f, speed = 90, end = '09') {
   return cruiseTargetReadiness(f, {speed, altitude: 350, heading: end === '27' ? 270 : 90, mode: 'altitude'});
 }
 export class ReturnPilot {
-  constructor(f, {speed = 90, end = '09'} = {}) {
+  declare end: string;
+  declare heading: number;
+  declare owner: Flight;
+  declare previous: CruisePrevious;
+  declare phase: string;
+  declare running: boolean;
+  declare orientation: T.Quaternion;
+  declare inverse: T.Quaternion;
+  declare route: ReturnRoute;
+  declare progress: number;
+  declare maxRouteError: number;
+  declare elapsed: number;
+  declare driver: TakeoffPrototype;
+  declare reason: string | undefined;
+  declare recoveryReason: string | undefined;
+  declare faultMessage: string | undefined;
+  declare telemetry: ReturnTelemetry | CruiseTelemetry | undefined;
+  constructor(f: Flight, {speed = 90, end = '09'}: ReturnSettings = {}) {
     const problem = returnReadiness(f, speed, end);
     if (problem) throw Error(problem);
     this.end = end;
@@ -67,13 +115,18 @@ export class ReturnPilot {
       integral: true,
       handoff: 'attitude'
     });
-    this.driver.cruise = new CruisePilot(f, {
-      speed,
-      altitude: 350,
-      heading: compassHeading(new T.Vector3(0, 0, 1).applyQuaternion(f.q), center, f.universalTime)
-    });
+    // A missing compass heading is refused by cruiseSettings, as CruisePilot would refuse it.
+    this.driver.cruise = new CruisePilot(
+      f,
+      cruiseSettings({
+        speed,
+        altitude: 350,
+        heading:
+          compassHeading(new T.Vector3(0, 0, 1).applyQuaternion(f.q), center, f.universalTime) ?? undefined
+      })
+    );
   }
-  stop(reason = 'manual') {
+  stop(reason = 'manual'): void {
     if (!this.running) return;
     this.running = false;
     this.reason = reason;
@@ -82,33 +135,34 @@ export class ReturnPilot {
     this.owner.holdQ = this.owner.q.clone();
     if (reason === 'fault') this.owner.throttle = 0;
   }
-  recover(reason = '着陸準備を中止しました') {
+  recover(reason = '着陸準備を中止しました'): void {
     if (!this.running) return;
     const f = this.owner,
       center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
     this.phase = 'recovery';
     this.recoveryReason = reason;
-    this.driver.cruise.target.altitude = 600;
-    this.driver.cruise.target.heading = compassHeading(
-      new T.Vector3(0, 0, 1).applyQuaternion(f.q),
-      center,
-      f.universalTime
+    const cruise = cruisePilot(this.driver);
+    cruise.target.altitude = 600;
+    cruise.target.heading = unknownHeading(
+      compassHeading(new T.Vector3(0, 0, 1).applyQuaternion(f.q), center, f.universalTime)
     );
   }
-  drive(f, dt) {
-    const commands = this.driver.update(f, dt);
-    if (!this.driver.cruise.running) {
-      this.faultMessage = this.driver.cruise.faultMessage;
+  drive(f: Flight, dt: number): AutopilotCommands {
+    const commands = this.driver.update(f, dt),
+      cruise = cruisePilot(this.driver);
+    if (!cruise.running) {
+      this.faultMessage = cruise.faultMessage;
       this.stop('fault');
       return {};
     }
     if (this.driver.attitudeTarget) {
+      if (!this.driver.lateralBias) throw TypeError('No lateral trim retained');
       this.driver.lateralBias.z = 0;
       commands.roll = rollServo(f, this.driver.attitudeTarget, 12);
     }
     return commands;
   }
-  update(f, dt, {manual = false} = {}) {
+  update(f: Flight, dt: number, {manual = false}: {manual?: boolean} = {}): AutopilotCommands {
     if (!this.running) return {};
     if (f !== this.owner || manual) {
       this.stop(manual ? 'manual' : 'vessel changed');
@@ -120,9 +174,10 @@ export class ReturnPilot {
     }
     if (dt === 0) return {};
     if (this.phase === 'recovery' || this.phase === 'recovery-hold') {
-      const commands = this.drive(f, dt);
-      this.telemetry = this.driver.cruise.telemetry;
-      if (this.running) this.phase = this.driver.cruise.status === '保持' ? 'recovery-hold' : 'recovery';
+      const commands = this.drive(f, dt),
+        cruise = cruisePilot(this.driver);
+      this.telemetry = cruise.telemetry;
+      if (this.running) this.phase = cruise.status === '保持' ? 'recovery-hold' : 'recovery';
       return commands;
     }
     this.elapsed += dt;
@@ -167,9 +222,10 @@ export class ReturnPilot {
         .applyQuaternion(this.orientation),
       f.universalTime
     );
-    this.driver.cruise.target.heading = nearEnd
+    const cruise = cruisePilot(this.driver);
+    cruise.target.heading = nearEnd
       ? this.heading - (Math.atan2(r.crossTrack, 1500) * 180) / Math.PI
-      : compassHeading(target.sub(center), center, f.universalTime);
+      : unknownHeading(compassHeading(target.sub(center), center, f.universalTime));
     this.phase = nearEnd && !landingReadiness(f, this.end) ? 'capture' : 'return';
     // Reaching the end without an accepted landing handoff must not turn back
     // towards a waypoint behind the aircraft.
@@ -179,7 +235,7 @@ export class ReturnPilot {
     }
     const commands = this.drive(f, dt);
     this.telemetry = {
-      ...this.driver.cruise.telemetry,
+      ...cruise.telemetry,
       remaining: r.remaining,
       cross: r.crossTrack,
       progress: this.progress,

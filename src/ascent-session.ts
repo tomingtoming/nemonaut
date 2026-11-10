@@ -1,18 +1,34 @@
-import {AscentPrototype} from './ascent-prototype.mjs';
-import {PARTS} from '../dist/catalog.js';
-import {ascentReadiness} from './ascent-readiness.mjs';
-import {ascentPlane} from './ascent-plane.mjs';
-import {bodyUp} from '../dist/celestial.js';
+// Automatic ascent lifecycle: admission, the pilot's settings handover, and the stop conditions
+// (vessel change, loss of control, 20 minutes without reaching the target orbit).
+import {AscentPrototype, type AscentTarget} from './ascent-prototype.js';
+import {PARTS} from './catalog.js';
+import {ascentReadiness} from './ascent-readiness.js';
+import {ascentPlane} from './ascent-plane.js';
+import {bodyUp} from './celestial.js';
+import type {Flight} from './core.js';
+export interface AscentSettings {
+  altitude: number;
+  inclination: number;
+}
+export type AscentPilot = AscentPrototype;
+/** The pilot settings an ascent takes over and gives back when it stops. */
+export type AscentControlState = Pick<Flight, 'sas' | 'sasMode' | 'navigationAuto' | 'navigationFrame'>;
 
-// Experimental lifecycle; product UI admission and manual-input wiring follow separately.
 export class AscentSession {
+  declare owner: Flight | null;
+  declare pilot: AscentPilot | null;
+  declare state: string;
+  declare message: string;
+  // Assigned by start(); they describe the ascent only while owner is set.
+  declare previous: AscentControlState | undefined;
+  declare elapsed: number;
   constructor() {
     this.owner = null;
     this.pilot = null;
     this.state = 'idle';
     this.message = '';
   }
-  start(f, settings) {
+  start(f: Flight, settings?: AscentTarget): void {
     if (this.owner) throw Error('Stop the current ascent first');
     const pilot = new AscentPrototype(settings);
     const reason = ascentReadiness(f);
@@ -33,7 +49,7 @@ export class AscentSession {
     this.state = 'running';
     this.message = '離昇';
   }
-  stop(state = 'cancelled', message = '中止') {
+  stop(state = 'cancelled', message = '中止'): void {
     if (!this.owner) return;
     const f = this.owner;
     Object.assign(f, this.previous);
@@ -44,7 +60,7 @@ export class AscentSession {
     this.state = state;
     this.message = message;
   }
-  step(f, dt) {
+  step(f: Flight, dt: number): void {
     if (!this.owner) return;
     if (f !== this.owner) {
       this.stop('cancelled', '機体切替');
@@ -64,6 +80,7 @@ export class AscentSession {
       this.stop('failed', '目標軌道に到達できませんでした');
       return;
     }
+    if (!this.pilot) throw TypeError('No ascent pilot');
     this.pilot.update(f);
     this.message = this.pilot.message;
     if (this.pilot.done)

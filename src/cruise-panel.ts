@@ -1,4 +1,4 @@
-import {runwaySelection, runwaySelector, type RunwayFlight} from './runway-selection.js';
+import {runwaySelection, runwaySelector} from './runway-selection.js';
 import {floatingWindow, type FloatingWindow} from './floating-window.js';
 import {
   CruisePilot,
@@ -8,22 +8,20 @@ import {
   cruiseAuthority,
   hasCruiseHardware,
   cruisePropulsion,
-  type CruiseFlight,
   type CruiseSettings,
   type CruisePrevious
 } from './cruise-pilot.js';
 import {
   TakeoffSession,
-  TakeoffPreviewClient,
   departureReadiness,
-  LandingSession,
-  LandingPlanClient,
-  landingReadiness,
-  ReturnSession,
-  returnReadiness,
   type TakeoffPilot,
   type AutopilotCommands
-} from './takeoff-controller.js';
+} from './takeoff-session.js';
+import {TakeoffPreviewClient} from './takeoff-preview-client.js';
+import {LandingSession, landingReadiness} from './landing-session.js';
+import {LandingPlanClient} from './landing-plan-client.js';
+import {ReturnSession} from './return-session.js';
+import {returnReadiness} from './runway-return-pilot.js';
 import {compassHeading} from './navigation.js';
 import {bodyAltitude} from './celestial.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
@@ -32,11 +30,9 @@ import {preserveManualControlEdit, isControlTarget} from './manual-control-edit.
 import {PARTS} from './catalog.js';
 import * as T from 'three';
 import {element} from './dom.js';
-export interface CruisePanelFlight extends CruiseFlight, RunwayFlight {
-  environment: string;
-  cruiseSettings?: CruiseSettings | null;
-  rocketAxes: boolean;
-}
+import type {Flight} from './core.js';
+/** The takeoff, landing and return sessions snapshot the whole vessel, so the panel works on a Flight. */
+export type CruisePanelFlight = Flight;
 export interface CruisePanelState {
   flight: CruisePanelFlight | null | undefined;
   atCenter: boolean;

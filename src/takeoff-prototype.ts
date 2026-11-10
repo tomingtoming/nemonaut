@@ -1,18 +1,97 @@
-// Experimental guidance: normal runway start, actuator commands only.
+// Runway takeoff guidance: ground roll, rotation, climb and the handoff to cruise guidance.
+// Commands the existing actuators only; never changes physical pose or velocity.
+// Its attitude inner loop (cruiseCommands) also flies the landing approach and the runway return.
 import * as T from 'three';
-import {bodyUp, bodyAltitude, bodyGravity} from '../dist/celestial.js';
-import {surfaceRelativeVelocity, surfaceAngularVelocity} from '../dist/surface-frame.js';
-import {atmosphere} from '../dist/planet.js';
-import {compassHeading} from '../dist/navigation.js';
-import {CruisePilot, cruiseReadiness, cruiseTargetReadiness} from '../dist/cruise-pilot.js';
-import {seedSasTrim} from '../dist/sas-trim.js';
-import {runwayApproach, RUNWAY} from '../dist/runway-navigation.js';
+import {bodyUp, bodyAltitude, bodyGravity} from './celestial.js';
+import {surfaceRelativeVelocity, surfaceAngularVelocity} from './surface-frame.js';
+import {atmosphere} from './planet.js';
+import {compassHeading} from './navigation.js';
+import {CruisePilot, cruiseReadiness, cruiseSettings, cruiseTargetReadiness} from './cruise-pilot.js';
+import {seedSasTrim} from './sas-trim.js';
+import {runwayApproach, RUNWAY} from './runway-navigation.js';
+import type {Flight} from './core.js';
 const rad = Math.PI / 180,
   clamp = T.MathUtils.clamp;
-export class TakeoffPrototype {
+export interface AutopilotCommands {
+  pitch?: number;
+  roll?: number;
+  yaw?: number;
+}
+export interface TakeoffOptions {
+  speed: number;
+  altitude?: number;
+  rotation?: number;
+  integral?: boolean;
+  handoff?: string;
+  abortGuard?: boolean;
+}
+/** The climb target; heading is null where the compass is undefined (at a pole or pointing straight up). */
+export interface TakeoffTarget {
+  speed: number;
+  altitude: number;
+  heading: number | null;
+  mode?: string;
+  vertical?: number;
+}
+/** What the attitude inner loop reads from its guidance: the commanded pitch (degrees) of the latest sample. */
+export interface PitchGuidance {
+  running?: boolean;
+  telemetry: {pitch: number} | undefined;
+}
+export interface TakeoffTelemetry {
+  height: number;
+  speed: number;
+  vertical: number;
+  pitch: number;
+  reason?: string;
+  pitchRate?: number;
+  alpha?: number;
+  targetPitch?: number;
+  minimum?: number;
+  pitchCommand?: number;
+  contacts?: number;
+  beforeThrottle?: number;
+  afterThrottle?: number;
+  handoffMode?: string;
+}
+export interface TakeoffAbort {
+  height: number;
+  speed: number;
+  pitch: number;
+  remaining: number;
+  stoppingDistance: number;
+  time: number;
+}
+// G is the guidance held in `cruise`. update() creates and drives a CruisePilot, so it is only
+// callable with the default G; the landing approach installs a pitch-only guidance and calls
+// cruiseCommands alone.
+export class TakeoffPrototype<G extends PitchGuidance = CruisePilot> {
+  declare abortGuard: boolean;
+  declare handoffMode: string;
+  declare integral: boolean;
+  declare pitchBias: number;
+  declare rotation: number;
+  declare owner: string;
+  declare target: TakeoffTarget;
+  declare phase: string;
+  declare elapsed: number;
+  declare commands: AutopilotCommands;
+  declare cruise: G | null;
+  declare abort: TakeoffAbort | undefined;
+  declare telemetry: TakeoffTelemetry | undefined;
+  declare guidanceSample: PitchGuidance['telemetry'] | null;
+  declare attitudeTarget: T.Quaternion | undefined;
+  declare lateralBias: T.Vector3 | undefined;
   constructor(
-    f,
-    {speed, altitude = 600, rotation = 8, integral = false, handoff = 'direct', abortGuard = false}
+    f: Flight,
+    {
+      speed,
+      altitude = 600,
+      rotation = 8,
+      integral = false,
+      handoff = 'direct',
+      abortGuard = false
+    }: TakeoffOptions
   ) {
     this.abortGuard = abortGuard;
     this.handoffMode = handoff;
@@ -30,7 +109,7 @@ export class TakeoffPrototype {
     this.commands = {};
     this.cruise = null;
   }
-  update(f, dt) {
+  update(this: TakeoffPrototype, f: Flight, dt: number): AutopilotCommands {
     if (f.vesselId !== this.owner || f.crashed || !Number.isFinite(dt) || dt < 0) {
       this.phase = 'stopped';
       return {};
@@ -59,8 +138,9 @@ export class TakeoffPrototype {
     const omega = f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(f.q.clone().invert()),
       pitchRate = -omega.x / rad;
     if (this.abortGuard && ['roll', 'rotate'].includes(this.phase) && f.telemetry.contacts) {
-      const runway = runwayApproach(center, f.universalTime, '09', f.vel),
-        remaining = RUNWAY.length + runway.remaining;
+      const runway = runwayApproach(center, f.universalTime, '09', f.vel);
+      if (!runway) throw TypeError('No runway approach away from the home planet');
+      const remaining = RUNWAY.length + runway.remaining;
       // Experimental margin: 6 m/s² is below the measured neutral ground braking
       // deceleration. Rotation unloads wheels, so validate the full abort separately.
       const stoppingDistance = (speed * speed) / 12 + speed * 0.5 + 50;
@@ -102,10 +182,17 @@ export class TakeoffPrototype {
         !cruiseTargetReadiness(f, this.target)
       ) {
         const beforeThrottle = f.throttle;
-        this.cruise = new CruisePilot(f, {
-          ...this.target,
-          speed: ['ramp', 'servo', 'seed', 'attitude'].includes(this.handoffMode) ? speed : this.target.speed
-        });
+        // A target without a compass heading is refused by cruiseSettings, as CruisePilot would refuse it.
+        this.cruise = new CruisePilot(
+          f,
+          cruiseSettings({
+            ...this.target,
+            heading: this.target.heading ?? undefined,
+            speed: ['ramp', 'servo', 'seed', 'attitude'].includes(this.handoffMode)
+              ? speed
+              : this.target.speed
+          })
+        );
         if (this.handoffMode !== 'direct')
           this.cruise.powerBias = clamp(beforeThrottle - (this.cruise.target.speed - speed) * 0.025, 0, 1);
         this.phase = 'cruise';
@@ -159,20 +246,24 @@ export class TakeoffPrototype {
     };
     return this.commands;
   }
-  cruiseCommands(f, dt) {
-    if (this.cruise.running === false) {
+  cruiseCommands(f: Flight, dt: number): AutopilotCommands {
+    const cruise = this.cruise;
+    if (!cruise) throw TypeError('No guidance to follow');
+    if (cruise.running === false) {
       this.phase = 'stopped';
       return {};
     }
     if (!['servo', 'attitude'].includes(this.handoffMode)) return {};
     // Flight refreshes holdQ while SAS is off. Retain the guidance target across
     // the faster inner-loop steps rather than accidentally chasing current pose.
-    if (this.guidanceSample !== this.cruise.telemetry) {
-      this.guidanceSample = this.cruise.telemetry;
+    if (this.guidanceSample !== cruise.telemetry) {
+      this.guidanceSample = cruise.telemetry;
       this.attitudeTarget = f.holdQ.clone();
     }
-    const commands = this.pitchServo(f, this.cruise.telemetry.pitch, dt);
+    if (!cruise.telemetry) throw TypeError('Guidance has not produced a sample');
+    const commands: AutopilotCommands = this.pitchServo(f, cruise.telemetry.pitch, dt);
     if (this.handoffMode === 'attitude') {
+      if (!this.attitudeTarget) throw TypeError('No attitude target retained');
       const error = this.attitudeTarget.clone().multiply(f.q.clone().invert());
       if (error.w < 0) {
         error.x *= -1;
@@ -182,23 +273,22 @@ export class TakeoffPrototype {
       const inverse = f.q.clone().invert(),
         local = new T.Vector3(error.x, error.y, error.z).applyQuaternion(inverse);
       const rate = f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(inverse);
-      this.lateralBias ??= new T.Vector3();
+      const lateralBias = (this.lateralBias ??= new T.Vector3());
       for (const [name, axis] of [
         ['yaw', 'y'],
         ['roll', 'z']
-      ]) {
+      ] as const) {
         const base = local[axis] * 4 - rate[axis] * 1.5,
-          raw = base + this.lateralBias[axis];
+          raw = base + lateralBias[axis];
         if (Math.abs(raw) < 1 || Math.sign(local[axis]) !== Math.sign(raw))
-          this.lateralBias[axis] = clamp(this.lateralBias[axis] + local[axis] * 0.8 * dt, -0.8, 0.8);
-        commands[name] = clamp(base + this.lateralBias[axis], -1, 1);
+          lateralBias[axis] = clamp(lateralBias[axis] + local[axis] * 0.8 * dt, -0.8, 0.8);
+        commands[name] = clamp(base + lateralBias[axis], -1, 1);
       }
     }
     return commands;
   }
-  // Diagnostic straight-flight comparison only: retain the takeoff elevator
-  // controller while consuming the cruise guidance. No heading/bank control.
-  pitchServo(f, targetPitch, dt) {
+  // Elevator servo toward a commanded pitch (degrees). No heading or bank control.
+  pitchServo(f: Flight, targetPitch: number, dt: number): {pitch: number} {
     const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
       up = bodyUp(center, f.universalTime);
     const pitch = Math.asin(clamp(new T.Vector3(0, 0, 1).applyQuaternion(f.q).dot(up), -1, 1)) / rad;

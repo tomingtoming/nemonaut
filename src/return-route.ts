@@ -1,20 +1,60 @@
-// Diagnostic planning layer. Coordinates are metres in a local horizontal plane;
+// Route planning for the runway return. Coordinates are metres in a local horizontal plane;
 // heading is radians counterclockwise from +x. No flight state is modified.
+export interface RoutePoint {
+  x: number;
+  y: number;
+}
+export interface RoutePose extends RoutePoint {
+  heading: number;
+}
+export interface RouteArc {
+  type: 'arc';
+  center: RoutePoint;
+  angle: number;
+  sign: number;
+  radius: number;
+  sweep: number;
+  length: number;
+}
+export interface RouteLine {
+  type: 'line';
+  start: RoutePoint;
+  heading: number;
+  length: number;
+}
+export type RouteSegment = RouteArc | RouteLine;
+export interface ReturnRoute {
+  segments: RouteSegment[];
+  length: number;
+  radius: number;
+  loops: number;
+  family: string;
+}
+export interface RouteSample extends RoutePose {
+  curvature: number;
+}
 const TAU = 2 * Math.PI;
-const mod = a => ((a % TAU) + TAU) % TAU;
-const left = v => ({x: -v.y, y: v.x});
-const add = (a, b, k = 1) => ({x: a.x + k * b.x, y: a.y + k * b.y});
-const dot = (a, b) => a.x * b.x + a.y * b.y;
-const unit = a => ({x: Math.cos(a), y: Math.sin(a)});
-function circle(p, sign, radius) {
+const mod = (a: number): number => ((a % TAU) + TAU) % TAU;
+const left = (v: RoutePoint): RoutePoint => ({x: -v.y, y: v.x});
+const add = (a: RoutePoint, b: RoutePoint, k = 1): RoutePoint => ({x: a.x + k * b.x, y: a.y + k * b.y});
+const dot = (a: RoutePoint, b: RoutePoint): number => a.x * b.x + a.y * b.y;
+const unit = (a: number): RoutePoint => ({x: Math.cos(a), y: Math.sin(a)});
+function circle(p: RoutePose, sign: number, radius: number): RoutePoint {
   return add(p, left(unit(p.heading)), sign * radius);
 }
-function arc(center, start, end, sign, radius, loops = 0) {
+function arc(
+  center: RoutePoint,
+  start: RoutePoint,
+  end: RoutePoint,
+  sign: number,
+  radius: number,
+  loops = 0
+): RouteArc {
   const angle = Math.atan2(start.y - center.y, start.x - center.x);
   const sweep = mod(sign * (Math.atan2(end.y - center.y, end.x - center.x) - angle)) + loops * TAU;
   return {type: 'arc', center, angle, sign, radius, sweep, length: sweep * radius};
 }
-export function routePoint(route, distance) {
+export function routePoint(route: Pick<ReturnRoute, 'segments' | 'length'>, distance: number): RouteSample {
   if (!Number.isFinite(distance)) throw new RangeError('Non-finite route distance');
   let d = Math.max(0, Math.min(route.length, distance));
   for (let i = 0; i < route.segments.length; i++) {
@@ -35,16 +75,21 @@ export function routePoint(route, distance) {
 }
 // Four circle-straight-circle families. This is not a global shortest-path
 // solver (three-arc paths are omitted), terrain avoidance, or a flyability proof.
-export function planReturnRoute(start, goal, {radius, minLength = 0} = {}) {
+export function planReturnRoute(
+  start: RoutePose,
+  goal: RoutePose,
+  {radius, minLength = 0}: {radius?: number; minLength?: number} = {}
+): ReturnRoute {
   if (
     ![start?.x, start?.y, start?.heading, goal?.x, goal?.y, goal?.heading, radius, minLength].every(
       Number.isFinite
     ) ||
+    radius === undefined ||
     radius <= 0 ||
     minLength < 0
   )
     throw new RangeError('Finite poses, positive radius and nonnegative minimum length required');
-  const candidates = [];
+  const candidates: ReturnRoute[] = [];
   for (const first of [-1, 1])
     for (const last of [-1, 1]) {
       const c1 = circle(start, first, radius),
@@ -69,7 +114,7 @@ export function planReturnRoute(start, goal, {radius, minLength = 0} = {}) {
           p2 = add(c2, n, k * radius),
           line = add(p2, p1, -1);
         if (dot(line, direction) < -1e-7) continue;
-        const segments = [
+        const segments: [RouteArc, RouteLine, RouteArc] = [
           arc(c1, start, p1, first, radius),
           {
             type: 'line',

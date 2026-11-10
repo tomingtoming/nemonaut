@@ -1,10 +1,21 @@
-import {ReturnPilot} from './return-pilot.mjs';
-import {LandingSession} from './landing-session.mjs';
+import {ReturnPilot, type ReturnSettings} from './runway-return-pilot.js';
+import {LandingSession} from './landing-session.js';
+import type {LandingPlanClient} from './landing-plan-client.js';
+import type {AutopilotCommands} from './takeoff-prototype.js';
+import type {Flight} from './core.js';
 
 // Owns one complete return/landing attempt. Promise completion never starts
 // actuators: handoff occurs only on the next unpaused simulation step.
 export class ReturnSession {
-  constructor(client) {
+  declare landing: LandingSession;
+  declare generation: number;
+  declare state: string;
+  declare owner: Flight | null;
+  declare pilot: ReturnPilot | null;
+  declare pending: Promise<void> | null;
+  declare message: string | null | undefined;
+  declare telemetry: ReturnPilot['telemetry'] | LandingSession['telemetry'];
+  constructor(client: LandingPlanClient) {
     this.landing = new LandingSession(client);
     this.generation = 0;
     this.state = 'idle';
@@ -12,7 +23,7 @@ export class ReturnSession {
     this.pilot = null;
     this.pending = null;
   }
-  start(f, settings) {
+  start(f: Flight, settings?: ReturnSettings): ReturnPilot {
     if (this.owner) throw Error('現在の自動操縦を停止してください');
     const pilot = new ReturnPilot(f, settings);
     this.generation++;
@@ -22,7 +33,7 @@ export class ReturnSession {
     this.message = null;
     return pilot;
   }
-  stop(reason = 'manual') {
+  stop(reason = 'manual'): void {
     this.generation++;
     this.landing.stop(reason);
     this.pilot?.stop(reason);
@@ -31,7 +42,7 @@ export class ReturnSession {
     this.pending = null;
     this.state = reason === 'fault' ? 'failed' : 'idle';
   }
-  recover(message) {
+  recover(message: string | undefined): void {
     this.generation++;
     this.landing.cancel();
     this.pending = null;
@@ -39,11 +50,13 @@ export class ReturnSession {
     this.pilot?.recover(message);
     this.state = 'recovery';
   }
-  prepare(f) {
-    const generation = this.generation;
+  prepare(f: Flight): void {
+    const generation = this.generation,
+      pilot = this.pilot;
     this.state = 'planning';
+    if (!pilot) throw TypeError('No return in progress');
     this.pending = this.landing
-      .prepare(f, {end: this.pilot.end})
+      .prepare(f, {end: pilot.end})
       .then(result => {
         if (generation !== this.generation || f !== this.owner) return;
         this.pending = null;
@@ -54,7 +67,7 @@ export class ReturnSession {
         this.recover(error.message + ' · 高度600 mへ');
       });
   }
-  step(f, dt, {manual = false} = {}) {
+  step(f: Flight, dt: number, {manual = false}: {manual?: boolean} = {}): AutopilotCommands {
     if (!this.owner) return {};
     if (f !== this.owner || manual) {
       this.stop(manual ? 'manual' : 'vessel changed');
@@ -81,18 +94,20 @@ export class ReturnSession {
       if (!this.landing.readyFor(f)) {
         this.recover('着陸計画が失効しました · 高度600 mへ');
       } else {
+        if (!pilot) throw TypeError('No return in progress');
         pilot.stop('handoff');
         try {
           this.landing.start(f);
           this.state = 'approach';
           return this.landing.step(f, dt);
         } catch (error) {
-          this.message = error.message;
+          this.message = error instanceof Error ? error.message : String(error);
           this.stop('fault');
           return {};
         }
       }
     }
+    if (!pilot) throw TypeError('No return in progress');
     const commands = pilot.update(f, dt);
     this.telemetry = pilot.telemetry;
     if (!pilot.running) {

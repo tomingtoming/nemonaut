@@ -1,15 +1,13 @@
 import {hasVacuumEngine} from './engine-medium.js';
-import {AscentSession, type AscentFlight, type AscentSettings} from './orbital-ascent-controller.js';
+import {AscentSession, type AscentSettings} from './ascent-session.js';
 import {orbitalAscentSettings} from './orbital-ascent-settings.js';
 import {floatingWindow, type FloatingWindow} from './floating-window.js';
 import {acceptsFlightKey} from './flight-keyboard.js';
 import {preserveManualControlEdit, isControlTarget} from './manual-control-edit.js';
 import {element, missing} from './dom.js';
+import type {Flight} from './core.js';
 
-export interface OrbitalAscentFlight extends AscentFlight {
-  orbitalAscentSettings?: AscentSettings | null;
-  parts: {id: string; type: string}[];
-}
+export type OrbitalAscentFlight = Flight;
 export interface OrbitalAscentState {
   flight: OrbitalAscentFlight | null | undefined;
   atCenter: boolean;

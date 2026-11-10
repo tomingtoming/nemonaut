@@ -1,13 +1,15 @@
 import {PARTS} from './catalog.js';
-import {canControl, type ControllableVessel} from './fleet.js';
-import {ManeuverSession, type ManeuverFlight, type ManeuverNode} from './maneuver-controller.js';
+import {canControl} from './fleet.js';
+import {ManeuverSession} from './maneuver-session.js';
 import {maneuverWarpBudget} from './maneuver-warp.js';
 import {floatingWindow, type FloatingWindow} from './floating-window.js';
 import {acceptsFlightKey} from './flight-keyboard.js';
 import {preserveManualControlEdit, isControlTarget} from './manual-control-edit.js';
 import {element, missing} from './dom.js';
+import type {Flight} from './core.js';
+import type {ManeuverNodeRecord} from './maneuver-node.js';
 
-export interface ManeuverPanelFlight extends ManeuverFlight, ControllableVessel {}
+export type ManeuverPanelFlight = Flight;
 interface ManeuverWindow {
   panel: FloatingWindow;
   power: HTMLSelectElement;
@@ -45,7 +47,7 @@ export function mountManeuverPanel(
   systems.append(button);
   let ui: ManeuverWindow | null = null,
     bound: ManeuverPanelFlight | null | undefined = null,
-    node: ManeuverNode | null | undefined = null,
+    node: ManeuverNodeRecord | null | undefined = null,
     message = '待機';
   const close = () => {
     ui?.panel.remove();
@@ -58,7 +60,7 @@ export function mountManeuverPanel(
       sync();
     }
   };
-  const fixed = (n: ManeuverNode | null | undefined) =>
+  const fixed = (n: ManeuverNodeRecord | null | undefined) =>
     !!(n?.capture || n?.returnPlan || n?.departure || n?.rendezvous || n?.plannedThrottle !== undefined);
   function update() {
     const {flight: f, atCenter} = getState();
