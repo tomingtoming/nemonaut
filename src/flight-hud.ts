@@ -51,20 +51,19 @@ export function mountWarpGuard() {
     openTracking(id);
   };
   // Pointer and keyboard activation of flight controls must not leave fast physics
-  // running while the pilot changes thrust, staging or attitude commands.
+  // running while the pilot changes thrust, staging or attitude commands. Floating windows
+  // (part, docking, descent and autopilot windows) count by their content, not their pin and
+  // close buttons; the sound, survey, runway and buoyancy windows hold no flight control.
+  const flightControls =
+    '#flightHud,#inspector,#orbitOverlay,#stageDock,' +
+    '.floatingWindow:not(.audioWindow,.deliveryWindow,.runwayWindow) .floatingContent:not(.buoyancyPanel)';
   for (const type of ['click', 'input', 'change'])
     document.addEventListener(
       type,
       event => {
         const target = event.target,
           control = target instanceof Element ? target.closest('button,input,select') : null;
-        if (
-          !control ||
-          control.id === 'warp' ||
-          !state.flight ||
-          !control.closest('#flightHud,#inspector,#orbitOverlay,#stageDock')
-        )
-          return;
+        if (!control || control.id === 'warp' || !state.flight || !control.closest(flightControls)) return;
         if (Number($('#warp', 'select').value) > 1) {
           $('#warp', 'select').value = '1';
           physicsClock.reset();
