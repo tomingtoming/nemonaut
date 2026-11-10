@@ -1540,7 +1540,7 @@
  "真空": "Vacuum",
  "真空冷却の温度が不正です": "Vacuum cooling temperature is invalid",
  "真空冷却の計算上限です": "Vacuum cooling calculation limit reached",
- "着地": "Landing",
+ "着地": "Landed",
  "着地しました。宇宙センターの追跡施設から回収できます": "Landed. It can be recovered from the Tracking Station at the Space Center",
  "着地・静止": "Landed and stationary",
  "着地完了": "Landing complete",
