@@ -4,9 +4,9 @@ import {Worker} from 'node:worker_threads';
 import {Flight} from '../dist/core.js';
 import {preset, PARTS} from '../dist/catalog.js';
 import {bodyAltitude} from '../dist/celestial.js';
-import {TakeoffPrototype} from '../tools/takeoff-prototype.mjs';
-import {ReturnSession} from '../tools/return-session.mjs';
-import {LandingPlanClient} from '../tools/landing-plan-client.mjs';
+import {TakeoffPrototype} from '../dist/takeoff-prototype.js';
+import {ReturnSession} from '../dist/return-session.js';
+import {LandingPlanClient} from '../dist/landing-plan-client.js';
 import {extendWheelTrack} from '../dist/runway-wheel-track.js';
 import {RUNWAY, runwayApproach} from '../dist/runway-navigation.js';
 const conditions = [

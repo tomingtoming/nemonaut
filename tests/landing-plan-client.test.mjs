@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Worker} from 'node:worker_threads';
 import {landingFixture} from '../tools/landing-profile.mjs';
-import {LandingPlanClient, landingPlanContext, landingPlanCurrent} from '../tools/landing-plan-client.mjs';
-import {LandingPrototype} from '../tools/landing-prototype.mjs';
+import {LandingPlanClient, landingPlanContext, landingPlanCurrent} from '../dist/landing-plan-client.js';
+import {LandingPrototype} from '../dist/landing-prototype.js';
 const good = f => {
   const c = landingPlanContext(f);
   return {

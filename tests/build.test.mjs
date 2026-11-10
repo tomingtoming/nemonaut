@@ -12,13 +12,8 @@ const walk = dir =>
   readdirSync(dir, {withFileTypes: true}).flatMap(e =>
     e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]
   );
-const BUNDLES = [
-  'landing-plan-worker.js',
-  'maneuver-controller.js',
-  'orbital-ascent-controller.js',
-  'takeoff-controller.js',
-  'takeoff-forecast-worker.js'
-];
+// The module workers: an import map does not apply inside a worker, so each is bundled with its imports.
+const WORKERS = ['landing-plan-worker.js', 'takeoff-forecast-worker.js'];
 
 test('every source file is delivered unchanged, declarations are not', () => {
   for (const file of walk(src)) {
@@ -37,10 +32,17 @@ test('every source file is delivered unchanged, declarations are not', () => {
     );
   }
 });
-test('the generated bundles exist and are not kept in src', () => {
-  for (const name of BUNDLES) {
-    assert.ok(statSync(path.join(dist, name)).size > 1000, name);
+test('each worker is one self-contained bundle built from its src module', () => {
+  for (const name of WORKERS) {
+    assert.ok(existsSync(path.join(src, name.slice(0, -3) + '.ts')), name + ' needs its source in src');
     assert.equal(existsSync(path.join(src, name)), false, name + ' is generated, not a source');
+    assert.ok(statSync(path.join(dist, name)).size > 1000, name);
+    const imports = [
+      ...readFileSync(path.join(dist, name), 'utf8').matchAll(/^import\b.*?from\s*"([^"]+)"/gm)
+    ];
+    assert.ok(imports.length > 0, name + ' must import the vendored three.js');
+    for (const [, specifier] of imports)
+      assert.equal(specifier, './vendor/three/three.module.js', name + ' must not import ' + specifier);
   }
 });
 test('a .ts module becomes plain ES module JS with its import path unchanged', async () => {

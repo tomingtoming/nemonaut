@@ -3,7 +3,7 @@
 // touchdownAlong explicitly creates a relocated post-contact fixture.
 import * as T from 'three';
 import {landingFixture} from './landing-profile.mjs';
-import {LandingPrototype} from './landing-prototype.mjs';
+import {LandingPrototype} from '../dist/landing-prototype.js';
 import {bodyUp, PRIMARY, bodyState} from '../dist/celestial.js';
 import {
   surfaceAngularVelocity,
@@ -12,7 +12,7 @@ import {
   surfaceRelativeVelocity,
   surfaceVelocity
 } from '../dist/surface-frame.js';
-import {RolloutControl} from './rollout-control.mjs';
+import {RolloutControl} from '../dist/rollout-control.js';
 import {RUNWAY, runwayApproach} from '../dist/runway-navigation.js';
 const clamp = T.MathUtils.clamp;
 export function rolloutImpact({

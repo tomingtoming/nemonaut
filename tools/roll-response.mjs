@@ -1,13 +1,13 @@
 // Airborne diagnostic: measured actuator response, never a product autopilot.
 import * as T from 'three';
 import {landingFixture} from './landing-profile.mjs';
-import {TakeoffPrototype} from './takeoff-prototype.mjs';
+import {TakeoffPrototype} from '../dist/takeoff-prototype.js';
 import {CruisePilot} from '../dist/cruise-pilot.js';
 import {bodyUp} from '../dist/celestial.js';
 import {surfaceAngularVelocity, surfaceRelativeVelocity} from '../dist/surface-frame.js';
 import {compassFrame, compassHeading} from '../dist/navigation.js';
 import {controlDeflection} from '../dist/aero.js';
-import {rollServo} from './roll-servo.mjs';
+import {rollServo} from '../dist/roll-servo.js';
 const rad = Math.PI / 180;
 export function rollResponse({kind = 'transport-cargo', fuelLoad = 0.5, rollGain = 4, log = () => {}} = {}) {
   const f = landingFixture({kind, offset: 0, fuelLoad}),

@@ -4,8 +4,8 @@ import * as T from 'three';
 import {Flight} from '../dist/core.js';
 import {preset, PARTS} from '../dist/catalog.js';
 import {saveFlight} from '../dist/flight-save.js';
-import {ascentReadiness} from '../tools/ascent-readiness.mjs';
-import {AscentSession} from '../tools/ascent-session.mjs';
+import {ascentReadiness} from '../dist/ascent-readiness.js';
+import {AscentSession} from '../dist/ascent-session.js';
 for (const kind of ['launcher', 'atlas'])
   test(`preflight accepts ${kind} without consuming fuel or executing real stages`, () => {
     const f = new Flight(preset(kind), 'land');

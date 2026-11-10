@@ -1,4 +1,4 @@
-import {ManeuverSession} from '../dist/maneuver-controller.js';
+import {ManeuverSession} from '../dist/maneuver-session.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {preset} from '../dist/catalog.js';

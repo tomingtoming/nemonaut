@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {ascentPlane, orbitInclination} from '../tools/ascent-plane.mjs';
+import {ascentPlane, orbitInclination} from '../dist/ascent-plane.js';
 test('target plane passes through launch position and has requested inclination across meridians', () => {
   for (const longitude of [0, Math.PI / 2, Math.PI, Math.PI * 1.5])
     for (const inclination of [0, 30, 90, 150, 180]) {

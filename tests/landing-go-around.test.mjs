@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {landingFixture} from '../tools/landing-profile.mjs';
-import {LandingPrototype} from '../tools/landing-prototype.mjs';
-import {LandingSession} from '../tools/landing-session.mjs';
-import {landingPlanContext} from '../tools/landing-plan-client.mjs';
+import {LandingPrototype} from '../dist/landing-prototype.js';
+import {LandingSession} from '../dist/landing-session.js';
+import {landingPlanContext} from '../dist/landing-plan-client.js';
 for (const kind of ['plane', 'plane-large', 'transport-cargo'])
   test(`${kind} abandons low final and recovers level flight without contact`, async () => {
     const f = landingFixture({kind}),

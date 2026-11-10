@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ReturnPilot, returnReadiness} from '../tools/return-pilot.mjs';
+import {ReturnPilot, returnReadiness} from '../dist/runway-return-pilot.js';
 import {landingFixture} from '../tools/landing-profile.mjs';
 import {runReturnFlight} from '../tools/return-flight-profile.mjs';
 import {RUNWAY} from '../dist/runway-navigation.js';

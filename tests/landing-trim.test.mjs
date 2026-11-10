@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {landingFixture} from '../tools/landing-profile.mjs';
-import {landingTrim, planLandingTrim} from '../tools/landing-trim.mjs';
+import {landingTrim, planLandingTrim} from '../dist/landing-trim.js';
 import {bodyUp, bodyGravity, bodyAltitude} from '../dist/celestial.js';
 import {surfaceVelocity, surfaceAngularVelocity} from '../dist/surface-frame.js';
 import {compassFrame} from '../dist/navigation.js';

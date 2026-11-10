@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {WorldRuntime} from '../dist/world-runtime.js';
-import {AscentSession} from '../dist/orbital-ascent-controller.js';
+import {AscentSession} from '../dist/ascent-session.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
-test('bundled ascent stages before registry refresh and advances every vessel on the same clock', () => {
+test('automatic ascent stages before registry refresh and advances every vessel on the same clock', () => {
   const f = new Flight(preset('launcher'), 'land', 1413.8),
     other = new Flight(preset('rover'), 'land', 1413.8);
   other.pos.x += 1000;

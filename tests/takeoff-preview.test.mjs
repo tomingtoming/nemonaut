@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {Flight, statistics} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {saveFlight} from '../dist/flight-save.js';
-import {TakeoffPrototype} from '../tools/takeoff-prototype.mjs';
-import {previewTakeoff} from '../tools/takeoff-preview.mjs';
+import {TakeoffPrototype} from '../dist/takeoff-prototype.js';
+import {previewTakeoff} from '../dist/takeoff-preview.js';
 import {runwayApproach, RUNWAY} from '../dist/runway-navigation.js';
 import {extendWheelTrack} from '../dist/runway-wheel-track.js';
 

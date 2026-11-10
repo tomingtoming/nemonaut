@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {landingFixture} from '../tools/landing-profile.mjs';
-import {landingPlanContext} from '../tools/landing-plan-client.mjs';
-import {LandingSession, landingReadiness} from '../tools/landing-session.mjs';
-import {LandingPrototype} from '../tools/landing-prototype.mjs';
+import {landingPlanContext} from '../dist/landing-plan-client.js';
+import {LandingSession, landingReadiness} from '../dist/landing-session.js';
+import {LandingPrototype} from '../dist/landing-prototype.js';
 // Synthetic plans exercise ownership only; flight performance is covered by
 // landing-prototype and return-flight integration tests using computed plans.
 const result = f => {

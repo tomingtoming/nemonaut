@@ -1,7 +1,7 @@
 import {Flight, statistics} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
-import {TakeoffPrototype} from './takeoff-prototype.mjs';
-import {previewTakeoff} from './takeoff-preview.mjs';
+import {TakeoffPrototype} from '../dist/takeoff-prototype.js';
+import {previewTakeoff} from '../dist/takeoff-preview.js';
 import {rotationEstimate} from './rotation-estimate.mjs';
 import {runwayApproach, RUNWAY} from '../dist/runway-navigation.js';
 for (const kind of ['plane', 'plane-large', 'transport-cargo'])

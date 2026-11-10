@@ -7,7 +7,7 @@ import {finiteReturnPlan} from '../dist/finite-return-plan.js';
 import {createManeuverNode} from '../dist/maneuver-node.js';
 import {lunarReturnPlan, lunarReturnNode} from '../dist/lunar-return.js';
 import {advanceCoastFleet} from '../dist/coast-flight.js';
-import {ManeuverSession} from '../tools/maneuver-session.mjs';
+import {ManeuverSession} from '../dist/maneuver-session.js';
 
 for (const throttle of [0.1, 1])
   test(`automatic finite return preserves ${throttle * 100}% start and precise cutoff`, t => {

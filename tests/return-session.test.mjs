@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ReturnSession} from '../tools/return-session.mjs';
-import {ReturnPilot} from '../tools/return-pilot.mjs';
+import {ReturnSession} from '../dist/return-session.js';
+import {ReturnPilot} from '../dist/runway-return-pilot.js';
 import {landingFixture} from '../tools/landing-profile.mjs';
-import {landingPlanContext} from '../tools/landing-plan-client.mjs';
-import {LandingPrototype} from '../tools/landing-prototype.mjs';
+import {landingPlanContext} from '../dist/landing-plan-client.js';
+import {LandingPrototype} from '../dist/landing-prototype.js';
 const ready = f => ({
   status: 'ready',
   plan: new LandingPrototype(f).trimPlan,

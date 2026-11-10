@@ -1,6 +1,6 @@
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
-import {AscentPrototype} from './ascent-prototype.mjs';
+import {AscentPrototype} from '../dist/ascent-prototype.js';
 
 for (const kind of ['launcher', 'atlas'])
   for (const altitude of [90000, 120000, 200000]) {

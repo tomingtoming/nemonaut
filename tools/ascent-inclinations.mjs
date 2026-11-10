@@ -1,6 +1,6 @@
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
-import {AscentPrototype} from './ascent-prototype.mjs';
+import {AscentPrototype} from '../dist/ascent-prototype.js';
 for (const inclination of [0, 30, 90, 150]) {
   const f = new Flight(preset('launcher'), 'land'),
     p = new AscentPrototype({altitude: 120000, inclination});

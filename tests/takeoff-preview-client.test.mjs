@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {Worker} from 'node:worker_threads';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
-import {TakeoffPrototype} from '../tools/takeoff-prototype.mjs';
-import {TakeoffPreviewClient} from '../tools/takeoff-preview-client.mjs';
+import {TakeoffPrototype} from '../dist/takeoff-prototype.js';
+import {TakeoffPreviewClient} from '../dist/takeoff-preview-client.js';
 const setup = () => {
   const f = new Flight(preset('plane-large'), 'runway', 161700);
   f.stageNext();

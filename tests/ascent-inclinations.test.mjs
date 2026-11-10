@@ -4,8 +4,8 @@ import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {PRIMARY_ROTATION_PERIOD} from '../dist/surface-frame.js';
 import {radial} from '../dist/planet.js';
-import {orbitInclination} from '../tools/ascent-plane.mjs';
-import {AscentSession} from '../tools/ascent-session.mjs';
+import {orbitInclination} from '../dist/ascent-plane.js';
+import {AscentSession} from '../dist/ascent-session.js';
 for (const kind of ['launcher', 'atlas'])
   for (const [inclination, epoch] of [
     [30, 0],

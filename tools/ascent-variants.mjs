@@ -1,7 +1,7 @@
 import {Flight} from '../dist/core.js';
 import {preset, PARTS} from '../dist/catalog.js';
 import {PRIMARY_ROTATION_PERIOD} from '../dist/surface-frame.js';
-import {AscentSession} from './ascent-session.mjs';
+import {AscentSession} from '../dist/ascent-session.js';
 for (const [kind, epoch, limit] of [
   ['launcher', PRIMARY_ROTATION_PERIOD / 4, 1],
   ['launcher', PRIMARY_ROTATION_PERIOD / 2, 1],

@@ -1,6 +1,6 @@
 // Type hardness check (BACKLOG 5). tsconfig is `strict`, so tsc reports the type errors; this adds
 // what tsc does not forbid: explicit `any` types and @ts-ignore / @ts-expect-error / @ts-nocheck
-// comments. Every src/*.ts (and the bundle declarations src/*.d.ts, as NAME.d) must have none.
+// comments. Every src/*.ts (a declaration file src/NAME.d.ts counts too, as NAME.d) must have none.
 // Usage: node tools/type-hardness.mjs [--check] [--files a,b]
 //   --check       exit 1 if any module has an error, an `any` or an ignore comment
 //   --files a,b   counts for the named modules

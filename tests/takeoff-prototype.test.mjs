@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as T from 'three';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
-import {TakeoffPrototype} from '../tools/takeoff-prototype.mjs';
+import {TakeoffPrototype} from '../dist/takeoff-prototype.js';
 import {runwayApproach, RUNWAY} from '../dist/runway-navigation.js';
 
 test('experimental attitude loop retains guidance between samples without changing physical state', () => {

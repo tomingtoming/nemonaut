@@ -1,7 +1,7 @@
 import {writeFileSync} from 'node:fs';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
-import {TakeoffPrototype} from './takeoff-prototype.mjs';
+import {TakeoffPrototype} from '../dist/takeoff-prototype.js';
 const progress = process.argv[2];
 if (!progress) throw Error('Absolute progress-file path required');
 const f = new Flight(preset('transport-cargo'), 'runway', 161700);

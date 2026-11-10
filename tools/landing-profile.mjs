@@ -9,7 +9,7 @@ import {
   surfaceVelocity,
   surfaceAngularVelocity
 } from '../dist/surface-frame.js';
-import {LandingPrototype} from './landing-prototype.mjs';
+import {LandingPrototype} from '../dist/landing-prototype.js';
 import {extendWheelTrack} from '../dist/runway-wheel-track.js';
 export function landingFixture({kind = 'plane-large', offset = 200, headingOffset = 0, fuelLoad = 0.5} = {}) {
   const parts = preset(kind);

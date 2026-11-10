@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Vector3} from 'three';
 import {Flight} from '../dist/core.js';
 import {preset, PARTS} from '../dist/catalog.js';
-import {AscentPrototype} from '../tools/ascent-prototype.mjs';
+import {AscentPrototype} from '../dist/ascent-prototype.js';
 
 for (const kind of ['launcher', 'atlas'])
   for (const altitude of [90000, 120000, 200000])

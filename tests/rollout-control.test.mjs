@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {RolloutControl} from '../tools/rollout-control.mjs';
+import {RolloutControl} from '../dist/rollout-control.js';
 import {rolloutImpact} from '../tools/rollout-impact-profile.mjs';
 import {RUNWAY} from '../dist/runway-navigation.js';
 test('limited runway or high speed demands immediate braking and latches it', () => {

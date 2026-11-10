@@ -5,8 +5,8 @@ import {Flight} from '../dist/core.js';
 import {preset, part} from '../dist/catalog.js';
 import {maneuverPreview} from '../dist/maneuver.js';
 import {createManeuverNode, validateManeuverNode} from '../dist/maneuver-node.js';
-import {ManeuverSession} from '../tools/maneuver-session.mjs';
-import {maneuverExecutionPlan, ALIGNMENT_WINDOW} from '../tools/maneuver-execution-plan.mjs';
+import {ManeuverSession} from '../dist/maneuver-session.js';
+import {maneuverExecutionPlan, ALIGNMENT_WINDOW} from '../dist/maneuver-execution-plan.js';
 import {WorldRuntime} from '../dist/world-runtime.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 

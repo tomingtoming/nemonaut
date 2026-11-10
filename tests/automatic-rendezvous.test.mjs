@@ -12,7 +12,7 @@ import {timedRendezvousTransfer, timedRelativeStopPlan} from '../dist/timed-rend
 import {maneuverPreview} from '../dist/maneuver.js';
 import {createManeuverNode, validateManeuverNode, maneuverEditValues} from '../dist/maneuver-node.js';
 import {RendezvousPlanBinding} from '../dist/rendezvous-burn.js';
-import {ManeuverSession} from '../dist/maneuver-controller.js';
+import {ManeuverSession} from '../dist/maneuver-session.js';
 import {WorldRuntime} from '../dist/world-runtime.js';
 import {advanceCoastFleet} from '../dist/coast-flight.js';
 import {portGuidance} from '../dist/port-navigation.js';

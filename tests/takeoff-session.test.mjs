@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
-import {TakeoffSession} from '../tools/takeoff-session.mjs';
-import {previewTakeoff} from '../tools/takeoff-preview.mjs';
+import {TakeoffSession} from '../dist/takeoff-session.js';
+import {previewTakeoff} from '../dist/takeoff-preview.js';
 const target = {speed: 90, altitude: 600, heading: 110, mode: 'altitude', vertical: 0};
 function setup() {
   const f = new Flight(preset('plane-large'), 'runway', 161700);

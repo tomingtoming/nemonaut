@@ -7,12 +7,12 @@ import {fixedToInertial, inertialToFixed, launchSiteOrientation} from '../dist/s
 import {compassHeading} from '../dist/navigation.js';
 import {runwayApproach} from '../dist/runway-navigation.js';
 import {extendWheelTrack} from '../dist/runway-wheel-track.js';
-import {TakeoffPrototype} from './takeoff-prototype.mjs';
-import {LandingPrototype} from './landing-prototype.mjs';
-import {rollServo} from './roll-servo.mjs';
-import {planReturnRoute, routePoint} from './return-route.mjs';
+import {TakeoffPrototype} from '../dist/takeoff-prototype.js';
+import {LandingPrototype} from '../dist/landing-prototype.js';
+import {rollServo} from '../dist/roll-servo.js';
+import {planReturnRoute, routePoint} from '../dist/return-route.js';
 import {surfaceRelativeVelocity, surfaceOrientation} from '../dist/surface-frame.js';
-import {ReturnPilot} from './return-pilot.mjs';
+import {ReturnPilot} from '../dist/runway-return-pilot.js';
 const wrap = a => ((a + 540) % 360) - 180;
 export function runReturnFlight({
   kind = 'plane-large',

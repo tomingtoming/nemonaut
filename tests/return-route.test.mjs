@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {planReturnRoute, routePoint} from '../tools/return-route.mjs';
+import {planReturnRoute, routePoint} from '../dist/return-route.js';
 const angleError = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 const near = (a, b, tolerance = 1e-6) => assert.ok(Math.abs(a - b) < tolerance, `${a} != ${b}`);
 test('return paths preserve both poses and tangent continuity across varied positions and headings', () => {

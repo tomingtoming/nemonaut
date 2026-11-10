@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';
 import {preset, PARTS} from '../dist/catalog.js';
 import {PRIMARY_ROTATION_PERIOD} from '../dist/surface-frame.js';
-import {AscentSession} from '../tools/ascent-session.mjs';
+import {AscentSession} from '../dist/ascent-session.js';
 test('pause, manual cancellation and vessel replacement do not leak ascent commands', () => {
   const a = new Flight(preset('launcher'), 'land'),
     b = new Flight(preset('atlas'), 'land'),

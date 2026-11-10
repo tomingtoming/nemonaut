@@ -1,6 +1,6 @@
 import {Flight, statistics} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
-import {TakeoffPrototype} from './takeoff-prototype.mjs';
+import {TakeoffPrototype} from '../dist/takeoff-prototype.js';
 import {runwayApproach, RUNWAY} from '../dist/runway-navigation.js';
 import * as T from 'three';
 import {bodyUp} from '../dist/celestial.js';
