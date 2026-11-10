@@ -14,25 +14,30 @@ const memory = entries => {
     removeItem: k => s.delete(k)
   };
 };
-test('old orbital-foundry browser data moves to omnivehicle keys without overwriting newer data', () => {
+test('browser data saved under earlier names moves to nemonaut keys, newest name first', () => {
   const st = memory([
-    ['orbital-foundry-game-v1', 'old game'],
-    ['orbital-foundry-craft', 'old craft'],
-    ['omnivehicle-craft', 'new craft'],
+    ['orbital-foundry-game-v1', 'oldest game'],
+    ['orbital-foundry-craft', 'oldest craft'],
+    ['orbital-foundry-lang', 'oldest lang'],
+    ['omnivehicle-craft', 'old craft'],
+    ['omnivehicle-lang', 'old lang'],
+    ['nemonaut-lang', 'new lang'],
     ['unrelated', 'x']
   ]);
-  assert.equal(migrateLegacyStorage(st), 1);
+  assert.equal(migrateLegacyStorage(st), 2);
   assert.deepEqual(Object.fromEntries(st.s), {
-    'omnivehicle-craft': 'new craft',
+    'nemonaut-lang': 'new lang',
     unrelated: 'x',
-    'omnivehicle-game-v1': 'old game'
+    'nemonaut-craft': 'old craft',
+    'nemonaut-game-v1': 'oldest game'
   });
   assert.equal(migrateLegacyStorage(st), 0, 'idempotent');
   assert.equal(migrateLegacyStorage(null), 0);
 });
-test('saves are written with the new kind and old kinds still load', () => {
-  assert.equal(saveKind('flight'), 'omnivehicle-flight');
-  assert.equal(storageKey('game-v1'), 'omnivehicle-game-v1');
+test('saves are written with the new kind and earlier kinds still load', () => {
+  assert.equal(saveKind('flight'), 'nemonaut-flight');
+  assert.equal(storageKey('game-v1'), 'nemonaut-game-v1');
+  assert.ok(isSaveKind('nemonaut-world', 'world'));
   assert.ok(isSaveKind('omnivehicle-world', 'world') && isSaveKind('orbital-foundry-world', 'world'));
   assert.ok(!isSaveKind('other-world', 'world'));
 });

@@ -1,4 +1,4 @@
-"""Orbital Foundry campus. Blender Z-up; GLB Y-up. Facility roots carry IDs."""
+"""Nemonaut campus. Blender Z-up; GLB Y-up. Facility roots carry IDs."""
 import bpy, math, os, random
 from mathutils import Vector
 root=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -122,7 +122,7 @@ export function showCenter() {
   $('#orbitOverlay', 'section').hidden = true;
   state.atCenter = true;
   flightPanels().buoyancyPanel.update();
-  document.title = 'Omnivehicle · 宇宙センター';
+  document.title = 'Nemonaut · 宇宙センター';
   document.body.classList.add('at-center');
   $('#spaceCenter', 'section').hidden = false;
   keys.clear();
@@ -133,7 +133,7 @@ export function showCenter() {
 export function enterWorkshop(bay: string) {
   if (!state.centerReady) return;
   state.atCenter = false;
-  document.title = 'Omnivehicle · ' + bay.toUpperCase();
+  document.title = 'Nemonaut · ' + bay.toUpperCase();
   $('#spaceCenter', 'section').hidden = true;
   document.body.classList.remove('at-center');
   setBay(bay);

@@ -252,7 +252,7 @@
  "JSON出力": "Export JSON",
  "JSON読込": "Import JSON",
  "Luna Expeditionは発射台から開始。自動軌道投入の実演または手動操作で周回へ。点火済みの上段を停止して計画します。落下中の分離段がある間は高速航行できません。": "Luna Expedition starts at the launch pad. Reach orbit with the auto orbit insertion demo or manual control. Stop the ignited upper stage and plan. You cannot use on-rails warp while a separated stage is falling.",
- "Omnivehicle · 宇宙センター": "Omnivehicle · Space Center",
+ "Nemonaut · 宇宙センター": "Nemonaut · Space Center",
  "OrbitControls の内部フレーム(_quat/_quatInverse)が見つかりません": "OrbitControls internal frame (_quat/_quatInverse) not found",
  "RCS 上へ並進": "RCS translate up",
  "RCS 下へ並進": "RCS translate down",

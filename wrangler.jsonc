@@ -1,10 +1,10 @@
-// Public release of Omnivehicle: static assets on Cloudflare Workers, no Worker script.
+// Public release of Nemonaut: static assets on Cloudflare Workers, no Worker script.
 // Deploy only with tools/deploy-cloudflare.sh: it builds dist (gitignored) from committed src.
 {
-  "name": "omnivehicle",
+  "name": "nemonaut",
   "compatibility_date": "2026-10-23",
   "assets": { "directory": "dist" },
-  "routes": [{ "pattern": "omnivehicle.toming.app", "custom_domain": true }],
+  "routes": [{ "pattern": "nemonaut.toming.app", "custom_domain": true }],
   "workers_dev": false,
   "preview_urls": false
 }

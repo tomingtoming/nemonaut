@@ -49,9 +49,9 @@ expect "resume from tracking" "$(click 観察を再開)" '観察'
 sleep 3
 expect "resumed flight" "$(altitude)" '^"?[0-9.]+k?m"?$'
 click 探査計画 >/dev/null; sleep 1
-ev "()=>{localStorage.setItem('omnivehicle-lang','en');location.reload();return 1}" >/dev/null; sleep 7
+ev "()=>{localStorage.setItem('nemonaut-lang','en');location.reload();return 1}" >/dev/null; sleep 7
 expect "english center" "$(ev "()=>{const JA=/[぀-ヿ㐀-鿿]/;const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n,c=0;while(n=w.nextNode())if(JA.test(n.data)&&n.parentNode.tagName!=='SCRIPT')c++;return c}")" '^"?0"?$'
-ev "()=>{localStorage.setItem('omnivehicle-lang','ja');return 1}" >/dev/null
+ev "()=>{localStorage.setItem('nemonaut-lang','ja');return 1}" >/dev/null
 errors=$("$P" -s=$S console 2>&1 | grep -o "Errors: [0-9]*" | head -1)
 expect "console" "$errors" 'Errors: 0'
 "$P" -s=$S close >/dev/null 2>&1

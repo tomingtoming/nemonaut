@@ -29,7 +29,7 @@ test('practice burn and separation cannot advance or replace the normal world, a
   writeStoredGame(s, game);
   const storedBeforePractice = readStoredGame(s).game;
   const normal = s.getItem(GAME_KEY);
-  s.setItem('omnivehicle-flight-v1', 'normal-quick');
+  s.setItem('nemonaut-flight-v1', 'normal-quick');
   const session = new PracticeSession(game, draft),
     world = session.initialWorld;
   assert.equal(world.vessels.length, 1);
@@ -65,7 +65,7 @@ test('practice burn and separation cannot advance or replace the normal world, a
     assert.notEqual(session.loadFlight().parts[0].id, 'another');
     session.saveHome(s);
     assert.equal(s.getItem(GAME_KEY), normal);
-    assert.equal(s.getItem('omnivehicle-flight-v1'), 'normal-quick');
+    assert.equal(s.getItem('nemonaut-flight-v1'), 'normal-quick');
     assert.deepEqual(readStoredGame(s).game, storedBeforePractice);
     assert.deepEqual(session.home, game);
     assert.deepEqual(game, before);

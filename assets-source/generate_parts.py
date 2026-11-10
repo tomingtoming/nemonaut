@@ -1,4 +1,4 @@
-"""Orbital Foundry original modular parts. Run with Blender --background --python this.py.
+"""Nemonaut original modular parts. Run with Blender --background --python this.py.
 Design coordinates are meters, +Y nose/up, +X starboard. GLB uses those coordinates.
 """
 import bpy, math, json, os
