@@ -26,7 +26,7 @@ export function mountDescentPanel(
   panel.id = 'descentPanel';
   panel.hidden = true;
   panel.innerHTML =
-    '<strong>月面降下・接地計器</strong><p class="descentStatus" role="status"></p><p class="descentNumbers"></p><div><button class="descentRetro">SAS逆行へ</button><button class="descentUp">SAS天頂へ</button></div><div><button class="descentFull">全開</button><button class="descentHover">静止推力の目安へ</button><button class="descentLess">−0.5%</button><button class="descentMore">＋0.5%</button><button class="descentStop">噴射停止</button></div><small>月周回から逆行に整列し、点火して水平速度を減らします。低速になったら天頂へ。脚の対地距離と鉛直速度を見てスロットルを調整し、最後は1 m/s未満で接地、噴射停止。減速距離は推力を速度の反対へ向けた一定重力の目安です。静止推力は天頂を向いた場合の値で、自動高度保持ではありません。</small>';
+    '<strong>月面降下・接地計器</strong><p class="descentStatus" role="status"></p><p class="descentNumbers"></p><div><button class="descentRetro">SAS逆行へ</button><button class="descentUp">SAS天頂へ</button></div><div><button class="descentFull">スロットル全開</button><button class="descentHover">静止推力の目安へ</button><button class="descentLess">−0.5%</button><button class="descentMore">＋0.5%</button><button class="descentStop">噴射停止</button></div><small>月周回から逆行に整列し、点火して水平速度を減らします。低速になったら天頂へ。脚の対地距離と鉛直速度を見てスロットルを調整し、最後は1 m/s未満で接地、噴射停止。減速距離は推力を速度の反対へ向けた一定重力の目安です。静止推力は天頂を向いた場合の値で、自動高度保持ではありません。</small>';
   const basicHelp = element(panel, 'small', 'small');
   const expeditionHelp = document.createElement('details');
   expeditionHelp.className = 'flightHelp';

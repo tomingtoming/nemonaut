@@ -169,6 +169,11 @@ export function wireWorkshopToolbar() {
   applySnap();
   $('#environment', 'select').onchange = hooks.updateInfo;
   $('#export', 'button').onclick = () => {
+    // An empty craft would produce a file that JSON読込 refuses.
+    if (!state.parts.length) {
+      notify('まず機体を組み立ててください');
+      return;
+    }
     const a = document.createElement('a');
     const url = URL.createObjectURL(
       new Blob([JSON.stringify(craftData(), null, 2)], {type: 'application/json'})

@@ -63,7 +63,7 @@ test('invalid formats and malformed encoded poses reject without mutating input'
     assert.deepEqual(bad, before);
   }
   assert.throws(() => loadCraft(null));
-  // Preserve the existing export-empty/read-reject policy.
-  assert.deepEqual(saveCraft([], 'empty').parts, []);
-  assert.throws(() => loadCraft(saveCraft([], 'empty')));
+  // An empty craft is refused on both sides: an export that the import would reject is never written.
+  assert.throws(() => saveCraft([], 'empty'));
+  assert.throws(() => loadCraft({...good, parts: []}));
 });

@@ -6,9 +6,9 @@ export interface SavedCraftInput extends CraftRecord {
   partFrame?: unknown;
 }
 
-/** External workshop JSON. Runtime and version 2 both use model centers. */
+/** External workshop JSON. Runtime and version 2 both use model centers. An empty craft is rejected, as loadCraft rejects it. */
 export function saveCraft(parts: FlightPart[], name: string) {
-  const checked = parts.length ? validateCraft({version: 1, parts}) : [];
+  const checked = validateCraft({version: 1, parts});
   return {
     version: 2,
     partFrame: SAVED_PART_FRAME,

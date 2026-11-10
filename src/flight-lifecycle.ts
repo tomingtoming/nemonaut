@@ -27,6 +27,14 @@ import {flightPanels, partWindowPanels} from './flight-panels.js';
 import {updateInfo} from './info-hub.js';
 import {parachuteVisuals, debrisVisuals, exhaust} from './flight-visuals.js';
 import {showCoastBlocker, updateDebrisList, updateNavigation} from './flight-hud.js';
+// 精密操縦 lives in its button, whose click handler (flight-controls-ui.ts) switches it.
+const precisionOn = () => $('#precisionControl', 'button').getAttribute('aria-pressed') === 'true';
+/** startFlight for the flight already in progress (vessel switch, docking): keeps the precision mode a new flight resets. */
+function continueFlight(next: Flight) {
+  const precise = precisionOn();
+  startFlight(next);
+  if (precise) $('#precisionControl', 'button').click();
+}
 export function startFlight(restored: Flight | null = null) {
   const {maneuverPanel, orbitalPanel, cruisePanel, trajectoryPanel} = flightPanels(),
     {partWindows, designPartWindows} = partWindowPanels(),
@@ -101,6 +109,7 @@ export function startFlight(restored: Flight | null = null) {
   $('#trimVal', 'b').textContent = '0%';
   $('#sas', 'button').classList.add('active');
   $('#sas', 'button').textContent = 'SAS ON';
+  if (precisionOn()) $('#precisionControl', 'button').click();
   showBrakeState($('#brake', 'button'), state.flight.brake);
   controls.maxDistance = 2000000;
   $('#warp', 'select').value = '1';
@@ -165,7 +174,7 @@ export function switchVessel(target: Flight) {
     state.flight = next;
     state.parts = structuredClone(next.parts);
     hooks.rebuild();
-    startFlight(next);
+    continueFlight(next);
     state.parts = blueprint;
     syncFlightControls();
     const control = currentFlight().parts.find(p => PARTS[p.type].control);
@@ -259,7 +268,7 @@ export function refreshDockedFlight(next: Flight) {
   state.flight = next;
   state.parts = structuredClone(next.parts);
   hooks.rebuild();
-  startFlight(next);
+  continueFlight(next);
   state.parts = blueprint;
   syncFlightControls();
 }
