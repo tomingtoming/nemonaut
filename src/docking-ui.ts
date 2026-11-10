@@ -131,6 +131,8 @@ export function updateDocking() {
   uses().dockingWindow().readings(guide, status);
   $('#portGuide', 'div').hidden = !guide;
   $('#portFrame', 'input').checked = docked.portTranslationEnabled;
+  // The docking autopilot switches RCS on and back; the switch follows the vessel.
+  $('#rcsEnabled', 'input').checked = docked.rcsEnabled;
   if (guide) {
     $('#portReadings', 'small').textContent =
       '軸距離 ' + guide.axial.toFixed(2) + ' m · 接近 ' + guide.closing.toFixed(2) + ' m/s';

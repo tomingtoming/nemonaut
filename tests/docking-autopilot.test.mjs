@@ -123,6 +123,25 @@ test('manual piloting settings cancel the autopilot and restore the previous set
     f.dispose();
   }
 });
+test('a completed automatic docking leaves RCS as it was before the autopilot switched it on', () => {
+  for (const before of [false, true]) {
+    const f = fixture(30, 0);
+    let docked = null;
+    try {
+      f.rcsEnabled = before;
+      const r = fly(f);
+      assert.equal(r.pilot.state, 'docking', r.pilot.message);
+      assert.equal(f.rcsEnabled, true, 'the autopilot flies on RCS');
+      docked = dockVessels(f, r.target, r.ports.own, r.ports.target);
+      assert.equal(docked.rcsEnabled, true, 'the coupled vessel copies the owner');
+      r.pilot.step(docked, 1 / 120);
+      assert.equal(r.pilot.state, 'complete');
+      assert.equal(docked.rcsEnabled, before);
+    } finally {
+      (docked ?? f).dispose();
+    }
+  }
+});
 test('start refuses unsafe conditions', () => {
   const f = fixture(30, 0);
   try {

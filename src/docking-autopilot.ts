@@ -164,6 +164,8 @@ export class DockingAutopilot {
         [...this.ownParts].every(id => f.parts.some(p => p.id === id)) &&
         f.parts.length > this.ownParts.size
       ) {
+        // The coupled vessel copied RCS from the owner, where this pilot had switched it on.
+        f.rcsEnabled = this.previous.rcsEnabled;
         this.owner = null;
         this.state = 'complete';
         this.message = '結合完了';
