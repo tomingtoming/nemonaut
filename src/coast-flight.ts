@@ -28,6 +28,7 @@ import {powerStep, type PowerPart, type PowerReading, type ChargeMap} from './po
 import {THERMAL, type ThermalState, type ThermalMap} from './thermal.js';
 import {atmosphere} from './planet.js';
 import {engineBurn} from './resources.js';
+import {centerOfMass} from './center-of-mass.js';
 
 export type CoastPart = import('./aero.js').AeroPart & PowerPart;
 export interface CoastTelemetry {
@@ -113,8 +114,7 @@ export interface CoastResult {
 
 const zero = new T.Vector3(),
   commands = {pitch: 0, yaw: 0, roll: 0};
-const center: (v: FrozenSurfaceSubject) => T.Vector3 = v =>
-  v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q));
+const center: (v: FrozenSurfaceSubject) => T.Vector3 = centerOfMass;
 
 // Vacuum radiation only. Limit the fractional temperature change rather than
 // taking a fixed number of steps per elapsed second; no ablator is consumed.

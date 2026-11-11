@@ -94,6 +94,7 @@ import {
   type FuelNetworks,
   type ResourcePart
 } from './resources.js';
+import {centerOfMass} from './center-of-mass.js';
 await RAPIER.init();
 /** Where a docked part came from: its vessel name and mission epoch (kept through dock/undock). */
 export interface MissionOrigin {
@@ -596,11 +597,7 @@ export class Flight {
         primaryCenter = bodyState({id: 'planet'}, universalTime).position;
       this.pos.sub(primaryCenter).applyQuaternion(orientation).add(primaryCenter);
       this.q.premultiply(orientation);
-      this.vel
-        .applyQuaternion(orientation)
-        .add(
-          surfaceVelocity(this.pos.clone().add(this.stats.com.clone().applyQuaternion(this.q)), universalTime)
-        );
+      this.vel.applyQuaternion(orientation).add(surfaceVelocity(centerOfMass(this), universalTime));
       this.omega.copy(surfaceAngularVelocity());
     }
     updateNavigationFrame(this, {reset: true});
@@ -664,11 +661,7 @@ export class Flight {
     if (!this.landed) this.pos.add(before.com.clone().sub(this.stats.com).applyQuaternion(this.q));
     this.updateColliderMasses();
     if (!this.landed) this.omega.copy(angularVelocity(this.body, this.q, momentum));
-    this.orbit = bodyOrbitState(
-      this.pos.clone().add(this.stats.com.clone().applyQuaternion(this.q)),
-      this.vel,
-      this.universalTime
-    );
+    this.orbit = bodyOrbitState(centerOfMass(this), this.vel, this.universalTime);
     return moved;
   }
   armParachutes() {
@@ -805,11 +798,7 @@ export class Flight {
         const impulse = direction.multiplyScalar(0.5 / (1 / child.stats.mass + 1 / remaining.mass));
         child.vel.addScaledVector(impulse, 1 / child.stats.mass);
         this.vel.addScaledVector(impulse, -1 / remaining.mass);
-        child.orbit = bodyOrbitState(
-          child.pos.clone().add(child.stats.com.clone().applyQuaternion(child.q)),
-          child.vel,
-          child.universalTime
-        );
+        child.orbit = bodyOrbitState(centerOfMass(child), child.vel, child.universalTime);
       }
     }
     this.stats = this.vesselStats();
@@ -837,11 +826,7 @@ export class Flight {
       this.vel.copy(frozen.vel);
       this.omega.copy(frozen.omega);
       if (this.holdQ) this.holdQ.premultiply(frozen.turn).normalize();
-      this.orbit = bodyOrbitState(
-        this.pos.clone().add(this.stats.com.clone().applyQuaternion(this.q)),
-        this.vel,
-        this.universalTime
-      );
+      this.orbit = bodyOrbitState(centerOfMass(this), this.vel, this.universalTime);
       return;
     }
     if (!this.parts.length) return;

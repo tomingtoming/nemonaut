@@ -24,6 +24,7 @@ import {suspensionTravel} from './landing-gear.js';
 import {PARTS} from './catalog.js';
 import {bodyOrbitState} from './celestial.js';
 import {SAS_MODES} from './navigation.js';
+import {centerOfMass} from './center-of-mass.js';
 const flags = [
   'started',
   'crashed',
@@ -484,11 +485,7 @@ export function loadFlight(
   f.chutes = chutes;
   f.buildColliders();
   f.stats = statistics(f.parts, f.fuel, f.ballast, f.thermal, f.gearDeployed);
-  f.orbit = bodyOrbitState(
-    f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
-    f.vel,
-    f.universalTime
-  );
+  f.orbit = bodyOrbitState(centerOfMass(f), f.vel, f.universalTime);
   try {
     for (const child of children) f.detached.push(loadFlight(child, {depth: depth + 1, budget}));
     if (depth === 0) {
@@ -502,8 +499,7 @@ export function loadFlight(
       if (value.universalTime !== undefined) checkTimes(value);
       setUniversalTime(f, time);
       restoreSeparationCounters(all);
-      for (const v of all)
-        v.orbit = bodyOrbitState(v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)), v.vel, time);
+      for (const v of all) v.orbit = bodyOrbitState(centerOfMass(v), v.vel, time);
       for (const v of all) updateNavigationFrame(v);
       resolveTargets(f, {strict: true});
     }

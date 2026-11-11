@@ -2,7 +2,7 @@ import {surfaceRelativeVelocity} from './surface-frame.js';
 import {pendingBurns} from './burn-schedule.js';
 import {center} from './planet.js';
 import {orbitSegments} from './tracking-orbits.js';
-import {centerOfVessel} from './relative-navigation.js';
+import {centerOfMass} from './center-of-mass.js';
 import {recoveryStatus} from './vessel-recovery.js';
 import {PARTS} from './catalog.js';
 import {loadFlight, saveFlight, type SavedFlight} from './flight-save.js';
@@ -25,14 +25,14 @@ export function trackingList(
       name: (v.vesselName || record.meta?.name || '飛行') + (i === 0 ? ' / 操作中' : ''),
       bodyName: v.orbit.body.name,
       universalTime: v.universalTime,
-      position: includeOrbit ? centerOfVessel(v).sub(center).toArray() : undefined,
+      position: includeOrbit ? centerOfMass(v).sub(center).toArray() : undefined,
       segments: includeOrbit
-        ? orbitSegments(centerOfVessel(v), v.vel, {stopped: v.landed || v.crashed, time: v.universalTime})
+        ? orbitSegments(centerOfMass(v), v.vel, {stopped: v.landed || v.crashed, time: v.universalTime})
         : undefined,
       parts: v.parts.length,
       altitude: v.orbit.altitude,
       speed: v.orbit.speed,
-      surfaceSpeed: surfaceRelativeVelocity(centerOfVessel(v), v.vel, v.universalTime).length(),
+      surfaceSpeed: surfaceRelativeVelocity(centerOfMass(v), v.vel, v.universalTime).length(),
       time: v.time,
       controllable: canControl(v),
       pendingBurns: pendingBurns(v),

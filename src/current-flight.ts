@@ -1,6 +1,7 @@
 // Access to the flight in progress (BACKLOG 7c, moved from app.ts unchanged): the controlled flight, the
 // running world and the centre of mass of a vessel. No import-time side effects.
-import {statistics, type Flight} from './core.js';
+import type {Flight} from './core.js';
+import {centerOfMass} from './center-of-mass.js';
 import type {WorldRuntime} from './world-runtime.js';
 import {state} from './app-state.js';
 export function currentFlight(): Flight {
@@ -12,9 +13,7 @@ export function currentWorldRuntime(): WorldRuntime {
   return state.worldRuntime;
 }
 export function vesselCenter(f: Flight) {
-  return statistics(f.parts, f.fuel, f.ballast, f.thermal, f.gearDeployed)
-    .com.applyQuaternion(f.q)
-    .add(f.pos);
+  return centerOfMass(f);
 }
 export function flightCenter() {
   return vesselCenter(currentFlight());

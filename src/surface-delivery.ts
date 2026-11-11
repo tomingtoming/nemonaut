@@ -5,6 +5,7 @@ import {surfaceRelativeVelocity} from './surface-frame.js';
 import {launchOrigins, surfaceOrigins} from './launch-provenance.js';
 import {appendHistory, type WorldHistoryEvent} from './world-history.js';
 import {DELIVERY_SITE, DELIVERY_SITES, deliveryDistance, type DeliverySite} from './delivery-sites.js';
+import {centerOfMass} from './center-of-mass.js';
 
 export interface DeliveryVessel extends DescentVessel {
   crashed?: boolean;
@@ -31,7 +32,7 @@ export function deliveryTelemetry(
   history: readonly WorldHistoryEvent[],
   {practice = false, site = DELIVERY_SITE}: {practice?: boolean; site?: DeliverySite} = {}
 ): DeliveryTelemetry {
-  const center = v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q));
+  const center = centerOfMass(v);
   const distance = deliveryDistance(center, v.universalTime, site),
     speed = surfaceRelativeVelocity(center, v.vel, v.universalTime).length();
   const probe = v.parts.find(p => PARTS[p.type].surfaceObservation === true),

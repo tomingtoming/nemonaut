@@ -1,6 +1,7 @@
 import {PRIMARY, bodyState, referenceBody} from './celestial.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
 import {deliverySitePosition, type DeliverySite} from './delivery-sites.js';
+import {centerOfMass} from './center-of-mass.js';
 export interface SiteApproachVessel {
   pos: import('three').Vector3;
   vel: import('three').Vector3;
@@ -15,7 +16,7 @@ export interface SiteApproach {
 
 // Speeds projected onto the surface, in the same frame as the site's arc distance.
 export function siteApproach(v: SiteApproachVessel, site: DeliverySite): SiteApproach | null {
-  const center = v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)),
+  const center = centerOfMass(v),
     time = v.universalTime;
   if (referenceBody(center, time).id !== PRIMARY.id) return null;
   const radial = center.clone().sub(bodyState(PRIMARY, time).position),

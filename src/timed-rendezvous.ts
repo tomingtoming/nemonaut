@@ -7,6 +7,7 @@ import {coastDrift} from './coast-orbit.js';
 import {relativeStopPlan} from './relative-stop-plan.js';
 
 import {transferThrottle} from './rendezvous-burn.js';
+import {centerOfMass} from './center-of-mass.js';
 export {transferThrottle} from './rendezvous-burn.js';
 /** The vessel fields transferBurnTiming simulates the burn from (a Flight satisfies it). */
 export interface BurnTimingVessel extends BurnEstimateVessel {
@@ -76,7 +77,7 @@ export function timedRendezvousTransfer(
   target: OrbitState | null | undefined,
   options: RendezvousTransferOptions & BurnTimingOptions = {}
 ) {
-  const position = vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),
+  const position = centerOfMass(vessel),
     own = bodyOrbitState(position, vessel.vel, vessel.universalTime);
   const plan = rendezvousTransfer(own, target, options),
     preview = maneuverPreview(
@@ -113,7 +114,7 @@ export function timedRelativeStopPlan(
   target: OrbitState | null | undefined,
   options: BurnTimingOptions = {}
 ) {
-  const position = vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),
+  const position = centerOfMass(vessel),
     own = bodyOrbitState(position, vessel.vel, vessel.universalTime),
     plan = relativeStopPlan(own, target);
   if (plan.location === 'now') throw Error('補正には最接近まで60秒以上の準備時間が必要です');

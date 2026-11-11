@@ -6,6 +6,7 @@ import {engineBurn, type FuelNetworks, type ResourcePart, type EngineSet} from '
 import {engineSubmersion} from './engine-medium.js';
 import {atmosphere} from './planet.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
+import {centerOfMass} from './center-of-mass.js';
 
 // Geometry is evaluated at the lowest part, not the vehicle origin or COM.
 // Braking figures assume thrust aligned against motion and constant gravity;
@@ -70,7 +71,7 @@ export function availableEngineForce(v: DescentVessel, density: number, pressure
 }
 
 export function descentTelemetry(v: DescentVessel): DescentTelemetry {
-  const com = v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)),
+  const com = centerOfMass(v),
     o = bodyOrbitState(com, v.vel, v.universalTime),
     up = o.r.clone().normalize();
   let clearance = Infinity;

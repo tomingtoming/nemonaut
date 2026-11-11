@@ -3,6 +3,7 @@ import * as T from 'three';
 import {DELIVERY_SITE, DELIVERY_SITES, deliveryDistance, type DeliverySite} from './delivery-sites.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
 import {descentTelemetry, type DescentVessel} from './descent.js';
+import {centerOfMass} from './center-of-mass.js';
 export const OBSERVATION_POWER = 0.1;
 /** Accumulated observation seconds (and their quality) at one delivery site. */
 export interface ObservationRecord {
@@ -84,7 +85,7 @@ export function observationReason(v: ObservationVessel, id: string): string {
   if (!p || !s) return '観測装置なし';
   if (v.crashed || v.thermal.get(id)?.failed) return '機体損傷';
   if (!s.enabled) return '停止中';
-  const com = v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q));
+  const com = centerOfMass(v);
   if (!observationSite(v, id)) return '観測点の範囲外';
   if (!v.landed || surfaceRelativeVelocity(com, v.vel, v.universalTime).length() >= 0.5)
     return '接地・静止待ち';

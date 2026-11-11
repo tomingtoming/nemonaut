@@ -16,6 +16,7 @@ import {rollServo} from './roll-servo.js';
 import {planLandingTrim, type LandingPlan} from './landing-trim.js';
 import {landingPlanMatches, landingPlanCurrent, type LandingPlanContext} from './landing-plan-client.js';
 import type {Flight} from './core.js';
+import {centerOfMass} from './center-of-mass.js';
 const rad = Math.PI / 180,
   clamp = T.MathUtils.clamp;
 export interface LandingOptions {
@@ -123,7 +124,7 @@ export class LandingPrototype {
     this.inner = new TakeoffPrototype<ApproachGuidance>(f, {speed: 90, integral: true, handoff: 'attitude'});
     this.inner.cruise = {running: true, telemetry: {pitch: 0}};
     if (useTrimPlan) {
-      const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+      const center = centerOfMass(f);
       if (preparedPlan !== undefined) {
         if (
           !preparedContext ||
@@ -150,7 +151,7 @@ export class LandingPrototype {
       return {};
     }
     if (dt === 0 || ['stopped', 'failed'].includes(this.phase)) return {};
-    const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
+    const center = centerOfMass(f),
       up = bodyUp(center, f.universalTime);
     const h = bodyAltitude(center, f.universalTime),
       v = surfaceRelativeVelocity(center, f.vel, f.universalTime),

@@ -1,5 +1,6 @@
 import {fleet} from './fleet.js';
-import {centerOfVessel, relativeState, type NavigationVessel} from './relative-navigation.js';
+import {relativeState, type NavigationVessel} from './relative-navigation.js';
+import {centerOfMass} from './center-of-mass.js';
 import {bodyOrbitState, type OrbitState} from './celestial.js';
 export interface MapVessel extends NavigationVessel {
   detached: MapVessel[];
@@ -24,7 +25,7 @@ export function mapVessels(root: MapVessel): MapVesselEntry[] {
   return fleet(root)
     .filter(v => v !== root)
     .map((v, i) => {
-      const position = centerOfVessel(v),
+      const position = centerOfMass(v),
         relative = relativeState(root, v);
       if (!relative) throw Error('機体の相対位置を計算できません');
       return {

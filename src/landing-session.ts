@@ -27,6 +27,7 @@ import {LandingPrototype, type LandingTelemetry} from './landing-prototype.js';
 import type {AutopilotCommands} from './takeoff-prototype.js';
 import type {LandingPlan} from './landing-trim.js';
 import type {Flight} from './core.js';
+import {centerOfMass} from './center-of-mass.js';
 /** The pilot of a running landing, as the flight loop and panel see it. */
 export type LandingPilot = LandingPrototype;
 export type LandingPrepareResult = LandingPlanResult;
@@ -44,7 +45,7 @@ export function landingReadiness(f: Flight, end = '09'): string | null {
   const problem = cruiseAuthority(f) || cruisePropulsion(f);
   if (problem) return problem;
   if (!f.parts.some(p => PARTS[p.type].wheel)) return '着陸用の車輪が必要';
-  const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+  const center = centerOfMass(f);
   if (referenceBody(center, f.universalTime).id !== 'planet' || f.telemetry.contacts)
     return `母星の滑走路${end}へ飛行中に準備してください`;
   const h = bodyAltitude(center, f.universalTime),
@@ -194,7 +195,7 @@ export class LandingSession {
       return {};
     }
     if (this.pilot.phase === 'go-around' && !this.recovery) {
-      const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+      const center = centerOfMass(f);
       if (bodyAltitude(center, f.universalTime) >= 450 && !cruiseReadiness(f)) {
         const target = {
           speed: Math.max(90, this.pilot.trimPlan?.speed ?? 90),

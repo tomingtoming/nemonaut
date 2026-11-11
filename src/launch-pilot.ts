@@ -2,6 +2,7 @@ import {engineMaxThrust, type FuelNetworks} from './resources.js';
 import * as T from 'three';
 import {PARTS, type Part} from './catalog.js';
 import {localUp, orbitState} from './planet.js';
+import {centerOfMass} from './center-of-mass.js';
 const Y = new T.Vector3(0, 1, 0);
 /** The flight fields LaunchPilot reads and the actuators it commands. */
 export interface LaunchPilotVessel {
@@ -64,7 +65,7 @@ export class LaunchPilot {
       }
       f.stageNext();
     }
-    const com = f.stats.com.clone().applyQuaternion(f.q).add(f.pos),
+    const com = centerOfMass(f),
       o = orbitState(com, f.vel),
       up = localUp(com),
       tangent = new T.Vector3(0, 0, 1).addScaledVector(up, -up.z).normalize();

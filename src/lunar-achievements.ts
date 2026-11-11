@@ -3,6 +3,7 @@ import {bodyOrbitState} from './celestial.js';
 import {descentTelemetry, type DescentVessel} from './descent.js';
 import {appendHistory, type WorldHistoryEvent} from './world-history.js';
 import {launchOrigins, surfaceOrigins} from './launch-provenance.js';
+import {centerOfMass} from './center-of-mass.js';
 
 // Called with observed simulation states, including after coast updates.
 // Surface-launch lineage survives staging; placed/unknown parts earn nothing.
@@ -31,7 +32,7 @@ export function recordLunarAchievements(
       origins
     );
     if (!sources) continue;
-    const center = vessel.stats.com.clone().applyQuaternion(vessel.q).add(vessel.pos);
+    const center = centerOfMass(vessel);
     const orbit = bodyOrbitState(center, vessel.vel, vessel.universalTime);
     if (orbit.bodyId !== 'moon' || orbit.altitude < 0) continue;
     const write = (type: string) => {

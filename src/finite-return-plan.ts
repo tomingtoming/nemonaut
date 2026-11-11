@@ -1,6 +1,7 @@
 import {deorbitPlan} from './deorbit-plan.js';
 import {finiteBurnPreview, type FiniteBurnVessel, type FiniteBurnPreview} from './finite-burn.js';
 import {maneuverPreview, type ManeuverComponents, type ManeuverPreview} from './maneuver.js';
+import {centerOfMass} from './center-of-mass.js';
 
 // Solve the first reachable retrograde crossing at a fixed ignition epoch.
 // Invalid long/low-altitude burns bound the search; they are never accepted.
@@ -23,7 +24,7 @@ export function finiteReturnPlan(
   {throttle = 0.1, periapsis = 25000, delay = 60}: FiniteReturnOptions = {}
 ): FiniteReturnPlan {
   if (![0.01, 0.1, 1].includes(throttle)) throw Error('帰還案の推力は1・10・100%から選んでください');
-  const pos = vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),
+  const pos = centerOfMass(vessel),
     time = vessel.universalTime;
   const seed = deorbitPlan(pos, vessel.vel, time, {periapsis, delay}),
     direction = seed.preview.impulse.clone().normalize(),

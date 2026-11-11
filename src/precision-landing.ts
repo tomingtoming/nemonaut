@@ -6,6 +6,7 @@ import {launchOrigins, surfaceOrigins} from './launch-provenance.js';
 import {appendHistory, type WorldHistoryEvent} from './world-history.js';
 import {DELIVERY_SITES, deliveryDistance, type DeliverySite} from './delivery-sites.js';
 import {PRECISION_ALTITUDE, flightPhases, phaseSources} from './flight-challenge-history.js';
+import {centerOfMass} from './center-of-mass.js';
 
 export interface PrecisionStatusVessel {
   parts: readonly {id: string}[];
@@ -73,7 +74,7 @@ export function recordFlightChallenges(
     const airborne = phaseSources(ids, phases, 'flight-ascent'),
       touchdowns = phaseSources(ids, phases, 'flight-touchdown');
     const damaged = v.crashed || [...v.thermal.values()].some(s => s.failed);
-    const center = v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q));
+    const center = centerOfMass(v);
     let type: string | undefined, data: Partial<WorldHistoryEvent> | undefined;
     if (airborne && v.telemetry.groundContact && v.orbit?.bodyId === 'planet') {
       const nearest = DELIVERY_SITES.map(site => ({

@@ -8,6 +8,7 @@ import {atmosphere} from './planet.js';
 import {planLandingTrim} from './landing-trim.js';
 import type {LandingPlanRequestMessage, LandingPlanReplyMessage} from './landing-plan-client.js';
 import type {Flight} from './core.js';
+import {centerOfMass} from './center-of-mass.js';
 export function handleLandingPlan({
   id,
   vesselId,
@@ -19,7 +20,7 @@ export function handleLandingPlan({
     if (!Number.isInteger(id) || id < 1 || vesselId !== flight?.vesselId || epoch !== flight?.universalTime)
       throw Error('Mismatched landing snapshot');
     clone = loadFlight(flight);
-    const center = clone.pos.clone().add(clone.stats.com.clone().applyQuaternion(clone.q));
+    const center = centerOfMass(clone);
     const plan = planLandingTrim(clone, {
       density: atmosphere(bodyAltitude(center, clone.universalTime)).density,
       gravity: bodyGravity(center, clone.universalTime).length()

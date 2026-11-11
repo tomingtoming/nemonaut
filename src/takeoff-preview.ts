@@ -5,6 +5,7 @@ import {TakeoffPrototype, type TakeoffTarget} from './takeoff-prototype.js';
 import {runwayApproach} from './runway-navigation.js';
 import {extendWheelTrack, type WheelTrack} from './runway-wheel-track.js';
 import type {Flight} from './core.js';
+import {centerOfMass} from './center-of-mass.js';
 export interface TakeoffPreviewOptions {
   seconds?: number;
   hz?: number;
@@ -87,7 +88,7 @@ export function runTakeoffPreview({flight, pilot: p, seconds, hz}: TakeoffReques
     for (let i = 0; i < seconds * hz && !clone.crashed; i++) {
       clone.step(1 / hz, pilot.update(clone, 1 / hz));
       wheelTrack = extendWheelTrack(wheelTrack, clone.telemetry.wheelContacts || []);
-      const center = clone.pos.clone().add(clone.stats.com.clone().applyQuaternion(clone.q)),
+      const center = centerOfMass(clone),
         r = runwayApproach(center, clone.universalTime, '09', clone.vel);
       if (clone.telemetry.contacts) {
         if (!r) throw TypeError('No runway approach away from the home planet');

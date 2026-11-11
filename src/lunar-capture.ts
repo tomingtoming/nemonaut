@@ -4,6 +4,7 @@ import {bodyOrbitState, MOON} from './celestial.js';
 import {apsisPlan} from './orbit-plan.js';
 import {coastDrift} from './coast-orbit.js';
 import {fuelNetworks, engineBurn, type EngineSet} from './resources.js';
+import {centerOfMass} from './center-of-mass.js';
 
 /** The vessel fields captureBurnEstimate reads. */
 export interface BurnEstimateVessel {
@@ -104,7 +105,7 @@ export function captureBurnEstimate(vessel: BurnEstimateVessel, deltaV: number):
 
 export function lunarCapturePlan(vessel: LunarCaptureVessel): LunarCapturePlan {
   const time = vessel.universalTime,
-    pos = vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),
+    pos = centerOfMass(vessel),
     orbit = bodyOrbitState(pos, vessel.vel, time);
   if (orbit.bodyId !== 'moon') throw Error('月重力圏へ入ってから計画してください');
   if (vessel.throttle !== 0) throw Error('スロットルを0にしてから計画してください');

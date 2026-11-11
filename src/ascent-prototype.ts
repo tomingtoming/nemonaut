@@ -7,6 +7,7 @@ import * as T from 'three';
 import {PARTS} from './catalog.js';
 import {atmosphere, localUp, orbitState, radial} from './planet.js';
 import type {Flight} from './core.js';
+import {centerOfMass} from './center-of-mass.js';
 export interface AscentTarget {
   altitude?: number;
   tolerance?: number;
@@ -67,7 +68,7 @@ export class AscentPrototype {
       f.stageNext();
     }
 
-    const com = f.stats.com.clone().applyQuaternion(f.q).add(f.pos),
+    const com = centerOfMass(f),
       o = orbitState(com, f.vel),
       up = localUp(com);
     this.plane ??= ascentPlane(up, this.inclination);

@@ -2,6 +2,7 @@ import {fleet, type FleetNode} from './fleet.js';
 import {bodyOrbitState} from './celestial.js';
 import {appendHistory, type WorldHistoryEvent} from './world-history.js';
 import {launchOrigins, surfaceOrigins} from './launch-provenance.js';
+import {centerOfMass} from './center-of-mass.js';
 
 // All parts must have recorded surface departures, across separation/docking.
 // Legacy/placed craft and unknown additions earn nothing.
@@ -39,7 +40,7 @@ export function recordOrbitAchievements(
       origins
     );
     if (!sources) continue;
-    const center = vessel.stats.com.clone().applyQuaternion(vessel.q).add(vessel.pos);
+    const center = centerOfMass(vessel);
     const orbit = bodyOrbitState(center, vessel.vel, vessel.universalTime);
     if (orbit.bodyId !== 'planet' || !orbit.stable || !Number.isFinite(orbit.apoapsis)) continue;
     result = appendHistory(

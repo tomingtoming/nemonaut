@@ -16,6 +16,7 @@ import {
   type ManeuverSettings
 } from './maneuver-execution-plan.js';
 import type {Flight} from './core.js';
+import {centerOfMass} from './center-of-mass.js';
 export type {ManeuverExecutionPlan, ManeuverSettings} from './maneuver-execution-plan.js';
 /** The pilot settings a burn takes over and gives back when it stops. */
 export type ManeuverControlState = Pick<Flight, 'sas' | 'sasMode' | 'navigationAuto' | 'navigationFrame'>;
@@ -62,11 +63,7 @@ export class ManeuverSession {
     if (this.owner) throw Error('実行中の噴射を停止してください');
     if (!f || !canControl(f)) throw Error('操縦可能な機体が必要です');
     if (f.throttle !== 0) throw Error('スロットルを0にしてください');
-    const orbit = bodyOrbitState(
-      f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
-      f.vel,
-      f.universalTime
-    );
+    const orbit = bodyOrbitState(centerOfMass(f), f.vel, f.universalTime);
     if (orbit.altitude < Math.max(1000, orbit.body.atmosphereTop ?? 0))
       throw Error('大気圏外で開始してください');
     const n = validateManeuverNode(f.maneuver);
@@ -163,11 +160,7 @@ export class ManeuverSession {
       this.stop('complete', '予定噴射を完了しました');
       return;
     }
-    const orbit = bodyOrbitState(
-      f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
-      f.vel,
-      f.universalTime
-    );
+    const orbit = bodyOrbitState(centerOfMass(f), f.vel, f.universalTime);
     if (orbit.bodyId !== this.body || orbit.altitude < Math.max(1000, orbit.body.atmosphereTop ?? 0)) {
       this.stop('failed', '噴射の適用範囲を外れました');
       return;

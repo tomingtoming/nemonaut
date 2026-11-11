@@ -4,7 +4,8 @@ import {partRotation} from './aero.js';
 import {Flight} from './core.js';
 import {PARTS, preset} from './catalog.js';
 import {center} from './planet.js';
-import {centerOfVessel, setTarget} from './relative-navigation.js';
+import {setTarget} from './relative-navigation.js';
+import {centerOfMass} from './center-of-mass.js';
 import {loadFlight, saveFlight} from './flight-save.js';
 import {flightFromWorld, worldFromFlight, type SavedWorld} from './world-save.js';
 
@@ -18,7 +19,7 @@ export function withRendezvousTarget(world: SavedWorld, {close = false}: {close?
       throw Error('移送練習は単独機の母星円軌道から開始してください');
     const target = new Flight(preset('orbital-tug'), 'orbit', own.universalTime);
     own.detached.push(target);
-    const radius = centerOfVessel(own).sub(center);
+    const radius = centerOfMass(own).sub(center);
     const rotation = new T.Quaternion().setFromAxisAngle(radius.clone().cross(own.vel).normalize(), 0.03);
     target.pos.copy(
       radius.applyQuaternion(rotation).add(center).sub(target.stats.com.clone().applyQuaternion(target.q))

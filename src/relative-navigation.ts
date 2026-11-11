@@ -1,5 +1,8 @@
 import * as T from 'three';
-import {partCenter, partMass, type AeroPart, type MassPart} from './aero.js';
+import type {AeroPart, MassPart} from './aero.js';
+import {centerOfMass, type MassCenteredVessel} from './center-of-mass.js';
+// The centre of a vessel is its centre of mass; the older name stays for its importers.
+export {centerOfMass as centerOfVessel} from './center-of-mass.js';
 import {PARTS} from './catalog.js';
 import {fleet} from './fleet.js';
 export interface NavigationPart extends AeroPart, MassPart {
@@ -10,13 +13,11 @@ export interface DockingPortPair {
   own: string;
   target: string;
 }
-export interface CenteredVessel {
+export interface CenteredVessel extends MassCenteredVessel {
   parts: readonly NavigationPart[];
   fuel?: import('./resources.js').FuelMap | number;
   ballast?: number;
   thermal?: ReadonlyMap<string, {ablator?: number}> | null;
-  q: T.Quaternion;
-  pos: T.Vector3;
 }
 export interface MovingVessel extends CenteredVessel {
   vel: T.Vector3;
@@ -43,25 +44,12 @@ export interface ResolveTargetOptions {
   strict?: boolean;
 }
 export const TARGET_MODES: string[] = ['target', 'relativeRetrograde', 'dock'];
-export function centerOfVessel(v: CenteredVessel): T.Vector3 {
-  const center = new T.Vector3();
-  let mass = 0;
-  for (const p of v.parts) {
-    const m = partMass(p, v.fuel, v.ballast, v.thermal);
-    mass += m;
-    center.addScaledVector(partCenter(p), m);
-  }
-  return center
-    .divideScalar(mass || 1)
-    .applyQuaternion(v.q)
-    .add(v.pos);
-}
 export function relativeState(
   v: MovingVessel,
   target: MovingVessel | null | undefined
 ): RelativeState | null {
   if (!target || v === target) return null;
-  const offset = centerOfVessel(target).sub(centerOfVessel(v)),
+  const offset = centerOfMass(target).sub(centerOfMass(v)),
     velocity = target.vel.clone().sub(v.vel),
     distance = offset.length(),
     speed = velocity.length(),

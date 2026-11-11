@@ -5,6 +5,7 @@ import {canControl} from './fleet.js';
 import {instrumentForward} from './command-frame.js';
 import {attitudeTarget} from './navigation.js';
 import {availableEngineForce, type DescentVessel} from './descent.js';
+import {centerOfMass} from './center-of-mass.js';
 export interface AscentAttitudeFlight extends DescentVessel {
   instrumentRotation: T.Quaternion;
   crashed?: boolean;
@@ -22,7 +23,7 @@ export interface AscentAttitudeFlight extends DescentVessel {
 export function setAscentAttitude(f: AscentAttitudeFlight, pitch: number): T.Vector3 {
   if (!Number.isFinite(pitch) || pitch < 0 || pitch > 90 || !canControl(f) || !hasVacuumEngine(f.parts))
     throw Error('離陸姿勢を指定できません');
-  const pos = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
+  const pos = centerOfMass(f),
     up = bodyUp(pos, f.universalTime);
   const horizontal = relativeMotion(pos, f.vel, f.universalTime).velocity;
   horizontal.addScaledVector(up, -horizontal.dot(up));

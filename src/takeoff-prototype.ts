@@ -10,6 +10,7 @@ import {CruisePilot, cruiseReadiness, cruiseSettings, cruiseTargetReadiness} fro
 import {seedSasTrim} from './sas-trim.js';
 import {runwayApproach, RUNWAY} from './runway-navigation.js';
 import type {Flight} from './core.js';
+import {centerOfMass} from './center-of-mass.js';
 const rad = Math.PI / 180,
   clamp = T.MathUtils.clamp;
 export interface AutopilotCommands {
@@ -123,7 +124,7 @@ export class TakeoffPrototype<G extends PitchGuidance = CruisePilot> {
     }
     // Fast attitude feedback must observe each physics step; holding saturated
     // control for 100 ms caused a limit cycle on the light aircraft.
-    const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
+    const center = centerOfMass(f),
       up = bodyUp(center, f.universalTime),
       v = surfaceRelativeVelocity(center, f.vel, f.universalTime);
     const height = bodyAltitude(center, f.universalTime),
@@ -289,7 +290,7 @@ export class TakeoffPrototype<G extends PitchGuidance = CruisePilot> {
   }
   // Elevator servo toward a commanded pitch (degrees). No heading or bank control.
   pitchServo(f: Flight, targetPitch: number, dt: number): {pitch: number} {
-    const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
+    const center = centerOfMass(f),
       up = bodyUp(center, f.universalTime);
     const pitch = Math.asin(clamp(new T.Vector3(0, 0, 1).applyQuaternion(f.q).dot(up), -1, 1)) / rad;
     const rate = -f.omega.clone().sub(surfaceAngularVelocity()).applyQuaternion(f.q.clone().invert()).x / rad,

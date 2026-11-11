@@ -12,6 +12,7 @@ import {PLANET} from './planet.js';
 import {keplerDrift, coastDrift} from './coast-orbit.js';
 import {captureBurnEstimate, type LunarCaptureVessel, type CaptureBurnEstimate} from './lunar-capture.js';
 import {engineBurn, type FuelNetworks} from './resources.js';
+import {centerOfMass} from './center-of-mass.js';
 
 // The lunar conic is followed to its actual SOI radius, then translated using
 // the ephemeris at that epoch. No parent-planet velocity is added twice.
@@ -180,12 +181,7 @@ export function predictReturnBurn(
   const fuel = new Map<string, number>(vessel.fuel),
     direction = plan.impulse.clone().normalize(),
     start = plan.time - plan.burn.duration / 2;
-  const at = coastDrift(
-    vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),
-    vessel.vel,
-    vessel.universalTime,
-    start - vessel.universalTime
-  );
+  const at = coastDrift(centerOfMass(vessel), vessel.vel, vessel.universalTime, start - vessel.universalTime);
   let pos = at.position,
     vel = at.velocity,
     time = start,
@@ -222,12 +218,7 @@ export function lunarReturnPlan(
   if (vessel.throttle !== 0) throw Error('噴射を停止してから帰還計画を作成してください');
   // Check the propulsion configuration before spending work on a search.
   captureBurnEstimate(vessel, 1);
-  const search = searchLunarReturn(
-      vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),
-      vessel.vel,
-      vessel.universalTime,
-      options
-    ),
+  const search = searchLunarReturn(centerOfMass(vessel), vessel.vel, vessel.universalTime, options),
     burn = captureBurnEstimate(vessel, search.deltaV);
   const plan: LunarReturnPlan = {
     ...search,

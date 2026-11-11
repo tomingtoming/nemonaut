@@ -1,4 +1,5 @@
 import {bodyAltitude, referenceBody} from './celestial.js';
+import {centerOfMass} from './center-of-mass.js';
 export type NavigationFrame = 'surface' | 'orbit';
 export interface NavigationFrameFlight {
   navigationFrame?: NavigationFrame;
@@ -33,7 +34,7 @@ export function updateNavigationFrame(
   {reset = false, time = f.universalTime}: {reset?: boolean; time?: number} = {}
 ): NavigationFrame | undefined {
   if (f.navigationAuto === false) return f.navigationFrame;
-  const point = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
+  const point = centerOfMass(f),
     body = referenceBody(point, time);
   setNavigationFrame(
     f,

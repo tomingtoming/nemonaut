@@ -3,7 +3,8 @@ export {portPose} from './port-navigation.js';
 import * as T from 'three';
 import {PARTS} from './catalog.js';
 import {partRotation, partMass} from './aero.js';
-import {centerOfVessel, resolveTargets} from './relative-navigation.js';
+import {resolveTargets} from './relative-navigation.js';
+import {centerOfMass} from './center-of-mass.js';
 import {Flight, statistics, descendants, validateCraft, type FlightPart} from './core.js';
 import {fleet} from './fleet.js';
 import {fuelNetworks} from './resources.js';
@@ -64,7 +65,7 @@ export function dockingStatus(a: Flight, aId: string, b: Flight, bId: string): D
 export function combinedMotion(a: DockingBody, b: DockingBody): CombinedMotion {
   const vessels = [a, b],
     masses = vessels.map(v => v.parts.reduce((s, p) => s + partMass(p, v.fuel, v.ballast, v.thermal), 0)),
-    centers = vessels.map(centerOfVessel),
+    centers = vessels.map(centerOfMass),
     mass = masses[0] + masses[1],
     center = centers[0]
       .clone()
@@ -155,7 +156,7 @@ function required(p: FlightPart | undefined, id: string): FlightPart {
   return p;
 }
 function updateOrbit(v: Flight): void {
-  v.orbit = bodyOrbitState(centerOfVessel(v), v.vel, v.universalTime);
+  v.orbit = bodyOrbitState(centerOfMass(v), v.vel, v.universalTime);
 }
 function replaceFleet(
   root: Flight,
@@ -232,7 +233,7 @@ export function undockVessel(root: Flight, portId: string): Flight {
   }
   const retained = parts.filter(p => !ids.has(p.id)),
     branch = parts.filter(p => ids.has(p.id)),
-    before = centerOfVessel(root),
+    before = centerOfMass(root),
     a = rebuilt(root, retained),
     b = rebuilt(root, branch);
   for (const v of [a, b]) {
@@ -243,9 +244,9 @@ export function undockVessel(root: Flight, portId: string): Flight {
     }
   }
   a.vesselId = root.vesselId;
-  for (const v of [a, b]) v.vel.copy(root.vel).add(root.omega.clone().cross(centerOfVessel(v).sub(before)));
+  for (const v of [a, b]) v.vel.copy(root.vel).add(root.omega.clone().cross(centerOfMass(v).sub(before)));
   // Equal-and-opposite impulses through the COM line preserve total angular momentum.
-  const direction = centerOfVessel(b).sub(centerOfVessel(a));
+  const direction = centerOfMass(b).sub(centerOfMass(a));
   if (direction.lengthSq() > 1e-10) {
     direction.normalize();
     const impulse = 0.1 / (1 / a.stats.mass + 1 / b.stats.mass);

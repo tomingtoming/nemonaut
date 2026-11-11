@@ -4,7 +4,7 @@ import {PARTS} from './catalog.js';
 import {partMass, partRotation} from './aero.js';
 import {inertiaAbout} from './vessel-inertia.js';
 import {DOCK_LIMITS} from './docking-limits.js';
-import {centerOfVessel} from './relative-navigation.js';
+import {centerOfMass} from './center-of-mass.js';
 import {recordFailure} from './failure-events.js';
 import type {Flight, FlightPart} from './core.js';
 
@@ -100,7 +100,7 @@ function dockingFaces(a: Flight, pa: FlightPart | undefined, b: Flight, pb: Flig
 }
 function body(v: Flight): CollisionBody {
   const mass = v.parts.reduce((s, p) => s + partMass(p, v.fuel, v.ballast, v.thermal), 0),
-    center = centerOfVessel(v);
+    center = centerOfMass(v);
   return {v, mass, center, inverseInertia: inertiaAbout(v, center).invert()};
 }
 const velocityAt = (b: CollisionBody, r: T.Vector3) => b.v.vel.clone().add(b.v.omega.clone().cross(r));

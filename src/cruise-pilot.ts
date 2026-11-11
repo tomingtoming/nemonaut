@@ -8,6 +8,7 @@ import {atmosphere} from './planet.js';
 import {PARTS} from './catalog.js';
 import {partRotation, controlDeflection, type ControlPart} from './aero.js';
 import {fuelNetworks, engineMaxThrust, type ResourcePart, type EngineSet} from './resources.js';
+import {centerOfMass} from './center-of-mass.js';
 const clamp = T.MathUtils.clamp,
   rad = Math.PI / 180;
 export type CruiseSettingsInput = {
@@ -220,7 +221,7 @@ export class CruisePilot {
     if (this.elapsed < 0.1) return;
     const elapsed = Math.min(this.elapsed, 0.2);
     this.elapsed = 0;
-    const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+    const center = centerOfMass(f);
     const up = bodyUp(center, f.universalTime),
       frame = compassFrame(center, f.universalTime);
     if (!frame) {

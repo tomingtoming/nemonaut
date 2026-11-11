@@ -22,6 +22,7 @@ export function advanceWorldPhysics(
       v,
       {
         parts: v.parts,
+        stats: v.stats,
         pos: v.pos.clone(),
         q: v.q.clone(),
         vel: v.vel.clone(),

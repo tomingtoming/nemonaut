@@ -25,6 +25,7 @@ import {landingReadiness} from './landing-session.js';
 import {planReturnRoute, routePoint, type ReturnRoute} from './return-route.js';
 import {rollServo} from './roll-servo.js';
 import type {Flight} from './core.js';
+import {centerOfMass} from './center-of-mass.js';
 export interface ReturnSettings {
   speed?: number;
   end?: string;
@@ -85,7 +86,7 @@ export class ReturnPilot {
     this.running = true;
     this.orientation = launchSiteOrientation('runway');
     this.inverse = this.orientation.clone().invert();
-    const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+    const center = centerOfMass(f);
     const local = inertialToFixed(center, f.universalTime).applyQuaternion(this.inverse);
     const v = surfaceRelativeVelocity(center, f.vel, f.universalTime)
       .applyQuaternion(surfaceOrientation(f.universalTime).invert())
@@ -138,7 +139,7 @@ export class ReturnPilot {
   recover(reason = '着陸準備を中止しました'): void {
     if (!this.running) return;
     const f = this.owner,
-      center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+      center = centerOfMass(f);
     this.phase = 'recovery';
     this.recoveryReason = reason;
     const cruise = cruisePilot(this.driver);
@@ -181,7 +182,7 @@ export class ReturnPilot {
       return commands;
     }
     this.elapsed += dt;
-    const center = f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
+    const center = centerOfMass(f);
     const local = inertialToFixed(center, f.universalTime).applyQuaternion(this.inverse),
       r = runwayApproach(center, f.universalTime, this.end, f.vel);
     let nearest = this.progress,

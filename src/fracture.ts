@@ -3,6 +3,7 @@ import {PARTS, type Part} from './catalog.js';
 import {normalizeSymmetry} from './symmetry.js';
 import {fuelNetworks, type FuelMap, type FuelNetworks} from './resources.js';
 import {bodyOrbitState, type OrbitState} from './celestial.js';
+import {centerOfMass} from './center-of-mass.js';
 /** One piece left after failed parts break away; wreck pieces start from a failed part. */
 export interface FractureComponent {
   parts: Part[];
@@ -208,11 +209,7 @@ export function fractureVessel(
     v.physicsOrigin = null;
     v.networks = fuelNetworks(v.parts);
     v.buildColliders();
-    v.orbit = bodyOrbitState(
-      v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)),
-      v.vel,
-      v.universalTime
-    );
+    v.orbit = bodyOrbitState(centerOfMass(v), v.vel, v.universalTime);
   };
   for (const component of components.slice(1)) {
     const child = createFlight(component.parts, before.environment, before.universalTime);

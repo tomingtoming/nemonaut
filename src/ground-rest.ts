@@ -2,6 +2,7 @@ import {PARTS} from './catalog.js';
 import {partCenter, type AeroPart} from './aero.js';
 import {referenceBody} from './celestial.js';
 import {overWater, surfaceRelativeVelocity, surfaceAngularVelocity} from './surface-frame.js';
+import {centerOfMass} from './center-of-mass.js';
 /** The vessel fields isParked reads (a Flight satisfies it). */
 export interface ParkedVessel {
   pos: import('three').Vector3;
@@ -18,12 +19,10 @@ export interface ParkedVessel {
   parts: readonly AeroPart[];
   environment?: string;
 }
-const center = (v: ParkedVessel): import('three').Vector3 =>
-  v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q));
 export function isParked(v: ParkedVessel): boolean | undefined {
   const body = referenceBody(v.pos, v.universalTime);
   const contact = (v.landed && v.landedTime > 0.5) || (v.brake && v.time > 0.5 && v.telemetry.contacts > 0);
-  const speed = surfaceRelativeVelocity(center(v), v.vel, v.universalTime, body).length(),
+  const speed = surfaceRelativeVelocity(centerOfMass(v), v.vel, v.universalTime, body).length(),
     spin = v.omega.clone().sub(surfaceAngularVelocity(body)).length();
   // Bound solver jitter at the outermost material point, not just COM. A long
   // vehicle must not qualify while its extremities sweep across the surface.

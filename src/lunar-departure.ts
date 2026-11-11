@@ -6,6 +6,7 @@ import {lambertArc, type LambertArc} from './lambert.js';
 import {predictTrajectory, type TrajectoryResult} from './trajectory.js';
 import {captureBurnEstimate, type BurnEstimateVessel, type CaptureBurnEstimate} from './lunar-capture.js';
 import {engineBurn, type FuelNetworks} from './resources.js';
+import {centerOfMass} from './center-of-mass.js';
 /** One instantaneous departure burn found on the parking conic. */
 export interface LunarDepartureCandidate {
   plannedAt: number;
@@ -125,18 +126,13 @@ export function lunarDeparturePlan(vessel: LunarDepartureVessel): LunarDeparture
   captureBurnEstimate(vessel, 1);
   // Every plan the search returns has passed through accept, which completes it in place.
   const evaluated = new Map<LunarDepartureSearchPlan, LunarDeparturePlan>();
-  const found = searchLunarDeparture(
-      vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),
-      vessel.vel,
-      vessel.universalTime,
-      {
-        accept: plan => {
-          const result = evaluateFiniteDeparture(vessel, plan);
-          evaluated.set(plan, result);
-          return result.ready;
-        }
+  const found = searchLunarDeparture(centerOfMass(vessel), vessel.vel, vessel.universalTime, {
+      accept: plan => {
+        const result = evaluateFiniteDeparture(vessel, plan);
+        evaluated.set(plan, result);
+        return result.ready;
       }
-    ),
+    }),
     result = evaluated.get(found);
   if (!result) throw Error('月遷移案の有限噴射を確認できません');
   return result;
@@ -155,7 +151,7 @@ function evaluateFiniteDeparture(
   if (plan.startTime - vessel.universalTime < 60) plan.warnings.push('姿勢調整の60秒を確保できません');
   if (plan.warnings.length) return Object.assign(plan, {ready: false});
   const at = coastDrift(
-      vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q)),
+      centerOfMass(vessel),
       vessel.vel,
       vessel.universalTime,
       plan.startTime - vessel.universalTime

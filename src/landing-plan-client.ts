@@ -7,6 +7,7 @@ import type * as T from 'three';
 import type {LandingPlan} from './landing-trim.js';
 import type {WorkerFactory} from './takeoff-preview-client.js';
 import type {Flight} from './core.js';
+import {centerOfMass} from './center-of-mass.js';
 /** The vessel state a landing plan was computed for. */
 export interface LandingPlanContext {
   vesselId: string;
@@ -62,9 +63,7 @@ type PlanFlight = Pick<
   | 'vesselId'
   | 'crashed'
 >;
-const density = (f: PlanFlight): number =>
-  atmosphere(bodyAltitude(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)), f.universalTime))
-    .density;
+const density = (f: PlanFlight): number => atmosphere(bodyAltitude(centerOfMass(f), f.universalTime)).density;
 const configuration = (f: PlanFlight): string =>
   JSON.stringify({
     parts: f.parts,

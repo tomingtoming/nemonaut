@@ -6,6 +6,7 @@ import {ascentReadiness} from './ascent-readiness.js';
 import {ascentPlane} from './ascent-plane.js';
 import {bodyUp} from './celestial.js';
 import type {Flight} from './core.js';
+import {centerOfMass} from './center-of-mass.js';
 export interface AscentSettings {
   altitude: number;
   inclination: number;
@@ -33,10 +34,7 @@ export class AscentSession {
     const pilot = new AscentPrototype(settings);
     const reason = ascentReadiness(f);
     if (reason) throw Error(reason);
-    pilot.plane = ascentPlane(
-      bodyUp(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)), f.universalTime),
-      pilot.inclination
-    );
+    pilot.plane = ascentPlane(bodyUp(centerOfMass(f), f.universalTime), pilot.inclination);
     this.previous = {
       sas: f.sas,
       sasMode: f.sasMode,

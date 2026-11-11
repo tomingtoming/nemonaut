@@ -1,7 +1,8 @@
 import * as T from 'three';
 import {PARTS} from './catalog.js';
 import {partRotation} from './aero.js';
-import {centerOfVessel, type MovingVessel, type NavigationPart} from './relative-navigation.js';
+import type {MovingVessel, NavigationPart} from './relative-navigation.js';
+import {centerOfMass} from './center-of-mass.js';
 export interface PortVessel<P extends NavigationPart = NavigationPart> extends MovingVessel {
   parts: readonly P[];
   omega: T.Vector3;
@@ -47,7 +48,7 @@ export function portPose<P extends NavigationPart>(
       .add(new T.Vector3(...p.p).applyQuaternion(v.q))
       .add(v.pos),
     normal = new T.Vector3(0, 1, 0).applyQuaternion(q),
-    velocity = v.vel.clone().add(v.omega.clone().cross(position.clone().sub(centerOfVessel(v))));
+    velocity = v.vel.clone().add(v.omega.clone().cross(position.clone().sub(centerOfMass(v))));
   return {part: p, q, position, normal, velocity};
 }
 export function portGuidance(

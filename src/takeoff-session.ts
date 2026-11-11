@@ -10,6 +10,7 @@ import {TakeoffPrototype} from './takeoff-prototype.js';
 import type {TakeoffPreviewClient, TakeoffForecast} from './takeoff-preview-client.js';
 import type {CruiseSettings, CruiseSettingsInput} from './cruise-pilot.js';
 import type {Flight} from './core.js';
+import {centerOfMass} from './center-of-mass.js';
 export type {AutopilotCommands} from './takeoff-prototype.js';
 /** The pilot a started takeoff hands to the flight loop. */
 export type TakeoffPilot = TakeoffPrototype;
@@ -36,11 +37,7 @@ export function departureReadiness(f: Flight, target: CruiseSettings): string | 
   if (f.environment !== 'runway' || !f.telemetry.contacts || bodyAltitude(f.pos, f.universalTime) > 20)
     return '滑走路上で準備してください';
   if (
-    surfaceRelativeVelocity(
-      f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
-      f.vel,
-      f.universalTime
-    ).length() > 0.5 ||
+    surfaceRelativeVelocity(centerOfMass(f), f.vel, f.universalTime).length() > 0.5 ||
     f.throttle !== 0 ||
     !f.brake
   )

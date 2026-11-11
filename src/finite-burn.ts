@@ -7,6 +7,7 @@ import {captureBurnEstimate, type BurnEstimateVessel} from './lunar-capture.js';
 import {fuelNetworks, engineBurn} from './resources.js';
 import {coastDrift} from './coast-orbit.js';
 import {advanceCelestialOrbit, bodyOrbitState, type OrbitState} from './celestial.js';
+import {centerOfMass} from './center-of-mass.js';
 
 // Ideal, fixed inertial thrust direction with body drag and pressure-dependent thrust.
 // No attitude dynamics, wing lift, thermal damage, parachutes or staging.
@@ -75,7 +76,7 @@ export function finiteBurnPreview(
   const estimate = captureBurnEstimate(vessel, deltaV);
   if (!estimate.enough) throw Error('現在の点火段の燃料が不足しています');
   if (estimate.duration / throttle > 1200) throw Error('20分を超える噴射は比較対象外です');
-  const center = vessel.pos.clone().add(vessel.stats.com.clone().applyQuaternion(vessel.q));
+  const center = centerOfMass(vessel);
   const coast = coastDrift(center, vessel.vel, vessel.universalTime, startTime - vessel.universalTime);
   let pos = coast.position,
     vel = coast.velocity,

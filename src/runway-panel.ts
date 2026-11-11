@@ -3,6 +3,7 @@ import {floatingWindow, type FloatingWindow} from './floating-window.js';
 import {runwayApproach} from './runway-navigation.js';
 import {drawRunwayMap} from './runway-map.js';
 import {element} from './dom.js';
+import {centerOfMass} from './center-of-mass.js';
 export interface RunwayPanelFlight extends RunwayFlight {
   stats: {com: import('three').Vector3};
   q: import('three').Quaternion;
@@ -39,7 +40,7 @@ export function mountRunwayPanel(root: Document, getState: () => RunwayPanelStat
     }
     if (!window) return;
     element(window.content, 'select', 'select').value = end;
-    const point = flight.stats.com.clone().applyQuaternion(flight.q).add(flight.pos);
+    const point = centerOfMass(flight);
     const v = runwayApproach(point, flight.universalTime, end, flight.vel),
       out = element(window.content, 'output', 'output');
     drawRunwayMap(element(window.content, 'canvas', 'canvas'), v, end);

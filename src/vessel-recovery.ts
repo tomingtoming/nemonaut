@@ -6,6 +6,7 @@ import {resolveTargets} from './relative-navigation.js';
 import {partCenter, partRotation} from './aero.js';
 import {bodyAltitude, bodyUp, relativeMotion} from './celestial.js';
 import {PARTS} from './catalog.js';
+import {centerOfMass} from './center-of-mass.js';
 
 export type RecoveryVessel = Pick<
   import('./core.js').Flight,
@@ -31,12 +32,7 @@ export interface RecoveryStatus {
 export function recoveryStatus(v: RecoveryVessel): RecoveryStatus {
   const motion = relativeMotion(v.pos, v.vel, v.universalTime),
     quiet =
-      surfaceRelativeVelocity(
-        v.pos.clone().add(v.stats.com.clone().applyQuaternion(v.q)),
-        v.vel,
-        v.universalTime,
-        motion.body
-      ).length() < 0.8 &&
+      surfaceRelativeVelocity(centerOfMass(v), v.vel, v.universalTime, motion.body).length() < 0.8 &&
       v.omega.clone().sub(surfaceAngularVelocity(motion.body)).length() < 0.15 &&
       v.throttle === 0;
   const afloat =

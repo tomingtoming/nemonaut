@@ -3,7 +3,8 @@ import {PARTS} from './catalog.js';
 import {partCenter} from './aero.js';
 import {canControl, fleet} from './fleet.js';
 import {bodyOrbitState} from './celestial.js';
-import {centerOfVessel, type DockingPortPair} from './relative-navigation.js';
+import type {DockingPortPair} from './relative-navigation.js';
+import {centerOfMass} from './center-of-mass.js';
 import {portGuidance, type PortGuidance} from './port-navigation.js';
 import {dockingStatus} from './docking.js';
 
@@ -98,8 +99,8 @@ export class DockingAutopilot {
       throw Error('操作可能な機体と、目標機のポートを選択してください');
     if (f.throttle !== 0) throw Error('主エンジンを停止してください');
     if (!fuelAvailable(f)) throw Error('供給可能なRCS推進剤が必要です');
-    const own = bodyOrbitState(centerOfVessel(f), f.vel, f.universalTime),
-      other = bodyOrbitState(centerOfVessel(target), target.vel, target.universalTime);
+    const own = bodyOrbitState(centerOfMass(f), f.vel, f.universalTime),
+      other = bodyOrbitState(centerOfMass(target), target.vel, target.universalTime);
     if (
       own.bodyId !== other.bodyId ||
       own.altitude < Math.max(1000, own.body.atmosphereTop) ||
@@ -144,7 +145,7 @@ export class DockingAutopilot {
   }
   // Geometry of the route: safety sphere around the target and the standby point on the port axis.
   plan(f: Flight, nav: PortGuidance): DockingPlan {
-    const center = centerOfVessel(this.target),
+    const center = centerOfMass(this.target),
       radius = reach(this.target, center) + reach(f, nav.own.position) + DOCKING_AUTOPILOT.margin;
     const depth = nav.target.position.clone().sub(center).dot(nav.outward),
       standby = Math.max(DOCKING_AUTOPILOT.standbyMin, radius - depth + 1);
