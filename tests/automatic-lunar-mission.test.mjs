@@ -99,7 +99,9 @@ test('ground ascent, automatic lunar orbit and return end in a retained capsule 
     f.sasMode = 'retrograde';
     f.stageNext();
     assert.equal(f.parts.length, 3);
-    for (let i = 0; i < 900 * 120 && !f.crashed && !f.landed; i++) f.step(1 / 120);
+    // The spent stages lying on the surface are stepped with the capsule and dominate the cost of
+    // this descent, so it runs at 60 Hz like the other parachute descents.
+    for (let i = 0; i < 900 * 60 && !f.crashed && !f.landed; i++) f.step(1 / 60);
     assert.equal(f.landed, true);
     assert.equal(f.crashed, false);
     assert.ok([...f.thermal.values()].every(s => !s.failed));

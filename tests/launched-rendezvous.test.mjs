@@ -18,153 +18,178 @@ import {portGuidance} from '../dist/port-navigation.js';
 import {dockingStatus, dockVessels, undockVessel} from '../dist/docking.js';
 import {setPartAction} from '../dist/part-actions.js';
 
-for (const automatic of [false, true])
-  test(`two surface launches ${automatic ? 'automatically' : 'manually'} rendezvous, dock, refuel, separate and resume independently`, () => {
-    let world = worldFromFlight(null),
-      firstId,
-      firstFuel,
-      firstTime;
-    for (let n = 0; n < 2; n++) {
-      world = launchWorld(world, {
-        parts: preset('tug-launcher'),
-        environment: 'land',
-        name: 'Tug ' + (n + 1)
-      });
-      let f = loadFlight(flightFromWorld(world));
-      const runtime = new WorldRuntime(f),
-        pilot = new LaunchPilot();
+// Both tugs fly the same launch from the surface whichever way the rendezvous is flown, so the
+// two ascents run once and every test continues from its own copy of the saved world.
+let tugsInOrbit = null;
+function launchTugs() {
+  if (tugsInOrbit) return tugsInOrbit;
+  let world = worldFromFlight(null),
+    firstId,
+    firstFuel,
+    firstTime;
+  for (let n = 0; n < 2; n++) {
+    world = launchWorld(world, {
+      parts: preset('tug-launcher'),
+      environment: 'land',
+      name: 'Tug ' + (n + 1)
+    });
+    const f = loadFlight(flightFromWorld(world));
+    const runtime = new WorldRuntime(f),
+      pilot = new LaunchPilot();
+    try {
+      for (let i = 0; i < 600 * 120 && !pilot.done && !f.crashed; i++) {
+        pilot.update(f);
+        runtime.replace(f);
+        runtime.step(1 / 120);
+      }
+      assert.equal(pilot.phase, '周回達成');
+      assert.equal(f.crashed, false);
+      assert.equal(f.stage, 1);
+      assert.ok(f.orbit.periapsis > 75000);
+      if (!n) {
+        firstId = f.vesselId;
+        firstFuel = [...f.fuel];
+        firstTime = f.universalTime;
+      }
+      world = worldFromFlight(saveFlight(f), {history: world.history});
+    } finally {
+      f.dispose();
+    }
+  }
+  return (tugsInOrbit = {world, firstId, firstFuel, firstTime});
+}
+// Docking, refuelling, undocking and resuming start from the same kind of close approach and
+// assert nothing about how the transfer was flown, so only one variant continues through them.
+for (const automatic of [false, true]) {
+  const docks = automatic;
+  test(
+    docks
+      ? 'two surface launches automatically rendezvous, dock, refuel, separate and resume independently'
+      : 'two surface launches manually rendezvous to a relative stop within 500 m',
+    () => {
+      const {world: saved, firstId, firstFuel, firstTime} = launchTugs();
+      let world = structuredClone(saved),
+        f = loadFlight(flightFromWorld(world));
+      const runtime = new WorldRuntime(f);
       try {
-        for (let i = 0; i < 600 * 120 && !pilot.done && !f.crashed; i++) {
-          pilot.update(f);
-          runtime.replace(f);
-          runtime.step(1 / 120);
-        }
-        assert.equal(pilot.phase, '周回達成');
-        assert.equal(f.crashed, false);
-        assert.equal(f.stage, 1);
-        assert.ok(f.orbit.periapsis > 75000);
-        if (!n) {
-          firstId = f.vesselId;
-          firstFuel = [...f.fuel];
-          firstTime = f.universalTime;
-        } else {
-          const target = runtime.vessels.get(firstId);
-          assert.ok(target);
-          assert.notEqual(target.vesselId, f.vesselId);
-          assert.equal(target.universalTime, f.universalTime);
-          assert.ok(target.universalTime > firstTime + 290);
-          assert.deepEqual([...target.fuel], firstFuel);
-          assert.ok(target.orbit.periapsis > 74000);
-          assert.ok(relativeState(f, target).distance > 500000);
-          const own = bodyOrbitState(centerOfVessel(f), f.vel, f.universalTime),
-            other = bodyOrbitState(centerOfVessel(target), target.vel, target.universalTime);
-          assert.throws(() => rendezvousTransfer(own, other, {duration: 600}));
-          const plan = timedRendezvousTransfer(f, other, {duration: 'auto'});
-          assert.equal(plan.automatic, true);
-          assert.ok(plan.duration > 3000 && plan.duration < 4000);
-          assert.ok(plan.deltaV + plan.arrivalSpeed < 800);
-          assert.ok(plan.burn.duration < 20);
-          const impulse = rendezvousTransfer(own, other, {duration: plan.duration}),
-            preview = maneuverPreview(
-              centerOfVessel(f),
-              f.vel,
-              {universalTime: impulse.epoch},
-              impulse.components,
-              f.universalTime
-            );
-          assert.ok(preview.orbit.stable);
-          const arrival = keplerDrift(
-              preview.orbit.r,
-              preview.orbit.relativeVelocity,
-              own.body.mu,
-              impulse.duration
-            ),
-            destination = keplerDrift(
-              other.r,
-              other.relativeVelocity,
-              own.body.mu,
-              impulse.arrivalTime - other.universalTime
-            );
-          assert.ok(Math.abs(arrival.position.distanceTo(destination.position) - 100) < 0.05);
-          setTarget(f, f, target);
-          const targetFuel = [...target.fuel];
-          const schedule = (epoch, components, burn) => {
-            f.maneuver = createManeuverNode(
-              maneuverPreview(centerOfVessel(f), f.vel, {universalTime: epoch}, components, f.universalTime),
-              f.time,
-              automatic
-                ? {
-                    rendezvous: {
-                      burnThrottle: burn.burnThrottle,
-                      duration: burn.duration,
-                      targetPartId: f.targetPartId
-                    }
+        const target = runtime.vessels.get(firstId);
+        assert.ok(target);
+        assert.notEqual(target.vesselId, f.vesselId);
+        assert.equal(target.universalTime, f.universalTime);
+        assert.ok(target.universalTime > firstTime + 290);
+        assert.deepEqual([...target.fuel], firstFuel);
+        assert.ok(target.orbit.periapsis > 74000);
+        assert.ok(relativeState(f, target).distance > 500000);
+        const own = bodyOrbitState(centerOfVessel(f), f.vel, f.universalTime),
+          other = bodyOrbitState(centerOfVessel(target), target.vel, target.universalTime);
+        assert.throws(() => rendezvousTransfer(own, other, {duration: 600}));
+        const plan = timedRendezvousTransfer(f, other, {duration: 'auto'});
+        assert.equal(plan.automatic, true);
+        assert.ok(plan.duration > 3000 && plan.duration < 4000);
+        assert.ok(plan.deltaV + plan.arrivalSpeed < 800);
+        assert.ok(plan.burn.duration < 20);
+        const impulse = rendezvousTransfer(own, other, {duration: plan.duration}),
+          preview = maneuverPreview(
+            centerOfVessel(f),
+            f.vel,
+            {universalTime: impulse.epoch},
+            impulse.components,
+            f.universalTime
+          );
+        assert.ok(preview.orbit.stable);
+        const arrival = keplerDrift(
+            preview.orbit.r,
+            preview.orbit.relativeVelocity,
+            own.body.mu,
+            impulse.duration
+          ),
+          destination = keplerDrift(
+            other.r,
+            other.relativeVelocity,
+            own.body.mu,
+            impulse.arrivalTime - other.universalTime
+          );
+        assert.ok(Math.abs(arrival.position.distanceTo(destination.position) - 100) < 0.05);
+        setTarget(f, f, target);
+        const targetFuel = [...target.fuel];
+        const schedule = (epoch, components, burn) => {
+          f.maneuver = createManeuverNode(
+            maneuverPreview(centerOfVessel(f), f.vel, {universalTime: epoch}, components, f.universalTime),
+            f.time,
+            automatic
+              ? {
+                  rendezvous: {
+                    burnThrottle: burn.burnThrottle,
+                    duration: burn.duration,
+                    targetPartId: f.targetPartId
                   }
-                : {}
-            );
-            f.maneuver.stopAtTarget = true;
-            f.maneuver.tolerance = 0.05;
-            f.sasMode = 'maneuver';
-          };
-          const advanceTo = epoch => {
-            if (automatic) return;
-            while (f.universalTime < epoch - 1e-6) runtime.step(Math.min(1 / 120, epoch - f.universalTime));
-          };
-          const burn = () => {
-            if (automatic) {
-              const session = new ManeuverSession();
-              session.start(f);
-              assert.equal(session.plan.startTime, f.maneuver.universalTime);
-              for (let i = 0; i < 300 * 120 && session.owner; i++) {
-                session.step(f, 1 / 120);
-                runtime.replace(f);
-                runtime.step(1 / 120);
-              }
-              assert.equal(session.state, 'complete', session.message);
-            }
-            for (let i = 0; i < 120 * 180 && !f.maneuver.complete && !f.crashed; i++) {
-              f.throttle = transferThrottle(Math.hypot(...f.maneuver.remaining));
+                }
+              : {}
+          );
+          f.maneuver.stopAtTarget = true;
+          f.maneuver.tolerance = 0.05;
+          f.sasMode = 'maneuver';
+        };
+        const advanceTo = epoch => {
+          if (automatic) return;
+          while (f.universalTime < epoch - 1e-6) runtime.step(Math.min(1 / 120, epoch - f.universalTime));
+        };
+        const burn = () => {
+          if (automatic) {
+            const session = new ManeuverSession();
+            session.start(f);
+            assert.equal(session.plan.startTime, f.maneuver.universalTime);
+            for (let i = 0; i < 300 * 120 && session.owner; i++) {
+              session.step(f, 1 / 120);
+              runtime.replace(f);
               runtime.step(1 / 120);
             }
-            assert.equal(f.maneuver.complete, true);
-            assert.equal(f.throttle, 0);
-            assert.equal(f.crashed, false);
-          };
-          schedule(plan.epoch, plan.components, plan.burn);
-          advanceTo(plan.epoch);
-          burn();
-          const stop = timedRelativeStopPlan(
-            f,
-            bodyOrbitState(centerOfVessel(target), target.vel, target.universalTime)
-          );
-          schedule(stop.location.universalTime, stop.components, stop.burn);
-          const coast = runtime.coast(stop.time, {maxSteps: 10000});
-          assert.equal(coast.reason, '予定噴射の直前', JSON.stringify(coast.blocker));
-          assert.ok(Math.abs(stop.location.universalTime - f.universalTime - 60) < 0.05);
-          advanceTo(stop.location.universalTime);
-          burn();
-          const close = relativeState(f, target);
-          assert.ok(close.distance < 500, `separation ${close.distance}`);
-          assert.ok(close.speed < 0.2, `relative speed ${close.speed}`);
-          assert.ok(f.fuelRatio > 0.2);
-          assert.deepEqual([...target.fuel], targetFuel);
-          assert.equal(target.universalTime, f.universalTime);
-          assert.equal(
-            f.parts.filter(p => p.type === 'rcs').reduce((s, p) => s + f.fuel.get(p.id), 0),
-            48
-          );
-          const restored = loadFlight(
-            flightFromWorld(worldFromFlight(saveFlight(f), {history: world.history}))
-          );
-          try {
-            assert.equal(restored.navigationTarget.vesselId, target.vesselId);
-            assert.ok(
-              Math.abs(relativeState(restored, restored.navigationTarget).distance - close.distance) < 1e-6
-            );
-            assert.deepEqual([...restored.fuel], [...f.fuel]);
-          } finally {
-            restored.dispose();
+            assert.equal(session.state, 'complete', session.message);
           }
+          for (let i = 0; i < 120 * 180 && !f.maneuver.complete && !f.crashed; i++) {
+            f.throttle = transferThrottle(Math.hypot(...f.maneuver.remaining));
+            runtime.step(1 / 120);
+          }
+          assert.equal(f.maneuver.complete, true);
+          assert.equal(f.throttle, 0);
+          assert.equal(f.crashed, false);
+        };
+        schedule(plan.epoch, plan.components, plan.burn);
+        advanceTo(plan.epoch);
+        burn();
+        const stop = timedRelativeStopPlan(
+          f,
+          bodyOrbitState(centerOfVessel(target), target.vel, target.universalTime)
+        );
+        schedule(stop.location.universalTime, stop.components, stop.burn);
+        const coast = runtime.coast(stop.time, {maxSteps: 10000});
+        assert.equal(coast.reason, '予定噴射の直前', JSON.stringify(coast.blocker));
+        assert.ok(Math.abs(stop.location.universalTime - f.universalTime - 60) < 0.05);
+        advanceTo(stop.location.universalTime);
+        burn();
+        const close = relativeState(f, target);
+        assert.ok(close.distance < 500, `separation ${close.distance}`);
+        assert.ok(close.speed < 0.2, `relative speed ${close.speed}`);
+        assert.ok(f.fuelRatio > 0.2);
+        assert.deepEqual([...target.fuel], targetFuel);
+        assert.equal(target.universalTime, f.universalTime);
+        assert.equal(
+          f.parts.filter(p => p.type === 'rcs').reduce((s, p) => s + f.fuel.get(p.id), 0),
+          48
+        );
+        const restored = loadFlight(
+          flightFromWorld(worldFromFlight(saveFlight(f), {history: world.history}))
+        );
+        try {
+          assert.equal(restored.navigationTarget.vesselId, target.vesselId);
+          assert.ok(
+            Math.abs(relativeState(restored, restored.navigationTarget).distance - close.distance) < 1e-6
+          );
+          assert.deepEqual([...restored.fuel], [...f.fuel]);
+        } finally {
+          restored.dispose();
+        }
+        if (docks) {
           const ownPort = f.parts.find(p => p.type === 'dockingPort').id,
             targetPort = target.parts.find(p => p.type === 'dockingPort').id;
           assert.ok(selectDockingPorts(f, ownPort, targetPort));
@@ -249,9 +274,10 @@ for (const automatic of [false, true])
           });
         }
         world = worldFromFlight(saveFlight(f), {history: world.history});
+        assert.equal(world.history.filter(e => e.type === 'launch').length, 2);
       } finally {
         f.dispose();
       }
     }
-    assert.equal(world.history.filter(e => e.type === 'launch').length, 2);
-  });
+  );
+}

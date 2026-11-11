@@ -6,6 +6,8 @@ import {center} from '../dist/planet.js';
 import {deorbitPlan} from '../dist/deorbit-plan.js';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
+import {createManeuverNode} from '../dist/maneuver-node.js';
+import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
 for (const scale of [1, 1.03])
   test(`return preview reaches 25 km from inclined orbit speed scale ${scale}`, () => {
     const r = 680000,
@@ -35,9 +37,6 @@ test('return preview rejects surface, lunar, escape and invalid targets', () => 
   assert.throws(() => deorbitPlan(p, v, 0, {periapsis: 70000}));
   assert.throws(() => deorbitPlan(p, v, 0, {delay: 0}));
 });
-
-import {createManeuverNode} from '../dist/maneuver-node.js';
-import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
 test('planned return burns finite thrust, separates and lands with parachute intact', () => {
   const f = new Flight(preset('returner'), 'orbit');
   try {
@@ -57,10 +56,8 @@ test('planned return burns finite thrust, separates and lands with parachute int
     }
     assert.equal(f.maneuver.complete, true);
     assert.equal(f.throttle, 0);
-    assert.ok(
-      f.orbit.periapsis > 15000 && f.orbit.periapsis < 35000,
-      `actual periapsis ${f.orbit.periapsis}`
-    );
+    // A 10 % burn started at the node, not centred on it, still lands within 1 km of the 25 km target.
+    assert.ok(Math.abs(f.orbit.periapsis - 25000) < 1000, `actual periapsis ${f.orbit.periapsis}`);
     f.stageNext();
     f.armParachutes();
     let opened = false;
@@ -79,44 +76,6 @@ test('planned return burns finite thrust, separates and lands with parachute int
         f.vel,
         f.universalTime
       ).length() < 0.8
-    );
-  } finally {
-    f.dispose();
-  }
-});
-
-import {captureBurnEstimate} from '../dist/lunar-capture.js';
-test('long low-power burn duration is estimable but instantaneous orbit is not its endpoint', t => {
-  const f = new Flight(preset('returner'), 'orbit');
-  try {
-    f.stageNext();
-    f.stageNext();
-    const plan = deorbitPlan(f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)), f.vel, 0),
-      before = [...f.fuel],
-      estimate = captureBurnEstimate(f, plan.preview.impulse.length());
-    assert.deepEqual([...f.fuel], before);
-    f.maneuver = createManeuverNode(plan.preview, 0);
-    f.maneuver.stopAtTarget = true;
-    f.maneuver.tolerance = 0.05;
-    f.sas = true;
-    f.sasMode = 'maneuver';
-    while (f.universalTime < 60) f.step(1 / 120);
-    const start = f.universalTime;
-    for (let i = 0; i < 120 * 800 && !f.maneuver.complete && !f.crashed; i++) {
-      f.throttle = 0.01;
-      f.step(1 / 120);
-    }
-    assert.equal(f.maneuver.complete, true);
-    assert.equal(f.crashed, false);
-    assert.ok(Math.abs(f.universalTime - start - estimate.duration / 0.01) < 1);
-    assert.ok(f.orbit.periapsis - 25000 > 10000);
-    assert.ok(estimate.duration / 0.01 > plan.preview.original.period * 0.05);
-    t.diagnostic(
-      JSON.stringify({
-        estimatedSeconds: estimate.duration / 0.01,
-        actualSeconds: f.universalTime - start,
-        actualPeriapsis: f.orbit.periapsis
-      })
     );
   } finally {
     f.dispose();

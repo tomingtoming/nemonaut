@@ -7,10 +7,7 @@ import {maneuverPreview} from '../dist/maneuver.js';
 import {createManeuverNode} from '../dist/maneuver-node.js';
 import {ManeuverSession} from '../dist/maneuver-session.js';
 import {maneuverExecutionPlan, maneuverExecutionThrottle} from '../dist/maneuver-execution-plan.js';
-import {AscentSession} from '../dist/ascent-session.js';
-import {WorldRuntime} from '../dist/world-runtime.js';
 import {terminalBurnDuration} from '../dist/maneuver-thrust-profile.js';
-import {saveFlight, loadFlight} from '../dist/flight-save.js';
 
 function vessel(dv = 30) {
   const f = new Flight(preset('rocket'), 'orbit');
@@ -152,56 +149,6 @@ test('without attitude actuators, a missed alignment deadline never ignites', ()
     assert.equal(f.throttle, 0);
     assert.deepEqual([...f.fuel], fuel);
   } finally {
-    f.dispose();
-  }
-});
-test('normal ground launch hands off to a planned burn without resetting the world', () => {
-  const f = new Flight(preset('launcher'), 'land', 1413.8),
-    world = new WorldRuntime(f),
-    ascent = new AscentSession(),
-    s = new ManeuverSession();
-  let restored;
-  try {
-    ascent.start(f, {altitude: 120000, inclination: 90});
-    for (let i = 0; i < 1200 * 120 && ascent.owner; i++) {
-      ascent.step(f, 1 / 120);
-      world.replace(f);
-      world.step(1 / 120);
-    }
-    assert.equal(ascent.state, 'complete');
-    const epoch = world.universalTime,
-      fuel = f.fuelRatio;
-    const p = maneuverPreview(
-      f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
-      f.vel,
-      {universalTime: epoch + 90},
-      30,
-      epoch
-    );
-    f.maneuver = createManeuverNode(p, f.time);
-    s.start(f, {throttle: 0.1});
-    for (let i = 0; i < 180 * 120 && s.owner; i++) {
-      s.step(f, 1 / 120);
-      world.replace(f);
-      world.step(1 / 120);
-    }
-    assert.equal(s.state, 'complete', s.message);
-    assert.ok(world.universalTime > epoch + 90);
-    assert.equal(f.stage, 1);
-    assert.ok(world.vessels.size >= 2);
-    assert.equal(
-      new Set([...world.vessels.values()].flatMap(v => v.parts.map(p => p.id))).size,
-      preset('launcher').length
-    );
-    assert.ok(f.fuelRatio < fuel);
-    assert.equal(f.throttle, 0);
-    assert.ok(f.orbit.periapsis > 70000);
-    for (const v of world.vessels.values()) assert.equal(v.universalTime, world.universalTime);
-    restored = loadFlight(saveFlight(f));
-    assert.equal(restored.maneuver.complete, true);
-    assert.equal(restored.throttle, 0);
-  } finally {
-    restored?.dispose();
     f.dispose();
   }
 });

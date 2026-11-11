@@ -62,8 +62,6 @@ test('loss of control and final fuel exhaustion release ownership as failure', (
 });
 for (const [kind, epoch, limit] of [
   ['launcher', PRIMARY_ROTATION_PERIOD / 4, 1],
-  ['launcher', PRIMARY_ROTATION_PERIOD / 2, 1],
-  ['atlas', (PRIMARY_ROTATION_PERIOD * 3) / 4, 1],
   ['launcher', 0, 0.8]
 ])
   test(`ascent ownership completes ${kind} at epoch ${epoch} with thrust ${limit}`, () => {

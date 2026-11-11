@@ -6,7 +6,8 @@ import {preset, PARTS} from '../dist/catalog.js';
 import {AscentPrototype} from '../dist/ascent-prototype.js';
 
 for (const kind of ['launcher', 'atlas'])
-  for (const altitude of [90000, 120000, 200000])
+  // 120 km is flown by the session and inclination tests, which drive this guidance.
+  for (const altitude of [90000, 200000])
     test(`${kind} reaches requested ${altitude / 1000} km orbit through real actuators`, () => {
       const f = new Flight(preset(kind), 'land'),
         pilot = new AscentPrototype({altitude});

@@ -12,7 +12,7 @@ import {preset} from '../dist/catalog.js';
 import {LaunchPilot} from '../dist/launch-pilot.js';
 import {lunarDeparturePlan, lunarDepartureNode} from '../dist/lunar-departure.js';
 import {advanceCoastFleet} from '../dist/coast-flight.js';
-import {lunarCapturePlan, captureNode} from '../dist/lunar-capture.js';
+import {lunarCapturePlan, captureNode, captureBurnEstimate} from '../dist/lunar-capture.js';
 import {surfaceSpeed} from './fixtures/surface-speed.mjs';
 
 test('Surface launch, lunar orbit, return burn and capsule touchdown form one continuous mission', () => {
@@ -24,12 +24,29 @@ test('Surface launch, lunar orbit, return burn and capsule touchdown form one co
   const f = loadFlight(flightFromWorld(world)),
     pilot = new LaunchPilot();
   try {
+    const capsule = f.parts.find(p => p.type === 'capsule'),
+      shield = f.parts.find(p => p.type === 'heatShield'),
+      chute = f.parts.find(p => p.type === 'parachute');
     for (let i = 0; i < 72000 && !pilot.done && !f.crashed; i++) {
       pilot.update(f);
       f.step(1 / 120);
     }
     assert.ok(pilot.done);
     assert.ok(f.detached.every(v => v.throttle === 0));
+    // The launch leaves the return hardware and the maneuver reserve intact.
+    assert.equal(f.crashed, false);
+    assert.ok(f.orbit.periapsis > 75000);
+    assert.ok(f.orbit.energy < 0);
+    assert.equal(f.stage, 2);
+    assert.equal(f.parts.length, 8);
+    assert.equal(f.detached.length, 2);
+    assert.equal(f.throttle, 0);
+    for (const p of [capsule, shield, chute]) assert.ok(f.parts.some(q => q.id === p.id));
+    assert.equal(f.thermal.get(shield.id).ablator, 40);
+    assert.equal(f.chutes.get(chute.id).status, 'stowed');
+    const reserve = captureBurnEstimate(f, 1600);
+    assert.ok(reserve.enough);
+    assert.ok(reserve.fuelRemaining > 0);
     world.history = recordOrbitAchievements(world.history, f);
     const before = {pos: f.pos.clone(), vel: f.vel.clone(), fuel: [...f.fuel], ut: f.universalTime},
       p = lunarDeparturePlan(f);
@@ -61,6 +78,9 @@ test('Surface launch, lunar orbit, return burn and capsule touchdown form one co
     }
     assert.throws(() => lunarDepartureNode(p, f), /再計算/);
     assert.ok(Math.abs(f.universalTime - (p.startTime - 60)) < 0.1);
+    // Coasting in the parking orbit spends no propellant and stays clear of the atmosphere.
+    assert.deepEqual([...f.fuel], before.fuel);
+    assert.ok(f.orbit.periapsis > 74000);
     while (f.universalTime < p.startTime) f.step(Math.min(1 / 120, p.startTime - f.universalTime));
     for (let i = 0; i < 14400 && !f.maneuver.complete; i++) {
       const left = new T.Vector3(...f.maneuver.remaining).length();
