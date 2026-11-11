@@ -156,7 +156,7 @@ test('a retired golden field that matches nothing fails', () => {
     assert.ok([1, 2].includes(entry.version), 'only frozen baselines retire fields');
 });
 
-// Golden v3: vessel-vessel collision on Rust physics.
+// Golden v3: recorded on Rust physics. Vessel-vessel collision, and the v2 capsule case again.
 const v3 = JSON.parse(
   readFileSync(new URL('./golden/js-v3.json', import.meta.url), 'utf8').replace(/^\uFEFF/, '')
 );
@@ -165,7 +165,12 @@ for (const {definition, expected} of v3.cases)
     assertGolden(expected, replay(definition), options(v3, definition))
   );
 test('golden v3 rejects replay without vessel-vessel collision', () => {
-  for (const {definition, expected} of v3.cases)
+  const colliding = v3.cases.filter(c => c.definition.vesselCollision === true);
+  assert.deepEqual(
+    colliding.map(c => c.definition.name),
+    ['orbit-bump-2ms', 'orbit-crash-30ms', 'fuel-tank-impact-fragments-collide']
+  );
+  for (const {definition, expected} of colliding)
     assert.equal(
       compareGolden(expected, replay({...definition, vesselCollision: false}), {
         mode: definition.mode,
