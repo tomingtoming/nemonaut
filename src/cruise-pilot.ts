@@ -7,7 +7,7 @@ import {surfaceRelativeVelocity} from './surface-frame.js';
 import {atmosphere} from './planet.js';
 import {PARTS} from './catalog.js';
 import {partRotation, controlDeflection, type ControlPart} from './aero.js';
-import {engineMaxThrust, type ResourcePart, type EngineSet} from './resources.js';
+import {fuelNetworks, engineMaxThrust, type ResourcePart, type EngineSet} from './resources.js';
 import {centerOfMass} from './center-of-mass.js';
 const clamp = T.MathUtils.clamp,
   rad = Math.PI / 180;
@@ -43,8 +43,6 @@ export interface CruiseFlight {
   started?: boolean;
   telemetry: {contacts?: number};
   fuel: ReadonlyMap<string, number>;
-  /** The vessel's current fuel networks (the ones its engines draw through). */
-  networks: Pick<import('./resources.js').FuelNetworks<CruisePart>, 'groups'>;
   active: EngineSet;
   vesselId: string;
   sas: boolean;
@@ -147,7 +145,7 @@ export function cruiseReadiness(f: CruiseFlight): string | null {
 export function cruisePropulsion(f: CruiseFlight): string | null {
   let thrust = 0,
     forward = 0;
-  for (const group of f.networks.groups) {
+  for (const group of fuelNetworks(f.parts).groups) {
     if (!group.tanks.some(t => (f.fuel.get(t.id) || 0) > 0)) continue;
     for (const p of group.engines) {
       if (PARTS[p.type].thrustMedium !== 'air' || !f.active.has(p.id)) continue;
