@@ -234,11 +234,21 @@ function throttleBlocksCoast(v: CoastVessel, active: CoastVessel): boolean {
     ).values()
   ].some(force => force > 0);
 }
+/** isParked, evaluated at most once per vessel until `clear` (a coast step reads it up to five times). */
+function parkedMemo(): {(v: CoastVessel): boolean | undefined; clear(): void} {
+  const known = new Map<CoastVessel, boolean | undefined>();
+  const parked = (v: CoastVessel): boolean | undefined => {
+    if (!known.has(v)) known.set(v, isParked(v));
+    return known.get(v);
+  };
+  return Object.assign(parked, {clear: () => known.clear()});
+}
 function worldCoastBlocker(
   vessels: readonly CoastVessel[],
   universalTime: number,
   active: CoastVessel,
-  {input = false}: CoastOptions = {}
+  {input = false}: CoastOptions = {},
+  parked: (v: CoastVessel) => boolean | undefined = isParked
 ): CoastBlocker | null {
   if (input) return blocker('操作中', active, 'input');
   for (const v of vessels) {
@@ -251,7 +261,7 @@ function worldCoastBlocker(
       )
     )
       return blocker('熱状態を確認してください', v, 'thermal');
-    if (isParked(v)) continue;
+    if (parked(v)) continue;
     const limit = coastStepLimit(center(v), v.vel, v.universalTime, {
       deadline: deadline(v),
       surfaceMargin: coastSurfaceMargin(v)
@@ -305,9 +315,11 @@ export function advanceWorldCoast(
     maxSteps > 10000
   )
     throw Error('時間加速の要求が不正です');
+  // Vessel state changes only where the updates are applied below; the memo is cleared there.
+  const parkedOf = parkedMemo();
   let advanced = 0,
     steps = 0,
-    blocked = worldCoastBlocker(vessels, universalTime, active, {input}),
+    blocked = worldCoastBlocker(vessels, universalTime, active, {input}, parkedOf),
     reason = blocked?.reason ?? null;
 
   while (!reason && advanced < requested && steps < maxSteps) {
@@ -316,7 +328,7 @@ export function advanceWorldCoast(
       limitingVessel: CoastVessel | null = null,
       nearby: CoastVessel | null = null;
     for (const v of vessels) {
-      if ((v.crashed && !v.failureDynamics) || isParked(v)) continue;
+      if ((v.crashed && !v.failureDynamics) || parkedOf(v)) continue;
       const limit = coastStepLimit(center(v), v.vel, v.universalTime, {
         requested: dt,
         deadline: deadline(v),
@@ -337,7 +349,7 @@ export function advanceWorldCoast(
         if (
           (a.crashed && !a.failureDynamics) ||
           (b.crashed && !b.failureDynamics) ||
-          (isParked(a) && isParked(b))
+          (parkedOf(a) && parkedOf(b))
         )
           continue;
         const clearance = center(a).distanceTo(center(b)) - 100;
@@ -377,7 +389,7 @@ export function advanceWorldCoast(
     const updates = vessels.map((v): FrozenCoastUpdate | LiveCoastUpdate => {
       if (v.crashed && !v.failureDynamics) return {kind: 'frozen', v, ...frozenSurfaceState(v, time, dt)};
       const c = center(v),
-        parked = isParked(v),
+        parked = parkedOf(v),
         body = referenceBody(c, time),
         start = bodyState(body, time);
       const drift: (duration: number) => BodyState = duration => {
@@ -484,10 +496,11 @@ export function advanceWorldCoast(
         engine: 'Kepler coast'
       };
     }
+    parkedOf.clear();
     universalTime = end;
     advanced += dt;
     steps++;
-    blocked = worldCoastBlocker(vessels, universalTime, active);
+    blocked = worldCoastBlocker(vessels, universalTime, active, {}, parkedOf);
     reason = blocked?.reason ?? null;
   }
   return {
