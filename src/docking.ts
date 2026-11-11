@@ -24,8 +24,7 @@ export interface DockingStatus {
   angularSpeed?: number;
 }
 /** A vessel as a rigid body with motion (combinedMotion). */
-export type DockingBody = import('./port-navigation.js').PortVessel &
-  import('./vessel-inertia.js').InertiaVessel;
+export type DockingBody = import('./port-navigation.js').PortVessel;
 /** Total mass, centre, momentum and inertia of two vessels moving as one. */
 export interface CombinedMotion {
   mass: number;
