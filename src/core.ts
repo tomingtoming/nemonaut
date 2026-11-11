@@ -869,13 +869,10 @@ export class Flight {
     this.world.integrationParameters.lengthUnit = solverScale;
     this.world.integrationParameters.normalizedAllowedLinearError = 0.001 / solverScale;
     this.world.integrationParameters.normalizedPredictionDistance = 0.005 / solverScale;
-    if (
-      freeFlight ||
-      reference.id === 'moon' ||
-      !this.physicsOrigin ||
-      this.physicsOrigin.distanceTo(this.pos) > 1000
-    )
-      this.physicsOrigin = this.pos.clone();
+    // The origin is the vessel's own position at the start of every step. Solver coordinates are
+    // single precision: a kilometre from the origin they resolve only 0.06 mm, which a vessel
+    // standing on the ground would pick up as movement on every step.
+    this.physicsOrigin = this.pos.clone();
     const origin = this.physicsOrigin;
     this.world.gravity = freeFlight
       ? {x: 0, y: 0, z: 0}

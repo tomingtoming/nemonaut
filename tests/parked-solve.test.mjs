@@ -123,8 +123,6 @@ test('a parked vessel stays parked across save and load and is not dropped again
   }
 });
 
-// The solver origin is recentred every kilometre the surface carries a vessel (686 steps). The engine
-// starts below include ones on the step of a recentring and ones whose window crosses one.
 test('a long-parked craft starts its engines without a jump', () => {
   for (const parkedSteps of [300, 685, 686, 1500, 4200, 9000]) {
     const {f, count} = parkedHopper(parkedSteps);

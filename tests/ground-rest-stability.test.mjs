@@ -7,20 +7,15 @@ import {MOON, bodyAltitude, bodyState, bodyUp, referenceBody} from '../dist/cele
 import {inertialToFixed, surfaceAngularVelocity, surfaceVelocity} from '../dist/surface-frame.js';
 
 // A vessel standing on the ground whose step result is kept (SAS on, or any input) is solved on
-// every step while the planet carries it and the ground through solver coordinates, and while the
-// solver origin is recentred every kilometre of that travel. It has to stand still through all of it.
+// every step while the planet carries it and the ground along. It has to stand still through that.
 const dt = 1 / 120;
-/** Steps between two recentrings of the solver origin on the home planet's equator at 120 Hz. */
-const RECENTRE = 686;
-// The bound on vertical movement of a standing vessel: the solver's allowed contact error (1 mm).
+/** Steps in which the home planet's equator travels one kilometre at 120 Hz. */
+const KILOMETRE = 686;
+// The bound on any movement of a standing vessel: the solver's allowed contact error (1 mm).
 const STILL = 1e-3;
-// Along the surface the solver's single-precision coordinates, up to a kilometre from its origin,
-// resolve 0.06 mm, and a standing vessel wanders by that much per step: a few centimetres in all.
-// The bounds are far below the 30 mm per recentring that a stale ground contact would add.
-const PLACE = 0.03,
-  PLACE_TEN_MINUTES = 0.06,
-  // The same wander turns a standing vessel: 0.024 rad in ten minutes for the hopper.
-  HEADING_TEN_MINUTES = 0.05;
+// A braked aircraft creeps on its wheels: about 18 mm and 1.3 mrad in ten minutes.
+const WHEEL_CREEP = 0.03,
+  WHEEL_TURN = 2e-3;
 const altitude = f => bodyAltitude(f.pos, f.universalTime),
   fixed = f => inertialToFixed(f.pos, f.universalTime),
   // The vessel's own up axis seen from the rotating surface: constant while the vessel stands still.
@@ -43,26 +38,13 @@ function solves(f) {
   };
   return () => n;
 }
-/** Counts how often the solver origin is replaced. */
-function recentrings(f) {
-  let n = 0,
-    origin = f.physicsOrigin;
-  return {
-    watch() {
-      if (f.physicsOrigin !== origin) n++;
-      origin = f.physicsOrigin;
-    },
-    count: () => n
-  };
-}
 /**
  * Lets the vessel settle, then steps it and checks on every step that it stays where it settled:
  * altitude, place on the surface, lean and heading, and that no single step lifts or drops it.
  */
-function standsStill(f, {settle, steps, input, place: placeBound = PLACE, heading: headingBound = 1e-3}) {
+function standsStill(f, {settle, steps, input, place: placeBound = STILL, heading: headingBound = 2e-4}) {
   for (let i = 0; i < settle; i++) f.step(dt, input);
   const count = solves(f),
-    origin = recentrings(f),
     rest = altitude(f),
     place = fixed(f),
     tilt = lean(f),
@@ -71,7 +53,6 @@ function standsStill(f, {settle, steps, input, place: placeBound = PLACE, headin
     worst = {altitude: 0, place: 0, lean: 0, heading: 0, step: 0};
   for (let i = 0; i < steps; i++) {
     f.step(dt, input);
-    origin.watch();
     const a = altitude(f);
     worst = {
       altitude: Math.max(worst.altitude, Math.abs(a - rest)),
@@ -91,7 +72,7 @@ function standsStill(f, {settle, steps, input, place: placeBound = PLACE, headin
   // 1 mm at the end of a 5 m lever.
   assert.ok(worst.lean < 2e-4, `lean changed: ${report}`);
   assert.ok(worst.heading < headingBound, `heading changed: ${report}`);
-  return {solved: count(), recentred: origin.count(), worst};
+  return {solved: count(), worst};
 }
 /** Places a vessel upright on the Moon's surface with the surface's motion. */
 function onTheMoon(f, clearance) {
@@ -106,13 +87,12 @@ function onTheMoon(f, clearance) {
 // solver returns, whatever the SAS commands are.
 const awake = {translateX: 1};
 
-test('a hopper standing on the pad with SAS on does not move across solver origin recentrings', () => {
+test('a hopper standing on the pad with SAS on does not move', () => {
   const f = new Flight(preset('hopper'), 'land');
   try {
     f.sas = true;
-    const {solved, recentred} = standsStill(f, {settle: 360, steps: 4 * RECENTRE});
-    assert.equal(solved, 4 * RECENTRE, 'SAS keeps the solver running');
-    assert.ok(recentred >= 3, `the origin was recentred ${recentred} times`);
+    const {solved} = standsStill(f, {settle: 360, steps: 4 * KILOMETRE});
+    assert.equal(solved, 4 * KILOMETRE, 'SAS keeps the solver running');
   } finally {
     f.dispose();
   }
@@ -123,16 +103,13 @@ test('a hopper kept awake by an input stands still at 60 Hz steps as well', () =
   try {
     f.sas = false;
     for (let i = 0; i < 360; i++) f.step(dt);
-    const origin = recentrings(f),
-      rest = altitude(f),
+    const rest = altitude(f),
       place = fixed(f);
-    for (let i = 0; i < 2 * RECENTRE; i++) {
+    for (let i = 0; i < 2 * KILOMETRE; i++) {
       f.step(2 * dt, awake);
-      origin.watch();
       assert.ok(Math.abs(altitude(f) - rest) < STILL, `step ${i} altitude ${altitude(f) - rest}`);
     }
-    assert.ok(origin.count() >= 3);
-    assert.ok(fixed(f).distanceTo(place) < PLACE, `moved ${fixed(f).distanceTo(place)} m`);
+    assert.ok(fixed(f).distanceTo(place) < STILL, `moved ${fixed(f).distanceTo(place)} m`);
   } finally {
     f.dispose();
   }
@@ -144,15 +121,14 @@ for (const [name, kind, environment] of [
   ['a transport on its gear', 'transport', 'runway'],
   ['a rover with its brakes on', 'rover', 'land']
 ])
-  test(`${name} with SAS on does not move across solver origin recentrings`, () => {
+  test(`${name} with SAS on does not move`, () => {
     for (const input of [undefined, awake]) {
       const f = new Flight(preset(kind), environment);
       try {
         f.sas = true;
         assert.equal(f.brake || kind === 'lander', true);
-        const {solved, recentred} = standsStill(f, {settle: 600, steps: 3 * RECENTRE + 60, input});
-        if (input) assert.equal(solved, 3 * RECENTRE + 60, 'an input keeps the solver running');
-        assert.ok(recentred >= 3, `the origin was recentred ${recentred} times`);
+        const {solved} = standsStill(f, {settle: 600, steps: 3 * KILOMETRE + 60, input});
+        if (input) assert.equal(solved, 3 * KILOMETRE + 60, 'an input keeps the solver running');
       } finally {
         f.dispose();
       }
@@ -193,15 +169,8 @@ test('a hopper kept awake for ten minutes neither sinks nor creeps', () => {
   try {
     f.sas = true;
     const steps = 600 * 120,
-      {solved, recentred} = standsStill(f, {
-        settle: 360,
-        steps,
-        input: awake,
-        place: PLACE_TEN_MINUTES,
-        heading: HEADING_TEN_MINUTES
-      });
+      {solved} = standsStill(f, {settle: 360, steps, input: awake});
     assert.equal(solved, steps);
-    assert.ok(recentred >= 100, `the origin was recentred ${recentred} times`);
   } finally {
     f.dispose();
   }
@@ -212,39 +181,30 @@ test('an aircraft kept awake on its gear for ten minutes neither sinks nor creep
   try {
     f.sas = true;
     const steps = 600 * 120,
-      {solved} = standsStill(f, {
-        settle: 600,
-        steps,
-        input: awake,
-        place: PLACE_TEN_MINUTES,
-        heading: HEADING_TEN_MINUTES
-      });
+      {solved} = standsStill(f, {settle: 600, steps, input: awake, place: WHEEL_CREEP, heading: WHEEL_TURN});
     assert.equal(solved, steps);
   } finally {
     f.dispose();
   }
 });
 
-test('a vessel woken on the very step the solver origin is recentred does not jump', () => {
+test('a held vessel woken after any length of rest does not jump', () => {
   // Held from step 240 or so: the solver is skipped until the input arrives.
-  for (const parked of [RECENTRE - 1, RECENTRE, 2 * RECENTRE - 1, 3 * RECENTRE - 1]) {
+  for (const parked of [KILOMETRE - 1, KILOMETRE, 2 * KILOMETRE - 1, 3 * KILOMETRE - 1]) {
     const f = new Flight(preset('hopper'), 'land');
     try {
       f.sas = false;
       for (let i = 0; i < parked; i++) f.step(dt);
-      const origin = recentrings(f),
-        rest = altitude(f),
+      const rest = altitude(f),
         place = fixed(f);
-      for (let i = 0; i < 2 * RECENTRE; i++) {
+      for (let i = 0; i < 2 * KILOMETRE; i++) {
         f.step(dt, awake);
-        origin.watch();
         assert.ok(
           Math.abs(altitude(f) - rest) < 5e-4,
           `woken after ${parked} steps: step ${i} altitude ${altitude(f) - rest}`
         );
       }
-      assert.ok(origin.count() >= 2);
-      assert.ok(fixed(f).distanceTo(place) < PLACE, `moved ${fixed(f).distanceTo(place)} m`);
+      assert.ok(fixed(f).distanceTo(place) < STILL, `moved ${fixed(f).distanceTo(place)} m`);
     } finally {
       f.dispose();
     }
