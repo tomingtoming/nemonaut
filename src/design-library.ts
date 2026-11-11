@@ -2,6 +2,7 @@ import {storageKey} from './app-id.js';
 import type {FlightPart} from './core.js';
 import {loadCraft, saveCraft} from './craft-save.js';
 import {SAVED_PART_FRAME} from './part-save-frame.js';
+import {FLIGHT_ENVIRONMENTS} from './flight-environments.js';
 export const DESIGN_LIBRARY_KEY = storageKey('design-library-v1');
 export interface DesignRecord {
   id: string;
@@ -35,17 +36,6 @@ export interface DesignDraft {
   bay: string;
   environment: string;
 }
-const environments = [
-  'land',
-  'runway',
-  'water',
-  'drop',
-  'orbit',
-  'entry',
-  'moon-orbit',
-  'moon-surface',
-  'transfer'
-];
 export function readDesignLibrary(value: DesignLibraryInput | null | undefined): DesignLibrary {
   if (
     !value ||
@@ -66,7 +56,7 @@ export function readDesignLibrary(value: DesignLibraryInput | null | undefined):
       typeof d.name !== 'string' ||
       d.name.length > 80 ||
       !['vab', 'sph'].includes(d.bay) ||
-      !environments.includes(d.environment) ||
+      !FLIGHT_ENVIRONMENTS.includes(d.environment) ||
       !Number.isFinite(d.savedAt) ||
       d.savedAt < 0
     )

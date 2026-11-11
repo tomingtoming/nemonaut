@@ -1,6 +1,8 @@
 import {validateRendezvousBurn} from './rendezvous-burn.js';
 import {relativeMotion} from './celestial.js';
 import * as T from 'three';
+import {orbitalBasis} from './orbital-basis.js';
+import {PLANET} from './planet.js';
 export interface ManeuverBurnWindow {
   midTime: number;
   duration: number;
@@ -165,7 +167,9 @@ export function validateManeuverNode(
     const r = value.returnPlan;
     if (
       r?.targetPeriapsis !== undefined &&
-      (!Number.isFinite(r.targetPeriapsis) || r.targetPeriapsis < 10000 || r.targetPeriapsis >= 70000)
+      (!Number.isFinite(r.targetPeriapsis) ||
+        r.targetPeriapsis < 10000 ||
+        r.targetPeriapsis >= PLANET.atmosphereTop)
     )
       throw Error('帰還目標近点の保存値が不正です');
     if (
@@ -180,7 +184,7 @@ export function validateManeuverNode(
       r.deltaV < 0.5 ||
       r.deltaV > 10000 ||
       r.predictedPeriapsis < 10000 ||
-      r.predictedPeriapsis >= 70000 ||
+      r.predictedPeriapsis >= PLANET.atmosphereTop ||
       r.exitTime <= r.midTime ||
       r.exitTime - r.midTime > 604800 ||
       Math.abs(r.midTime - value.universalTime - r.duration / 2) > 0.001 ||
@@ -231,9 +235,7 @@ export function maneuverEditValues(
   const pos = new T.Vector3(...node.position),
     vel = new T.Vector3(...node.velocity).sub(impulse),
     local = relativeMotion(pos, vel, node.universalTime),
-    p = local.velocity.clone().normalize(),
-    n = local.r.clone().cross(p).normalize(),
-    r = p.clone().cross(n).normalize();
+    {prograde: p, normal: n, radial: r} = orbitalBasis(local.r, local.velocity);
   if (n.lengthSq() < 0.5) throw Error('軌道面を決められません');
   return {
     universalTime: node.universalTime,

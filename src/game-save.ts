@@ -2,6 +2,7 @@ import {saveKind, isSaveKind} from './app-id.js';
 import {convertSavedPartFrame, SAVED_PART_FRAME} from './part-save-frame.js';
 import {validateCraft, type FlightPart} from './core.js';
 import {validateWorld, type SavedWorld} from './world-save.js';
+import {FLIGHT_ENVIRONMENTS} from './flight-environments.js';
 
 export interface WorkshopDraft {
   name: string;
@@ -32,9 +33,7 @@ function workshop(value: WorkshopDraft | null | undefined, centered: boolean): W
     typeof value.name !== 'string' ||
     value.name.length > 80 ||
     !['vab', 'sph'].includes(value.bay) ||
-    !['land', 'runway', 'water', 'drop', 'orbit', 'entry', 'moon-orbit', 'moon-surface', 'transfer'].includes(
-      value.environment
-    ) ||
+    !FLIGHT_ENVIRONMENTS.includes(value.environment) ||
     !Array.isArray(value.parts)
   )
     throw Error('組立中の設計の保存形式が不正です');

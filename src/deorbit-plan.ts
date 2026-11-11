@@ -21,7 +21,7 @@ export function deorbitPlan(
   if (o.bodyId !== 'planet' || !o.stable || o.energy >= 0)
     throw Error('母星の大気外周回軌道から計画してください');
   if (!Number.isFinite(periapsis) || periapsis < 10000 || periapsis >= o.body.atmosphereTop)
-    throw Error('帰還目標近点は10〜70 km未満です');
+    throw Error('帰還目標近点は10〜' + o.body.atmosphereTop / 1000 + ' km未満です');
   if (!Number.isFinite(delay) || delay < 1 || delay >= o.period)
     throw Error('噴射時刻は次の1周以内にしてください');
   const location = {universalTime: time + delay},

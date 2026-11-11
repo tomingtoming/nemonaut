@@ -1,6 +1,7 @@
 import {lambertArc} from './lambert.js';
 import {keplerDrift} from './coast-orbit.js';
 import {bodyOrbitState, bodyState, MOON, type OrbitState} from './celestial.js';
+import {orbitalBasis} from './orbital-basis.js';
 export interface RendezvousTransferOptions {
   duration?: number | 'auto';
   preparation?: number;
@@ -78,9 +79,7 @@ export function rendezvousTransfer(
     position = departure.position.clone().add(origin.position),
     velocity = arc.departure.clone().add(origin.velocity);
   validate(bodyOrbitState(position, velocity, epoch, own.body));
-  const p = departure.velocity.clone().normalize(),
-    n = departure.position.clone().cross(p).normalize(),
-    r = p.clone().cross(n).normalize();
+  const {prograde: p, normal: n, radial: r} = orbitalBasis(departure.position, departure.velocity);
   return {
     epoch,
     arrivalTime,

@@ -8,6 +8,7 @@ import {relativeStopPlan} from './relative-stop-plan.js';
 
 import {transferThrottle} from './rendezvous-burn.js';
 import {centerOfMass} from './center-of-mass.js';
+import {orbitalBasis} from './orbital-basis.js';
 export {transferThrottle} from './rendezvous-burn.js';
 /** The vessel fields transferBurnTiming simulates the burn from (a Flight satisfies it). */
 export interface BurnTimingVessel extends BurnEstimateVessel {
@@ -93,9 +94,11 @@ export function timedRendezvousTransfer(
     throw Error('整列時間または短時間噴射の条件を満たしません');
   const at = coastDrift(position, vessel.vel, vessel.universalTime, epoch - vessel.universalTime),
     origin = bodyState(own.body, epoch),
-    p = at.velocity.clone().sub(origin.velocity).normalize(),
-    n = at.position.clone().sub(origin.position).cross(p).normalize(),
-    r = p.clone().cross(n).normalize();
+    {
+      prograde: p,
+      normal: n,
+      radial: r
+    } = orbitalBasis(at.position.clone().sub(origin.position), at.velocity.clone().sub(origin.velocity));
   return {
     ...plan,
     impulseEpoch: plan.epoch,
@@ -125,9 +128,11 @@ export function timedRelativeStopPlan(
     throw Error('整列時間または短時間噴射の条件を満たしません');
   const at = coastDrift(position, vessel.vel, vessel.universalTime, epoch - vessel.universalTime),
     origin = bodyState(own.body, epoch),
-    p = at.velocity.clone().sub(origin.velocity).normalize(),
-    n = at.position.clone().sub(origin.position).cross(p).normalize(),
-    r = p.clone().cross(n).normalize();
+    {
+      prograde: p,
+      normal: n,
+      radial: r
+    } = orbitalBasis(at.position.clone().sub(origin.position), at.velocity.clone().sub(origin.velocity));
   return {
     ...plan,
     location: {universalTime: epoch},

@@ -2,6 +2,7 @@ import {closestApproach} from './closest-approach.js';
 import {keplerDrift} from './coast-orbit.js';
 import type {OrbitState} from './celestial.js';
 import type {ManeuverComponents} from './maneuver.js';
+import {orbitalBasis} from './orbital-basis.js';
 /** A single impulsive burn that cancels velocity relative to the target, now or at closest approach. */
 export interface RelativeStopPlan {
   location: 'now' | {universalTime: number};
@@ -33,9 +34,7 @@ export function relativeStopPlan(
     deltaV = impulse.length();
   if (deltaV < 0.5) throw Error('相対速度は既に0.5 m/s未満です');
   if (deltaV > 10000) throw Error('必要なΔvが10000 m/sを超えています');
-  const p = a.velocity.clone().normalize(),
-    n = a.position.clone().cross(p).normalize(),
-    r = p.clone().cross(n).normalize();
+  const {prograde: p, normal: n, radial: r} = orbitalBasis(a.position, a.velocity);
   return {
     location: time === 0 ? 'now' : {universalTime: own.universalTime + time},
     time,

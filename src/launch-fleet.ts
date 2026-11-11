@@ -5,6 +5,7 @@ import {Flight, validateCraft, type FlightPart} from './core.js';
 import {PARTS} from './catalog.js';
 import {loadFlight, type SavedFlight} from './flight-save.js';
 import {fleet} from './fleet.js';
+import {FLIGHT_ENVIRONMENTS} from './flight-environments.js';
 export function freshLaunchParts(
   parts: FlightPart[],
   used: ReadonlySet<string> = new Set<string>(),
@@ -43,12 +44,7 @@ export function launchIntoFleet(
   record: SavedFlight | null | undefined,
   {parts, environment, name, universalTime}: LaunchRequest
 ): Flight {
-  if (
-    !['land', 'runway', 'water', 'drop', 'orbit', 'entry', 'moon-orbit', 'moon-surface', 'transfer'].includes(
-      environment
-    ) ||
-    typeof name !== 'string'
-  )
+  if (!FLIGHT_ENVIRONMENTS.includes(environment) || typeof name !== 'string')
     throw Error('出発条件が不正です');
   const checked = validateCraft({version: 1, parts});
   if (checked.filter(p => !p.parent).length !== 1 || !checked.some(p => PARTS[p.type].control))

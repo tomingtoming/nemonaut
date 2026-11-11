@@ -25,6 +25,7 @@ import {PARTS} from './catalog.js';
 import {bodyOrbitState} from './celestial.js';
 import {SAS_MODES} from './navigation.js';
 import {centerOfMass} from './center-of-mass.js';
+import {FLIGHT_ENVIRONMENTS} from './flight-environments.js';
 const flags = [
   'started',
   'crashed',
@@ -248,11 +249,7 @@ export function loadFlight(
   }
   const children = value.detached ?? [];
   check(Array.isArray(children) && children.length <= 400);
-  check(
-    ['land', 'runway', 'water', 'orbit', 'drop', 'entry', 'moon-orbit', 'moon-surface', 'transfer'].includes(
-      value.environment
-    )
-  );
+  check(FLIGHT_ENVIRONMENTS.includes(value.environment));
   vector(value.pos, 3, 1e10);
   vector(value.vel, 3, 1e6);
   vector(value.omega, 3, 1e4);
