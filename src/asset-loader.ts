@@ -9,6 +9,14 @@ import {mainRenderQuality, sceneCore} from './scene.js';
 export const assets = new Map<string, T.Object3D>();
 /** Part type → bounds of its model. */
 export const assetBounds = new Map<string, T.Box3>();
+// Kept apart from the models: Object3D.clone() copies userData through JSON, once per part visual.
+const thumbnails = new Map<string, string>();
+/** Part type → data URL of its catalogue thumbnail. */
+export function assetThumbnail(type: string): string {
+  const url = thumbnails.get(type);
+  if (!url) throw Error('部品の画像が見つかりません: ' + type);
+  return url;
+}
 export function assetModel(type: string): T.Object3D {
   const model = assets.get(type);
   if (!model) throw Error('部品モデルが見つかりません: ' + type);
@@ -46,7 +54,7 @@ export async function loadAssets() {
     tc.position.copy(center).add(new T.Vector3(1.3, 0.8, 1.8).normalize().multiplyScalar(s * 1.8));
     tc.lookAt(center);
     thumbRenderer.render(ts, tc);
-    model.userData.thumbnail = thumbRenderer.domElement.toDataURL();
+    thumbnails.set(type, thumbRenderer.domElement.toDataURL());
     ts.remove(clone);
   }
   thumbRenderer.dispose();

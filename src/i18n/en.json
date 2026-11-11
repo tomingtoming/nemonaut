@@ -1962,6 +1962,7 @@
  "部品を選んで取付位置をクリック ": "Select a part and click the attach position ",
  "部品ウィンドウがまだ作られていません": "The part windows have not been created yet",
  "部品データが不正です。": "Part data is invalid.",
+ "部品の画像が見つかりません: ": "Part image not found: ",
  "部品モデルが見つかりません: ": "Part model not found: ",
  "部品ライブラリ ": "Parts library ",
  "部品上限は400です": "Part limit is 400",

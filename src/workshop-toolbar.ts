@@ -11,7 +11,7 @@ import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
 import {$, $$, dataValue, notify, errorMessage, showModal} from './ui-common.js';
 import {editorMarkers, frame} from './scene.js';
-import {assetModel} from './asset-loader.js';
+import {assetThumbnail} from './asset-loader.js';
 import {checkpoint, undo, redo} from './workshop-undo.js';
 import {showNodes, cancelPlacement, beginPlacement} from './workshop-place.js';
 import {isEditMode, setMode} from './workshop-select.js';
@@ -211,7 +211,7 @@ export function catalog() {
     )
     .map(
       ([k, d]) =>
-        `<button class="partcard" data-type="${k}" title="${d.desc}"><span class="partcode">${d.code}</span><em>+</em><img src="${assetModel(k).userData.thumbnail}" alt=""><strong>${d.name}</strong></button>`
+        `<button class="partcard" data-type="${k}" title="${d.desc}"><span class="partcode">${d.code}</span><em>+</em><img src="${assetThumbnail(k)}" alt=""><strong>${d.name}</strong></button>`
     )
     .join('');
   $$('.partcard', 'button').forEach(
