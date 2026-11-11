@@ -4,8 +4,7 @@ import {Flight, statistics} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {bodyUp, bodyAltitude} from '../dist/celestial.js';
 import {surfaceVelocity} from '../dist/surface-frame.js';
-import {AircraftHoldPrototype} from './aircraft-hold-prototype.mjs';
-import {cruiseReadiness} from '../dist/cruise-pilot.js';
+import {CruisePilot, cruiseReadiness} from '../dist/cruise-pilot.js';
 import {PARTS} from '../dist/catalog.js';
 import {surfaceForce, partRotation, aeroPoint} from '../dist/aero.js';
 import {atmosphere} from '../dist/planet.js';
@@ -80,7 +79,7 @@ for (const kind of requested ? [requested] : ['plane', 'plane-large', 'transport
       .addScaledVector(forward, speed);
   }
   const targetHeight = normalDeparture ? f.orbit.altitude : 1000;
-  const pilot = new AircraftHoldPrototype(f, {speed, altitude: targetHeight, heading: 90});
+  const pilot = new CruisePilot(f, {speed, altitude: targetHeight, heading: 90});
   let stall = 0,
     minHeight = Infinity,
     maxHeight = -Infinity;

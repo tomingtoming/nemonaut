@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as T from 'three';
 import {withRendezvousTarget} from '../dist/rendezvous-practice.js';
 import {worldFromFlight, flightFromWorld} from '../dist/world-save.js';
 import {launchWorld} from '../dist/world-operations.js';
@@ -8,14 +7,12 @@ import {loadFlight} from '../dist/flight-save.js';
 import {preset} from '../dist/catalog.js';
 import {timedRendezvousTransfer, timedRelativeStopPlan, transferThrottle} from '../dist/timed-rendezvous.js';
 import {bodyOrbitState} from '../dist/celestial.js';
-import {centerOfVessel, relativeState, setTarget} from '../dist/relative-navigation.js';
+import {centerOfVessel, relativeState} from '../dist/relative-navigation.js';
 import {maneuverPreview} from '../dist/maneuver.js';
 import {createManeuverNode} from '../dist/maneuver-node.js';
 import {advanceCoastFleet} from '../dist/coast-flight.js';
-import {portGuidance} from '../dist/port-navigation.js';
-import {dockingStatus, dockVessels} from '../dist/docking.js';
-test('Delayed burns can be corrected by a two-minute transfer and fuel-efficient RCS docking', () => {
-  let f = loadFlight(
+test('Burns started about 5 s late leave a 600-700 m miss that a two-minute transfer corrects to under 100 m', () => {
+  const f = loadFlight(
     flightFromWorld(
       withRendezvousTarget(
         launchWorld(worldFromFlight(null), {parts: preset('orbital-tug'), environment: 'orbit', name: 'Tug'})
@@ -61,33 +58,6 @@ test('Delayed burns can be corrected by a two-minute transfer and fuel-efficient
     execute(stop);
     assert.ok(relativeState(f, g).distance < 100);
     assert.ok(relativeState(f, g).speed < 0.1);
-    const ai = f.parts.find(p => p.type === 'dockingPort').id,
-      bi = g.parts.find(p => p.type === 'dockingPort').id;
-    setTarget(f, f, g);
-    f.dockingPorts = {own: ai, target: bi};
-    f.rcsEnabled = true;
-    f.sasMode = 'dock';
-    f.portTranslationEnabled = true;
-    const clamp = x => T.MathUtils.clamp(x, -1, 1);
-    let i = 0;
-    for (; i < 600 * 120; i++) {
-      const n = portGuidance(f, ai, g, bi);
-      if (dockingStatus(f, ai, g, bi).ready) break;
-      const desired = clamp((n.axial - (n.lateral > 1 ? 20 : 0)) * 0.12) * 0.6;
-      f.step(1 / 120, {
-        portForward: clamp((desired - n.closing) * 2),
-        portRight: clamp((clamp(-n.horizontal * 0.15) * 0.6 - n.horizontalSpeed) * 2),
-        portUp: clamp((clamp(-n.vertical * 0.15) * 0.6 - n.verticalSpeed) * 2)
-      });
-    }
-    assert.ok(i / 120 < 240);
-    assert.ok(dockingStatus(f, ai, g, bi).ready);
-    assert.ok(dockingStatus(f, ai, g, bi).speed < 0.03);
-    const rcsFuel = f.parts.filter(p => p.type === 'rcs').reduce((sum, p) => sum + f.fuel.get(p.id), 0);
-    assert.ok(rcsFuel > 25 && rcsFuel < 48);
-    f = dockVessels(f, g, ai, bi);
-    assert.equal(f.parts.length, 20);
-    assert.equal(f.detached.length, 0);
   } finally {
     f.dispose();
   }

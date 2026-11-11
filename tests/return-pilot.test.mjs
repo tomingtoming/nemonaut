@@ -47,7 +47,6 @@ for (const kind of ['plane', 'plane-large', 'transport-cargo'])
     test(`${kind} independently starts return control after outbound ${outboundHeading ?? 90}`, () => {
       const r = runReturnFlight({
         kind,
-        standalone: true,
         outboundHeading,
         returnAfter: outboundHeading === null ? 0 : 200,
         seconds: 1100
@@ -59,7 +58,7 @@ for (const kind of ['plane', 'plane-large', 'transport-cargo'])
       assert.equal(r.ownerUnchanged, true);
       assert.equal(r.initialParts, r.remainingParts);
       assert.ok(r.remainingFuel > 0 && r.remainingFuel < r.initialFuel);
-      const start = r.events.find(e => e.phase === 'return:0');
+      const start = r.events.find(e => e.phase === 'return');
       if (outboundHeading !== null) {
         assert.ok(start.time >= 200);
         assert.ok(Math.abs(start.heading - 210) < 20 && Math.abs(start.x) > 1000);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {DockingSession} from '../tools/docking-session.mjs';
+import {DockingAutopilot, DOCKING_AUTOPILOT} from '../dist/docking-autopilot.js';
 import {preset} from '../dist/catalog.js';
 import {withRendezvousTarget} from '../dist/rendezvous-practice.js';
 import {worldFromFlight, flightFromWorld} from '../dist/world-save.js';
@@ -62,7 +62,7 @@ function burn(f) {
   return first;
 }
 for (const burnThrottle of [null, 0.1])
-  test(`generated automatic transfer and relative stop hand off to RCS docking (${burnThrottle ?? 'tail'})`, t => {
+  test(`generated automatic transfer and relative stop hand off to automatic docking (${burnThrottle ?? 'tail'})`, t => {
     let f = fixture();
     try {
       let g = f.navigationTarget;
@@ -107,20 +107,21 @@ for (const burnThrottle of [null, 0.1])
           targetSpin: g.omega.length()
         })
       );
-      const docking = new DockingSession(),
+      const docking = new DockingAutopilot(),
         runtime = new WorldRuntime(f);
       let i = 0;
-      // Prototype session consumes the actual burn result, without repositioning.
+      // The shipped autopilot consumes the actual burn result, without repositioning.
       docking.start(f);
-      for (; i < 180 * 120 && docking.owner; i++) {
+      for (; i < 180 * 120 && docking.active && docking.state !== 'docking'; i++) {
         const input = docking.step(f, 1 / 120);
         runtime.replace(f);
         runtime.step(1 / 120, input);
       }
-      assert.equal(docking.state, 'complete', docking.message);
+      assert.equal(docking.state, 'docking', docking.message);
       assert.ok(i < 180 * 120);
+      t.diagnostic(JSON.stringify({dockingTime: docking.elapsed, peak: docking.peak.speed}));
       assert.ok(dockingStatus(f, ai, g, bi).ready);
-      assert.ok(dockingStatus(f, ai, g, bi).speed < 0.03);
+      assert.ok(dockingStatus(f, ai, g, bi).speed <= DOCKING_AUTOPILOT.finalSpeed);
       const fuelBefore = [...f.fuel.values(), ...g.fuel.values()].reduce((a, b) => a + b, 0);
       f = dockVessels(f, g, ai, bi);
       assert.equal(f.parts.length, 20);
