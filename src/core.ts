@@ -27,7 +27,6 @@ import {advanceWorldPhysics} from './world-physics.js';
 import {fleet, canControl} from './fleet.js';
 import {stagePressRuns} from './vessel-controls.js';
 import {
-  inertialToFixed,
   launchSiteOrientation,
   overWater,
   shoreline,
@@ -1062,7 +1061,7 @@ export class Flight {
     );
     const wheelContacts: WheelContact[] = [],
       anchor = new T.Vector3();
-    let surfaceTurn: T.Quaternion | undefined;
+    let surfaceTurn: {toInertial: T.Quaternion; toFixed: T.Quaternion} | undefined;
 
     let stallCount = 0,
       contacts = 0,
@@ -1304,10 +1303,16 @@ export class Flight {
           )
             delete motion.anchor;
           else if (motion.anchor || Math.hypot(sideSpeed, forwardSpeed) < TYRE_GRIP_SPEED) {
-            const place = inertialToFixed(point, startTime, reference),
-              toInertial = (surfaceTurn ??= surfaceOrientation(startTime, reference));
+            const frame = (surfaceTurn ??= {
+                toInertial: surfaceOrientation(startTime, reference),
+                toFixed: surfaceOrientation(startTime, reference).invert()
+              }),
+              place = point.clone().sub(startBody.position).applyQuaternion(frame.toFixed);
             if (motion.anchor) {
-              const stretch = place.clone().sub(anchor.fromArray(motion.anchor)).applyQuaternion(toInertial),
+              const stretch = place
+                  .clone()
+                  .sub(anchor.fromArray(motion.anchor))
+                  .applyQuaternion(frame.toInertial),
                 reach = limit / (share * TYRE_GRIP_STIFFNESS);
               sideStretch = T.MathUtils.clamp(stretch.dot(side), -reach, reach);
               forwardStretch = T.MathUtils.clamp(stretch.dot(forward), -reach, reach);
@@ -1319,7 +1324,7 @@ export class Flight {
                       .copy(side)
                       .multiplyScalar(sideStretch)
                       .addScaledVector(forward, forwardStretch)
-                      .applyQuaternion(toInertial.clone().invert())
+                      .applyQuaternion(frame.toFixed)
                   )
                   .toArray();
             } else motion.anchor = place.toArray();
