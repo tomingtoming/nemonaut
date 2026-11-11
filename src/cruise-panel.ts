@@ -578,6 +578,7 @@ export function mountCruisePanel(
       return;
     }
     panel = floatingWindow(root.body, {title: '自動操縦', x: innerWidth - 330, y: 150, onClose: close});
+    panel.element.classList.add('cruiseWindow');
     const f = getState().flight;
     if (!f) throw Error('自動操縦の対象機体がありません');
     render(f);

@@ -160,6 +160,7 @@ export function mountOrbitalAscent(
       return;
     }
     panel = floatingWindow(root.body, {title: '自動投入', x: innerWidth - 330, y: 150, onClose: close});
+    panel.element.classList.add('ascentWindow');
     render(getState().flight ?? missing('自動投入の対象機体'));
     update();
   };

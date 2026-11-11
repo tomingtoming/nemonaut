@@ -52,11 +52,13 @@ export function mountWarpGuard() {
   };
   // Pointer and keyboard activation of flight controls must not leave fast physics
   // running while the pilot changes thrust, staging or attitude commands. Floating windows
-  // (part, docking, descent and autopilot windows) count by their content, not their pin and
-  // close buttons; the sound, survey, runway and buoyancy windows hold no flight control.
+  // (part, docking and descent windows) count by their content, not their pin and close buttons;
+  // the sound, survey, runway and buoyancy windows hold no flight control, and the settings of the
+  // automation windows (automatic burn, orbital ascent, cruise) stay adjustable while warping.
   const flightControls =
     '#flightHud,#inspector,#orbitOverlay,#stageDock,' +
-    '.floatingWindow:not(.audioWindow,.deliveryWindow,.runwayWindow) .floatingContent:not(.buoyancyPanel)';
+    '.floatingWindow:not(.audioWindow,.deliveryWindow,.runwayWindow,.maneuverWindow,.ascentWindow,.cruiseWindow)' +
+    ' .floatingContent:not(.buoyancyPanel)';
   for (const type of ['click', 'input', 'change'])
     document.addEventListener(
       type,

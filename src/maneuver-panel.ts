@@ -111,6 +111,7 @@ export function mountManeuverPanel(
       return;
     }
     const panel = floatingWindow(root.body, {title: '自動噴射', x: innerWidth - 330, y: 160, onClose: close});
+    panel.element.classList.add('maneuverWindow');
     const power = root.createElement('select');
     power.setAttribute('aria-label', '自動噴射の推力');
     for (const [value, label] of [
