@@ -81,16 +81,34 @@ function contactArgs(c: Collider): ContactShape['args'] {
   shapeArgs.set(c, args);
   return args;
 }
+// buildColliders replaces the collider group map whenever the collider set changes, so the map identifies
+// the set; the part list is checked too because the shapes name its part objects.
+const vesselShapes = new WeakMap<
+  Flight['colliderGroups'],
+  {parts: Flight['parts']; shapes: ContactShape[]}
+>();
 function shapes(v: Flight): ContactShape[] {
+  const cached = vesselShapes.get(v.colliderGroups);
+  if (cached && cached.parts === v.parts) return cached.shapes;
   const owner = new Map<number, string>();
   for (const [id, group] of v.colliderGroups) for (const {collider} of group) owner.set(collider.handle, id);
+  const parts = new Map<string, FlightPart>();
+  for (const p of v.parts) if (!parts.has(p.id)) parts.set(p.id, p);
   const out: ContactShape[] = [];
   for (let i = 0; i < v.body.numColliders(); i++) {
-    const c = v.body.collider(i);
-    out.push({part: v.parts.find(x => x.id === owner.get(c.handle)), args: contactArgs(c)});
+    const c = v.body.collider(i),
+      id = owner.get(c.handle);
+    out.push({part: id === undefined ? undefined : parts.get(id), args: contactArgs(c)});
   }
+  vesselShapes.set(v.colliderGroups, {parts: v.parts, shapes: out});
   return out;
 }
+/** The collider sets whose shapes the pair query currently holds (side 0 and 1), to resend only poses. */
+let loaded: {
+  pair: NonNullable<ReturnType<typeof sharedPhysics>>;
+  a: Flight['colliderGroups'];
+  b: Flight['colliderGroups'];
+} | null = null;
 // Facing docking ports belong to the docking capture, not to collision.
 function dockingFaces(a: Flight, pa: FlightPart | undefined, b: Flight, pb: FlightPart | undefined): boolean {
   if (!pa || !pb || !PARTS[pa.type]?.docking || !PARTS[pb.type]?.docking) return false;
@@ -146,11 +164,15 @@ export function resolveVesselCollisions(vessels: readonly Flight[], dt: number):
         sb = shapes(b),
         origin = a.pos.clone(),
         offset = b.pos.clone().sub(origin);
-      pair.pair_reset();
-      for (const s of sa)
-        if (pair.pair_shape(0, ...s.args) !== 1) throw Error('Rust物理: vessel contact shape rejected');
-      for (const s of sb)
-        if (pair.pair_shape(1, ...s.args) !== 1) throw Error('Rust物理: vessel contact shape rejected');
+      if (loaded?.pair !== pair || loaded.a !== a.colliderGroups || loaded.b !== b.colliderGroups) {
+        loaded = null;
+        pair.pair_reset();
+        for (const s of sa)
+          if (pair.pair_shape(0, ...s.args) !== 1) throw Error('Rust物理: vessel contact shape rejected');
+        for (const s of sb)
+          if (pair.pair_shape(1, ...s.args) !== 1) throw Error('Rust物理: vessel contact shape rejected');
+        loaded = {pair, a: a.colliderGroups, b: b.colliderGroups};
+      }
       if (
         pair.pair_pose(0, 0, 0, 0, a.q.x, a.q.y, a.q.z, a.q.w) !== 1 ||
         pair.pair_pose(1, offset.x, offset.y, offset.z, b.q.x, b.q.y, b.q.z, b.q.w) !== 1
