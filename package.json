@@ -11,9 +11,9 @@
     "build": "node tools/build.mjs",
     "pretest": "node tools/build.mjs --quiet",
     "test": "node --test tests/*.test.mjs",
-    "typecheck": "tsc -p tsconfig.json && node tools/type-hardness.mjs --check && node tools/type-precision.mjs --check && node tools/module-graph.mjs --check && prettier --check --log-level warn \"src/**/*.ts\" \"tools/*.mjs\" \"tests/*.mjs\"",
+    "typecheck": "tsc -p tsconfig.json && tsc -p worker/tsconfig.json && node tools/type-hardness.mjs --check && node tools/type-precision.mjs --check && node tools/module-graph.mjs --check && prettier --check --log-level warn \"src/**/*.ts\" \"worker/*.ts\" \"tools/*.mjs\" \"tests/*.mjs\"",
     "dev": "node tools/serve.mjs",
-    "format": "prettier --write \"src/**/*.ts\" \"tools/*.mjs\" \"tests/*.mjs\""
+    "format": "prettier --write \"src/**/*.ts\" \"worker/*.ts\" \"tools/*.mjs\" \"tests/*.mjs\""
   },
   "dependencies": {
     "three": "0.180.0"
