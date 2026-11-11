@@ -9,7 +9,7 @@ import {
 } from '../dist/vessel-controls.js';
 import {Flight} from '../dist/core.js';
 import {PARTS, preset, part} from '../dist/catalog.js';
-import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
+import {surfaceSpeed} from './fixtures/surface-speed.mjs';
 
 const actions = rows => rows.map(r => r.action);
 const row = (rows, action) => rows.find(r => r.action === action);
@@ -96,12 +96,6 @@ test('W/S releases the brake only with a powered wheel and drive enabled', () =>
   assert.equal(releaseBrakeForDrive(plane, 1), false, 'free-rolling gear does not release the brake');
 });
 
-const surfaceSpeed = f =>
-  surfaceRelativeVelocity(
-    f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
-    f.vel,
-    f.universalTime
-  ).length();
 test('powered wheels drive without the Space start once the brake is off', () => {
   const f = new Flight(preset('rover'), 'land');
   try {

@@ -1,13 +1,6 @@
 import {stagePerformance} from '../dist/resources.js';
 import {descentTelemetry} from '../dist/descent.js';
 import {setAscentAttitude} from '../dist/lunar-ascent.js';
-import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
-const surfaceSpeed = f =>
-  surfaceRelativeVelocity(
-    f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
-    f.vel,
-    f.universalTime
-  ).length();
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 import {lunarReturnPlan, lunarReturnNode} from '../dist/lunar-return.js';
 import {launchWorld, retireWorldVessel} from '../dist/world-operations.js';
@@ -23,6 +16,7 @@ import {LaunchPilot} from '../dist/launch-pilot.js';
 import {lunarDeparturePlan, lunarDepartureNode} from '../dist/lunar-departure.js';
 import {advanceCoastFleet} from '../dist/coast-flight.js';
 import {lunarCapturePlan, captureNode} from '../dist/lunar-capture.js';
+import {surfaceSpeed} from './fixtures/surface-speed.mjs';
 
 test('Surface expedition vacuum stage keeps its stack sockets and landing clearance', () => {
   const parts = preset('lunar-surface-expedition'),

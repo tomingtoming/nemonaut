@@ -1,10 +1,3 @@
-import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
-const surfaceSpeed = f =>
-  surfaceRelativeVelocity(
-    f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
-    f.vel,
-    f.universalTime
-  ).length();
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';
@@ -12,6 +5,7 @@ import {preset} from '../dist/catalog.js';
 import {parachuteStep} from '../dist/recovery.js';
 import {LaunchPilot} from '../dist/launch-pilot.js';
 import {ReturnPilot} from '../dist/return-pilot.js';
+import {surfaceSpeed} from './fixtures/surface-speed.mjs';
 test('Parachute waits in vacuum and at unsafe speed, reefs then opens and collapses after touchdown', () => {
   const state = {status: 'armed', fraction: 0};
   for (const env of [

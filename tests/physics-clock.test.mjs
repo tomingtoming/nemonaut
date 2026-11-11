@@ -1,19 +1,13 @@
 import * as T from 'three';
 import {MOON, bodyState, bodyOrbitState} from '../dist/celestial.js';
 import {descentTelemetry} from '../dist/descent.js';
-import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
-const surfaceSpeed = f =>
-  surfaceRelativeVelocity(
-    f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
-    f.vel,
-    f.universalTime
-  ).length();
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PhysicsClock, physicalWarpStop} from '../dist/physics-clock.js';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
+import {surfaceSpeed} from './fixtures/surface-speed.mjs';
 
 test('Physical acceleration preserves every fixed integration step', () => {
   const run = rate => {

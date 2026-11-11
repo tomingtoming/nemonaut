@@ -1,16 +1,11 @@
 import {bodyAltitude} from '../dist/celestial.js';
-import {surfaceRelativeVelocity, inertialToFixed} from '../dist/surface-frame.js';
-const surfaceSpeed = f =>
-  surfaceRelativeVelocity(
-    f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
-    f.vel,
-    f.universalTime
-  ).length();
+import {inertialToFixed} from '../dist/surface-frame.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {preset, part} from '../dist/catalog.js';
 import {Flight, validateCraft, descendants} from '../dist/core.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
+import {surfaceSpeed} from './fixtures/surface-speed.mjs';
 const run = (f, seconds, input = () => ({}), hz = 120) => {
   for (let i = 0; i < seconds * hz; i++) f.step(1 / hz, input(i / hz));
   return f;

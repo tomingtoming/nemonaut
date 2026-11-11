@@ -1,10 +1,3 @@
-import {surfaceRelativeVelocity} from '../dist/surface-frame.js';
-const surfaceSpeed = f =>
-  surfaceRelativeVelocity(
-    f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
-    f.vel,
-    f.universalTime
-  ).length();
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
@@ -13,6 +6,7 @@ import {preset} from '../dist/catalog.js';
 import {lunarReturnPlan, lunarReturnNode} from '../dist/lunar-return.js';
 import {advanceCoastFleet} from '../dist/coast-flight.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
+import {surfaceSpeed} from './fixtures/surface-speed.mjs';
 
 test('Lunar return capsule burns, escapes, separates, survives entry and lands with its real parachute', () => {
   let f = new Flight(preset('lunar-return'), 'moon-orbit', 40000);

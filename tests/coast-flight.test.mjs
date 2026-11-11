@@ -1,12 +1,6 @@
 import {referenceCooling} from '../tools/coast-cooling-reference.mjs';
 import {bodyState, referenceBody} from '../dist/celestial.js';
-import {surfaceRelativeVelocity, inertialToFixed, surfaceOrientation} from '../dist/surface-frame.js';
-const surfaceSpeed = f =>
-  surfaceRelativeVelocity(
-    f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q)),
-    f.vel,
-    f.universalTime
-  ).length();
+import {inertialToFixed, surfaceOrientation} from '../dist/surface-frame.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
@@ -24,6 +18,7 @@ import {createThermal} from '../dist/thermal.js';
 import {thermalStep} from '../tools/golden/thermal-reference.mjs';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 import {selectVessel, fleet} from '../dist/fleet.js';
+import {surfaceSpeed} from './fixtures/surface-speed.mjs';
 
 const center = f => f.pos.clone().add(f.stats.com.clone().applyQuaternion(f.q));
 
