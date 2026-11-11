@@ -13,9 +13,6 @@ const dt = 1 / 120;
 const KILOMETRE = 686;
 // The bound on any movement of a standing vessel: the solver's allowed contact error (1 mm).
 const STILL = 1e-3;
-// A braked aircraft creeps on its wheels: about 18 mm and 1.3 mrad in ten minutes.
-const WHEEL_CREEP = 0.03,
-  WHEEL_TURN = 2e-3;
 const altitude = f => bodyAltitude(f.pos, f.universalTime),
   fixed = f => inertialToFixed(f.pos, f.universalTime),
   // The vessel's own up axis seen from the rotating surface: constant while the vessel stands still.
@@ -176,13 +173,83 @@ test('a hopper kept awake for ten minutes neither sinks nor creeps', () => {
   }
 });
 
-test('an aircraft kept awake on its gear for ten minutes neither sinks nor creeps', () => {
+// The runway lies off the equator, where the planet's spin pushes a standing vessel sideways along the
+// ground (0.17 mm/s²). Braked tyres hold that as the feet of a lander do; what remains is the breathing
+// of the suspension, a few hundredths of a millimetre.
+for (const kind of ['plane', 'plane-large', 'transport', 'transport-cargo', 'rover'])
+  test(`a braked ${kind} kept awake on the runway for ten minutes neither sinks nor creeps`, () => {
+    const f = new Flight(preset(kind), 'runway');
+    try {
+      f.sas = true;
+      assert.equal(f.brake, true);
+      const steps = 600 * 120,
+        {solved} = standsStill(f, {settle: 600, steps, input: awake, place: 1e-4});
+      assert.equal(solved, steps);
+    } finally {
+      f.dispose();
+    }
+  });
+
+test('a braked aircraft stands still at 60 Hz steps as well', () => {
+  for (const kind of ['plane', 'plane-large', 'transport']) {
+    const f = new Flight(preset(kind), 'runway');
+    try {
+      f.sas = true;
+      for (let i = 0; i < 600; i++) f.step(dt, awake);
+      const rest = altitude(f),
+        place = fixed(f),
+        facing = heading(f);
+      for (let i = 0; i < 60 * 60; i++) {
+        f.step(2 * dt, awake);
+        assert.ok(Math.abs(altitude(f) - rest) < STILL, `${kind} step ${i} altitude ${altitude(f) - rest}`);
+        assert.ok(
+          fixed(f).distanceTo(place) < 1e-4,
+          `${kind} step ${i} moved ${fixed(f).distanceTo(place)} m`
+        );
+        assert.ok(f.omega.clone().sub(surfaceAngularVelocity()).length() < 1e-4, `${kind} step ${i} rocks`);
+      }
+      assert.ok(heading(f).distanceTo(facing) < 2e-4);
+    } finally {
+      f.dispose();
+    }
+  }
+});
+
+test('a braked aircraft passes between held and awake without moving', () => {
   const f = new Flight(preset('plane'), 'runway');
   try {
-    f.sas = true;
-    const steps = 600 * 120,
-      {solved} = standsStill(f, {settle: 600, steps, input: awake, place: WHEEL_CREEP, heading: WHEEL_TURN});
-    assert.equal(solved, steps);
+    f.sas = false;
+    for (let i = 0; i < 600; i++) f.step(dt, awake);
+    const place = fixed(f),
+      facing = heading(f),
+      count = solves(f);
+    let previous = place,
+      worst = 0,
+      solved = 0;
+    // Held (no input: the solver is skipped) and awake in turns of unequal length.
+    for (const [steps, input] of [
+      [KILOMETRE - 1, undefined],
+      [240, awake],
+      [3, undefined],
+      [1, awake],
+      [2 * KILOMETRE + 1, undefined],
+      [1200, awake],
+      [600, undefined],
+      [2400, awake]
+    ]) {
+      for (let i = 0; i < steps; i++) {
+        f.step(dt, input);
+        const now = fixed(f);
+        worst = Math.max(worst, now.distanceTo(previous));
+        previous = now;
+        assert.ok(now.distanceTo(place) < 1e-4, `moved ${now.distanceTo(place)} m`);
+      }
+      if (input) solved += steps;
+      else assert.ok(count() <= solved + 8, 'the held aircraft skips the solver');
+    }
+    // No step moves it further than the suspension's breathing does.
+    assert.ok(worst < 2e-6, `a single step moved it ${worst} m`);
+    assert.ok(heading(f).distanceTo(facing) < 2e-4);
   } finally {
     f.dispose();
   }
