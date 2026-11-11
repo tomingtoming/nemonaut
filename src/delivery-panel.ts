@@ -16,7 +16,7 @@ import {
   SURVEY_TARGET_SECONDS
 } from './delivery-sites.js';
 import {deliveryTelemetry} from './surface-delivery.js';
-import {element, missing} from './dom.js';
+import {element, missing, setText} from './dom.js';
 const key = storageKey('delivery-guide');
 export type DeliveryStationVessel = import('./surface-survey.js').SurveyVessel &
   import('./observation.js').ObservationStatusVessel;
@@ -273,37 +273,73 @@ export function mountDeliveryPanel(
           : '観測機は現在の世界にありません';
     }
   }
+  // What may cover the marker. The rectangles are read again after input (a drag moves a window), when
+  // the window resizes, and otherwise four times a second, not every frame.
+  const coverSelector =
+    '#flightQuickNav,.navpanel,.hudreadings,#inspector,#flightMenu,#flightSystems,#stageDock,.floatingWindow,#panelDock';
+  let covers: DOMRect[] | null = null,
+    coversRead = 0,
+    labelled: string | null = null,
+    placed = '';
+  const forget = () => {
+    covers = null;
+  };
+  for (const type of ['pointerdown', 'pointerup', 'keydown', 'keyup', 'wheel', 'click', 'input', 'toggle'])
+    root.addEventListener(type, forget, {capture: true, passive: true});
+  root.addEventListener(
+    'pointermove',
+    e => {
+      if (e.buttons) forget();
+    },
+    {capture: true, passive: true}
+  );
+  root.defaultView?.addEventListener('resize', forget);
+  const orbitOverlay = element(root, '#orbitOverlay', 'section');
   function updateMarker(camera: import('three').Camera, width: number, height: number): void {
-    const site = selectedDeliverySite();
-    marker.textContent = '◇ ' + site.name;
-    marker.setAttribute('aria-label', site.name + 'の位置');
     const {flight, atCenter} = getState();
-    const visible = followed && flight && !atCenter && element(root, '#orbitOverlay', 'section').hidden;
-    const p = visible ? projectDeliverySite(camera, flight.universalTime, width, height, site) : null;
-    marker.hidden = !p;
-    if (p) {
+    const visible = followed && flight && !atCenter && orbitOverlay.hidden;
+    if (!visible) {
+      if (!marker.hidden) marker.hidden = true;
+      return;
+    }
+    const site = selectedDeliverySite();
+    setText(marker, '◇ ' + site.name);
+    if (labelled !== site.name) {
+      labelled = site.name;
+      marker.setAttribute('aria-label', site.name + 'の位置');
+    }
+    const p = projectDeliverySite(camera, flight.universalTime, width, height, site);
+    if (!p) {
+      if (!marker.hidden) marker.hidden = true;
+      return;
+    }
+    // Measured while shown, as the rectangle of a hidden marker is empty.
+    if (marker.hidden) marker.hidden = false;
+    const at = p.x + 'px,' + p.y + 'px';
+    if (placed !== at) {
+      placed = at;
       marker.style.left = p.x + 'px';
       marker.style.top = p.y + 'px';
-      // Keep the world anchor truthful; the guide still supplies distance/bearing
-      // when another instrument occupies its projected screen position.
-      const m = marker.getBoundingClientRect();
-      marker.hidden = [
-        ...root.querySelectorAll(
-          '#flightQuickNav,.navpanel,.hudreadings,#inspector,#flightMenu,#flightSystems,#stageDock,.floatingWindow,#panelDock'
-        )
-      ].some(el => {
-        if (getComputedStyle(el).visibility === 'hidden') return false;
-        const r = el.getBoundingClientRect();
-        return (
-          r.width > 0 &&
-          r.height > 0 &&
-          m.left < r.right + 4 &&
-          m.right > r.left - 4 &&
-          m.top < r.bottom + 4 &&
-          m.bottom > r.top - 4
-        );
-      });
     }
+    // Keep the world anchor truthful; the guide still supplies distance/bearing
+    // when another instrument occupies its projected screen position.
+    const m = marker.getBoundingClientRect(),
+      now = performance.now();
+    if (!covers || now - coversRead > 250) {
+      coversRead = now;
+      covers = [];
+      for (const el of root.querySelectorAll(coverSelector)) {
+        if (getComputedStyle(el).visibility === 'hidden') continue;
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) covers.push(r);
+      }
+    }
+    if (
+      covers.some(
+        r => m.left < r.right + 4 && m.right > r.left - 4 && m.top < r.bottom + 4 && m.bottom > r.top - 4
+      )
+    )
+      marker.hidden = true;
   }
   return {update, close, updateMarker};
 }
