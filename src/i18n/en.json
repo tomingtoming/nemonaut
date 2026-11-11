@@ -1285,6 +1285,7 @@
  "次の近点": "Next periapsis",
  "次の遠点": "Next apoapsis",
  "次段": "Stage",
+ "次の段はありません": "No next stage",
  "正規化した世界に機体がありません: ": "No craft in the normalized world: ",
  "正面はローカル+Y。ポート面を向き合わせて低速で結合。": "The front is local +Y. Dock at low speed with the port faces aligned.",
  "残り": "Remaining",

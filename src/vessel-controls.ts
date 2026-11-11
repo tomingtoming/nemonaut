@@ -42,6 +42,13 @@ const staged = (p: Pick<Part, 'type'>) => {
 export function hasNextStage(parts: VesselParts, stage: number): boolean {
   return parts.some(p => staged(p) && p.stage > stage);
 }
+/**
+ * Whether a Space press runs a stage. The first press always does: it starts the flight at stage 0 even
+ * with nothing staged (brake off, wheel drive follows the throttle). Later presses need a staged part above.
+ */
+export function stagePressRuns(parts: VesselParts, stage: number): boolean {
+  return stage < 0 || hasNextStage(parts, stage);
+}
 
 /** The vessel fields the drive gate reads. */
 export interface DriveVessel {

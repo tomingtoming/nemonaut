@@ -4,6 +4,7 @@ import {
   vesselControls,
   hasPoweredWheel,
   hasNextStage,
+  stagePressRuns,
   releaseBrakeForDrive,
   launchHint
 } from '../dist/vessel-controls.js';
@@ -56,6 +57,18 @@ test('Space shows only while a later stage has something to run', () => {
   const last = Math.max(...parts.map(p => p.stage));
   assert.equal(hasNextStage(parts, last), false);
   assert.ok(!actions(vesselControls(parts, {stage: last})).some(a => /次段/.test(a)));
+});
+test('a Space press runs a stage on the first press and while a staged part is above', () => {
+  const parts = preset('rocket'),
+    last = Math.max(...parts.map(p => p.stage));
+  assert.equal(stagePressRuns(parts, -1), true);
+  assert.equal(stagePressRuns(parts, last - 1), true);
+  assert.equal(stagePressRuns(parts, last), false);
+  // A craft with nothing staged: the first press starts the flight, later ones do nothing.
+  const rover = preset('rover').map(p => ({...p, stage: 0}));
+  assert.equal(hasNextStage(rover, 0), false);
+  assert.equal(stagePressRuns(rover, -1), true);
+  assert.equal(stagePressRuns(rover, 0), false);
 });
 test('on touch the rows name on-screen controls and no key letters', () => {
   for (const kind of ['rover', 'rocket', 'sub', 'rcs', 'plane', 'recovery', 'courier']) {

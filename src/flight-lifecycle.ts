@@ -10,7 +10,7 @@ import {selectVessel, canControl} from './fleet.js';
 import {PARTS} from './catalog.js';
 import {Flight} from './core.js';
 import {ignitionHint} from './first-steps.js';
-import {launchHint} from './vessel-controls.js';
+import {launchHint, stagePressRuns} from './vessel-controls.js';
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
 import {$, errorMessage, notify} from './ui-common.js';
@@ -236,6 +236,12 @@ export function endFlight() {
 }
 export function stage() {
   if (!state.flight || !canControl(state.flight)) return;
+  // A press with nothing left to stage changes nothing, so it gets a notice instead of the staging sound and toast.
+  if (!stagePressRuns(state.flight.parts, state.flight.stage)) {
+    state.flight.stageNext();
+    notify('次の段はありません');
+    return;
+  }
   const firstStage = !state.flight.started,
     removed = state.flight.stageNext(),
     hint = ignitionHint({
