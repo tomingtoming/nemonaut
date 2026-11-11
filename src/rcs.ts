@@ -49,6 +49,16 @@ export function mixRCS(
   rotation: T.Vector3,
   translation: T.Vector3
 ): number[] {
+  // No command, no jets: with an all-zero command the sweeps below leave every level at exactly 0.
+  if (
+    translation.x === 0 &&
+    translation.y === 0 &&
+    translation.z === 0 &&
+    rotation.x === 0 &&
+    rotation.y === 0 &&
+    rotation.z === 0
+  )
+    return thrusters.map(() => 0);
   const columns = thrusters.map(t => {
     const f = t.direction.clone().multiplyScalar(t.thrust),
       torque = t.position.clone().sub(com).cross(f);
@@ -65,21 +75,27 @@ export function mixRCS(
   const scale = positive.map((v, i) => Math.max(v, negative[i], 1));
   const residual = command.map((v, i) => (v * (v >= 0 ? positive[i] : negative[i])) / scale[i]);
   const matrix = columns.map(col => col.map((v, i) => v / scale[i])),
+    norms = matrix.map(col => col.reduce((s, v) => s + v * v, 0)),
     levels = thrusters.map(() => 0);
-  for (let iteration = 0; iteration < 120; iteration++)
+  for (let iteration = 0; iteration < 120; iteration++) {
+    let moved = false;
     for (let j = 0; j < matrix.length; j++) {
       const col = matrix[j],
-        norm = col.reduce((s, v) => s + v * v, 0);
+        norm = norms[j];
       if (norm < 1e-12) continue;
-      const next = T.MathUtils.clamp(
-          levels[j] + col.reduce((s, v, i) => s + v * residual[i], 0) / norm,
-          0,
-          1
-        ),
+      let dot = 0;
+      for (let i = 0; i < 6; i++) dot += col[i] * residual[i];
+      const next = T.MathUtils.clamp(levels[j] + dot / norm, 0, 1),
         delta = next - levels[j];
+      // A level that stays put leaves the residual as it is.
+      if (delta === 0) continue;
+      moved = true;
       levels[j] = next;
-      col.forEach((v, i) => (residual[i] -= v * delta));
+      for (let i = 0; i < 6; i++) residual[i] -= col[i] * delta;
     }
+    // A sweep that moved nothing is a fixed point: every later sweep repeats it.
+    if (!moved) break;
+  }
   // Opposed nozzles can retain a cancelling component in a least-squares
   // solution. Remove only exactly opposite force/torque columns: this keeps
   // the commanded wrench unchanged while avoiding propellant spent on itself.
@@ -115,6 +131,52 @@ export function rcsThrusters(
       isp
     }));
   });
+}
+
+/** The RCS blocks a thruster list was built from, to tell when it must be rebuilt. */
+export interface RcsLayout {
+  sources: {part: RcsPart; id: string; type: string; p: T.Vector3Tuple; r: T.Vector3Tuple}[];
+  thrusters: RcsThruster[];
+}
+function sameTuple(a: T.Vector3Tuple, b: T.Vector3Tuple): boolean {
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+}
+/**
+ * rcsThrusters, rebuilt only when the supplying RCS blocks change (another part object, id, type, placement
+ * or fuel switch). The returned layout replaces the caller's; its thrusters and their vectors are shared
+ * between calls and must not be modified.
+ */
+export function rcsLayout(
+  previous: RcsLayout | undefined,
+  parts: readonly RcsPart[],
+  definitions: Readonly<Record<string, RcsDefinition>>
+): RcsLayout {
+  if (previous) {
+    let k = 0,
+      same = true;
+    for (const p of parts) {
+      if (!definitions[p.type].rcsThrust || p.fuelEnabled === false) continue;
+      const s = previous.sources[k++];
+      if (
+        !s ||
+        s.part !== p ||
+        s.id !== p.id ||
+        s.type !== p.type ||
+        !sameTuple(s.p, p.p) ||
+        !sameTuple(s.r, p.r)
+      ) {
+        same = false;
+        break;
+      }
+    }
+    if (same && k === previous.sources.length) return previous;
+  }
+  return {
+    sources: parts
+      .filter(p => definitions[p.type].rcsThrust && p.fuelEnabled !== false)
+      .map(p => ({part: p, id: p.id, type: p.type, p: [...p.p], r: [...p.r]})),
+    thrusters: rcsThrusters(parts, definitions)
+  };
 }
 
 // Internal monopropellant reservoirs supply only their own block. No main-fuel

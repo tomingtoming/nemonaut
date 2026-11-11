@@ -48,7 +48,7 @@ import {flightThermalStep, forgetThermalShape} from './flight-thermal.js';
 import {createThermal, type ThermalMap, type ThermalStepResult} from './thermal.js';
 import {portGuidance, portTranslation, type PortVessel} from './port-navigation.js';
 import {relativeState, resolveTargets, type DockingPortPair} from './relative-navigation.js';
-import {rcsThrusters, mixRCS, burnRCS, type RcsJet} from './rcs.js';
+import {rcsLayout, mixRCS, burnRCS, type RcsJet, type RcsLayout} from './rcs.js';
 import {createCharge, powerStep, type ChargeMap, type PowerReading} from './power.js';
 import {maneuverDirection, advanceManeuver, type ManeuverNodeRecord} from './maneuver-node.js';
 import {validateSymmetry} from './symmetry.js';
@@ -434,6 +434,7 @@ export class Flight {
   get instrumentRotation() {
     return instrumentRotation(this.parts, this.rocketAxes, PARTS);
   }
+  private rcsLayout?: RcsLayout;
   // Staging and fracture replace the part list on the surviving Flight instance.
   private axisParts?: FlightPart[];
   private axialControls = false;
@@ -1290,7 +1291,9 @@ export class Flight {
       }
     }
     const thrusters = this.rcsEnabled
-      ? rcsThrusters(this.parts, PARTS).filter(t => (this.fuel.get(t.id) || 0) > 0)
+      ? (this.rcsLayout = rcsLayout(this.rcsLayout, this.parts, PARTS)).thrusters.filter(
+          t => (this.fuel.get(t.id) || 0) > 0
+        )
       : [];
     const rotation = new T.Vector3(commands.pitch, commands.yaw, commands.roll),
       translation = new T.Vector3(input.translateX || 0, input.translateY || 0, input.translateZ || 0);
@@ -1306,11 +1309,14 @@ export class Flight {
     }
     const levels = mixRCS(thrusters, st.com, rotation, translation);
     this.rcsJets = burnRCS(thrusters, levels, this.fuel, dt);
-    for (const jet of this.rcsJets)
+    for (const jet of this.rcsJets) {
+      // An idle jet adds nothing.
+      if (jet.force.x === 0 && jet.force.y === 0 && jet.force.z === 0) continue;
       apply(
         jet.force.clone().applyQuaternion(this.q),
         jet.position.clone().applyQuaternion(this.q).add(this.pos)
       );
+    }
     // Body drag at COM; wing drag and lift above act at individual aerodynamic centers.
     const bodyAero = bodyDrag(this.bodyAerodynamics, this.q, relativeVelocity, density);
     apply(bodyAero.force, com);
