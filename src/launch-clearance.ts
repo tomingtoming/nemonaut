@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {PARTS} from './catalog.js';
 import {partCenter, partRotation, type AeroPart} from './aero.js';
+import {boxCorners} from './part-frame.js';
 /** The vessel fields the launch clearance check reads. */
 export interface ClearanceVessel {
   parts: readonly AeroPart[];
@@ -22,18 +23,9 @@ function bounds(v: ClearanceVessel): T.Box3 {
   const box = new T.Box3();
   for (const p of v.parts) {
     const center = partCenter(p),
-      q = partRotation(p),
-      size = PARTS[p.type].size;
-    for (const x of [-1, 1])
-      for (const y of [-1, 1])
-        for (const z of [-1, 1])
-          box.expandByPoint(
-            new T.Vector3((x * size[0]) / 2, (y * size[1]) / 2, (z * size[2]) / 2)
-              .applyQuaternion(q)
-              .add(center)
-              .applyQuaternion(v.q)
-              .add(v.pos)
-          );
+      q = partRotation(p);
+    for (const corner of boxCorners(PARTS[p.type].size))
+      box.expandByPoint(corner.applyQuaternion(q).add(center).applyQuaternion(v.q).add(v.pos));
   }
   return box;
 }

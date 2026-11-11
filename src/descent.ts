@@ -2,6 +2,7 @@ import * as T from 'three';
 import {PARTS} from './catalog.js';
 import {bodyOrbitState, MOON, type CelestialBodyId} from './celestial.js';
 import {partCenter, partRotation, type AeroPart} from './aero.js';
+import {boxCorners} from './part-frame.js';
 import {engineBurn, type FuelNetworks, type ResourcePart, type EngineSet} from './resources.js';
 import {engineSubmersion} from './engine-medium.js';
 import {atmosphere} from './planet.js';
@@ -70,24 +71,41 @@ export function availableEngineForce(v: DescentVessel, density: number, pressure
   return force.length() > totalThrust * 1e-12 ? force : force.set(0, 0, 0);
 }
 
-export function descentTelemetry(v: DescentVessel): DescentTelemetry {
-  const com = centerOfMass(v),
-    o = bodyOrbitState(com, v.vel, v.universalTime),
-    up = o.r.clone().normalize();
+/** The vessel fields the clearance reads. */
+export type ClearanceVessel = Pick<DescentVessel, 'pos' | 'q' | 'vel' | 'universalTime' | 'stats' | 'parts'>;
+/** Height of the lowest box corner of any part above the reference sphere of the orbit state's body. */
+function lowestClearance(
+  v: Pick<DescentVessel, 'pos' | 'q' | 'parts'>,
+  o: Pick<ReturnType<typeof bodyOrbitState>, 'center' | 'body'>
+): number {
   let clearance = Infinity;
   for (const p of v.parts) {
     const rotation = v.q.clone().multiply(partRotation(p)),
-      c = partCenter(p).applyQuaternion(v.q).add(v.pos),
-      [x, y, z] = PARTS[p.type].size;
-    for (const a of [-1, 1])
-      for (const b of [-1, 1])
-        for (const d of [-1, 1]) {
-          const corner = new T.Vector3((a * x) / 2, (b * y) / 2, (d * z) / 2)
-            .applyQuaternion(rotation)
-            .add(c);
-          clearance = Math.min(clearance, corner.distanceTo(o.center) - o.body.radius);
-        }
+      c = partCenter(p).applyQuaternion(v.q).add(v.pos);
+    for (const corner of boxCorners(PARTS[p.type].size))
+      clearance = Math.min(
+        clearance,
+        corner.applyQuaternion(rotation).add(c).distanceTo(o.center) - o.body.radius
+      );
   }
+  return clearance;
+}
+/**
+ * The reference body and the lowest-part clearance at `time`: the geometric part of descentTelemetry,
+ * for callers that need neither the engine sample nor the braking figures.
+ */
+export function surfaceClearance(
+  v: ClearanceVessel,
+  time: number = v.universalTime
+): Pick<DescentTelemetry, 'body' | 'clearance'> {
+  const o = bodyOrbitState(centerOfMass(v), v.vel, time);
+  return {body: o.bodyId, clearance: lowestClearance(v, o)};
+}
+export function descentTelemetry(v: DescentVessel): DescentTelemetry {
+  const com = centerOfMass(v),
+    o = bodyOrbitState(com, v.vel, v.universalTime),
+    up = o.r.clone().normalize(),
+    clearance = lowestClearance(v, o);
   const air = o.bodyId === 'planet' ? atmosphere(o.altitude) : {density: 0, pressure: 0};
   const force = availableEngineForce(v, air.density, air.pressure);
   const velocity = surfaceRelativeVelocity(com, v.vel, v.universalTime, o.body),

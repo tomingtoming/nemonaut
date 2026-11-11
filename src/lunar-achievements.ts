@@ -1,6 +1,6 @@
 import {fleet, type FleetNode} from './fleet.js';
 import {bodyOrbitState} from './celestial.js';
-import {descentTelemetry, type DescentVessel} from './descent.js';
+import {surfaceClearance, type DescentVessel} from './descent.js';
 import {appendHistory, type WorldHistoryEvent} from './world-history.js';
 import {launchOrigins, surfaceOrigins} from './launch-provenance.js';
 import {centerOfMass} from './center-of-mass.js';
@@ -55,8 +55,7 @@ export function recordLunarAchievements(
     };
     write('moon-arrival');
     if (vessel.landed && orbit.speed < 1) {
-      const descent = descentTelemetry(vessel);
-      if (Math.abs(descent.clearance) < 0.5) write('moon-landing');
+      if (Math.abs(surfaceClearance(vessel).clearance) < 0.5) write('moon-landing');
     }
   }
   return result;

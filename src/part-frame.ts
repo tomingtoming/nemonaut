@@ -25,3 +25,13 @@ export function vesselPointToPart(part: PartPose, point: T.Vector3): T.Vector3 {
 export function partDirectionToVessel(part: Pick<PartPose, 'r'>, direction: readonly number[]): T.Vector3 {
   return new T.Vector3(...direction).applyQuaternion(partRotation(part));
 }
+
+/** The eight corners of a box of the given size about its centre, in the box's own frame (new vectors). */
+export function boxCorners(size: readonly number[]): T.Vector3[] {
+  const [x, y, z] = size,
+    corners: T.Vector3[] = [];
+  for (const a of [-1, 1])
+    for (const b of [-1, 1])
+      for (const c of [-1, 1]) corners.push(new T.Vector3((a * x) / 2, (b * y) / 2, (c * z) / 2));
+  return corners;
+}

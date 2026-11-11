@@ -2,7 +2,7 @@ import {PARTS} from './catalog.js';
 import * as T from 'three';
 import {DELIVERY_SITE, DELIVERY_SITES, deliveryDistance, type DeliverySite} from './delivery-sites.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
-import {descentTelemetry, type DescentVessel} from './descent.js';
+import {surfaceClearance, type DescentVessel} from './descent.js';
 import {centerOfMass} from './center-of-mass.js';
 export const OBSERVATION_POWER = 0.1;
 /** Accumulated observation seconds (and their quality) at one delivery site. */
@@ -79,30 +79,46 @@ export function observationData(
 ): ObservationRecord | undefined {
   return site.id === DELIVERY_SITE.id ? state : (state?.sites?.[site.id] ?? {day: 0, night: 0});
 }
-export function observationReason(v: ObservationVessel, id: string): string {
+/**
+ * Why probe `id` cannot observe at `time`, or the site it observes. `states` and `time` default to the
+ * vessel's own; the physics step passes the start of the step.
+ */
+function observationCheck(
+  v: ObservationVessel,
+  states: ReadonlyMap<string, ObservationState>,
+  id: string,
+  time: number
+): string | DeliverySite {
   const p = v.parts.find(p => p.id === id),
-    s = v.observations.get(id);
+    s = states.get(id);
   if (!p || !s) return '観測装置なし';
   if (v.crashed || v.thermal.get(id)?.failed) return '機体損傷';
   if (!s.enabled) return '停止中';
-  const com = centerOfMass(v);
-  if (!observationSite(v, id)) return '観測点の範囲外';
-  if (!v.landed || surfaceRelativeVelocity(com, v.vel, v.universalTime).length() >= 0.5)
-    return '接地・静止待ち';
-  const d = descentTelemetry(v);
+  const com = centerOfMass(v),
+    point = new T.Vector3(...p.p).applyQuaternion(v.q).add(v.pos),
+    site = DELIVERY_SITES.find(site => deliveryDistance(point, time, site) <= site.radius);
+  if (!site) return '観測点の範囲外';
+  if (!v.landed || surfaceRelativeVelocity(com, v.vel, time).length() >= 0.5) return '接地・静止待ち';
+  const d = surfaceClearance(v, time);
   if (d.body !== 'planet' || Math.abs(d.clearance) > 0.5) return '接地・静止待ち';
-  return '';
+  return site;
 }
+export function observationReason(v: ObservationVessel, id: string): string {
+  const result = observationCheck(v, v.observations, id, v.universalTime);
+  return typeof result === 'string' ? result : '';
+}
+/** Adds dt of observation to every enabled probe that can observe; `time` is when the vessel state holds. */
 export function advanceObservations(
   v: ObservationVessel,
   states: Map<string, ObservationState>,
   power: Pick<import('./power.js').PowerReading, 'ratio' | 'eclipse'>,
-  dt: number
+  dt: number,
+  time: number = v.universalTime
 ): void {
   for (const [id, s] of states) {
-    if (!s.enabled || observationReason({...v, observations: states}, id)) continue;
-    const site = observationSite(v, id);
-    if (!site) continue;
+    if (!s.enabled) continue;
+    const site = observationCheck(v, states, id, time);
+    if (typeof site === 'string') continue;
     const data = site.id === DELIVERY_SITE.id ? s : ((s.sites ??= {})[site.id] ??= {day: 0, night: 0});
     const key = power.eclipse ? 'night' : 'day';
     data[key] = Math.min(1e12, data[key] + dt * power.ratio);

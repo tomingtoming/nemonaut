@@ -1,6 +1,6 @@
 import {PARTS} from './catalog.js';
 import {fleet, type FleetNode} from './fleet.js';
-import {descentTelemetry, type DescentVessel} from './descent.js';
+import {surfaceClearance, type DescentVessel} from './descent.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
 import {launchOrigins, surfaceOrigins} from './launch-provenance.js';
 import {appendHistory, type WorldHistoryEvent} from './world-history.js';
@@ -51,7 +51,7 @@ export function deliveryTelemetry(
   else if (!v.landed || speed >= 0.5) reason = '接地・静止待ち';
   else if ((v.charge.get(probe.id) || 0) <= 0) reason = '電力不足';
   else {
-    const descent = descentTelemetry(v);
+    const descent = surfaceClearance(v);
     if (descent.body !== 'planet' || Math.abs(descent.clearance) > 0.5) reason = '接地・静止待ち';
   }
   return {distance, speed, ready: !reason, reason, probePartId: probe?.id, launchEventIds: sources};

@@ -1,6 +1,6 @@
 import {PARTS} from './catalog.js';
 import {fleet, type FleetNode} from './fleet.js';
-import {descentTelemetry, type DescentVessel} from './descent.js';
+import {surfaceClearance, type DescentVessel} from './descent.js';
 import {surfaceRelativeVelocity} from './surface-frame.js';
 import {launchOrigins, surfaceOrigins} from './launch-provenance.js';
 import {appendHistory, type WorldHistoryEvent} from './world-history.js';
@@ -95,7 +95,7 @@ export function recordFlightChallenges(
       v.orbit?.bodyId === 'planet' &&
       v.orbit.altitude >= PRECISION_ALTITUDE
     ) {
-      const d = descentTelemetry(v);
+      const d = surfaceClearance(v);
       if (d.clearance >= PRECISION_ALTITUDE) {
         type = 'flight-ascent';
         data = {clearance: d.clearance};
@@ -109,7 +109,7 @@ export function recordFlightChallenges(
       if (!site || next.some(e => e.type === 'precision-landing' && e.siteId === site.id)) continue;
       const distance = deliveryDistance(center, v.universalTime, site),
         speed = surfaceRelativeVelocity(center, v.vel, v.universalTime).length();
-      if (distance <= site.radius && speed < 0.5 && Math.abs(descentTelemetry(v).clearance) < 0.5) {
+      if (distance <= site.radius && speed < 0.5 && Math.abs(surfaceClearance(v).clearance) < 0.5) {
         type = 'precision-landing';
         data = {siteId: site.id, distance, speed, damaged: false, flightEventIds: touchdowns.map(e => e.id)};
       }

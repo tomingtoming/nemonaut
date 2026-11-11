@@ -378,6 +378,10 @@ export function statistics(
   };
 }
 const up = new T.Vector3(0, 1, 0);
+/** Full deflection on one axis, for asking which surfaces answer it. */
+const UNIT_COMMANDS = {pitch: {pitch: 1}, yaw: {yaw: 1}, roll: {roll: 1}} as const;
+const touchAxes = new T.Matrix4(),
+  touchRotation = new T.Quaternion();
 function extentY(p: AeroPart, q = new T.Quaternion()) {
   const d = PARTS[p.type],
     e = new T.Matrix4().makeRotationFromQuaternion(q.clone().multiply(partRotation(p))).elements;
@@ -837,17 +841,23 @@ export class Flight {
     const altitude = (p: T.Vector3) => bodyAltitude(p, startTime, reference),
       localUp = (p: T.Vector3) => bodyUp(p, startTime, reference),
       gravity = (p: T.Vector3) => bodyGravity(p, startTime, reference),
-      startCOM = this.pos.clone().add(this.vesselStats().com.applyQuaternion(this.q)),
+      // Nothing below changes parts, fuel, ballast, ablator or gear before the forces are summed.
+      st = this.vesselStats(),
+      startCOM = this.pos.clone().add(st.com.clone().applyQuaternion(this.q)),
       spin = surfaceAngularVelocity(reference),
       relativeOmega = this.omega.clone().sub(spin),
       relativeVelocity = surfaceRelativeVelocity(startCOM, this.vel, startTime, reference);
+    let craftRadius = 0;
+    for (const p of this.parts) {
+      const size = PARTS[p.type].size;
+      craftRadius = Math.max(
+        craftRadius,
+        Math.sqrt(p.p[0] * p.p[0] + p.p[1] * p.p[1] + p.p[2] * p.p[2]) + Math.max(size[0], size[1], size[2])
+      );
+    }
     // Floating local physics origin: the solver never sees planet-scale coordinates.
     const normal = localUp(this.pos),
       height = altitude(this.pos),
-      craftRadius = this.parts.reduce(
-        (m, p) => Math.max(m, new T.Vector3(...p.p).length() + Math.max(...PARTS[p.type].size)),
-        0
-      ),
       freeFlight = height > craftRadius + 25;
     // Large length units also enlarge internal contact tolerances. Use metre-scale
     // contact at low speed, keeping headroom above the solver's velocity limit.
@@ -913,7 +923,6 @@ export class Flight {
     this.body.setLinvel(freeFlight ? {x: 0, y: 0, z: 0} : relativeVelocity, true);
     this.body.setAngvel(freeFlight ? this.omega : relativeOmega, true);
     this.updateColliderMasses();
-    const st = this.vesselStats();
     this.stats = st;
     const mass = st.mass,
       com = st.com.clone().applyQuaternion(this.q).add(this.pos),
@@ -925,6 +934,16 @@ export class Flight {
       torque = new T.Vector3(),
       engineForce = new T.Vector3();
     const apply = (f: T.Vector3, point: T.Vector3) => {
+      // A zero force at a finite point changes neither sum nor the solver's accumulators.
+      if (
+        f.x === 0 &&
+        f.y === 0 &&
+        f.z === 0 &&
+        Number.isFinite(point.x) &&
+        Number.isFinite(point.y) &&
+        Number.isFinite(point.z)
+      )
+        return;
       force.add(f);
       torque.add(point.clone().sub(com).cross(f));
       this.body.addForceAtPoint(f, point.clone().sub(origin), true);
@@ -999,7 +1018,7 @@ export class Flight {
         !this.rocketAxes &&
         Math.abs(steering[axis]) < 0.01 &&
         this.parts.some(
-          p => PARTS[p.type].controlAxis && Math.abs(controlDeflection(p, st.com, {[name]: 1})) > 1e-6
+          p => PARTS[p.type].controlAxis && Math.abs(controlDeflection(p, st.com, UNIT_COMMANDS[name])) > 1e-6
         );
       const axes: SasTrimAxes = {x: trimmed('pitch', 'x'), y: trimmed('yaw', 'y'), z: trimmed('roll', 'z')};
       if (banking) axes.y = false;
@@ -1335,14 +1354,14 @@ export class Flight {
       startTime,
       observationDemand(this)
     );
-    advanceObservations({...this, universalTime: startTime}, this.observations, power, dt);
-    if (this.reactionEnabled && reaction)
-      this.body.addTorque(
-        new T.Vector3(commands.pitch, commands.yaw, commands.roll)
-          .multiplyScalar(reaction * power.ratio)
-          .applyQuaternion(this.q),
-        true
-      );
+    advanceObservations(this, this.observations, power, dt, startTime);
+    if (this.reactionEnabled && reaction) {
+      const wheels = new T.Vector3(commands.pitch, commands.yaw, commands.roll)
+        .multiplyScalar(reaction * power.ratio)
+        .applyQuaternion(this.q);
+      // A zero torque leaves the solver's accumulator as it is.
+      if (wheels.x !== 0 || wheels.y !== 0 || wheels.z !== 0) this.body.addTorque(wheels, true);
+    }
 
     advanceTransferGuide(
       this.transferGuide,
@@ -1477,12 +1496,14 @@ export class Flight {
         position: hit.point
       });
     }
+    // Only read where support is not already established.
     const touching =
       !freeFlight &&
+      !supported &&
       this.parts.some(p => {
         const point = partCenter(p).applyQuaternion(this.q).add(this.pos),
-          axes = new T.Matrix4().makeRotationFromQuaternion(
-            this.q.clone().multiply(partRotation(p))
+          axes = touchAxes.makeRotationFromQuaternion(
+            touchRotation.copy(this.q).multiply(partRotation(p))
           ).elements,
           d = PARTS[p.type],
           extent =
