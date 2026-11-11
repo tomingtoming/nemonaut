@@ -23,12 +23,9 @@ jobs:
           node-version: 24
       - name: Install pinned compiler and Wasm target
         run: rustup toolchain install 1.97.0 --profile minimal --target wasm32-unknown-unknown
-      - name: Compile the diagnostics Wasm (parity-tool exports, not shipped)
-        run: |
-          cargo +1.97.0 build --manifest-path engine/Cargo.toml --locked --release --target wasm32-unknown-unknown --features diagnostics
-          cp engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm engine/target/orbital_engine_diagnostics.wasm
-      - name: Compile the product Wasm (default features)
-        run: cargo +1.97.0 build --manifest-path engine/Cargo.toml --locked --release --target wasm32-unknown-unknown
+      - name: Compile the product Wasm and the diagnostics Wasm (parity-tool exports, not shipped)
+        # The one build command, shared with developers: the output must not depend on this runner's paths.
+        run: bash tools/build-engine.sh
       - name: Compare the diagnostics Wasm with JS Rapier (npm, its own solver)
         run: |
           npm ci --ignore-scripts
@@ -41,9 +38,7 @@ jobs:
           # Golden v3 needs vessel-vessel collision, which exists only on Rust physics (src/engine).
           node --test tests/golden-replay.test.mjs tests/physics-facade.test.mjs
       - name: Check product Wasm matches this source build
-        run: |
-          sha256sum engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm src/engine/orbital_engine.wasm
-          cmp engine/target/wasm32-unknown-unknown/release/orbital_engine.wasm src/engine/orbital_engine.wasm
+        run: bash tools/build-engine.sh --check
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
