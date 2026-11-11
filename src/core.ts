@@ -27,6 +27,7 @@ import {advanceWorldPhysics} from './world-physics.js';
 import {fleet, canControl} from './fleet.js';
 import {stagePressRuns} from './vessel-controls.js';
 import {
+  inertialToFixed,
   launchSiteOrientation,
   overWater,
   shoreline,
@@ -153,8 +154,17 @@ export interface WheelMotion {
   speed: number;
   steer: number;
   extension?: number;
+  /** Where a braked tyre grips the ground, in the reference body's fixed frame; absent while it rolls or slides. */
+  anchor?: [number, number, number];
   readonly isVector3?: never;
 }
+// A braked tyre that has all but stopped (below the grip speed, m/s) grips the ground as static friction
+// does: a damped spring (per kilogram carried: 1/s² and 1/s) ties it to the point where it stopped and holds
+// any force below the grip limit, which a force proportional to speed alone cannot do without creeping.
+// The damping keeps the explicit force stable at 60 Hz steps for a craft that rocks on its gear.
+const TYRE_GRIP_STIFFNESS = 160,
+  TYRE_GRIP_DAMPING = 16,
+  TYRE_GRIP_SPEED = 0.01;
 /** A wheel touching the ground during a step. */
 export interface WheelContact {
   id: string;
@@ -1050,7 +1060,9 @@ export class Flight {
       air.pressure,
       p => 1 - engineSubmersion(this, p, startTime)
     );
-    const wheelContacts: WheelContact[] = [];
+    const wheelContacts: WheelContact[] = [],
+      anchor = new T.Vector3();
+    let surfaceTurn: T.Quaternion | undefined;
 
     let stallCount = 0,
       contacts = 0,
@@ -1261,7 +1273,8 @@ export class Flight {
             : motion.speed * Math.exp(-dt * (this.brake ? 12 : 0.3));
         motion.angle = (motion.angle + motion.speed * dt) % (2 * Math.PI);
         this.wheelMotion.set(p.id, motion);
-        if (bottom < travel) {
+        if (bottom >= travel) delete motion.anchor;
+        else {
           contacts++;
           wheelImpactSpeed = Math.min(wheelImpactSpeed, pv.dot(normal));
           const share = mass / Math.max(1, wheelCount),
@@ -1270,29 +1283,58 @@ export class Flight {
           const forward = rollingDirection;
           const side = normal.clone().cross(forward),
             load = Math.max(spring, share * gravity(wp).length() * 0.25),
-            point = wp.clone().addScaledVector(normal, -radius);
+            limit = load * 0.8,
+            point = wp.clone().addScaledVector(normal, -radius),
+            sideSpeed = pv.dot(side),
+            forwardSpeed = pv.dot(forward),
+            rolling = this.brake ? 8 : 0.012;
           wheelContacts.push({
             id: p.id,
             point: point.toArray(),
             halfAxle: axle.multiplyScalar(d.size[0] / 2).toArray(),
             time: startTime
           });
-          apply(
-            side.multiplyScalar(T.MathUtils.clamp(-pv.dot(side) * share * 6, -load * 0.8, load * 0.8)),
-            point
-          );
-          apply(
-            forward
-              .clone()
-              .multiplyScalar(
-                T.MathUtils.clamp(
-                  -pv.dot(forward) * share * (this.brake ? 8 : 0.012),
-                  -load * 0.8,
-                  load * 0.8
-                )
-              ),
-            point
-          );
+          let sideStretch = 0,
+            forwardStretch = 0;
+          // The hold ends with the brake, and where the sliding tyre's own resistance reaches the grip limit.
+          if (
+            !this.brake ||
+            Math.abs(sideSpeed) * share * 6 >= limit ||
+            Math.abs(forwardSpeed) * share * rolling >= limit
+          )
+            delete motion.anchor;
+          else if (motion.anchor || Math.hypot(sideSpeed, forwardSpeed) < TYRE_GRIP_SPEED) {
+            const place = inertialToFixed(point, startTime, reference),
+              toInertial = (surfaceTurn ??= surfaceOrientation(startTime, reference));
+            if (motion.anchor) {
+              const stretch = place.clone().sub(anchor.fromArray(motion.anchor)).applyQuaternion(toInertial),
+                reach = limit / (share * TYRE_GRIP_STIFFNESS);
+              sideStretch = T.MathUtils.clamp(stretch.dot(side), -reach, reach);
+              forwardStretch = T.MathUtils.clamp(stretch.dot(forward), -reach, reach);
+              // Past the grip limit the tyre slides and takes the hold along.
+              if (sideStretch !== stretch.dot(side) || forwardStretch !== stretch.dot(forward))
+                motion.anchor = place
+                  .sub(
+                    stretch
+                      .copy(side)
+                      .multiplyScalar(sideStretch)
+                      .addScaledVector(forward, forwardStretch)
+                      .applyQuaternion(toInertial.clone().invert())
+                  )
+                  .toArray();
+            } else motion.anchor = place.toArray();
+          }
+          const gripped = !!motion.anchor,
+            tyreForce = (speed: number, stretch: number, rate: number) =>
+              T.MathUtils.clamp(
+                gripped
+                  ? -share * (speed * TYRE_GRIP_DAMPING + stretch * TYRE_GRIP_STIFFNESS)
+                  : -speed * share * rate,
+                -limit,
+                limit
+              );
+          apply(side.multiplyScalar(tyreForce(sideSpeed, sideStretch, 6)), point);
+          apply(forward.clone().multiplyScalar(tyreForce(forwardSpeed, forwardStretch, rolling)), point);
           // Powered wheels drive whenever the brake is off, without the Space start;
           // without a drive input they follow the throttle only once started, as engines do.
           if (
@@ -1308,6 +1350,10 @@ export class Flight {
             );
           }
         }
+      } else if (d.wheel) {
+        // A wheel that is folded away or afloat holds nothing.
+        const motion = this.wheelMotion.get(p.id);
+        if (motion) delete motion.anchor;
       }
     }
     const thrusters = this.rcsEnabled

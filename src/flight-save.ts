@@ -301,7 +301,8 @@ export function loadFlight(
           v &&
             (['angle', 'speed', 'steer'] as const).every(k => Number.isFinite(v[k]) && Math.abs(v[k]) < 1e6)
         );
-        const savedTravel = v.travel === undefined ? 0.18 : v.travel; // All legacy wheels used 0.18 m.
+        const savedTravel = v.travel === undefined ? 0.18 : v.travel, // All legacy wheels used 0.18 m.
+          anchor = v.anchor === undefined ? undefined : vector(v.anchor, 3, 1e9);
         check(Number.isFinite(savedTravel) && savedTravel > 0);
         const travel = suspensionTravel(savedPart(byId, id).type);
         check(
@@ -314,7 +315,8 @@ export function loadFlight(
           steer: v.steer,
           ...(v.extension === undefined
             ? {}
-            : {extension: savedTravel === travel ? v.extension : (v.extension / savedTravel) * travel})
+            : {extension: savedTravel === travel ? v.extension : (v.extension / savedTravel) * travel}),
+          ...(anchor ? {anchor: [anchor[0], anchor[1], anchor[2]] satisfies WheelMotion['anchor']} : {})
         };
       }
     ),
