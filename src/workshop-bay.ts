@@ -4,7 +4,7 @@
 import * as T from 'three';
 import {workshopLayout, workshopFrame} from './workshop-layout.js';
 import {state} from './app-state.js';
-import {sceneCore, mat, box} from './scene.js';
+import {sceneCore, mat, box, setWorkshopFog} from './scene.js';
 let built: {
   room: T.Group;
   workshopDeck: T.Group;
@@ -16,7 +16,12 @@ export function buildWorkshopBay() {
   const room = new T.Group(),
     workshopDeck = new T.Group();
   bay.add(room, workshopDeck);
-  const beamMat = mat('#25343d', 0.5, 0.5);
+  // One material for each kind of repeated piece.
+  const beamMat = mat('#25343d', 0.5, 0.5),
+    stripeMat = mat('#b07b43'),
+    mullionMat = mat('#3a505b'),
+    lampMat = new T.MeshStandardMaterial({color: '#d5f1fa', emissive: '#9dd9ef', emissiveIntensity: 2}),
+    tickMat = mat('#73878b');
   const workshopGround = box(bay, [90, 0.25, 90], [0, -0.3, 0], mat('#334750', 0.3, 0.65));
   workshopGround.renderOrder = -2;
   let grid = asUnderlay(new T.GridHelper(80, 80, '#647984', '#435963'));
@@ -25,19 +30,14 @@ export function buildWorkshopBay() {
     box(room, [0.5, 22, 44], [x, 10, -3], beamMat);
     for (let z = -22; z <= 20; z += 7) {
       box(room, [0.65, 20, 0.65], [x, 10, z], beamMat);
-      box(room, [0.1, 8, 0.25], [x - x / 180, 8, z], mat('#b07b43'));
+      box(room, [0.1, 8, 0.25], [x - x / 180, 8, z], stripeMat);
     }
   }
   for (let z = -22; z <= 20; z += 7) box(room, [36, 0.45, 0.5], [0, 19, z], beamMat);
   box(room, [36, 19, 0.5], [0, 9.5, -25], mat('#243742'));
   for (const x of [-12, -6, 0, 6, 12]) {
-    box(room, [0.1, 18, 0.1], [x, 9, -24.6], mat('#3a505b'));
-    box(
-      room,
-      [2.7, 0.07, 0.1],
-      [x, 13, -24.4],
-      new T.MeshStandardMaterial({color: '#d5f1fa', emissive: '#9dd9ef', emissiveIntensity: 2})
-    );
+    box(room, [0.1, 18, 0.1], [x, 9, -24.6], mullionMat);
+    box(room, [2.7, 0.07, 0.1], [x, 13, -24.4], lampMat);
   }
   const platform = new T.Mesh(new T.CylinderGeometry(4.7, 4.9, 0.12, 80), mat('#263940', 0.5, 0.55));
   platform.position.y = -0.09;
@@ -53,7 +53,7 @@ export function buildWorkshopBay() {
       workshopDeck,
       [0.08, 0.015, 0.3],
       [4.35 * Math.cos(t), -0.015, 4.35 * Math.sin(t)],
-      mat('#73878b')
+      tickMat
     );
     m.rotation.y = -t + Math.PI / 2;
   }
@@ -77,7 +77,7 @@ function workshopBay() {
   return built;
 }
 export function updateWorkshop() {
-  const {bay, camera, controls, craftRoot, scene} = sceneCore(),
+  const {bay, camera, controls, craftRoot} = sceneCore(),
     bayParts = workshopBay(),
     {room, workshopDeck, workshopGround} = bayParts;
   if (state.flight) return;
@@ -105,6 +105,6 @@ export function updateWorkshop() {
   const fit = workshopFrame(bounds, camera.fov, camera.aspect);
   if (fit) {
     controls.maxDistance = fit.maxDistance;
-    scene.fog = new T.Fog('#293c49', fit.fogNear, fit.fogFar);
+    setWorkshopFog(fit.fogNear, fit.fogFar);
   }
 }

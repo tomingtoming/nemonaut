@@ -187,6 +187,16 @@ export function setCameraUp(up: T.Vector3) {
   const {controls} = sceneCore();
   setOrbitUp(controls, up);
 }
+const workshopFogColor = new T.Color('#293c49');
+/** The workshop's fog from `near` to `far`: the scene's fog is moved when it is already the workshop's. */
+export function setWorkshopFog(near: number, far: number) {
+  const {scene} = sceneCore(),
+    fog = scene.fog;
+  if (fog instanceof T.Fog && fog.color.equals(workshopFogColor)) {
+    fog.near = near;
+    fog.far = far;
+  } else scene.fog = new T.Fog(workshopFogColor, near, far);
+}
 export function resize() {
   const {viewport, renderer, camera} = sceneCore();
   const w = viewport.clientWidth,
@@ -197,7 +207,7 @@ export function resize() {
   camera.updateProjectionMatrix();
 }
 export function frame() {
-  const {camera, controls, craftRoot, scene} = sceneCore();
+  const {camera, controls, craftRoot} = sceneCore();
   setCameraUp(state.flight ? bodyUp(flightCenter(), state.flight.universalTime) : new T.Vector3(0, 1, 0));
   const bounds = new T.Box3();
   if (state.flight) {
@@ -212,7 +222,7 @@ export function frame() {
   if (!fit) return;
   if (!state.flight) {
     controls.maxDistance = fit.maxDistance;
-    scene.fog = new T.Fog('#293c49', fit.fogNear, fit.fogFar);
+    setWorkshopFog(fit.fogNear, fit.fogFar);
     controls.target.copy(fit.target);
     camera.position
       .copy(fit.target)
