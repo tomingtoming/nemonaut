@@ -17,24 +17,20 @@ export function advanceWorldPhysics(
     ids.add(v.vesselId);
   }
   if (!ids.has(activeVesselId)) throw Error('操縦対象が世界に存在しません');
-  const snapshots = new Map<import('./core.js').Flight | null, import('./core.js').FlightTarget>(
-    vessels.map(v => [
-      v,
-      {
+  // A vessel reads its target as it was at the start of the step, whichever of the two steps first. Only
+  // vessels that are someone's target need a snapshot, and only of what stepBody reads from a target.
+  const targets = new Set<import('./core.js').Flight | null>(vessels.map(v => v.navigationTarget)),
+    snapshots = new Map<import('./core.js').Flight | null, import('./core.js').FlightTarget>();
+  for (const v of vessels)
+    if (targets.has(v))
+      snapshots.set(v, {
         parts: v.parts,
         stats: v.stats,
         pos: v.pos.clone(),
         q: v.q.clone(),
         vel: v.vel.clone(),
-        omega: v.omega.clone(),
-        fuel: new Map(v.fuel),
-        ballast: v.ballast,
-        thermal: new Map<string, import('./thermal.js').ThermalState>(
-          [...v.thermal].map(([id, s]) => [id, {...s}])
-        )
-      }
-    ])
-  );
+        omega: v.omega.clone()
+      });
   const endTime = universalTime + dt;
   for (const v of vessels) v.universalTime = endTime;
   try {
