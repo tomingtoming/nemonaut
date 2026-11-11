@@ -20,6 +20,35 @@ import {
   gearTravel,
   isRetractable
 } from './landing-gear.js';
+type MeshLike = T.Object3D & {geometry?: T.BufferGeometry; material?: T.Material | T.Material[]};
+// RCS plumes share one cone and fade through a material each. The materials of removed visuals are used
+// again, not disposed: the renderer drops a shader program with its last material and would compile it
+// again at the next jet.
+let rcsPlumeGeometry: T.ConeGeometry | null = null;
+const sparePlumeMaterials = new Set<T.MeshBasicMaterial>();
+function plumeMaterial(): T.MeshBasicMaterial {
+  for (const spare of sparePlumeMaterials) {
+    sparePlumeMaterials.delete(spare);
+    return spare;
+  }
+  return new T.MeshBasicMaterial({color: '#b7e9ff', transparent: true, opacity: 0.6, depthWrite: false});
+}
+/**
+ * Frees what the visuals under `root`, which is leaving the scene, own: wreck tints, RCS plume materials,
+ * and the geometry and materials of other meshes that are not clones of a loaded model (engine plumes).
+ */
+export function disposeVisuals(root: T.Object3D) {
+  disposeWreckVisual(root);
+  root.traverse((o: MeshLike) => {
+    if (o.userData.sharedAsset) return;
+    if (o.userData.rcsPlume) {
+      if (o.material instanceof T.MeshBasicMaterial) sparePlumeMaterials.add(o.material);
+      return;
+    }
+    o.geometry?.dispose();
+    if (o.material) for (const m of Array.isArray(o.material) ? o.material : [o.material]) m.dispose();
+  });
+}
 export function cloneModel(type: string) {
   const model = assetModel(type).clone(true);
   model.traverse(m => {
@@ -81,10 +110,8 @@ export function makePartVisual(p: FlightPart) {
   }
   if (PARTS[p.type].rcsThrust) {
     o.userData.rcsPlumes = RCS_DIRECTIONS.map(direction => {
-      const plume = new T.Mesh(
-        new T.ConeGeometry(0.07, 0.5, 12),
-        new T.MeshBasicMaterial({color: '#b7e9ff', transparent: true, opacity: 0.6, depthWrite: false})
-      );
+      const plume = new T.Mesh((rcsPlumeGeometry ??= new T.ConeGeometry(0.07, 0.5, 12)), plumeMaterial());
+      plume.userData.rcsPlume = true;
       const exhaust = new T.Vector3(...direction).negate();
       plume.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), exhaust.clone().negate());
       plume.position.copy(rcsOutlet(PARTS[p.type].size, direction)).addScaledVector(exhaust, 0.25);
@@ -149,7 +176,7 @@ export function rebuildCraft() {
   const {craftRoot} = sceneCore(),
     {gizmo} = editorMarkers();
   gizmo.detach();
-  disposeWreckVisual(craftRoot);
+  disposeVisuals(craftRoot);
   craftRoot.clear();
   objects.clear();
   for (const p of state.parts) {

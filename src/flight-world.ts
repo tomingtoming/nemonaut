@@ -11,33 +11,57 @@ import {addSurveyMarkers} from './survey-markers.js';
 import {addRunwayMarkings} from './runway-scenery.js';
 import {RUNWAY} from './runway-navigation.js';
 import {launchSiteOrientation, surfaceOrientation} from './surface-frame.js';
-import {disposeWreckVisual} from './failure-visuals.js';
 import {state} from './app-state.js';
 import {currentFlight, flightCenter} from './current-flight.js';
 import {sceneCore, mat} from './scene.js';
 import {assets} from './asset-loader.js';
-type MeshLike = T.Object3D & {geometry?: T.BufferGeometry; material?: T.Material | T.Material[]};
+import {disposeVisuals} from './part-visuals.js';
 let surfacePatch: T.Mesh;
-let moonGlobe: T.Mesh, groundFacilities: T.Group;
+let moonGlobe: T.Mesh, groundFacilities: T.Group, runwaySite: T.Group;
+let campus: 'missing' | 'loading' | 'added' = 'missing';
 /** Materials of the planet globe and the surface patch (read each frame by the flight scenery). */
 export let planetMaterial: ReturnType<typeof surfaceMaterial>,
   patchMaterial: ReturnType<typeof surfaceMaterial>;
-export function disposeWorld() {
-  const {testWorld} = sceneCore();
-  disposeWreckVisual(testWorld);
-  testWorld.traverse((o: MeshLike) => {
-    if (o.userData.sharedAsset) return;
-    o.geometry?.dispose();
-    if (o.material) {
-      const mats = Array.isArray(o.material) ? o.material : [o.material];
-      mats.forEach(m => m.dispose());
-    }
-  });
-  testWorld.clear();
+/** The world's own children of testWorld, once built; a flight adds its canopies and debris after them. */
+let worldObjects: Set<T.Object3D> | null = null;
+/** Adds the campus buildings once their model has loaded; a failed load is tried again at the next flight. */
+function addCampus() {
+  if (campus !== 'missing') return;
+  campus = 'loading';
+  const {testWorld} = sceneCore(),
+    site = groundFacilities,
+    runway = runwaySite;
+  void loadCampus()
+    .then(model => {
+      if (site !== groundFacilities || site.parent !== testWorld) return;
+      addPadBuildings(site, model);
+      addRunwayHangar(runway, model);
+      campus = 'added';
+    })
+    .catch(error => {
+      if (site === groundFacilities) campus = 'missing';
+      console.warn('宇宙センターの建物を表示できません', error);
+    });
 }
+/**
+ * Prepares testWorld for a flight starting at `time`. The globes, the surface patch, the sky and the ground
+ * facilities depend on nothing but the time, which updateWorldGeometry and the scenery follow each frame, so
+ * they are built once; what the previous flight left under testWorld is disposed either way.
+ */
 export function buildTestWorld(time: number) {
   const {testWorld} = sceneCore();
-  disposeWorld();
+  if (worldObjects) {
+    for (const o of [...testWorld.children])
+      if (!worldObjects.has(o)) {
+        disposeVisuals(o);
+        testWorld.remove(o);
+      }
+    moonGlobe.position.copy(bodyState(MOON, time).position);
+    addCampus();
+    return;
+  }
+  disposeVisuals(testWorld);
+  testWorld.clear();
   groundFacilities = new T.Group();
   testWorld.add(groundFacilities);
   planetMaterial = surfaceMaterial();
@@ -65,18 +89,12 @@ export function buildTestWorld(time: number) {
   testWorld.add(surfacePatch);
   addLaunchpad(groundFacilities, assets.get('launchpad'));
   addSurveyMarkers(groundFacilities, assets);
-  const runwaySite = new T.Group();
+  runwaySite = new T.Group();
   runwaySite.quaternion.copy(launchSiteOrientation('runway'));
   runwaySite.position.set(0, PLANET.radius, 0).applyQuaternion(runwaySite.quaternion);
   groundFacilities.add(runwaySite);
-  const site = groundFacilities;
-  void loadCampus()
-    .then(model => {
-      if (site.parent !== testWorld) return;
-      addPadBuildings(site, model);
-      addRunwayHangar(runwaySite, model);
-    })
-    .catch(error => console.warn('宇宙センターの建物を表示できません', error));
+  campus = 'missing';
+  addCampus();
   const runwayGeometry = new T.PlaneGeometry(RUNWAY.width, RUNWAY.length, 1, 80);
   runwayGeometry.rotateX(-Math.PI / 2);
   runwayGeometry.translate(0, 0, RUNWAY.center);
@@ -88,6 +106,7 @@ export function buildTestWorld(time: number) {
   runway.receiveShadow = true;
   runwaySite.add(runway);
   addRunwayMarkings(runwaySite);
+  worldObjects = new Set(testWorld.children);
 }
 export function updateWorldGeometry() {
   const fl = currentFlight(),
