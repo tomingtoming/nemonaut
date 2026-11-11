@@ -1,8 +1,8 @@
-// Module structure gauge (BACKLOG 7). Builds the runtime import graph of src/*.ts (value imports and
+// Module structure gauge. Builds the runtime import graph of src/*.ts (value imports and
 // re-exports; type-only imports are erased by the build and do not count) and reports import cycles
 // (strongly connected components) and the size of app.ts, the composition root.
 // tools/module-graph.json records the allowed cycles (may only shrink). app.ts, the composition root,
-// must stay within the target size (BACKLOG 7 reached it on 2026-11-02).
+// must stay within the target size.
 // Usage: node tools/module-graph.mjs [--check] [--update] [--deps name]
 //   --check   exit 1 on a cycle that is not recorded, or if app.ts is larger than the target
 //   --update  record the current state (cycles only removed)

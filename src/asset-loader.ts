@@ -1,4 +1,4 @@
-// Part and scenery models (BACKLOG 7c, moved from app.ts): the loaded GLB scenes by part type, their bounds,
+// Part and scenery models: the loaded GLB scenes by part type, their bounds,
 // and the start-up loading with the catalogue thumbnails. No import-time side effects: boot() in app.ts calls
 // loadAssets() at the place where the models were loaded before.
 import * as T from 'three';
@@ -58,7 +58,7 @@ export async function loadAssets() {
     ts.remove(clone);
   }
   thumbRenderer.dispose();
-  // Touch (8g): give the thumbnail context back to the browser (phones allow only a few at a time); the
+  // Touch: give the thumbnail context back to the browser (phones allow only a few at a time); the
   // thumbnails are data URLs by now and this renderer is never used again.
   if (mainRenderQuality().releaseUnusedContexts) thumbRenderer.forceContextLoss();
   const shroud = await loader.loadAsync('./assets/parts/engine-shroud.glb');

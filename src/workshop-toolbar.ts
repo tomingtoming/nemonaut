@@ -1,4 +1,4 @@
-// Workshop toolbar, craft I/O and parts catalog (BACKLOG 7c, moved from app.ts unchanged): new craft, example
+// Workshop toolbar, craft I/O and parts catalog: new craft, example
 // craft, VAB/SPH bay, markers, edit modes, snap, symmetry, craft JSON save/load/export/import and the catalog
 // with categories and search. app.ts calls wireWorkshopToolbar and wireCatalog at their original places.
 // Calls up into app.ts through app-hooks. No import-time side effects.

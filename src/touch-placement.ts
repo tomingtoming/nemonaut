@@ -1,4 +1,4 @@
-// Placing parts on touch (BACKLOG 8f). A mouse previews the ghost by hovering and places with one click; a
+// Placing parts on touch. A mouse previews the ghost by hovering and places with one click; a
 // finger cannot hover, so on touch the first tap only moves the ghost there (a preview) and a second tap
 // commits it: a tap near the previewed point (same view) or on the same attachment node. A tap elsewhere
 // moves the preview. workshop-place.ts only sends pointers with pointerType 'touch' here, so the mouse path

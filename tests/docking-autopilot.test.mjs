@@ -67,7 +67,7 @@ function fly(f, limit = 1800) {
 }
 for (const [name, axial, horizontal, vertical] of [
   ['in front', 30, 0, 0],
-  ['25 m to the side (the sprint 290 arrival)', 10, 25, 0],
+  ['25 m to the side', 10, 25, 0],
   ['behind the target', -15, 3, 2]
 ])
   test('automatic docking from ' + name + ' reaches the docking condition without touching the target', t => {

@@ -1,4 +1,4 @@
-// Exploration records of the flight in progress (BACKLOG 7c, moved from app.ts unchanged): landing
+// Exploration records of the flight in progress: landing
 // challenges and orbit, lunar, delivery and survey achievements written into the parked world's history,
 // with a notice per new record. No import-time side effects.
 import {recordFlightChallenges} from './precision-landing.js';

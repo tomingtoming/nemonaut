@@ -1,4 +1,4 @@
-// Flight HUD (BACKLOG 7c, moved from app.ts unchanged): the coast blocker notice with its inspect button and
+// Flight HUD: the coast blocker notice with its inspect button and
 // the guard that drops fast physics when a flight control is used, the list of separated vessels with tracking,
 // control and targeting, the navigation readout with the navball, and the lunar transfer guide. app.ts calls
 // mountWarpGuard and wireFlightHud at their original places (each handler of wireFlightHud is the only one of

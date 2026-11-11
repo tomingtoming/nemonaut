@@ -1,5 +1,5 @@
 import {equipmentSwitches, isEquipmentKey} from './part-settings.js';
-// Workshop selection and inspector (BACKLOG 7c, moved from app.ts unchanged): selecting a part, the edit
+// Workshop selection and inspector: selecting a part, the edit
 // modes with the transform gizmo, the inspector with pose, stage and equipment settings (linked across a
 // symmetry group), deleting a branch. app.ts calls wireSelection at the original place. Calls up into app.ts
 // through app-hooks. No import-time side effects.

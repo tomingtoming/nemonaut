@@ -1,4 +1,4 @@
-// Workshop bay geometry (BACKLOG 7c, moved from app.ts): the hangar room, the deck, the floor and the grid,
+// Workshop bay geometry: the hangar room, the deck, the floor and the grid,
 // and their fitting to the craft. No import-time side effects: app.ts calls buildWorkshopBay() where the
 // geometry was built before.
 import * as T from 'three';

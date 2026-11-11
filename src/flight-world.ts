@@ -1,4 +1,4 @@
-// The flight world (BACKLOG 7c, moved from app.ts): planet globe, Moon, the surface patch under the vessel,
+// The flight world: planet globe, Moon, the surface patch under the vessel,
 // the launch pad, runway and survey markers under testWorld, and their per-frame placement. No import-time
 // side effects.
 import * as T from 'three';

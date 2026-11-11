@@ -1,4 +1,4 @@
-// Workspace persistence (BACKLOG 7c, moved from app.ts unchanged): the record of the current flight, parking
+// Workspace persistence: the record of the current flight, parking
 // the flight into the saved world, writing and restoring the workspace (world + workshop draft) in browser
 // storage, and saving it before the page unloads. No import-time side effects; app.ts calls
 // wireWorkspacePersistence at the original place.

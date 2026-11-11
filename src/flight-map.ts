@@ -475,7 +475,7 @@ export function mountFlightMap(
   toolbar.append(status);
   canvas.title =
     '右ドラッグで回転（左ドラッグも可） · ホイールで拡大縮小 · 天体をダブルクリックで中心へ · 軌道クリックで計画 · 色付きハンドルでΔv調整（Shiftで微調整）';
-  // Touch (BACKLOG 8d): two fingers pinch-zoom like the wheel, a double tap re-centres like dblclick.
+  // Touch: two fingers pinch-zoom like the wheel, a double tap re-centres like dblclick.
   const pinch = new Pinch(),
     doubleTap = new DoubleTap();
   let lastPointerType = '';

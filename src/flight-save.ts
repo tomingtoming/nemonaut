@@ -84,7 +84,7 @@ export interface SavedFlight {
   maneuver?: ManeuverNodeRecord | null;
   transferGuide?: TransferGuide | null;
   state: SavedFlightState;
-  /** Landing gear down (BACKLOG 9c); saves written before it load with the gear down. */
+  /** Landing gear down; saves written before it load with the gear down. */
   gearDeployed?: boolean;
   flapStage?: number;
   rcsEnabled?: boolean;

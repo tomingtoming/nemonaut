@@ -1,4 +1,4 @@
-// Shared mutable state of the app (BACKLOG 7b): every former module-level `let` of app.ts, in one object
+// Shared mutable state of the app: every former module-level `let` of app.ts, in one object
 // so that modules split out of app.ts read and write the same values. Type-only imports: this module has
 // no runtime dependencies and no import-time side effects. Values that need runtime code (the starting
 // craft, the frame clock) start empty here and are assigned by app.ts at their original place.

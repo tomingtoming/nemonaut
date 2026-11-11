@@ -1,4 +1,4 @@
-// Launch and practice (BACKLOG 7c, moved from app.ts unchanged): launching the workshop craft or a library
+// Launch and practice: launching the workshop craft or a library
 // design into the saved world or into an independent practice session, finishing practice, and the
 // launch/back buttons. Calls the space center through app-hooks (center-ui imports this module).
 // No import-time side effects; app.ts calls wireLaunchButtons.
@@ -104,7 +104,7 @@ export function launchAdditional(design: PracticeDesign & {bay?: string}) {
     else {
       const departure = launchedWorld.history.at(-1);
       if (!departure) throw Error('出発の記録がありません');
-      // How this craft starts, from its parts (BACKLOG 9a); the full list is in the controls panel.
+      // How this craft starts, from its parts; the full list is in the controls panel.
       const hint = launchHint(
         currentFlight().parts,
         document.body.classList.contains('touch'),

@@ -1,4 +1,4 @@
-// Landing gear deploy / retract (BACKLOG 9c). Which parts fold away is a part property (`retractable` in the
+// Landing gear deploy / retract. Which parts fold away is a part property (`retractable` in the
 // catalog: the aircraft nose and main gear and their large variants), never the craft type; the switch is one
 // flag per vessel (Flight.gearDeployed, deployed at launch). Retracted gear has no wheel contact or suspension
 // (core.ts) and no drag (it leaves the body-drag boxes, body-drag.ts); its mass and a small collider move to the

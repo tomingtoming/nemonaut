@@ -1,4 +1,4 @@
-// Orbit map on touch (BACKLOG 8d): pinch zoom, double tap re-centre and finger-sized hit areas. The map
+// Orbit map on touch: pinch zoom, double tap re-centre and finger-sized hit areas. The map
 // (flight-map.ts) only feeds pointers with pointerType 'touch' into these, so a mouse never reaches them.
 
 /** Zoom limits of the map extent (metres), shared by the wheel and the pinch. */

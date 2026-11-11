@@ -1,4 +1,4 @@
-// Touch smoke check (BACKLOG 8): drives the game as a phone (touch, no mouse or keyboard) in landscape
+// Touch smoke check: drives the game as a phone (touch, no mouse or keyboard) in landscape
 // and portrait, taps through the main path and saves a screenshot of each screen. Fails on a console
 // error, a missing result, horizontal overflow, or when body.touch is not set.
 // Usage: node tools/smoke-touch.mjs <url> [screenshot dir]
@@ -31,7 +31,7 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   const cdp = await context.newCDPSession(page);
   const touch = (type, x, y) =>
     cdp.send('Input.dispatchTouchEvent', {type, touchPoints: type === 'touchEnd' ? [] : [{x, y, id: 1}]});
-  // Part windows (8c): a long press on the canvas over a part opens the part window (right click on desktop).
+  // Part windows: a long press on the canvas over a part opens the part window (right click on desktop).
   const partWindows = host =>
     page.evaluate(h => document.querySelectorAll(`#${h} .floatingWindow`).length, host);
   const closePartWindows = host =>
@@ -69,7 +69,7 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
     await touch('touchEnd', x, y);
     await page.waitForTimeout(700);
   };
-  // Layout (8e): the key controls of a screen do not overlap each other and lie inside the viewport, and
+  // Layout: the key controls of a screen do not overlap each other and lie inside the viewport, and
   // the visible buttons in its key panels are at least 40 px in both directions (touch targets).
   const checkLayout = async (screen, keys, panels) => {
     const r = await page.evaluate(
@@ -142,7 +142,7 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   expect(`${tag} body.touch`, l.touch, l.touch);
   expect(`${tag} center no overflow`, !l.overflow, l.overflow);
   await shot('center');
-  // Performance (8g): on touch the renderers draw at a capped pixel ratio (main 1.5, space centre 1.25).
+  // Performance: on touch the renderers draw at a capped pixel ratio (main 1.5, space centre 1.25).
   const pixelRatio = id =>
     page.evaluate(id => {
       const c = document.getElementById(id);
@@ -224,7 +224,7 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
     expect(`${tag} workshop short tap still selects`, await selectedPart(), await selectedPart());
     await closePartWindows('designPartWindows');
   }
-  // Placement (8f): the first tap previews the ghost (no part added), a second tap on it places the part;
+  // Placement: the first tap previews the ghost (no part added), a second tap on it places the part;
   // the touch cancel button ends placing. Taps go to the canvas through CDP.
   const partCount = () => page.evaluate(() => Number(document.getElementById('count')?.textContent));
   const placement = () =>
@@ -321,7 +321,7 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
     await page.waitForTimeout(400);
   }
   expect(`${tag} undo restores the part count`, (await partCount()) === countBefore, await partCount());
-  // Gizmo (8f): select a part, switch to translate, drag the gizmo centre with one finger: the part moves and
+  // Gizmo: select a part, switch to translate, drag the gizmo centre with one finger: the part moves and
   // the camera does not rotate. The camera and gizmo are read from the page's own scene module (test only).
   const sceneModule = new URL('scene.js', page.url()).href;
   const view = () =>
@@ -458,7 +458,7 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   await page.tap(inspectorToggle);
   await page.waitForTimeout(300);
   await checkLayout('flight', flightKeys, flightPanels);
-  // 9a: the controls panel lists this vessel's controls by on-screen names, no key letters; 「? 操作」 opens
+  // The controls panel lists this vessel's controls by on-screen names, no key letters; 「? 操作」 opens
   // the full list with touch gestures.
   const noKeys = text => !/(^|[\s/·])([A-Z]|Space|Shift|Ctrl)(?=[\s/·]|$)/m.test(text);
   // On touch it starts collapsed; a tap on its title opens it.
@@ -518,7 +518,7 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
     () => getComputedStyle(document.getElementById('sasDirections')).display
   );
   expect(`${tag} SAS directions close after a choice`, sasClosed === 'none', sasClosed);
-  // Flight controls (8b): stage, full throttle and the stick feed the keyboard's held-key path.
+  // Flight controls: stage, full throttle and the stick feed the keyboard's held-key path.
   const controls = await page.evaluate(() => {
     const visible = e => !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0;
     const stage = document.getElementById('stage'),
@@ -532,7 +532,7 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
   });
   expect(`${tag} touch flight controls shown`, controls.pad && controls.stick, JSON.stringify(controls));
   expect(`${tag} #stage still reachable`, controls.stageReachable, controls.stageReachable);
-  // The gear button (BACKLOG 9c) exists only for craft with retractable gear: none on the rocket here.
+  // The gear button exists only for craft with retractable gear: none on the rocket here.
   const gearShown = await page.evaluate(() =>
     ['#touchFlight button[data-code=KeyG]', '#gear'].map(s => {
       const e = document.querySelector(s);
@@ -585,7 +585,7 @@ for (const name of ['Pixel 7 landscape', 'Pixel 7']) {
     `${climbing.attitude} -> ${turned.attitude}`
   );
   expect(`${tag} stick released`, released.held === '', JSON.stringify(released.held));
-  // Orbit map (8d): open by tap, pinch out zooms in (the #mapScale readout shrinks), a double tap on the
+  // Orbit map: open by tap, pinch out zooms in (the #mapScale readout shrinks), a double tap on the
   // body re-centres (focus switches, extent resets), close by tap.
   await page.tap('#openOrbitMap');
   await page.waitForTimeout(1500);

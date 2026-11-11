@@ -1,4 +1,4 @@
-// The info hub (BACKLOG 7c, moved from app.ts unchanged): updateInfo refreshes the flight and design panels
+// The info hub: updateInfo refreshes the flight and design panels
 // (fan-out) and then the design statistics of the workshop or the flight in progress (mass, TWR, Δv, power,
 // RCS, fuel feeds, checks and the staging panel). The staging callbacks and the other calls up into app.ts go
 // through app-hooks. No import-time side effects.

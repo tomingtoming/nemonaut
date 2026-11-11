@@ -2,7 +2,7 @@ import {showBrakeState} from './flight-controls.js';
 import {rollKeys, throttleUp, throttleDown, keyAxis, pitchKeys, yawKeys} from './flight-keyboard.js';
 import {overWater} from './surface-frame.js';
 import {manualTranslation} from './flight-input.js';
-// The per-frame loop (BACKLOG 7c, moved from app.ts unchanged): audio, failure captions, the space center
+// The per-frame loop: audio, failure captions, the space center
 // render, throttle keys, time warp and coasting, physics stepping with the autopilots and docking, part and
 // parachute visuals, debris, camera follow, the HUD and its 250 ms refresh, pause and rendering.
 // No import-time side effects; app.ts calls startFrameLoop where it requested the first frame.
@@ -192,7 +192,7 @@ export function startFrameLoop(
               const stepped = currentFlight(),
                 world = currentWorldRuntime(),
                 pitch = keyAxis(keys, pitchKeys);
-              // W/S with the brake on drives powered wheels off at once (BACKLOG 9a).
+              // W/S with the brake on drives powered wheels off at once.
               if (releaseBrakeForDrive(stepped, pitch)) {
                 showBrakeState(hud.brake, stepped.brake);
                 notify('ブレーキを解除しました');

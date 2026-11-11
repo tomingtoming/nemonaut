@@ -1,4 +1,4 @@
-// Workshop panels (BACKLOG 7c, moved from app.ts unchanged): the assembly tree, the interference list with its
+// Workshop panels: the assembly tree, the interference list with its
 // highlight boxes, and the scene overlays they draw into (interference boxes, fuel network). app.ts creates
 // the overlays at their original place. Calls up into app.ts through app-hooks. No import-time side effects.
 import * as T from 'three';

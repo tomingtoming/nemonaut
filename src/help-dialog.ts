@@ -15,7 +15,7 @@ import {
   pitchKeys,
   yawKeys
 } from './flight-keyboard.js';
-// 「? 操作」 (BACKLOG 9a): the full list of keys for the workshop and for flight in the #modal dialog, with
+// 「? 操作」: the full list of keys for the workshop and for flight in the #modal dialog, with
 // the touch gestures and on-screen buttons instead on a touch device. The part-dependent subset is in
 // 「この機体で使える操作」 (vessel-controls-panel.ts). Static text only; no import-time side effects.
 import {showModal} from './ui-common.js';

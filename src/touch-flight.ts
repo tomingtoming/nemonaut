@@ -10,7 +10,7 @@ import {
   pitchKeys,
   yawKeys
 } from './flight-keyboard.js';
-// Flight controls for touch devices (BACKLOG 8b): a virtual stick (W/S, A/D), roll (Q/E), full throttle /
+// Flight controls for touch devices: a virtual stick (W/S, A/D), roll (Q/E), full throttle /
 // cut (Z/X), stage (Space), camera on the craft (V) and RCS translation (I/K, J/L, U/O). They feed the keyboard's own path: every
 // press and release is dispatched to window as the equivalent KeyboardEvent, so the held-key set, its gates
 // (pause, modal, observed vessel), the warp drop to 1×, the rocket-axes swap and the capture listeners that
@@ -87,7 +87,7 @@ const BUTTONS: readonly (readonly [
   [throttleKeys[0], '全推力', 'スロットル全開', 'main'],
   [throttleKeys[1], '推力0', 'スロットル停止', 'main'],
   [stageKey, '次段', '点火 / 次段', 'main'],
-  // Landing gear (BACKLOG 9c): shown only on a vessel with retractable gear; the label follows the gear.
+  // Landing gear: shown only on a vessel with retractable gear; the label follows the gear.
   [landingGear.code, 'ギア上げ', 'ランディングギアの出し入れ', 'main'],
   [upKeys[0], '上へ', 'RCS 上へ並進', 'rcs'],
   [forwardKeys[0], '前へ', 'RCS 前へ並進', 'rcs'],

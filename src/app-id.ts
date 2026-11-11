@@ -1,7 +1,7 @@
-// Storage keys and save-format kinds. The game is Nemonaut since 2026-11-10 (Omnivehicle from
-// 2026-11-01, Orbital Foundry before that): data is written as `nemonaut-*`. Save records whose
-// kind carries an earlier name are still accepted when read, because the frozen Golden baselines
-// were recorded under them; browser storage keys under the earlier names are not read.
+// Storage keys and save-format kinds. Data is written as `nemonaut-*`. The game had two earlier names
+// (Omnivehicle, and Orbital Foundry before that). Save records whose kind carries an earlier name are
+// still accepted when read, because the frozen Golden baselines were recorded under them; browser
+// storage keys under the earlier names are not read.
 export const APP = 'nemonaut',
   LEGACY_APPS = ['omnivehicle', 'orbital-foundry'];
 export const storageKey = (name: string): string => APP + '-' + name;

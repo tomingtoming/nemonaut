@@ -46,7 +46,7 @@ test('impact comparison still rejects nonfinite diagnostic trajectories', () => 
   assert.equal(compareGolden(original, changed, {mode: 'impact'}).pass, false);
 });
 
-// Golden v2 (sprint 303): the failed part is decided by contact impulse ranking.
+// Golden v2: the failed part is decided by contact impulse ranking.
 const v2 = JSON.parse(
   readFileSync(new URL('./golden/js-v2.json', import.meta.url), 'utf8').replace(/^\uFEFF/, '')
 );
@@ -74,7 +74,7 @@ test('golden v2 rejects contact impulses that are read as zero', async () => {
   }
 });
 
-// Golden v3 (sprint 307): vessel-vessel collision on Rust physics.
+// Golden v3: vessel-vessel collision on Rust physics.
 const v3 = JSON.parse(
   readFileSync(new URL('./golden/js-v3.json', import.meta.url), 'utf8').replace(/^\uFEFF/, '')
 );

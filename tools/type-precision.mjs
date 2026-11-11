@@ -1,8 +1,8 @@
-// Type precision gauge (BACKLOG 6). Counts, per src/*.ts, the claims the type checker cannot verify:
+// Type precision gauge. Counts, per src/*.ts, the claims the type checker cannot verify:
 // non-null assertions (`x!`) and type assertions (`x as T`, except `as const`). The goal is zero,
 // except for `as` in the boundary modules listed in tools/precision.json (where untyped data enters:
 // the Wasm exports, parsed save JSON, DOM lookups), whose recorded counts may only go down.
-// Everywhere else both counts must be zero (reached 2026-11-02, BACKLOG 6), so CI fails on any new claim.
+// Everywhere else both counts must be zero, so CI fails on any new claim.
 // Usage: node tools/type-precision.mjs [--check] [--update] [--files a,b]
 //   --check    exit 1 if a module has a `!`, a non-boundary module has an `as`, or a boundary module
 //              exceeds its recorded `as` count

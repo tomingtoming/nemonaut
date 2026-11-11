@@ -14,7 +14,7 @@ import {
   pitchKeys,
   yawKeys
 } from './flight-keyboard.js';
-// The controls this vessel can use (BACKLOG 9a). Craft are not classified as rocket / rover / plane / sub:
+// The controls this vessel can use. Craft are not classified as rocket / rover / plane / sub:
 // every row comes from the parts present (powered wheels, steerable wheels, engines, screws, control
 // surfaces, reaction wheels, RCS, parachutes, docking ports), so a plane with powered wheels gets the drive
 // rows and a rocket with a ballast tank gets the ballast row. Keys on a keyboard, on-screen names on touch

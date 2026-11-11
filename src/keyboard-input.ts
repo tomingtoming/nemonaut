@@ -1,4 +1,4 @@
-// Keyboard input (BACKLOG 7c, moved from app.ts unchanged): the main flight/workshop key handler with quick
+// Keyboard input: the main flight/workshop key handler with quick
 // save/load, and the arrow keys that orbit the camera. No import-time side effects except creating the held
 // arrow set; app.ts calls wireKeyboard and wireCameraKeys at the original places (the docking autopilot's
 // capture listener is registered between them by initDockingUi).
@@ -42,7 +42,7 @@ export function wireKeyboard() {
       $('#modal', 'dialog').open
     )
       return;
-    // Flight frames the camera with V; F is kept free for the flaps (BACKLOG 9d), G is the gear (9c).
+    // Flight frames the camera with V; F is kept free for the flaps, G is the gear.
     if (state.flight && e.code === cameraFrameKey) {
       e.preventDefault();
       if (!e.repeat) frame();

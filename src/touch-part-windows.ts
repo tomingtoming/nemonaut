@@ -1,4 +1,4 @@
-// Part windows on touch (BACKLOG 8c): a long press on the 3D canvas over a part opens the same window as the
+// Part windows on touch: a long press on the 3D canvas over a part opens the same window as the
 // right click does there (flight part window or workshop design part window). Only pointers with pointerType
 // 'touch' enter the recognizer, so a mouse never goes through this path. A second finger (pinch) cancels the
 // press; when the press fires, the caller cancels the pending tap (select / place) of its release.

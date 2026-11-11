@@ -1,4 +1,4 @@
-// Small DOM helpers shared by the app modules (BACKLOG 7b, moved from app.ts unchanged). No import-time side effects.
+// Small DOM helpers shared by the app modules. No import-time side effects.
 import type * as T from 'three';
 import {element, elements} from './dom.js';
 import {state} from './app-state.js';

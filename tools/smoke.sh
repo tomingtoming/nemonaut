@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# UI smoke check (BACKLOG 7): drives the built game in a browser through the main paths and fails on
-# a console error or a missing result. app.ts has no unit tests, so every split step runs this.
-# Usage: bash tools/smoke.sh [url]   (default: starts nothing; pass the dev server or public URL)
+# UI smoke check: drives the built game in a browser through the main paths and fails on
+# a console error or a missing result. app.ts has no unit tests; this checks its wiring.
+# Usage: bash tools/smoke.sh <url>   (starts no server; pass the URL of a served build)
 # Needs playwright-cli; set PWCLI to its path if it is not on PATH.
 set -uo pipefail
 URL=${1:?usage: bash tools/smoke.sh <url>}

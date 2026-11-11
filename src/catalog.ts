@@ -61,7 +61,7 @@ export type PartDefinition = {
   suspensionTravel?: number; // metres from the resting axle to full extension
   /** Wheel motor capability, independent of the part name or vessel type. */
   poweredWheel?: boolean;
-  /** Landing gear that folds away in flight (BACKLOG 9c): G toggles it for the whole vessel. */
+  /** Landing gear that folds away in flight: G toggles it for the whole vessel. */
   retractable?: boolean;
   /** Maximum wheel steering angle in radians at rest. */
   steer?: number;
@@ -974,14 +974,14 @@ export function preset(kind: string): Part[] {
     add('truss', [0, 0.8, -0.5]);
     if (kind === 'boat') for (const x of [-1, 1]) add('pontoon', [x, 0.3, 0], r, 1);
     add('propeller', [0, -0.15, -1.7], r, 1);
-    // A rudder in the screw's wash, deep enough to stay in the water at the waterline (BACKLOG 9b): A/D turn.
+    // A rudder in the screw's wash, deep enough to stay in the water at the waterline: A/D turn.
     if (kind === 'boat') add('rudder', [0, -0.3, -2.2], [Math.PI / 2, Math.PI / 2, 0], 1);
     if (kind === 'sub') {
       add('ballast', [-0.65, 0.3, -0.3], r, 1);
       add('ballast', [0.65, 0.3, -0.3], r, 1);
-      // A rudder behind the screw, low enough to stay in the water when surfaced (BACKLOG 9b): A/D turn.
+      // A rudder behind the screw, low enough to stay in the water when surfaced: A/D turn.
       add('rudder', [0, -0.25, -2.65], [Math.PI / 2, Math.PI / 2, 0], 1);
-      // Bow and stern planes (BACKLOG 9b): W/S and SAS hold the pitch, also when fully flooded. Equal arms
+      // Bow and stern planes: W/S and SAS hold the pitch, also when fully flooded. Equal arms
       // fore and aft keep the trim and cancel their drag moments while the hull rises or sinks.
       for (const [z, parent] of [
         [1.6, 0],

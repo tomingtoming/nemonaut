@@ -1,4 +1,4 @@
-// Flight input shared across the modules split out of app.ts (BACKLOG 7c, moved from app.ts unchanged): the
+// Flight input shared across the modules split out of app.ts: the
 // held flight keys, the physics clock of the frame loop and the game audio (mounted by app.ts). Plain values;
 // no import-time side effects on the DOM, storage or the scene.
 import {PhysicsClock} from './physics-clock.js';

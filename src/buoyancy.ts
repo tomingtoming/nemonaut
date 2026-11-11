@@ -25,7 +25,7 @@ export function submergedFraction(altitude: number, verticalExtent: number): num
 }
 /**
  * Density of the fluid around a surface part that is `submerged` (0..1) in water: air and water
- * blended by the submerged fraction (BACKLOG 9b). Exactly the air density when not submerged.
+ * blended by the submerged fraction. Exactly the air density when not submerged.
  */
 export function mediumDensity(airDensity: number, submerged: number): number {
   return submerged > 0 ? airDensity + (WATER_DENSITY - airDensity) * Math.min(1, submerged) : airDensity;

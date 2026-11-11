@@ -1,4 +1,4 @@
-// 「この機体で使える操作」 (BACKLOG 9a): a small collapsible box in the flight HUD under the quick navigation,
+// 「この機体で使える操作」: a small collapsible box in the flight HUD under the quick navigation,
 // listing the controls derived from the piloted vessel's parts (vessel-controls.ts) — key names with a
 // keyboard, on-screen names on touch. At launch it opens on a desktop and starts collapsed on touch, where
 // the screen is small; once the viewer opens or collapses it, that choice is remembered per

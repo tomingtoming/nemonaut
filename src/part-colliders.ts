@@ -36,7 +36,7 @@ export function createPartColliders(
 ): PartCollider[] {
   const d = PARTS[part.type],
     rotation = partRotation(part),
-    // Folded gear (BACKLOG 9c): its mass centre and collider move with the folded visual (landing-gear.ts).
+    // Folded gear: its mass centre and collider move with the folded visual (landing-gear.ts).
     retracted = folded !== undefined,
     center = folded ?? partCenter(part);
   const boxes = hasCargoBay(d) ? cargoCollisionBoxes(d, part.cargoOpen) : d.collisionBoxes;

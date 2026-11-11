@@ -1,4 +1,4 @@
-// Flight lifecycle (BACKLOG 7c, moved from app.ts unchanged): starting a flight from the workshop craft or a
+// Flight lifecycle: starting a flight from the workshop craft or a
 // restored flight, syncing the flight controls, switching the controlled vessel, ending the flight, staging,
 // and replacing the flight after docking (kept separate from switchVessel: it does not select the vessel
 // through the fleet and does not notify). Calls up into app.ts through app-hooks. No import-time side effects.

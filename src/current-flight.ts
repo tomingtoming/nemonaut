@@ -1,4 +1,4 @@
-// Access to the flight in progress (BACKLOG 7c, moved from app.ts unchanged): the controlled flight, the
+// Access to the flight in progress: the controlled flight, the
 // running world and the centre of mass of a vessel. No import-time side effects.
 import type {Flight} from './core.js';
 import {centerOfMass} from './center-of-mass.js';

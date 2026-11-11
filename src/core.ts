@@ -413,7 +413,7 @@ export class Flight {
   declare failureEvents: FailureEvent[];
   declare floor: number;
   declare fuel: FuelMap;
-  /** Landing gear down (BACKLOG 9c): one switch for the vessel's retractable gear, deployed at launch. */
+  /** Landing gear down: one switch for the vessel's retractable gear, deployed at launch. */
   flapStage = 0;
   declare gearDeployed: boolean;
   declare gimbals: Map<string, T.Vector3>;
@@ -630,7 +630,7 @@ export class Flight {
   buildColliders(): void {
     this.waterGeometry = undefined;
     this.solvedRest = undefined;
-    // Retracted gear is inside the body: no drag of its own (BACKLOG 9c).
+    // Retracted gear is inside the body: no drag of its own.
     const nextDrag = createBodyAerodynamics(this.parts, this.gearDeployed);
     this.bodyAerodynamics?.dispose();
     this.bodyAerodynamics = nextDrag;
@@ -1060,14 +1060,14 @@ export class Flight {
       contacts = 0,
       wheelImpactSpeed = 0;
     this.lastThrust = 0;
-    // Every surface feels water for the part of it that is submerged (BACKLOG 9b): fins, rudders and wings
+    // Every surface feels water for the part of it that is submerged: fins, rudders and wings
     // alike, with the flow relative to the water at rest on the surface.
     const surfaceSubmersion = (p: FlightPart, point: T.Vector3) => {
       if (!waterAt(point)) return 0;
       const level = new T.Quaternion().setFromUnitVectors(localUp(point), up).multiply(this.q);
       return submergedFraction(altitude(point), extentY(p, level));
     };
-    // Retracted gear neither touches the ground nor shares the load (BACKLOG 9c).
+    // Retracted gear neither touches the ground nor shares the load.
     const onWheels = (p: FlightPart) => !!PARTS[p.type].wheel && !gearRetracted(p, this.gearDeployed),
       wheelCount = this.parts.filter(onWheels).length,
       surfaces = this.parts
@@ -1297,7 +1297,7 @@ export class Flight {
               ),
             point
           );
-          // Powered wheels drive whenever the brake is off, without the Space start (BACKLOG 9a);
+          // Powered wheels drive whenever the brake is off, without the Space start;
           // without a drive input they follow the throttle only once started, as engines do.
           if (
             PARTS[p.type].poweredWheel === true &&

@@ -1,5 +1,5 @@
 import {overWater} from './surface-frame.js';
-// 3D scene core (BACKLOG 7c, moved from app.ts): renderer, scene, camera, orbit controls, lights, the
+// 3D scene core: renderer, scene, camera, orbit controls, lights, the
 // top-level groups, the editor markers and overlays, the registry of part objects and the camera framing.
 // No import-time scene creation: app.ts calls the create* functions at the places where these objects were
 // created before, so the creation order (and the order of the scene's children) is unchanged.

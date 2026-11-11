@@ -1,4 +1,4 @@
-// Orbit and map planning (BACKLOG 7c, moved from app.ts unchanged): the orbit readout of the HUD, the map
+// Orbit and map planning: the orbit readout of the HUD, the map
 // overlay with its panels (finite burn, map throttle, maneuver stop, flight map, trajectory), the burn plan
 // inputs and the fixed maneuver node. app.ts calls the mount and wire functions at their original places.
 // Calls up into app.ts through app-hooks. No import-time side effects.

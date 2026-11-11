@@ -1,4 +1,4 @@
-// Flight visuals (BACKLOG 7c, moved from app.ts unchanged): the engine plumes and parachute canopies of the
+// Flight visuals: the engine plumes and parachute canopies of the
 // controlled vessel, the visuals of separated vessels (debris) with their plumes and canopies, and the name of
 // a vessel's control part. The registries are plain values; no import-time side effects on the DOM or scene.
 import * as T from 'three';

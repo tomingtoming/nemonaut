@@ -1,4 +1,4 @@
-// Design library dialogs (BACKLOG 7c, moved from app.ts unchanged): the stored designs in this browser, saving
+// Design library dialogs: the stored designs in this browser, saving
 // the workshop design and the launch library of the pad, runway and workshop. Calls up into app.ts through
 // app-hooks. No import-time side effects.
 import {storageKey} from './app-id.js';

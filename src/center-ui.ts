@@ -1,4 +1,4 @@
-// Space center UI (BACKLOG 7c, moved from app.ts unchanged): the world history list, the center summary and
+// Space center UI: the world history list, the center summary and
 // guidance, returning to the center, entering a workshop, resuming a parked flight, the 3D center and its
 // facility buttons. No import-time side effects; app.ts calls wireCenterButtons and wireCenterFacilities at
 // the original places and awaits initializeCenter in boot.

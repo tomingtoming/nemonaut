@@ -1,4 +1,4 @@
-// Render quality per device (BACKLOG 8g). Touch devices (phones, tablets) get a lower pixel-ratio cap,
+// Render quality per device. Touch devices (phones, tablets) get a lower pixel-ratio cap,
 // smaller shadow maps and the cheaper PCF shadow filter; the desktop gets exactly the earlier settings.
 // Pure (no three.js): the renderers map shadowType to the three.js constant. Chosen once when a renderer
 // is created (a WebGL context's antialias cannot change later).

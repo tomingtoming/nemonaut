@@ -5,7 +5,7 @@ import {preset} from '../dist/catalog.js';
 import {surfaceVelocity, surfaceRelativeVelocity} from '../dist/surface-frame.js';
 import {atmosphere, altitude} from '../dist/planet.js';
 
-// Approximate the observed Sprint 138 state, not an exact saved-flight replay.
+// Approximates a steep entry observed in play, not an exact saved-flight replay.
 const profiles = [];
 for (const dt of [1 / 120, 1 / 240])
   for (const scenario of ['observed-steep', 'entry-preset']) {

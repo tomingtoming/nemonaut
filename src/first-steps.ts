@@ -10,7 +10,7 @@ export function isFirstVisit({historyCount = 0, vesselCount = 0, designCount = 0
 }
 // The first ignition with the throttle at 0 lights the engines without thrust, so nothing seems to happen.
 // On touch the hint names the on-screen buttons (touch-flight.ts) instead of the keys. A craft without a
-// thrust part (wheels only) has no throttle to raise, so it gets no hint (BACKLOG 9a).
+// thrust part (wheels only) has no throttle to raise, so it gets no hint.
 export function ignitionHint({
   firstStage,
   throttle,

@@ -100,7 +100,7 @@ export function surfaceForce(
 export const SURFACE_LIFT_SLOPE = 4.5;
 /**
  * Factor (0..1] on the force of one of `surfaces` lifting surfaces for a physics step of `dt` (s), so
- * that the step stays stable when the fluid is dense (BACKLOG 9b). Near zero angle of attack the force
+ * that the step stays stable when the fluid is dense. Near zero angle of attack the force
  * of a surface with `area` (m²) at `speed` (m/s) through a fluid of `density` changes with the flow
  * across it like a damper of about density·speed·area·(lift slope / 2 + flat-plate drag 1.2) N per
  * m/s. An explicit step overshoots such a damper once dt·k/m exceeds 1, where 1/m is the craft's

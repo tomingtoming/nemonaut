@@ -1,4 +1,4 @@
-// Late-bound calls "up" into app.ts (BACKLOG 7b). Modules split out of app.ts call these slots instead of
+// Late-bound calls "up" into app.ts. Modules split out of app.ts call these slots instead of
 // importing the module that imports them, which keeps the runtime import graph acyclic. app.ts assigns the
 // real functions once at start-up; a slot that is called before that throws instead of doing nothing.
 // Type-only imports: no runtime dependencies and no import-time side effects.

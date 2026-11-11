@@ -1,4 +1,4 @@
-// Tracking station and vessel recovery (BACKLOG 7c, moved from app.ts unchanged): the tracking dialog with the
+// Tracking station and vessel recovery: the tracking dialog with the
 // map of the parked world's vessels, observation and control, recovery/termination with its undo.
 // Calls up into app.ts through app-hooks. No import-time side effects.
 import {mountTrackingMap, TRACKING_COLORS} from './tracking-map.js';

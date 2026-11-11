@@ -1,4 +1,4 @@
-// Screw spin (BACKLOG 9b): how fast a screw's rotor turns on screen, and which part of the model turns. No
+// Screw spin: how fast a screw's rotor turns on screen, and which part of the model turns. No
 // DOM or scene; part-visuals.ts turns the rotor in flight. The rate follows the thrust the screw actually
 // gives (throttle × submersion × active), so a screw out of the water or at zero throttle stands still, and
 // a screw at full thrust turns visibly without strobing at 60 frames per second.

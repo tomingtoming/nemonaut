@@ -1,6 +1,6 @@
 name: Full suite on Rust physics
 # Manual only: the whole suite takes about 8 minutes on a many-core workstation but exceeded
-# 40 minutes on one hosted runner (run 41005960242), so it is sharded and not run per push.
+# 40 minutes on one hosted runner, so it is sharded and not run per push.
 on:
   workflow_dispatch:
 permissions:

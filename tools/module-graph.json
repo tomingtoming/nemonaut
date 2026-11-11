@@ -1,4 +1,4 @@
 {
- "note": "Allowed runtime import cycles among src modules (may only shrink). app.ts must stay within 15 KB (tools/module-graph.mjs). BACKLOG 7.",
+ "note": "Allowed runtime import cycles among src modules (may only shrink). app.ts must stay within 15 KB (tools/module-graph.mjs).",
  "cycles": []
 }

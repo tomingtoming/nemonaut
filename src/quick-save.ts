@@ -1,5 +1,5 @@
 import {showBrakeState} from './flight-controls.js';
-// Quick save and restore of the current flight (BACKLOG 7c, moved from app.ts unchanged): the practice
+// Quick save and restore of the current flight: the practice
 // session's temporary save, the browser save slot, and restoring a saved flight with its controls and
 // autopilot. No import-time side effects (the storage key is a constant string); app.ts calls wireQuickSave.
 import {storageKey} from './app-id.js';

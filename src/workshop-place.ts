@@ -1,4 +1,4 @@
-// Workshop placement (BACKLOG 7c, moved from app.ts unchanged): placing a part or a branch with its ghost,
+// Workshop placement: placing a part or a branch with its ghost,
 // attachment-node markers and symmetry copies, picking under the pointer, and the canvas pointer handlers.
 // app.ts calls wirePlacement at the original place. Calls up into app.ts through app-hooks. The raycaster
 // and pointer vector are plain values; no import-time side effects.

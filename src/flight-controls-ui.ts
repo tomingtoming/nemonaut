@@ -1,4 +1,4 @@
-// Flight control handlers (BACKLOG 7c, moved from app.ts unchanged): the control toggles, parachutes, the
+// Flight control handlers: the control toggles, parachutes, the
 // demonstration autopilots, navigation frame and SAS mode, stage, throttle, ballast, SAS, brake, precision
 // control and the lunar transfer guide buttons. app.ts calls wireFlightControls at the original place of the
 // first of them; each handler is the only one of its element and event, so assigning them together keeps
@@ -105,7 +105,7 @@ export function wireFlightControls() {
     updateFlightControls(document, f);
     blurActive();
   };
-  // Gear up / down (BACKLOG 9c): G and the touch 「ギア」 button press this button.
+  // Gear up / down: G and the touch 「ギア」 button press this button.
   $('#gear', 'button').onclick = () => {
     const f = state.flight;
     if (!f || !canControl(f)) return;

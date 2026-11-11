@@ -1,4 +1,4 @@
-// Thermal panel (BACKLOG 7c, moved from app.ts unchanged): heat-shield ablator summary and the hottest parts
+// Thermal panel: heat-shield ablator summary and the hottest parts
 // of the flight in progress. No import-time side effects.
 import {PARTS} from './catalog.js';
 import type {Flight, FlightPart} from './core.js';

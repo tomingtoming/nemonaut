@@ -1,4 +1,4 @@
-// Flight and design panels (BACKLOG 7c, moved from app.ts unchanged): mounting of the part windows and of the
+// Flight and design panels: mounting of the part windows and of the
 // flight panels with their callbacks, in the original order (the panel DOM chain capture → descent → flight
 // layout → descent window → ascent → departure, return depends on it). app.ts calls mountPartWindowPanels and
 // mountFlightPanels at their original places; other modules read the handles through the getters. Calls up

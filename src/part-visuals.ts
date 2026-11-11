@@ -1,4 +1,4 @@
-// Part visuals (BACKLOG 7c, moved from app.ts): a part's 3D object (model, hinge, gimbal, wheel, RCS plumes,
+// Part visuals: a part's 3D object (model, hinge, gimbal, wheel, RCS plumes,
 // cargo) and the rebuild of the craft's objects under craftRoot. No import-time side effects.
 import * as T from 'three';
 import {makeSurfaceHinge} from './surface-hinge.js';
@@ -88,7 +88,7 @@ export function makePartVisual(p: FlightPart) {
     rolling.add(visual);
     steering.add(rolling);
     if (isRetractable(p.type)) {
-      // Retractable gear (BACKLOG 9c) folds about a pivot: the top of the wheel, or the strut's top once
+      // Retractable gear folds about a pivot: the top of the wheel, or the strut's top once
       // rebuildCraft has mounted a strut. The inner group carries the wheel and the strut back to place.
       const fold = new T.Group(),
         inner = new T.Group();

@@ -1,4 +1,4 @@
-// Workshop undo (BACKLOG 7c, moved from app.ts unchanged): snapshots of the design (parts, name, bay,
+// Workshop undo: snapshots of the design (parts, name, bay,
 // environment) with an undo and a redo stack of 60 entries. Calls up into app.ts through app-hooks.
 // No import-time side effects.
 import {state} from './app-state.js';

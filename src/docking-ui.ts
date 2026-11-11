@@ -1,4 +1,4 @@
-// Docking UI (BACKLOG 7c, moved from app.ts unchanged): the docking panel with port selection, guidance,
+// Docking UI: the docking panel with port selection, guidance,
 // bond release, armed docking and the automatic docking pilot, which a piloting key cancels. app.ts calls
 // initDockingUi and wireDockingPorts at their original places. Calls up into app.ts through app-hooks. The
 // pilot object is plain state; no import-time side effects on the DOM.
