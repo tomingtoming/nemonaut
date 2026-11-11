@@ -57,7 +57,20 @@ const zero = (): DockingCommands => ({portForward: 0, portRight: 0, portUp: 0});
 const clamp = (x: number, a = 1) => T.MathUtils.clamp(x, -a, a);
 const fuelAvailable = (f: Flight) =>
   f.parts.some(p => PARTS[p.type].rcsThrust && p.fuelEnabled !== false && (f.fuel.get(p.id) || 0) > 0);
-const signature = (f: Flight) => JSON.stringify(f.parts.map(p => [p.id, p.p, p.r, p.fuelEnabled]));
+/** What must stay as it was at the start: each part's identity, placement and fuel switch. */
+type Shape = {id: string; p: readonly number[]; r: readonly number[]; fuelEnabled: boolean | undefined}[];
+const signature = (f: Flight): Shape =>
+  f.parts.map(p => ({id: p.id, p: [...p.p], r: [...p.r], fuelEnabled: p.fuelEnabled}));
+function sameShape(f: Flight, shape: Shape): boolean {
+  if (f.parts.length !== shape.length) return false;
+  for (let i = 0; i < shape.length; i++) {
+    const p = f.parts[i],
+      s = shape[i];
+    if (p.id !== s.id || p.fuelEnabled !== s.fuelEnabled) return false;
+    for (let j = 0; j < 3; j++) if (p.p[j] !== s.p[j] || p.r[j] !== s.r[j]) return false;
+  }
+  return true;
+}
 // Farthest material point from `point`, using each part's bounding sphere.
 function reach(v: Flight, point: T.Vector3): number {
   return v.parts.reduce(
@@ -75,14 +88,14 @@ export class DockingAutopilot {
   declare state: DockingAutopilotState;
   declare message: string;
   declare ownParts: Set<string>;
-  declare ownShape: string;
+  declare ownShape: Shape;
   declare owner: Flight | null;
   declare peak: {speed: number};
   declare ports: DockingPortPair;
   declare previous: Pick<Flight, 'sas' | 'sasMode' | 'rcsEnabled' | 'portTranslationEnabled'>;
   declare stable: number;
   declare target: Flight;
-  declare targetShape: string;
+  declare targetShape: Shape;
   constructor() {
     this.owner = null;
     this.state = 'idle';
@@ -184,9 +197,10 @@ export class DockingAutopilot {
       this.target.crashed ||
       f.crashed ||
       !fleet(f).includes(this.target) ||
-      JSON.stringify(f.dockingPorts) !== JSON.stringify(this.ports) ||
-      signature(f) !== this.ownShape ||
-      signature(this.target) !== this.targetShape
+      f.dockingPorts?.own !== this.ports.own ||
+      f.dockingPorts.target !== this.ports.target ||
+      !sameShape(f, this.ownShape) ||
+      !sameShape(this.target, this.targetShape)
     ) {
       this.stop('cancelled', '機体またはポートが変更されました');
       return zero();
