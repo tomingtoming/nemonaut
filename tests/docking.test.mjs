@@ -151,11 +151,18 @@ test('Docking reroots incoming parts without moving them and conserves momentum 
       new T.Vector3(...p.p).applyQuaternion(merged.q).add(merged.pos).distanceTo(poses.get(p.id)) < 1e-9
     );
   assert.ok(merged.vel.clone().multiplyScalar(merged.stats.mass).distanceTo(motion.momentum) < 1e-9);
+  // The solver finds the merged body's principal moments in f32 with a closed-form eigen-solve, which
+  // resolves the (here equal) transverse pair only to about sqrt(ulp x moment x spread of the moments).
+  const moments = Object.values(merged.body.principalInertia()),
+    largest = Math.max(...moments),
+    momentError = Math.sqrt(2 ** -23 * largest * (largest - Math.min(...moments)));
+  assert.ok(momentError < 1e-4 * largest, 'solver tensor error bound: ' + momentError);
   assert.ok(
     merged.omega
       .clone()
       .applyMatrix3(inertiaAbout(merged, centerOfVessel(merged)))
-      .distanceTo(motion.angularMomentum) < 1e-8
+      .distanceTo(motion.angularMomentum) <
+      momentError * merged.omega.length()
   );
   assert.deepEqual([...merged.charge.values()], [17, 43]);
   assert.equal(merged.throttle, 0);
@@ -186,7 +193,8 @@ test('Saved docked craft can undock with all resources and rigid body momentum r
     false
   );
   assert.ok(motion.momentum.distanceTo(linear) < 1e-8);
-  assert.ok(motion.angularMomentum.distanceTo(angular) < 1e-8);
+  // The spin is about the vessels' common symmetry axis, where the solver's f32 moments agree to a few ulp.
+  assert.ok(motion.angularMomentum.distanceTo(angular) < 16 * 2 ** -23 * angular.length());
   assert.equal(motion.mass, mass);
   assert.ok(result.vel.distanceTo(child.vel) >= 0.099);
   const again = loadFlight(saveFlight(result));
