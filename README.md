@@ -1,6 +1,6 @@
 # Nemonaut
 
-Nemonaut is a browser game in which you assemble vehicles from parts — rockets, aircraft, rovers, boats and submarines — and operate them in one persistent world that reaches from the sea floor to the Moon. Rendering uses three.js; the physics is a Rust engine built on Rapier and compiled to WebAssembly; the game logic is TypeScript. Everything runs in the browser and saves stay in the browser's local storage. The interface is written in Japanese and has a complete English translation. The rest of this document is in Japanese.
+Nemonaut is a browser game in which you assemble vehicles from parts — rockets, aircraft, rovers, boats and submarines — and operate them in one persistent world that reaches from the sea floor to the Moon. Rendering uses three.js; the physics is a Rust engine built on Rapier and compiled to WebAssembly; the game logic is TypeScript. Everything runs in the browser and saves stay in the browser's local storage; the site counts anonymous usage statistics (see 利用状況の計測 below, off with `?metrics=off`). The interface is written in Japanese and has a complete English translation. The rest of this document is in Japanese.
 
 **遊ぶ：<https://nemonaut.toming.app>**
 
@@ -10,7 +10,7 @@ Nemonaut is a browser game in which you assemble vehicles from parts — rockets
 
 部品を組み合わせて乗り物を作り、同じ世界の中で動かすブラウザゲームです。ロケット、航空機、ローバー、船、潜水艦を、共通の部品と共通の物理で扱います。母星は自転し、月がその周りを回ります。出発した機体は世界に残り、別の機体を出して会合・ドッキングできます。
 
-描画はthree.js、物理はRust（Rapier）をWebAssemblyへコンパイルしたエンジン、ゲーム本体はTypeScriptです。サーバー側の処理はなく、保存はブラウザのlocalStorageに置かれます。表示言語は日本語と英語で、右上の「EN」/「JA」ボタンで切り替えます（初回はブラウザの言語設定に従います）。
+描画はthree.js、物理はRust（Rapier）をWebAssemblyへコンパイルしたエンジン、ゲーム本体はTypeScriptです。ゲームはすべてブラウザの中で動き、保存はブラウザのlocalStorageに置かれます。サーバー側にあるのは、静的ファイルの配信と、匿名の利用統計を受け取る小さな窓口1つだけです（[利用状況の計測](#利用状況の計測)）。表示言語は日本語と英語で、右上の「EN」/「JA」ボタンで切り替えます（初回はブラウザの言語設定に従います）。
 
 | 組立棟 | 飛行 |
 |---|---|
@@ -129,6 +129,7 @@ src/            ゲーム本体（TypeScript、1ファイル1モジュール）�
   vendor/       three.js の同梱コピー
 engine/         物理エンジンのRustソース
 assets-source/  3Dモデルを生成するBlender用Pythonスクリプトと .blend
+worker/         匿名の利用統計を受け取るCloudflare Worker（POST /metric）
 tests/          node:test による試験と tests/golden の基準データ
 tools/          ビルド、検査、試験用の参照実装、飛行実験
 ```
@@ -138,6 +139,18 @@ tools/          ビルド、検査、試験用の参照実装、飛行実験
 - **表示言語**：画面の文言はコード中に日本語で書かれています。英語を選ぶと、`src/i18n.ts` が `src/i18n/en.json` を使って表示を置き換えます。辞書の過不足は試験で検査します。
 - **保存**：localStorageの `nemonaut-` で始まるキーに置かれます。
 - **3Dモデル**：`assets-source/` のPythonスクリプトをBlenderで実行して生成したGLBを `src/assets/` に置いています。
+- **利用統計**：`src/metrics.ts` が出来事をまとめて同じオリジンの `POST /metric` へ送り、`worker/` のWorkerが検査してWorkers Analytics Engineへ書きます。ビルドは、ビルド元のコミットを `dist/build-id.js` に書き出します（統計の行に付く版の印）。
+
+## 利用状況の計測
+
+どの見本機や出発地点が使われ、どこまで進めたかを知るために、匿名の利用統計を集めています。
+
+- **記録するもの**：見本機を開いた、出発した、自動操縦を始めた、到達記録が付いた、機体が壊れた、機体JSONを書き出した・読み込んだ、という出来事と、その種類（見本機・出発地点・到達記録などのゲームに組み込まれた識別子）、部品数、画面を表示していた秒数などの数値。あわせて、端末の種類（タッチかどうか）、表示言語、ブラウザの言語設定、参照元のホスト名、国（サーバーがリクエストから付けます）。
+- **記録しないもの**：アカウントはなく、Cookieも使いません。IPアドレスは保存しません。機体名など、入力した文字は一切送りません。機体の設計や保存データも送りません。
+- **訪問者の区別**：同じ人の再訪と別の人を数え分けるために、乱数の識別子を1つ、ブラウザのlocalStorage（`nemonaut-visitor`）に置きます。
+- **止め方**：`https://nemonaut.toming.app/?metrics=off` を一度開くと、そのブラウザからは以後何も送りません。`?metrics=public` で元に戻ります。
+
+出来事の一覧、保存する列、読み方は [docs/metrics.md](docs/metrics.md) にあります。これとは別に、ページの閲覧数はCloudflare Web Analyticsで数えています（Cookieを使わない集計で、配信側で自動的に挿入されます）。
 
 ## 開発
 
@@ -155,11 +168,11 @@ npm run format      # Prettierで整形
 
 `npm run typecheck` は次の5つを順に実行します。
 
-1. `tsc`（strict）による型検査
+1. `tsc`（strict）による型検査（`src/` と `worker/`）
 2. `tools/type-hardness.mjs`：明示的な `any` と `@ts-ignore` 類の禁止
 3. `tools/type-precision.mjs`：非nullアサーション `!` の禁止と、型アサーション `as` を境界モジュール（`tools/precision.json`）に限ること
 4. `tools/module-graph.mjs`：モジュール間の循環importの禁止と、`app.ts` の大きさの上限
-5. Prettierによる整形の確認（`src/**/*.ts`、`tools/*.mjs`、`tests/*.mjs`）
+5. Prettierによる整形の確認（`src/**/*.ts`、`worker/*.ts`、`tools/*.mjs`、`tests/*.mjs`）
 
 注意点：
 
@@ -180,8 +193,8 @@ CI（`.github/workflows/`）は、pushごとにビルドと `npm run typecheck`�
 
 ## 配信
 
-`dist/` を静的ファイルとしてCloudflare Workersに置いています。サーバー側のスクリプトはありません（`wrangler.jsonc`）。
-配信は `tools/deploy-cloudflare.sh` で行います。コミット済みの `src/` から `dist/` をビルドして送るため、未コミットの変更があると中止します。
+`dist/` を静的ファイルとしてCloudflare Workersに置いています。サーバー側のスクリプトは、匿名の利用統計を受け取る `worker/`（`POST /metric`）だけで、それ以外のリクエストはすべて静的ファイルの層が答えます（`wrangler.jsonc`）。
+配信は `tools/deploy-cloudflare.sh` で行います。コミット済みの `src/` から `dist/` をビルドし、`worker/` とあわせて送るため、未コミットの変更があると中止します。
 
 ## 第三者のソフトウェア
 

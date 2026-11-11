@@ -2187,5 +2187,6 @@
  "ギア下げ": "Gear down",
  "ギアの出し入れ": "Landing gear up / down",
  "「ギア上げ / 下げ」ボタン": "\"Gear up / down\" button",
- "G · ランディングギアの出し入れ（接地中は格納できません）": "G · Raise / lower the landing gear (cannot retract while on the ground)"
+ "G · ランディングギアの出し入れ（接地中は格納できません）": "G · Raise / lower the landing gear (cannot retract while on the ground)",
+ "匿名の利用統計を集めています（入力した名前や機体の設計は送りません）。止めるには、アドレスの末尾に ?metrics=off を付けて一度開いてください。": "Anonymous usage statistics are collected (names you type and craft designs are never sent). To turn this off, open the page once with ?metrics=off added to the address."
 }

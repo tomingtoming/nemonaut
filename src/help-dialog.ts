@@ -90,7 +90,8 @@ export function openHelp({touch, flying}: {touch: boolean; flying: boolean}): vo
     flight = '<h3>飛行</h3>' + grid(touch ? FLIGHT_TOUCH : FLIGHT_KEYS);
   showModal(
     '<h2>操作</h2><p>飛行中は左の「この機体で使える操作」に、今の機体で使える操作だけが出ます。</p>' +
-      (flying ? flight + workshop : workshop + flight)
+      (flying ? flight + workshop : workshop + flight) +
+      '<p><small>匿名の利用統計を集めています（入力した名前や機体の設計は送りません）。止めるには、アドレスの末尾に ?metrics=off を付けて一度開いてください。</small></p>'
   );
 }
 export function wireHelp(button: HTMLElement, body: HTMLElement = document.body): void {
