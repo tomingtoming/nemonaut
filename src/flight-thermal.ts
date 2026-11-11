@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {PARTS} from './catalog.js';
-import {partPointToVessel, partRotation} from './part-frame.js';
+import {boxCorners, partPointToVessel, partRotation} from './part-frame.js';
 import type {World} from './physics.js';
 import {
   THERMAL,
@@ -22,15 +22,8 @@ function register(parts: readonly ThermalPart[], wasm: World['exports']) {
       rotation = partRotation(p);
     const center = partPointToVessel(p, d.massCenter || [0, 0, 0]);
     const row = [];
-    for (const a of [-1, 1])
-      for (const b of [-1, 1])
-        for (const c of [-1, 1])
-          row.push(
-            ...new T.Vector3((a * x) / 2, (b * y) / 2, (c * z) / 2)
-              .applyQuaternion(rotation)
-              .add(center)
-              .toArray()
-          );
+    for (const corner of boxCorners(d.size))
+      row.push(...corner.applyQuaternion(rotation).add(center).toArray());
     for (const axis of [
       [y * z, 0, 0],
       [0, x * z, 0],
@@ -107,12 +100,9 @@ function register(parts: readonly ThermalPart[], wasm: World['exports']) {
       const ratio = s.temperature / limit;
       if (!hottest || ratio > hottest.ratio) hottest = {id: p.id, temperature: s.temperature, ratio};
     }
-    return {
-      parts: readings,
-      hottest,
-      consumed,
-      failed: [...state].filter(([, s]) => s.failed).map(([id]) => id)
-    };
+    const failed: string[] = [];
+    for (const [id, s] of state) if (s.failed) failed.push(id);
+    return {parts: readings, hottest, consumed, failed};
   };
 }
 type Shape = {
@@ -152,17 +142,13 @@ export function flightThermalStep(
   return entry.run(parts, state, q, v, air, dt);
 }
 function sameShape(shape: Shape[], parts: readonly ThermalPart[]) {
-  return (
-    shape.length === parts.length &&
-    parts.every((p, i) => {
-      const s = shape[i];
-      return (
-        p.id === s.id &&
-        p.type === s.type &&
-        PARTS[p.type] === s.definition &&
-        p.p.every((x, j) => x === s.position[j]) &&
-        p.r.every((x, j) => x === s.rotation[j])
-      );
-    })
-  );
+  if (shape.length !== parts.length) return false;
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i],
+      s = shape[i];
+    if (p.id !== s.id || p.type !== s.type || PARTS[p.type] !== s.definition) return false;
+    for (let j = 0; j < p.p.length; j++) if (p.p[j] !== s.position[j]) return false;
+    for (let j = 0; j < p.r.length; j++) if (p.r[j] !== s.rotation[j]) return false;
+  }
+  return true;
 }
