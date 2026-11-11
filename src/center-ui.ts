@@ -6,7 +6,6 @@ import {renderFirstSteps, isFirstVisit} from './first-steps.js';
 import {frameTrackedVessel} from './camera-up.js';
 import {historyActionLabel} from './departure-mode.js';
 import {formatUniversalTime} from './universal-time.js';
-import {worldTrackingList} from './world-operations.js';
 import {fleet} from './fleet.js';
 import {CENTER_FACILITIES, centerGuidance} from './center-facilities.js';
 import {SpaceCenter} from './space-center.js';
@@ -68,7 +67,7 @@ export function refreshCenter() {
   } catch {
     libraryError = true;
   }
-  const vesselCount = state.parkedWorld ? worldTrackingList(state.parkedWorld).length : 0,
+  const vesselCount = state.parkedWorld?.vessels.length ?? 0,
     history = state.parkedWorld?.history ?? [];
   renderFirstSteps($('#centerFirstSteps', 'section'), {
     visible: !libraryError && isFirstVisit({historyCount: history.length, vesselCount, designCount}),
