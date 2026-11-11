@@ -56,18 +56,33 @@ for (const kind of ['plane', 'plane-large', 'transport-cargo'])
       assert.equal(r.landed, true);
       assert.equal(r.unexpectedContact, null);
       assert.equal(r.ownerUnchanged, true);
+      assert.equal(r.everAirborne, true);
       assert.equal(r.initialParts, r.remainingParts);
       assert.ok(r.remainingFuel > 0 && r.remainingFuel < r.initialFuel);
       const start = r.events.find(e => e.phase === 'return');
+      assert.ok(start);
+      const phases = r.events.map(e => e.phase);
+      for (const phase of [
+        'departure:roll',
+        'departure:climb',
+        'return',
+        'landing:approach',
+        'landing:rollout',
+        'landing:stopped'
+      ])
+        assert.ok(phases.includes(phase), phase);
       if (outboundHeading !== null) {
         assert.ok(start.time >= 200);
         assert.ok(Math.abs(start.heading - 210) < 20 && Math.abs(start.x) > 1000);
       }
+      assert.ok(r.route.length >= 18000 && r.route.radius >= 2500, JSON.stringify(r.route));
       assert.ok(r.route.maxRouteError < 1000);
       assert.ok(r.handoff.remaining >= 5000 && r.handoff.remaining <= 10000);
       assert.ok(Math.abs(r.handoff.heading - 90) <= 15 && Math.abs(r.handoff.cross) <= 250);
       assert.ok(r.handoff.height >= 300 && r.handoff.height <= 400);
       for (const track of [r.departureTrack, r.landingTrack])
         assert.ok(track.minAlong >= 0 && track.maxAlong < RUNWAY.length && track.maxCross < RUNWAY.width / 2);
+      assert.ok(r.handoff.time > 100 && r.landingTouch.time > r.handoff.time);
       assert.ok(r.landingTouch.impact > -3 && r.final.speed < 0.5);
+      assert.ok(Math.abs(r.final.heading - 90) < 5);
     });
