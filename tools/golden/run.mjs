@@ -1,5 +1,5 @@
 import {readFile,writeFile} from 'node:fs/promises';import {execFileSync} from 'node:child_process';import {createHash} from 'node:crypto';
-import {assertGolden,tolerances} from './compare.mjs';
+import {assertGolden,tolerances} from './compare.mjs';import {retiredFields} from './retired.mjs';
 const version=process.argv.includes('--v3')?3:process.argv.includes('--v2')?2:1;
 // v1/v2 were recorded on the retired JS solver: they can be replayed (checked) but not re-recorded.
 if(version<3&&process.argv.includes('--record'))throw Error('Golden v1/v2 are frozen: their recording solver (JS Rapier) is retired');
@@ -21,5 +21,6 @@ if(record){
 }else{
  const {replay}=await import('./replay-js.mjs');
  const baseline=JSON.parse((await readFile(file,'utf8')).replace(/^\uFEFF/,''));
- for(const {definition,expected} of baseline.cases){const result=assertGolden(expected,replay(definition),{mode:definition.mode,limits:baseline.tolerances});console.log(JSON.stringify({case:definition.name,pass:true,maxToleranceRatio:result.maxRatio}));}
+ const retired=retiredFields(version,baseline.cases.map(c=>c.definition.name));
+ for(const {definition,expected} of baseline.cases){const skip=retired.get(definition.name)??[],result=assertGolden(expected,replay(definition),{mode:definition.mode,limits:baseline.tolerances,retired:skip});console.log(JSON.stringify({case:definition.name,pass:true,maxToleranceRatio:result.maxRatio,...(skip.length?{retiredFields:skip}:{})}));}
 }
