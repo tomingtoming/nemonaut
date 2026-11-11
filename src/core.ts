@@ -392,6 +392,10 @@ export class Flight {
   declare ballast: number;
   declare body: import('./physics.js').RigidBody;
   private waterGeometry?: WaterGeometry;
+  /** The pose a held (parked and quiet) step left the vessel in, once a solve has run from that rest. */
+  private solvedRest?: {pos: T.Vector3; q: T.Quaternion};
+  /** Whether solves have been skipped since the solver last ran. */
+  private solveSkipped = false;
   declare bodyAerodynamics: BodyAerodynamics;
   declare brake: boolean;
   declare charge: ChargeMap;
@@ -625,6 +629,7 @@ export class Flight {
   }
   buildColliders(): void {
     this.waterGeometry = undefined;
+    this.solvedRest = undefined;
     // Retracted gear is inside the body: no drag of its own (BACKLOG 9c).
     const nextDrag = createBodyAerodynamics(this.parts, this.gearDeployed);
     this.bodyAerodynamics?.dispose();
@@ -1398,8 +1403,36 @@ export class Flight {
       engine: 'Rust Rapier 0.21'
     };
     const impactSpeed = relativeVelocity.dot(normal);
+    // A settled unpowered body stays at rest instead of acquiring solver jitter.
+    // Manual/SAS/RCS commands and any produced thrust wake it immediately.
+    const held =
+      !!resting &&
+      this.lastThrust === 0 &&
+      !this.rcsJets.length &&
+      Object.values(commands).every(n => Math.abs(n) < 1e-6) &&
+      !Object.values(input).some(n => typeof n === 'number' && n !== 0);
+    // A held vessel discards what the solver returns and keeps only its ground contacts, which a
+    // solve from the same rest on the same colliders finds again. So the solver runs once per rest
+    // and is skipped while nothing else has moved the vessel since.
+    const skip =
+      held && !!this.solvedRest && this.pos.equals(this.solvedRest.pos) && this.q.equals(this.solvedRest.q);
     this.world.timestep = dt;
-    this.world.step();
+    if (skip) {
+      this.solveSkipped = true;
+      // The solver brings the mass properties up to date before it steps.
+      this.body.recomputeMassPropertiesFromColliders();
+    } else {
+      if (this.solveSkipped && this.ground && this.world.ground.enabled) {
+        // The solver keeps the ground side of a contact where it last determined it, in solver
+        // coordinates, for as long as the two colliders keep their relative pose, and the ground has
+        // moved with the planet since the last solve. Re-enabling the ground makes this solve
+        // determine the contacts anew.
+        this.ground.setEnabled(false);
+        this.ground.setEnabled(true);
+      }
+      this.solveSkipped = false;
+      this.world.step();
+    }
     this.q.copy(this.body.rotation()).normalize();
     this.omega.copy(this.body.angvel());
     if (freeFlight) {
@@ -1423,21 +1456,14 @@ export class Flight {
         .add(surfaceVelocity(endCOM, this.universalTime, reference));
       if (this.holdQ) this.holdQ.premultiply(turn).normalize();
     }
-    // A settled unpowered body stays at rest instead of acquiring solver jitter.
-    // Manual/SAS/RCS commands and any produced thrust wake it immediately.
-    if (
-      resting &&
-      this.lastThrust === 0 &&
-      !this.rcsJets.length &&
-      Object.values(commands).every(n => Math.abs(n) < 1e-6) &&
-      !Object.values(input).some(n => typeof n === 'number' && n !== 0)
-    ) {
+    if (held && resting) {
       this.pos.copy(resting.pos);
       this.q.copy(resting.q);
       const c = this.pos.clone().add(st.com.clone().applyQuaternion(this.q));
       this.vel.copy(surfaceVelocity(c, this.universalTime, reference));
       this.omega.copy(spin);
-    }
+      this.solvedRest = {pos: this.pos.clone(), q: this.q.clone()};
+    } else this.solvedRest = undefined;
     this.orbit = bodyOrbitState(
       this.pos.clone().add(st.com.clone().applyQuaternion(this.q)),
       this.vel,
