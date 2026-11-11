@@ -395,7 +395,6 @@ export class Flight {
   /** The pose a held (parked and quiet) step left the vessel in, once a solve has run from that rest. */
   private solvedRest?: {pos: T.Vector3; q: T.Quaternion};
   /** Whether solves have been skipped since the solver last ran. */
-  private solveSkipped = false;
   declare bodyAerodynamics: BodyAerodynamics;
   declare brake: boolean;
   declare charge: ChargeMap;
@@ -1418,19 +1417,9 @@ export class Flight {
       held && !!this.solvedRest && this.pos.equals(this.solvedRest.pos) && this.q.equals(this.solvedRest.q);
     this.world.timestep = dt;
     if (skip) {
-      this.solveSkipped = true;
       // The solver brings the mass properties up to date before it steps.
       this.body.recomputeMassPropertiesFromColliders();
     } else {
-      if (this.solveSkipped && this.ground && this.world.ground.enabled) {
-        // The solver keeps the ground side of a contact where it last determined it, in solver
-        // coordinates, for as long as the two colliders keep their relative pose, and the ground has
-        // moved with the planet since the last solve. Re-enabling the ground makes this solve
-        // determine the contacts anew.
-        this.ground.setEnabled(false);
-        this.ground.setEnabled(true);
-      }
-      this.solveSkipped = false;
       this.world.step();
     }
     this.q.copy(this.body.rotation()).normalize();

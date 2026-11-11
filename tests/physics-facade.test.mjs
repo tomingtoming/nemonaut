@@ -53,6 +53,10 @@ function scene(L) {
 function drive(L, {world, ground, body, parts}, log) {
   for (let tick = 0; tick < 240; tick++) {
     const a = tick * 0.01;
+    // The engine determines every contact anew on each step (it is built without Rapier's contact
+    // recycling, which the npm build has no switch for). Re-enabling the ground makes the oracle do
+    // the same on this step.
+    ground.setEnabled(false);
     ground.setEnabled(true);
     ground.setTranslation({x: 0.1 * a, y: -1 - 0.001 * tick, z: 0});
     ground.setRotation({x: 0.01, y: 0, z: 0.002 * a, w: 1.0001});

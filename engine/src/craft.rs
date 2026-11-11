@@ -35,6 +35,12 @@ pub extern "C" fn craft_reset() {
     p.length_unit = 100.0;
     p.normalized_allowed_linear_error = 0.001 / 100.0;
     p.normalized_prediction_distance = 0.005 / 100.0;
+    // The game moves the ground collider and the vessel together through solver coordinates every
+    // step (the surface of a rotating planet around a fixed origin). A recycled contact keeps the
+    // ground-side anchor and the normal where the last full update put them in those coordinates
+    // and is revalidated by the relative pose alone, so it would read that motion as penetration.
+    // Determine the contacts from the current poses on every step instead.
+    p.contact_recycling = false;
     let body = world.bodies.insert(
         RigidBodyBuilder::dynamic()
             .can_sleep(false)

@@ -123,18 +123,14 @@ test('a parked vessel stays parked across save and load and is not dropped again
   }
 });
 
-// The solver origin is recentred every kilometre the surface carries a vessel, which by itself moves a
-// vessel resting on the ground. The windows below lie between two recentrings.
-const sameOrigin = (f, origin) =>
-  assert.ok(origin.equals(f.physicsOrigin), 'the solver origin was recentred');
-
+// The solver origin is recentred every kilometre the surface carries a vessel (686 steps). The engine
+// starts below include ones on the step of a recentring and ones whose window crosses one.
 test('a long-parked craft starts its engines without a jump', () => {
-  for (const parkedSteps of [300, 1500, 4200, 9000]) {
+  for (const parkedSteps of [300, 685, 686, 1500, 4200, 9000]) {
     const {f, count} = parkedHopper(parkedSteps);
     try {
       const before = count(),
-        rest = altitude(f),
-        origin = f.physicsOrigin.clone();
+        rest = altitude(f);
       f.stageNext();
       f.throttle = 1;
       f.step(dt);
@@ -152,7 +148,6 @@ test('a long-parked craft starts its engines without a jump', () => {
         previous = rate;
       }
       assert.equal(count(), before + 241);
-      sameOrigin(f, origin);
       assert.ok(altitude(f) - rest > 5, 'lifted off');
       assert.equal(f.landed, false);
     } finally {
@@ -166,8 +161,7 @@ test('a long-parked craft woken without a force stays where it rests', () => {
   try {
     const before = count(),
       rest = altitude(f),
-      place = fixed(f),
-      origin = f.physicsOrigin.clone();
+      place = fixed(f);
     // A translation command without RCS produces no force but ends the hold.
     for (let i = 0; i < 240; i++) {
       f.step(dt, {translateX: 1});
@@ -176,7 +170,6 @@ test('a long-parked craft woken without a force stays where it rests', () => {
       assert.equal(f.landed, true);
     }
     assert.equal(count(), before + 240);
-    sameOrigin(f, origin);
     assert.ok(fixed(f).distanceTo(place) < 2e-3);
     run(f, 600);
     assert.equal(isParked(f), true);
