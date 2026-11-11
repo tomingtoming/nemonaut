@@ -1,14 +1,14 @@
 {
   "version": 3,
   "provenance": {
-    "revision": "b6432021c6bf02b0f95d5cef1f5920573afc0381",
+    "revision": "1ef6932d935966b95faa60e73648949f4770ea37",
     "node": "v24.14.0",
     "platform": "linux",
     "arch": "x64",
     "physics": "rust-wasm",
     "rapierRevision": "b716d375efc0201003f0cd9ef7168eee0b62c177",
-    "engineWasmSHA256": "3e13afdc5496b744d9da7a023d648eaa78946e91bcef5abed86a42577b1b36bf",
-    "recordedAt": "2026-11-11T03:10:23.435Z"
+    "engineWasmSHA256": "51c0bd7466dae7e6fcdf3245bd3dee5e4ae152b1d55c3368de05b2ccf7f73cea",
+    "recordedAt": "2026-11-11T07:53:09.391Z"
   },
   "tolerances": {
     "position": 0.05,
@@ -35,7 +35,7 @@
           "kind": "nemonaut-flight",
           "version": 2,
           "partFrame": "nominal-center-v1",
-          "vesselId": "fbfe55df-822a-4e44-83d1-bb6c6decfd42",
+          "vesselId": "1336e010-bc47-4e50-820d-39ea1257dc9e",
           "physicsModel": "rotating-primary-v1",
           "universalTime": 0,
           "vesselName": "",
@@ -44,7 +44,7 @@
           "failureDynamics": false,
           "parts": [
             {
-              "id": "5d63d130-3b57-45e4-9ce0-c436c30a549c",
+              "id": "6272f14f-b8e4-46d3-8913-27b89f3bd48b",
               "type": "probe",
               "p": [
                 0,
@@ -60,7 +60,7 @@
               "stage": 0
             },
             {
-              "id": "d080c084-f1a8-46ea-881b-8656392ada11",
+              "id": "a7d24cd4-d05b-4bfe-9235-adea483bf3d3",
               "type": "tank",
               "p": [
                 0,
@@ -72,11 +72,11 @@
                 0,
                 0
               ],
-              "parent": "5d63d130-3b57-45e4-9ce0-c436c30a549c",
+              "parent": "6272f14f-b8e4-46d3-8913-27b89f3bd48b",
               "stage": 0
             },
             {
-              "id": "6fa2ef7b-afc6-4854-8e91-2c03885d9941",
+              "id": "7a7db930-55c8-43e6-89a4-ec5dcae028d9",
               "type": "engine",
               "p": [
                 0,
@@ -88,11 +88,11 @@
                 0,
                 0
               ],
-              "parent": "d080c084-f1a8-46ea-881b-8656392ada11",
+              "parent": "a7d24cd4-d05b-4bfe-9235-adea483bf3d3",
               "stage": 0
             },
             {
-              "id": "70854767-ec5f-4e58-8704-3467b9b26fa3",
+              "id": "d3ba7ba2-8b4e-4570-bf61-af40b3d0afa7",
               "type": "solar",
               "p": [
                 1.6,
@@ -104,11 +104,11 @@
                 0,
                 0
               ],
-              "parent": "5d63d130-3b57-45e4-9ce0-c436c30a549c",
+              "parent": "6272f14f-b8e4-46d3-8913-27b89f3bd48b",
               "stage": 0
             },
             {
-              "id": "9a9103ed-9898-4f0d-b42c-f929bfbb9912",
+              "id": "4caf0b2a-00b8-4779-a6f6-3001d35812fc",
               "type": "solar",
               "p": [
                 -1.6,
@@ -120,7 +120,7 @@
                 0,
                 0
               ],
-              "parent": "5d63d130-3b57-45e4-9ce0-c436c30a549c",
+              "parent": "6272f14f-b8e4-46d3-8913-27b89f3bd48b",
               "stage": 0
             }
           ],
@@ -180,19 +180,19 @@
           "rcsEnabled": false,
           "fuel": [
             [
-              "d080c084-f1a8-46ea-881b-8656392ada11",
+              "a7d24cd4-d05b-4bfe-9235-adea483bf3d3",
               1800
             ]
           ],
           "charge": [
             [
-              "5d63d130-3b57-45e4-9ce0-c436c30a549c",
+              "6272f14f-b8e4-46d3-8913-27b89f3bd48b",
               200
             ]
           ],
           "observations": [
             [
-              "5d63d130-3b57-45e4-9ce0-c436c30a549c",
+              "6272f14f-b8e4-46d3-8913-27b89f3bd48b",
               {
                 "enabled": false,
                 "day": 0,
@@ -202,7 +202,7 @@
           ],
           "thermal": [
             [
-              "5d63d130-3b57-45e4-9ce0-c436c30a549c",
+              "6272f14f-b8e4-46d3-8913-27b89f3bd48b",
               {
                 "temperature": 288.15,
                 "ablator": 0,
@@ -210,7 +210,7 @@
               }
             ],
             [
-              "d080c084-f1a8-46ea-881b-8656392ada11",
+              "a7d24cd4-d05b-4bfe-9235-adea483bf3d3",
               {
                 "temperature": 288.15,
                 "ablator": 0,
@@ -218,7 +218,7 @@
               }
             ],
             [
-              "6fa2ef7b-afc6-4854-8e91-2c03885d9941",
+              "7a7db930-55c8-43e6-89a4-ec5dcae028d9",
               {
                 "temperature": 288.15,
                 "ablator": 0,
@@ -226,7 +226,7 @@
               }
             ],
             [
-              "70854767-ec5f-4e58-8704-3467b9b26fa3",
+              "d3ba7ba2-8b4e-4570-bf61-af40b3d0afa7",
               {
                 "temperature": 288.15,
                 "ablator": 0,
@@ -234,7 +234,7 @@
               }
             ],
             [
-              "9a9103ed-9898-4f0d-b42c-f929bfbb9912",
+              "4caf0b2a-00b8-4779-a6f6-3001d35812fc",
               {
                 "temperature": 288.15,
                 "ablator": 0,
@@ -252,7 +252,7 @@
               "kind": "nemonaut-flight",
               "version": 2,
               "partFrame": "nominal-center-v1",
-              "vesselId": "e3d789f5-dd6c-4716-a921-cd95f9d3da24",
+              "vesselId": "128931f0-40bd-439d-882c-15006b08e605",
               "physicsModel": "rotating-primary-v1",
               "universalTime": 0,
               "vesselName": "",
@@ -261,7 +261,7 @@
               "failureDynamics": false,
               "parts": [
                 {
-                  "id": "c63b5abb-8f49-49a1-8020-8c91fb2b9eea",
+                  "id": "bf3ae079-11c7-480b-bf29-c0a666804cca",
                   "type": "probe",
                   "p": [
                     0,
@@ -277,7 +277,7 @@
                   "stage": 0
                 },
                 {
-                  "id": "27954ace-247f-4d28-ae0a-5c6b10c27adc",
+                  "id": "0d91d67c-d925-4631-8e21-8fc6369d058f",
                   "type": "tank",
                   "p": [
                     0,
@@ -289,11 +289,11 @@
                     0,
                     0
                   ],
-                  "parent": "c63b5abb-8f49-49a1-8020-8c91fb2b9eea",
+                  "parent": "bf3ae079-11c7-480b-bf29-c0a666804cca",
                   "stage": 0
                 },
                 {
-                  "id": "41677ef2-ae67-4871-8f46-33d1d325cc78",
+                  "id": "b9961c19-ec42-457a-af4d-9cc3de88a10a",
                   "type": "engine",
                   "p": [
                     0,
@@ -305,11 +305,11 @@
                     0,
                     0
                   ],
-                  "parent": "27954ace-247f-4d28-ae0a-5c6b10c27adc",
+                  "parent": "0d91d67c-d925-4631-8e21-8fc6369d058f",
                   "stage": 0
                 },
                 {
-                  "id": "7f9918eb-5d05-4c99-b48d-e7c47de5c3ba",
+                  "id": "c31ec225-cce7-408f-a71c-60dc27dcd0bd",
                   "type": "solar",
                   "p": [
                     1.6,
@@ -321,11 +321,11 @@
                     0,
                     0
                   ],
-                  "parent": "c63b5abb-8f49-49a1-8020-8c91fb2b9eea",
+                  "parent": "bf3ae079-11c7-480b-bf29-c0a666804cca",
                   "stage": 0
                 },
                 {
-                  "id": "a9190985-f4e0-44a7-9f77-15782f53f1f4",
+                  "id": "766c506f-b80a-44b8-a5fe-3e8d21fff7a8",
                   "type": "solar",
                   "p": [
                     -1.6,
@@ -337,7 +337,7 @@
                     0,
                     0
                   ],
-                  "parent": "c63b5abb-8f49-49a1-8020-8c91fb2b9eea",
+                  "parent": "bf3ae079-11c7-480b-bf29-c0a666804cca",
                   "stage": 0
                 }
               ],
@@ -397,19 +397,19 @@
               "rcsEnabled": false,
               "fuel": [
                 [
-                  "27954ace-247f-4d28-ae0a-5c6b10c27adc",
+                  "0d91d67c-d925-4631-8e21-8fc6369d058f",
                   1800
                 ]
               ],
               "charge": [
                 [
-                  "c63b5abb-8f49-49a1-8020-8c91fb2b9eea",
+                  "bf3ae079-11c7-480b-bf29-c0a666804cca",
                   200
                 ]
               ],
               "observations": [
                 [
-                  "c63b5abb-8f49-49a1-8020-8c91fb2b9eea",
+                  "bf3ae079-11c7-480b-bf29-c0a666804cca",
                   {
                     "enabled": false,
                     "day": 0,
@@ -419,7 +419,7 @@
               ],
               "thermal": [
                 [
-                  "c63b5abb-8f49-49a1-8020-8c91fb2b9eea",
+                  "bf3ae079-11c7-480b-bf29-c0a666804cca",
                   {
                     "temperature": 288.15,
                     "ablator": 0,
@@ -427,7 +427,7 @@
                   }
                 ],
                 [
-                  "27954ace-247f-4d28-ae0a-5c6b10c27adc",
+                  "0d91d67c-d925-4631-8e21-8fc6369d058f",
                   {
                     "temperature": 288.15,
                     "ablator": 0,
@@ -435,7 +435,7 @@
                   }
                 ],
                 [
-                  "41677ef2-ae67-4871-8f46-33d1d325cc78",
+                  "b9961c19-ec42-457a-af4d-9cc3de88a10a",
                   {
                     "temperature": 288.15,
                     "ablator": 0,
@@ -443,7 +443,7 @@
                   }
                 ],
                 [
-                  "7f9918eb-5d05-4c99-b48d-e7c47de5c3ba",
+                  "c31ec225-cce7-408f-a71c-60dc27dcd0bd",
                   {
                     "temperature": 288.15,
                     "ablator": 0,
@@ -451,7 +451,7 @@
                   }
                 ],
                 [
-                  "a9190985-f4e0-44a7-9f77-15782f53f1f4",
+                  "766c506f-b80a-44b8-a5fe-3e8d21fff7a8",
                   {
                     "temperature": 288.15,
                     "ablator": 0,
@@ -1293,7 +1293,7 @@
           "kind": "nemonaut-flight",
           "version": 2,
           "partFrame": "nominal-center-v1",
-          "vesselId": "e230d5a2-8ada-4273-9e6a-4640ea27787e",
+          "vesselId": "caf3c9f1-a5ae-4ffc-9cc2-20ac149e171e",
           "physicsModel": "rotating-primary-v1",
           "universalTime": 0,
           "vesselName": "",
@@ -1302,7 +1302,7 @@
           "failureDynamics": false,
           "parts": [
             {
-              "id": "a9f601c1-b2cf-4122-bb7f-044e78a0eda6",
+              "id": "b16b4b5e-fd5a-403d-a0b6-66b25c721307",
               "type": "probe",
               "p": [
                 0,
@@ -1318,7 +1318,7 @@
               "stage": 0
             },
             {
-              "id": "671cb834-1f6b-4277-9538-5fe4df915f7e",
+              "id": "9d9e039a-3336-4eb8-be12-f65a9c112e25",
               "type": "tank",
               "p": [
                 0,
@@ -1330,11 +1330,11 @@
                 0,
                 0
               ],
-              "parent": "a9f601c1-b2cf-4122-bb7f-044e78a0eda6",
+              "parent": "b16b4b5e-fd5a-403d-a0b6-66b25c721307",
               "stage": 0
             },
             {
-              "id": "a7604ebb-6266-4dad-9ee8-88d2524663a8",
+              "id": "595e9bb4-932f-4333-8e50-cf1dbfa77422",
               "type": "engine",
               "p": [
                 0,
@@ -1346,11 +1346,11 @@
                 0,
                 0
               ],
-              "parent": "671cb834-1f6b-4277-9538-5fe4df915f7e",
+              "parent": "9d9e039a-3336-4eb8-be12-f65a9c112e25",
               "stage": 0
             },
             {
-              "id": "a348a672-4a2c-4392-9084-de4a1c14ab6e",
+              "id": "33a4cd85-8c71-4752-92a2-29f0974ded51",
               "type": "solar",
               "p": [
                 1.6,
@@ -1362,11 +1362,11 @@
                 0,
                 0
               ],
-              "parent": "a9f601c1-b2cf-4122-bb7f-044e78a0eda6",
+              "parent": "b16b4b5e-fd5a-403d-a0b6-66b25c721307",
               "stage": 0
             },
             {
-              "id": "94c55bc7-3510-477f-ac5f-ecafd6b76762",
+              "id": "aecef98a-eb02-4196-b973-999d3a792b3f",
               "type": "solar",
               "p": [
                 -1.6,
@@ -1378,7 +1378,7 @@
                 0,
                 0
               ],
-              "parent": "a9f601c1-b2cf-4122-bb7f-044e78a0eda6",
+              "parent": "b16b4b5e-fd5a-403d-a0b6-66b25c721307",
               "stage": 0
             }
           ],
@@ -1438,19 +1438,19 @@
           "rcsEnabled": false,
           "fuel": [
             [
-              "671cb834-1f6b-4277-9538-5fe4df915f7e",
+              "9d9e039a-3336-4eb8-be12-f65a9c112e25",
               1800
             ]
           ],
           "charge": [
             [
-              "a9f601c1-b2cf-4122-bb7f-044e78a0eda6",
+              "b16b4b5e-fd5a-403d-a0b6-66b25c721307",
               200
             ]
           ],
           "observations": [
             [
-              "a9f601c1-b2cf-4122-bb7f-044e78a0eda6",
+              "b16b4b5e-fd5a-403d-a0b6-66b25c721307",
               {
                 "enabled": false,
                 "day": 0,
@@ -1460,7 +1460,7 @@
           ],
           "thermal": [
             [
-              "a9f601c1-b2cf-4122-bb7f-044e78a0eda6",
+              "b16b4b5e-fd5a-403d-a0b6-66b25c721307",
               {
                 "temperature": 288.15,
                 "ablator": 0,
@@ -1468,7 +1468,7 @@
               }
             ],
             [
-              "671cb834-1f6b-4277-9538-5fe4df915f7e",
+              "9d9e039a-3336-4eb8-be12-f65a9c112e25",
               {
                 "temperature": 288.15,
                 "ablator": 0,
@@ -1476,7 +1476,7 @@
               }
             ],
             [
-              "a7604ebb-6266-4dad-9ee8-88d2524663a8",
+              "595e9bb4-932f-4333-8e50-cf1dbfa77422",
               {
                 "temperature": 288.15,
                 "ablator": 0,
@@ -1484,7 +1484,7 @@
               }
             ],
             [
-              "a348a672-4a2c-4392-9084-de4a1c14ab6e",
+              "33a4cd85-8c71-4752-92a2-29f0974ded51",
               {
                 "temperature": 288.15,
                 "ablator": 0,
@@ -1492,7 +1492,7 @@
               }
             ],
             [
-              "94c55bc7-3510-477f-ac5f-ecafd6b76762",
+              "aecef98a-eb02-4196-b973-999d3a792b3f",
               {
                 "temperature": 288.15,
                 "ablator": 0,
@@ -1510,7 +1510,7 @@
               "kind": "nemonaut-flight",
               "version": 2,
               "partFrame": "nominal-center-v1",
-              "vesselId": "99213e4c-9bcc-4536-bb2b-9b00e658d74e",
+              "vesselId": "36e57782-b21b-47a8-ac51-a3847c58831d",
               "physicsModel": "rotating-primary-v1",
               "universalTime": 0,
               "vesselName": "",
@@ -1519,7 +1519,7 @@
               "failureDynamics": false,
               "parts": [
                 {
-                  "id": "cc54ca52-32ea-4906-8a87-d58b2b2705a7",
+                  "id": "ea17901e-0db2-4569-96d8-d119f902e0fc",
                   "type": "probe",
                   "p": [
                     0,
@@ -1535,7 +1535,7 @@
                   "stage": 0
                 },
                 {
-                  "id": "32d76f9e-2212-4520-bcc1-c3bfa5d77631",
+                  "id": "63b69622-df66-4ac3-af5a-4aac4434af97",
                   "type": "tank",
                   "p": [
                     0,
@@ -1547,11 +1547,11 @@
                     0,
                     0
                   ],
-                  "parent": "cc54ca52-32ea-4906-8a87-d58b2b2705a7",
+                  "parent": "ea17901e-0db2-4569-96d8-d119f902e0fc",
                   "stage": 0
                 },
                 {
-                  "id": "d1e3bc7d-ccd6-4027-b6ba-9089d4134c32",
+                  "id": "f1c0fdfd-e44d-447e-a243-1b3f79ba5aed",
                   "type": "engine",
                   "p": [
                     0,
@@ -1563,11 +1563,11 @@
                     0,
                     0
                   ],
-                  "parent": "32d76f9e-2212-4520-bcc1-c3bfa5d77631",
+                  "parent": "63b69622-df66-4ac3-af5a-4aac4434af97",
                   "stage": 0
                 },
                 {
-                  "id": "8f16660c-5d2e-402b-a41f-4632d331ddfe",
+                  "id": "869daada-f2c3-4d85-a75c-6d48d33cf4cc",
                   "type": "solar",
                   "p": [
                     1.6,
@@ -1579,11 +1579,11 @@
                     0,
                     0
                   ],
-                  "parent": "cc54ca52-32ea-4906-8a87-d58b2b2705a7",
+                  "parent": "ea17901e-0db2-4569-96d8-d119f902e0fc",
                   "stage": 0
                 },
                 {
-                  "id": "5cc53c18-42b2-4e16-bbd2-e0d5afa3479a",
+                  "id": "fa920810-1017-4030-b0c4-eeb44bf59774",
                   "type": "solar",
                   "p": [
                     -1.6,
@@ -1595,7 +1595,7 @@
                     0,
                     0
                   ],
-                  "parent": "cc54ca52-32ea-4906-8a87-d58b2b2705a7",
+                  "parent": "ea17901e-0db2-4569-96d8-d119f902e0fc",
                   "stage": 0
                 }
               ],
@@ -1655,19 +1655,19 @@
               "rcsEnabled": false,
               "fuel": [
                 [
-                  "32d76f9e-2212-4520-bcc1-c3bfa5d77631",
+                  "63b69622-df66-4ac3-af5a-4aac4434af97",
                   1800
                 ]
               ],
               "charge": [
                 [
-                  "cc54ca52-32ea-4906-8a87-d58b2b2705a7",
+                  "ea17901e-0db2-4569-96d8-d119f902e0fc",
                   200
                 ]
               ],
               "observations": [
                 [
-                  "cc54ca52-32ea-4906-8a87-d58b2b2705a7",
+                  "ea17901e-0db2-4569-96d8-d119f902e0fc",
                   {
                     "enabled": false,
                     "day": 0,
@@ -1677,7 +1677,7 @@
               ],
               "thermal": [
                 [
-                  "cc54ca52-32ea-4906-8a87-d58b2b2705a7",
+                  "ea17901e-0db2-4569-96d8-d119f902e0fc",
                   {
                     "temperature": 288.15,
                     "ablator": 0,
@@ -1685,7 +1685,7 @@
                   }
                 ],
                 [
-                  "32d76f9e-2212-4520-bcc1-c3bfa5d77631",
+                  "63b69622-df66-4ac3-af5a-4aac4434af97",
                   {
                     "temperature": 288.15,
                     "ablator": 0,
@@ -1693,7 +1693,7 @@
                   }
                 ],
                 [
-                  "d1e3bc7d-ccd6-4027-b6ba-9089d4134c32",
+                  "f1c0fdfd-e44d-447e-a243-1b3f79ba5aed",
                   {
                     "temperature": 288.15,
                     "ablator": 0,
@@ -1701,7 +1701,7 @@
                   }
                 ],
                 [
-                  "8f16660c-5d2e-402b-a41f-4632d331ddfe",
+                  "869daada-f2c3-4d85-a75c-6d48d33cf4cc",
                   {
                     "temperature": 288.15,
                     "ablator": 0,
@@ -1709,7 +1709,7 @@
                   }
                 ],
                 [
-                  "5cc53c18-42b2-4e16-bbd2-e0d5afa3479a",
+                  "fa920810-1017-4030-b0c4-eeb44bf59774",
                   {
                     "temperature": 288.15,
                     "ablator": 0,
@@ -3586,7 +3586,7 @@
           "kind": "nemonaut-flight",
           "version": 2,
           "partFrame": "nominal-center-v1",
-          "vesselId": "9d009733-6a66-4785-9cb3-d10a08378d68",
+          "vesselId": "0f895d6c-5bc7-45c7-9991-c7d7045014cd",
           "physicsModel": "rotating-primary-v1",
           "universalTime": 0,
           "vesselName": "",
@@ -3595,7 +3595,7 @@
           "failureDynamics": false,
           "parts": [
             {
-              "id": "15d337b4-6a44-4ebb-951f-2bd3d685f4e2",
+              "id": "d939a23a-1c5d-4f89-ab81-fbb7c24eeb91",
               "type": "probe",
               "p": [
                 0,
@@ -3611,7 +3611,7 @@
               "stage": 0
             },
             {
-              "id": "e51afba6-5e61-4e48-8e7f-3f56d0e4fccb",
+              "id": "5cf05976-a55a-4f35-a2c4-a911df4d970d",
               "type": "tank",
               "p": [
                 0,
@@ -3623,7 +3623,7 @@
                 0,
                 0
               ],
-              "parent": "15d337b4-6a44-4ebb-951f-2bd3d685f4e2",
+              "parent": "d939a23a-1c5d-4f89-ab81-fbb7c24eeb91",
               "stage": 0,
               "fuelLoad": 1
             }
@@ -3689,19 +3689,19 @@
           "rcsEnabled": false,
           "fuel": [
             [
-              "e51afba6-5e61-4e48-8e7f-3f56d0e4fccb",
+              "5cf05976-a55a-4f35-a2c4-a911df4d970d",
               1800
             ]
           ],
           "charge": [
             [
-              "15d337b4-6a44-4ebb-951f-2bd3d685f4e2",
+              "d939a23a-1c5d-4f89-ab81-fbb7c24eeb91",
               200
             ]
           ],
           "observations": [
             [
-              "15d337b4-6a44-4ebb-951f-2bd3d685f4e2",
+              "d939a23a-1c5d-4f89-ab81-fbb7c24eeb91",
               {
                 "enabled": false,
                 "day": 0,
@@ -3711,7 +3711,7 @@
           ],
           "thermal": [
             [
-              "15d337b4-6a44-4ebb-951f-2bd3d685f4e2",
+              "d939a23a-1c5d-4f89-ab81-fbb7c24eeb91",
               {
                 "temperature": 288.15,
                 "ablator": 0,
@@ -3719,7 +3719,7 @@
               }
             ],
             [
-              "e51afba6-5e61-4e48-8e7f-3f56d0e4fccb",
+              "5cf05976-a55a-4f35-a2c4-a911df4d970d",
               {
                 "temperature": 288.15,
                 "ablator": 0,
@@ -3839,32 +3839,32 @@
                 },
                 "time": 0.7499999999999998,
                 "position": [
-                  -1.027141872120283,
-                  2.030492445281226,
-                  133.65647202937882
+                  -1.0271338346760168,
+                  2.030488714576186,
+                  133.6564335996756
                 ],
                 "velocity": [
-                  -1.6296997724854225,
-                  -4.019355772273934,
-                  178.98225984081992
+                  -1.6297191116860652,
+                  -4.019600364318325,
+                  178.98225707309666
                 ],
                 "quaternion": [
-                  0.00479419057164756,
-                  -0.00003781347924256595,
-                  0.0020813934433181877,
-                  0.9999863409608343
+                  0.004792701901871709,
+                  -0.00003770796548710789,
+                  0.0020798749434122097,
+                  0.9999863512602605
                 ],
                 "angularVelocity": [
-                  1.9636533351446024,
-                  -0.09261165549676909,
-                  2.0106778328962776
+                  1.9637456066998698,
+                  -0.09264355354196224,
+                  2.010795830243246
                 ],
                 "resources": [
                   {
                     "id": "p000",
                     "fuel": 0,
-                    "charge": 199.97754903018762,
-                    "temperature": 288.1500043903645,
+                    "charge": 199.9775710092305,
+                    "temperature": 288.15000439036345,
                     "ablator": 0
                   }
                 ]
@@ -3887,32 +3887,32 @@
                 },
                 "time": 0.7499999999999998,
                 "position": [
-                  -0.4418476428836584,
-                  1.147453797981143,
-                  132.08078000283493
+                  -0.44184173038229346,
+                  1.1474606341216713,
+                  132.08075693795647
                 ],
                 "velocity": [
-                  -0.20994802660445713,
-                  -0.18790033902506792,
-                  175.71280788063274
+                  -0.20995095171623557,
+                  -0.18802437804999103,
+                  175.71279164863486
                 ],
                 "quaternion": [
-                  0.19243487253034094,
-                  -0.007194585378746379,
-                  0.0014681039160371007,
-                  0.9812822746011218
+                  0.1924535821629046,
+                  -0.007192345871122205,
+                  0.0014670486800595975,
+                  0.9812786233489992
                 ],
                 "angularVelocity": [
-                  1.183688915812119,
-                  -0.1202671037139596,
-                  0.01526788055217864
+                  1.1835367333371103,
+                  -0.12026670538535982,
+                  0.015127488153221201
                 ],
                 "resources": [
                   {
                     "id": "p001",
                     "fuel": 0,
                     "charge": 0,
-                    "temperature": 288.1499899522574,
+                    "temperature": 288.149989952228,
                     "ablator": 0
                   }
                 ]
@@ -3949,32 +3949,32 @@
                 },
                 "time": 1.4999999999999971,
                 "position": [
-                  -1.8200081262524577,
-                  0.14061661520432445,
-                  266.6948558365649
+                  -1.8199348232453825,
+                  0.14060403305350877,
+                  266.6942026607619
                 ],
                 "velocity": [
-                  -0.30808836221694946,
-                  -0.07798536326147702,
-                  175.54490611885214
+                  -0.30811551213264465,
+                  -0.07799427867762743,
+                  175.54448780976438
                 ],
                 "quaternion": [
-                  0.00025006476596773426,
-                  -0.0002292659125007053,
-                  0.000006031464425403466,
-                  0.9999999424341861
+                  0.00024375115591633714,
+                  -0.00022993097472648235,
+                  0.000014503826535123257,
+                  0.9999999437533784
                 ],
                 "angularVelocity": [
-                  0.00029597558567422583,
-                  3.064255682153599e-8,
-                  -0.00006968103108953359
+                  0.0003068366327048561,
+                  3.1346045703463886e-8,
+                  -0.00007042164353741659
                 ],
                 "resources": [
                   {
                     "id": "p000",
                     "fuel": 0,
-                    "charge": 199.9250513555519,
-                    "temperature": 288.1500054728288,
+                    "charge": 199.92537567493594,
+                    "temperature": 288.1500054729187,
                     "ablator": 0
                   }
                 ]
@@ -3997,32 +3997,32 @@
                 },
                 "time": 1.4999999999999971,
                 "position": [
-                  -0.4568814840167761,
-                  1.0320976701332256,
-                  263.9405056750851
+                  -0.4568743214404094,
+                  1.0320726134814322,
+                  263.94025488584015
                 ],
                 "velocity": [
-                  -0.01826557144522667,
-                  -0.5912087824593673,
-                  176.19415942444303
+                  -0.018302995711565018,
+                  -0.5913045538448601,
+                  176.19425800298683
                 ],
                 "quaternion": [
-                  0.457450520939424,
-                  -0.006443315126612075,
-                  0.0033114765752539654,
-                  0.8892055660561964
+                  0.457475559495317,
+                  -0.00644147303492756,
+                  0.003310805360234269,
+                  0.8891927004072029
                 ],
                 "angularVelocity": [
-                  1.143926843880296,
-                  -0.0000033762976373939647,
-                  0.016692301250290476
+                  1.1440420000540021,
+                  -0.00001448814481185798,
+                  0.01672240529419334
                 ],
                 "resources": [
                   {
                     "id": "p001",
                     "fuel": 0,
                     "charge": 0,
-                    "temperature": 288.1499785605046,
+                    "temperature": 288.14997856052065,
                     "ablator": 0
                   }
                 ]
@@ -4059,32 +4059,32 @@
                 },
                 "time": 2.999999999999992,
                 "position": [
-                  -1.8527002076734411,
-                  -0.033417310256513844,
-                  529.1728684140691
+                  -1.852611163902679,
+                  -0.033467937893785216,
+                  529.1718805146419
                 ],
                 "velocity": [
-                  -0.00006187811231939122,
-                  -0.15443701315104055,
-                  174.94251512376695
+                  0.000003222664645363693,
+                  -0.15428373706607323,
+                  174.9425314460153
                 ],
                 "quaternion": [
-                  0.00043854972669012576,
-                  -0.00022924089110230576,
-                  0.0000015037562949818395,
-                  0.9999998775602374
+                  0.00044306762974610856,
+                  -0.00022990422695436845,
+                  0.000003020353127791051,
+                  0.999999875412992
                 ],
                 "angularVelocity": [
-                  0.0002148568705584903,
-                  -2.7088104344098687e-7,
-                  0.00030942310629810245
+                  0.00029588161668163865,
+                  1.4227926710169257e-8,
+                  -0.000016117974120826823
                 ],
                 "resources": [
                   {
                     "id": "p000",
                     "fuel": 0,
-                    "charge": 199.90157503710003,
-                    "temperature": 288.1500054642816,
+                    "charge": 199.90196805265825,
+                    "temperature": 288.1500054643712,
                     "ablator": 0
                   }
                 ]
@@ -4107,20 +4107,20 @@
                 },
                 "time": 2.999999999999992,
                 "position": [
-                  -0.47842965088784695,
-                  0.39353342936374247,
-                  527.0209067227553
+                  -0.47994291616238033,
+                  0.3934607228729874,
+                  527.0212948422627
                 ],
                 "velocity": [
                   0,
-                  -0.1536639603869976,
-                  174.94265507877807
+                  -0.1536640735513519,
+                  174.94265505757897
                 ],
                 "quaternion": [
-                  0.7073986098699039,
-                  -0.005129872338766715,
-                  0.005126904464630199,
-                  0.7067776213311554
+                  0.7073999837620837,
+                  -0.0051298392099209025,
+                  0.005125948022006223,
+                  0.7067762534069463
                 ],
                 "angularVelocity": [
                   0.0002915709005598028,
@@ -4132,7 +4132,7 @@
                     "id": "p001",
                     "fuel": 0,
                     "charge": 0,
-                    "temperature": 288.14996496923817,
+                    "temperature": 288.1499649696767,
                     "ablator": 0
                   }
                 ]
@@ -4144,6 +4144,570 @@
                 "cause": "impact",
                 "effect": "fuel-burst",
                 "time": 0.15833333333333333,
+                "fuel": 1800
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "name": "capsule-tank-rest-after-impact",
+        "dt": 0.008333333333333333,
+        "ticks": 240,
+        "mode": "impact",
+        "initial": {
+          "kind": "orbital-foundry-flight",
+          "version": 1,
+          "vesselId": "50d3959c-8a41-4026-8f29-70e405976511",
+          "physicsModel": "rotating-primary-v1",
+          "physicsMigration": null,
+          "universalTime": 0,
+          "vesselName": "",
+          "separationCount": 0,
+          "failureEvents": [],
+          "failureDynamics": false,
+          "parts": [
+            {
+              "id": "85055875-56fd-4e3b-8ca9-562b8bcee1ba",
+              "type": "capsule",
+              "p": [
+                0,
+                0,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": null,
+              "stage": 0
+            },
+            {
+              "id": "4d9fc5a9-4bbe-42a9-84d9-ebb70789b277",
+              "type": "tank",
+              "p": [
+                1.5,
+                0,
+                0
+              ],
+              "r": [
+                0,
+                0,
+                0
+              ],
+              "parent": "85055875-56fd-4e3b-8ca9-562b8bcee1ba",
+              "stage": 0,
+              "fuelLoad": 1
+            }
+          ],
+          "environment": "land",
+          "pos": [
+            0,
+            2.699999999976717,
+            0
+          ],
+          "vel": [
+            0,
+            -32,
+            174.94286106387227
+          ],
+          "q": [
+            -0.09905448310851656,
+            0.012446704603379653,
+            0.12405187902322888,
+            0.9872408116723228
+          ],
+          "omega": [
+            0.0002915709005598028,
+            0,
+            0
+          ],
+          "holdQ": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "sasMode": "hold",
+          "navigationFrame": "surface",
+          "navigationAuto": true,
+          "orbitalAscentSettings": null,
+          "runwayEnd": "09",
+          "cruiseSettings": null,
+          "targetPartId": null,
+          "dockingPorts": null,
+          "portTranslationEnabled": false,
+          "maneuver": null,
+          "transferGuide": null,
+          "state": {
+            "started": false,
+            "crashed": false,
+            "landed": false,
+            "sas": true,
+            "brake": true,
+            "reactionEnabled": true,
+            "steeringEnabled": true,
+            "driveEnabled": true,
+            "time": 0,
+            "stage": -1,
+            "throttle": 0,
+            "ballast": 0,
+            "trim": 0,
+            "maxAltitude": 0,
+            "landedTime": 0
+          },
+          "rcsEnabled": false,
+          "fuel": [
+            [
+              "4d9fc5a9-4bbe-42a9-84d9-ebb70789b277",
+              1800
+            ]
+          ],
+          "charge": [
+            [
+              "85055875-56fd-4e3b-8ca9-562b8bcee1ba",
+              1000
+            ]
+          ],
+          "observations": [],
+          "thermal": [
+            [
+              "85055875-56fd-4e3b-8ca9-562b8bcee1ba",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ],
+            [
+              "4d9fc5a9-4bbe-42a9-84d9-ebb70789b277",
+              {
+                "temperature": 288.15,
+                "ablator": 0,
+                "failed": false
+              }
+            ]
+          ],
+          "active": [],
+          "deflections": [],
+          "gimbals": [],
+          "wheelMotion": [],
+          "chutes": [],
+          "detached": [],
+          "meta": {}
+        },
+        "actions": [
+          {
+            "tick": 120,
+            "kind": "restore"
+          }
+        ],
+        "checkpoints": [
+          0,
+          60,
+          120,
+          240
+        ]
+      },
+      "expected": {
+        "name": "capsule-tank-rest-after-impact",
+        "mode": "impact",
+        "samples": [
+          {
+            "tick": 0,
+            "vessels": [
+              {
+                "key": "p000,p001",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "capsule",
+                    "parent": null
+                  },
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": "p000"
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 0,
+                "position": [
+                  1.1027505188730102,
+                  2.9759656142553323,
+                  -0.055940999469590746
+                ],
+                "velocity": [
+                  0,
+                  -32,
+                  174.94286106387227
+                ],
+                "quaternion": [
+                  -0.09905448310851658,
+                  0.012446704603379656,
+                  0.12405187902322891,
+                  0.987240811672323
+                ],
+                "angularVelocity": [
+                  0.0002915709005598028,
+                  0,
+                  0
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 1000,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  },
+                  {
+                    "id": "p001",
+                    "fuel": 1800,
+                    "charge": 0,
+                    "temperature": 288.15,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": []
+          },
+          {
+            "tick": 60,
+            "vessels": [
+              {
+                "key": "p000",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "capsule",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 0.5000000000000007,
+                "position": [
+                  0.6526811569929123,
+                  0.8621038019191474,
+                  88.96221578177843
+                ],
+                "velocity": [
+                  1.4311617612838745,
+                  -0.40711254418187676,
+                  177.8583350455815
+                ],
+                "quaternion": [
+                  0.1487383153404223,
+                  -0.053166504441400315,
+                  0.060809164118080274,
+                  0.9855721596689084
+                ],
+                "angularVelocity": [
+                  -0.6113152058137652,
+                  -0.0647135752848876,
+                  -0.30649942982411515
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 997.4675506423766,
+                    "temperature": 288.15000093038043,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p001",
+                "parts": [
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.5000000000000007,
+                "position": [
+                  2.762591094207725,
+                  1.3001960456462909,
+                  91.72737413617898
+                ],
+                "velocity": [
+                  3.0116944313049316,
+                  -1.5820553766246848,
+                  184.59788677895682
+                ],
+                "quaternion": [
+                  0.7503263246424842,
+                  -0.11144018864640401,
+                  -0.6495652293245054,
+                  -0.051541282051947135
+                ],
+                "angularVelocity": [
+                  7.4364220945822,
+                  1.205326687034116,
+                  -2.9971832552867275
+                ],
+                "resources": [
+                  {
+                    "id": "p001",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.15000050838245,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": [
+              {
+                "part": "p001",
+                "cause": "impact",
+                "effect": "fuel-burst",
+                "time": 0.06666666666666667,
+                "fuel": 1800
+              }
+            ]
+          },
+          {
+            "tick": 120,
+            "vessels": [
+              {
+                "key": "p000",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "capsule",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": false,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 0.9999999999999989,
+                "position": [
+                  1.2656722906976938,
+                  0.6674757618457079,
+                  177.50163161459918
+                ],
+                "velocity": [
+                  1.0055195093154907,
+                  -0.3883959425967075,
+                  176.31340838694723
+                ],
+                "quaternion": [
+                  0.019789023783458048,
+                  -0.059159399452767464,
+                  0.016283731713750575,
+                  0.9979195358722869
+                ],
+                "angularVelocity": [
+                  -0.4152239115251299,
+                  -0.011969256360534374,
+                  -0.17817386912884536
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 995.1085918128072,
+                    "temperature": 288.15000003024545,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p001",
+                "parts": [
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 0.9999999999999989,
+                "position": [
+                  3.9586971292683155,
+                  1.8620810128185432,
+                  183.3260862710129
+                ],
+                "velocity": [
+                  2.312631607055664,
+                  -0.8579144478362885,
+                  182.98901694069426
+                ],
+                "quaternion": [
+                  -0.13872835777287218,
+                  0.5843895542707683,
+                  0.025974557131902738,
+                  -0.7991048829726021
+                ],
+                "angularVelocity": [
+                  6.187560781715989,
+                  -1.2243948458320373,
+                  -2.7279144473111745
+                ],
+                "resources": [
+                  {
+                    "id": "p001",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.1499968195525,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": [
+              {
+                "part": "p001",
+                "cause": "impact",
+                "effect": "fuel-burst",
+                "time": 0.06666666666666667,
+                "fuel": 1800
+              }
+            ]
+          },
+          {
+            "tick": 240,
+            "vessels": [
+              {
+                "key": "p000",
+                "parts": [
+                  {
+                    "id": "p000",
+                    "type": "capsule",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": false,
+                  "landed": true,
+                  "controllable": true,
+                  "wreck": false
+                },
+                "time": 1.9999999999999953,
+                "position": [
+                  1.5258726839519938,
+                  0.5462432177737355,
+                  352.7720279408481
+                ],
+                "velocity": [
+                  4.5489773725648774e-8,
+                  -0.10285765442201962,
+                  174.94269918038717
+                ],
+                "quaternion": [
+                  0.00025386875069818447,
+                  -0.05949258724551193,
+                  0.000040867033702328756,
+                  0.9982287142450764
+                ],
+                "angularVelocity": [
+                  0.0002909180174007115,
+                  4.9060582953732444e-12,
+                  -6.998526912377237e-8
+                ],
+                "resources": [
+                  {
+                    "id": "p000",
+                    "fuel": 0,
+                    "charge": 990.825505413918,
+                    "temperature": 288.14999851257346,
+                    "ablator": 0
+                  }
+                ]
+              },
+              {
+                "key": "p001",
+                "parts": [
+                  {
+                    "id": "p001",
+                    "type": "tank",
+                    "parent": null
+                  }
+                ],
+                "state": {
+                  "stage": -1,
+                  "crashed": true,
+                  "landed": false,
+                  "controllable": false,
+                  "wreck": true
+                },
+                "time": 1.9999999999999953,
+                "position": [
+                  5.6448486490987815,
+                  1.3412196411835702,
+                  364.88852517730237
+                ],
+                "velocity": [
+                  0.8010286688804626,
+                  1.3294009066389865,
+                  179.72977389347156
+                ],
+                "quaternion": [
+                  -0.04556414383086639,
+                  -0.8282650574083394,
+                  0.3236470334007558,
+                  0.45514118825284383
+                ],
+                "angularVelocity": [
+                  3.8643114416586166,
+                  -0.22403006172213155,
+                  -0.6688162763429564
+                ],
+                "resources": [
+                  {
+                    "id": "p001",
+                    "fuel": 0,
+                    "charge": 0,
+                    "temperature": 288.14997838893737,
+                    "ablator": 0
+                  }
+                ]
+              }
+            ],
+            "events": [
+              {
+                "part": "p001",
+                "cause": "impact",
+                "effect": "fuel-burst",
+                "time": 0.06666666666666667,
                 "fuel": 1800
               }
             ]
