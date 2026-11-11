@@ -1,11 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {preset} from '../dist/catalog.js';
+import {preset, PARTS} from '../dist/catalog.js';
 import {Flight, statistics} from '../dist/core.js';
 import {transferTargets, transferFuel} from '../dist/fuel-transfer.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 import * as T from 'three';
-import {PARTS} from '../dist/catalog.js';
 import {partMass, partCenter, partRotation} from '../dist/aero.js';
 // Independent inertia sum: rotated cuboids plus the parallel-axis contribution.
 function momentumOf(f) {

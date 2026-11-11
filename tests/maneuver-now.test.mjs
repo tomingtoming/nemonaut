@@ -43,11 +43,16 @@ test('the automatic burn of a now-plan lights once aligned and completes', () =>
     runtime = new WorldRuntime(f),
     s = new ManeuverSession();
   try {
-    assert.throws(
-      () => new ManeuverSession().start(vessel(false)),
-      /過去/,
-      'without the mark the same plan is refused'
-    );
+    const unmarked = vessel(false);
+    try {
+      assert.throws(
+        () => new ManeuverSession().start(unmarked),
+        /過去/,
+        'without the mark the same plan is refused'
+      );
+    } finally {
+      unmarked.dispose();
+    }
     s.start(f, {throttle: 0.1});
     const deadline = s.plan.startTime;
     let litAt = null;

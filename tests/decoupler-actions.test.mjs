@@ -5,6 +5,7 @@ import {Flight, descendants} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {fleet} from '../dist/fleet.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
+import {stagePlan} from '../dist/staging.js';
 test('Individual separation preserves stage, ignition and resources with rotating mass conservation', () => {
   const f = new Flight(preset('launcher'), 'orbit');
   let restored;
@@ -85,7 +86,6 @@ test('Individual separation does not start flight or arm chutes and rejects unav
     f.dispose();
   }
 });
-import {stagePlan} from '../dist/staging.js';
 test('Large lunar stack supports lower-first and upper-first individual separation with stable stage slots', () => {
   for (const order of [[1, 2, 3], [3]]) {
     const f = new Flight(preset('lunar-surface-expedition'), 'orbit');

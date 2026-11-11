@@ -94,38 +94,31 @@ test('Reference performance excludes fuel-starved clusters from thrust and Isp',
 
 import {stageFuelLevels} from '../dist/stage-fuel.js';
 
-test('Explicit thrust media preserve every engine burn and fuel gauge without legacy flags', () => {
-  for (const [type, definition] of Object.entries(PARTS).filter(([, d]) => d.thrust > 0)) {
-    const saved = PARTS[type];
+test('Every thrust part burns and gauges fuel as its family did before thrustMedium existed', () => {
+  for (const [type, saved] of Object.entries(PARTS).filter(([, d]) => d.thrust > 0)) {
     // Frozen pre-migration families: the expected calculation must not read thrustMedium.
     const air = ['jet', 'jetLarge', 'transportJet'].includes(type);
     const water = ['propeller', 'propellerLarge'].includes(type);
-    const withoutFlags = {...saved};
     const parts = [
       {id: 'supply', type: 'tank', stage: 0},
       {id: 'motor', type, parent: 'supply', stage: 0}
     ];
-    try {
-      PARTS[type] = withoutFlags;
-      const network = fuelNetworks(parts);
-      assert.equal(network.network.get('motor').engines.length, water ? 0 : 1, type);
-      assert.equal(stageFuelLevels(parts).size, water ? 0 : 1, type);
-      assert.equal(stagePerformance(parts).length, water ? 0 : 1, type);
-      for (const density of [0, 0.6125, 1.225]) {
-        const fuel = createFuel(parts);
-        const before = fuel.get('supply');
-        const pressure = (density / 1.225) * 101325;
-        const isp =
-          saved.ispSeaLevel === undefined
-            ? saved.isp
-            : saved.isp + ((saved.ispSeaLevel - saved.isp) * pressure) / 101325;
-        const expected = water ? 0 : saved.thrust * 0.5 * (air ? density / 1.225 : isp / saved.isp);
-        const actual = engineBurn(network, fuel, new Set(['motor']), 0.5, density, 0.01);
-        assert.ok(Math.abs((actual.get('motor') || 0) - expected) < 1e-8, `${type} at ${density}`);
-        assert.ok(Math.abs(before - fuel.get('supply') - (expected * 0.01) / (isp * 9.81)) < 1e-9, type);
-      }
-    } finally {
-      PARTS[type] = saved;
+    const network = fuelNetworks(parts);
+    assert.equal(network.network.get('motor').engines.length, water ? 0 : 1, type);
+    assert.equal(stageFuelLevels(parts).size, water ? 0 : 1, type);
+    assert.equal(stagePerformance(parts).length, water ? 0 : 1, type);
+    for (const density of [0, 0.6125, 1.225]) {
+      const fuel = createFuel(parts);
+      const before = fuel.get('supply');
+      const pressure = (density / 1.225) * 101325;
+      const isp =
+        saved.ispSeaLevel === undefined
+          ? saved.isp
+          : saved.isp + ((saved.ispSeaLevel - saved.isp) * pressure) / 101325;
+      const expected = water ? 0 : saved.thrust * 0.5 * (air ? density / 1.225 : isp / saved.isp);
+      const actual = engineBurn(network, fuel, new Set(['motor']), 0.5, density, 0.01);
+      assert.ok(Math.abs((actual.get('motor') || 0) - expected) < 1e-8, `${type} at ${density}`);
+      assert.ok(Math.abs(before - fuel.get('supply') - (expected * 0.01) / (isp * 9.81)) < 1e-9, type);
     }
   }
 });

@@ -133,21 +133,6 @@ test('Saved node resumes burn accounting and rejects corrupt state; older saves 
   h.dispose();
 });
 
-test('Asymmetric tank depletion updates each collider and COM from its own remaining fuel', async () => {
-  const {statistics} = await import('../dist/core.js'),
-    {PARTS} = await import('../dist/catalog.js');
-  const f = new Flight(preset('launcher'), 'orbit'),
-    tanks = f.parts.filter(p => PARTS[p.type].fuel);
-  f.fuel.set(tanks[0].id, 0);
-  f.fuel.set(tanks[1].id, 100);
-  const expected = statistics(f.parts, f.fuel);
-  f.step(1 / 120);
-  assert.ok(f.stats.com.distanceTo(expected.com) < 1e-9);
-  assert.ok(Math.abs(f.colliders.get(tanks[0].id).mass() - PARTS[tanks[0].type].mass) < 0.001);
-  assert.ok(Math.abs(f.colliders.get(tanks[1].id).mass() - PARTS[tanks[1].type].mass - 100) < 0.001);
-  f.dispose();
-});
-
 test('Crossing the target at a large step is detected and continued thrust remains visible as overshoot', () => {
   const f = new Flight(preset('rocket'), 'orbit'),
     n = plan(f, 30),

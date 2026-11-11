@@ -15,6 +15,15 @@ const SRC = path.join(root, 'src'),
   OUT = path.join(root, 'dist');
 export const WORKERS = ['takeoff-forecast-worker.js', 'landing-plan-worker.js'];
 const isDeclaration = f => /\.d\.m?ts$/.test(f);
+/** esbuild options for one .ts module; `rel` is its path below src/. */
+export const transformOptions = rel => ({
+  loader: 'ts',
+  format: 'esm',
+  target: 'es2022',
+  charset: 'utf8',
+  sourcefile: rel,
+  tsconfigRaw: {compilerOptions: {verbatimModuleSyntax: true}}
+});
 
 async function* walk(dir) {
   for (const e of await readdir(dir, {withFileTypes: true})) {
@@ -35,14 +44,7 @@ export async function buildSite({quiet = false} = {}) {
     if (rel.endsWith('.ts')) {
       const target = path.join(OUT, rel.slice(0, -3) + '.js');
       await mkdir(path.dirname(target), {recursive: true});
-      const {code} = await transform(await readFile(file, 'utf8'), {
-        loader: 'ts',
-        format: 'esm',
-        target: 'es2022',
-        charset: 'utf8',
-        sourcefile: rel,
-        tsconfigRaw: {compilerOptions: {verbatimModuleSyntax: true}}
-      });
+      const {code} = await transform(await readFile(file, 'utf8'), transformOptions(rel));
       await writeFile(target, code);
       transformed++;
     } else {

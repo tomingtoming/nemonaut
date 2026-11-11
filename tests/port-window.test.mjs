@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';
-import {preset} from '../dist/catalog.js';
-import {portWindowState, operatePort} from '../dist/port-window.js';
+import {preset, part} from '../dist/catalog.js';
+import {portWindowState, operatePort, guideFromPort, setPortTranslation} from '../dist/port-window.js';
+import {selectDockingPorts, setTarget} from '../dist/relative-navigation.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 test('Either bonded port can split then selected peer can redock through the part window adapter', () => {
   for (const side of [0, 1]) {
@@ -51,8 +52,7 @@ test('Stale target, occupied own port and out-of-range docking cannot mutate the
   }
 });
 
-test('Port guidance binds exact port IDs, aligns without thrust, persists and rejects stale targets', async () => {
-  const {guideFromPort} = await import('../dist/port-window.js');
+test('Port guidance binds exact port IDs, aligns without thrust, persists and rejects stale targets', () => {
   let f = new Flight(preset('docking'), 'orbit'),
     restored;
   try {
@@ -85,8 +85,7 @@ test('Port guidance binds exact port IDs, aligns without thrust, persists and re
   }
 });
 
-test('Part-window translation switch only controls its selected pair and preserves RCS, SAS and throttle', async () => {
-  const {guideFromPort, setPortTranslation} = await import('../dist/port-window.js');
+test('Part-window translation switch only controls its selected pair and preserves RCS, SAS and throttle', () => {
   let f = new Flight(preset('docking'), 'orbit'),
     restored;
   try {
@@ -114,10 +113,7 @@ test('Part-window translation switch only controls its selected pair and preserv
   }
 });
 
-test('Changing ports through the navigation panel resets guidance and invalidates a pinned window selection', async () => {
-  const {part} = await import('../dist/catalog.js'),
-    {selectDockingPorts, setTarget} = await import('../dist/relative-navigation.js'),
-    {guideFromPort, setPortTranslation} = await import('../dist/port-window.js');
+test('Changing ports through the navigation panel resets guidance and invalidates a pinned window selection', () => {
   const make = () => {
     const p = preset('rcs');
     p.push(

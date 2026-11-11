@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
+import {saveFlight, loadFlight} from '../dist/flight-save.js';
 
-test('Swift lifts off a rotating runway using its elevator and preserves an airborne save', async () => {
-  const {saveFlight, loadFlight} = await import('../dist/flight-save.js');
+test('Swift lifts off a rotating runway using its elevator and preserves an airborne save', () => {
   for (const epoch of [0, 159542]) {
     const f = new Flight(preset('plane'), 'runway', epoch);
     let restored;

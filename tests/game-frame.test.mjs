@@ -18,7 +18,7 @@ const equalParts = (a, b) =>
     assert.ok(new T.Vector3(...p.p).distanceTo(new T.Vector3(...b[i].p)) < 1e-10);
     assert.deepEqual({...p, p: []}, {...b[i], p: []});
   });
-test('game writer changes only workshop coordinates and repeated storage resumes preserve the world', () => {
+test('the game writer stores centred workshop parts as they are and repeated storage resumes preserve the draft and the world', () => {
   const flight = new Flight(preset('plane'), 'orbit', 1234);
   try {
     const original = gameRecord({world: worldFromFlight(saveFlight(flight)), draft: draft()}),
@@ -49,12 +49,12 @@ test('game writer changes only workshop coordinates and repeated storage resumes
   }
 });
 test('empty drafts remain valid and invalid frame combinations reject', () => {
-  const legacy = gameRecord({
+  const empty = gameRecord({
     world: worldFromFlight(null, {universalTime: 9}),
     draft: {...draft(), parts: []}
   });
-  assert.deepEqual(validateGame(writeGame(legacy)), legacy);
-  const encoded = writeGame(gameRecord({world: legacy.world, draft: draft()}));
+  assert.deepEqual(validateGame(writeGame(empty)), empty);
+  const encoded = writeGame(gameRecord({world: empty.world, draft: draft()}));
   for (const mutate of [
     s => delete s.partFrame,
     s => (s.version = 99),

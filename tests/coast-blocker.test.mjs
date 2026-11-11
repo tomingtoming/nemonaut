@@ -6,6 +6,7 @@ import {advanceCoastFleet, coastBlocker} from '../dist/coast-flight.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 import {pendingBurns} from '../dist/burn-schedule.js';
 import {trackingList} from '../dist/tracking.js';
+import {physicalWarpStop} from '../dist/physics-clock.js';
 
 test('An overdue retained-vessel plan identifies its owner without mutating the fleet', () => {
   const a = new Flight(preset('orbiter'), 'orbit', 100),
@@ -93,8 +94,7 @@ test('A coast that reaches a future deadline retains the limiting vessel', () =>
   }
 });
 
-test('Ordinary maneuver coast stops with the same sixty-second alignment margin as physical warp', async () => {
-  const {physicalWarpStop} = await import('../dist/physics-clock.js');
+test('Ordinary maneuver coast stops with the same sixty-second alignment margin as physical warp', () => {
   const f = new Flight(preset('orbital-tug'), 'orbit', 100);
   try {
     f.maneuver = {universalTime: 220, time: 120, complete: false};

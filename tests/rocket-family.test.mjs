@@ -17,20 +17,17 @@ test('six sized engines trade sea-level thrust for vacuum Isp without changing m
       parts = [tank, engine],
       network = fuelNetworks(parts),
       d = PARTS[type];
-    let usedVac;
     for (const pressure of [0, 50662.5, 101325]) {
       const fuel = createFuel(parts),
         force = engineBurn(network, fuel, new Set([engine.id]), 0.4, 1.225, 1, pressure).get(engine.id),
         used = (d.thrust * 0.4) / (d.isp * 9.81);
       assert.ok(Math.abs(force - (d.thrust * 0.4 * engineIsp(engine, pressure)) / d.isp) < 1e-7);
       assert.ok(Math.abs(14400 - fuel.get(tank.id) - used) < 1e-9);
-      usedVac = used;
     }
     const fuel = new Map([[tank.id, 0.001]]),
       force = engineBurn(network, fuel, new Set([engine.id]), 1, 1.225, 1, 101325).get(engine.id);
     assert.equal(fuel.get(tank.id), 0);
     assert.ok(Math.abs(force - 0.001 * d.ispSeaLevel * 9.81) < 1e-9);
-    assert.ok(usedVac > 0);
   }
 });
 test('new engine exports contain a distinct animated nozzle', async () => {

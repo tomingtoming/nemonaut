@@ -98,7 +98,7 @@ test('Sea departure is independent of occupied land sites and follows planetary 
     }
   }
 });
-test('Legacy sea vessels retain their saved location on load', () => {
+test('A vessel saved as a sea departure away from the sea site keeps its saved position, attitude and velocity on load', () => {
   const f = new Flight(preset('boat'), 'land', 1234);
   let restored;
   try {

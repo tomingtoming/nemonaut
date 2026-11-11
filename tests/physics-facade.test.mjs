@@ -4,8 +4,8 @@ import {readFileSync} from 'node:fs';
 import R from '@dimforge/rapier3d-compat';
 import P, {installPhysics} from '../dist/physics.js';
 
-// Oracle: JS Rapier 0.21 with its own solver (no Rust installed on this module instance, the
-// preload installs on the vendor copy). The facade must give the very same numbers.
+// Oracle: the npm JS Rapier 0.21 with its own solver. The facade (dist/physics.js on the Rust engine)
+// must give the very same numbers.
 await R.init();
 installPhysics(
   await WebAssembly.compile(readFileSync(new URL('../dist/engine/orbital_engine.wasm', import.meta.url)))
@@ -105,12 +105,11 @@ test('the facade reproduces JS Rapier bit for bit: mass properties, forces, step
     actual = [];
   const a = scene(R),
     b = scene(P);
-  for (const [x, y] of [[a, b]])
-    for (let i = 0; i < 3; i++) {
-      assert.deepEqual(v(y.parts[i].translationWrtParent()), v(x.parts[i].translationWrtParent()));
-      assert.deepEqual(q(y.parts[i].rotationWrtParent()), q(x.parts[i].rotationWrtParent()));
-      assert.equal(y.parts[i].shapeType(), x.parts[i].shapeType());
-    }
+  for (let i = 0; i < 3; i++) {
+    assert.deepEqual(v(b.parts[i].translationWrtParent()), v(a.parts[i].translationWrtParent()));
+    assert.deepEqual(q(b.parts[i].rotationWrtParent()), q(a.parts[i].rotationWrtParent()));
+    assert.equal(b.parts[i].shapeType(), a.parts[i].shapeType());
+  }
   drive(R, a, expected);
   drive(P, b, actual);
   assert.ok(

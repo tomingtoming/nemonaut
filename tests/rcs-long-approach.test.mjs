@@ -38,11 +38,9 @@ test('RCS forces approach from 56 m with lateral offset and dock without telepor
     assert.ok(g.lateral < 0.001);
     assert.ok(g.speed < 0.03);
     assert.ok([...f.fuel.values()].reduce((a, b) => a + b, 0) < 48);
-    if (dockingStatus(f, ai, b, bi).ready) {
-      f = dockVessels(f, b, ai, bi);
-      assert.equal(f.parts.length, 14);
-      assert.equal(f.detached.length, 0);
-    }
+    f = dockVessels(f, b, ai, bi);
+    assert.equal(f.parts.length, 14);
+    assert.equal(f.detached.length, 0);
   } finally {
     f.dispose();
   }

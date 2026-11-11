@@ -2,7 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PerspectiveCamera, Vector3, Quaternion} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {setOrbitUp, frameTrackedVessel, constrainSurfaceCamera} from '../dist/camera-up.js';
+import {
+  setOrbitUp,
+  frameTrackedVessel,
+  constrainSurfaceCamera,
+  flightFrameOffset
+} from '../dist/camera-up.js';
 
 test('OrbitControls uses the local vertical through body rotation and workshop return', () => {
   const camera = new PerspectiveCamera(),
@@ -71,8 +76,7 @@ test('surface constraint keeps camera outside mother planet and moving moon with
   }
 });
 
-test('marine framing follows shallow dives while land framing retains the overhead view', async () => {
-  const {flightFrameOffset} = await import('../dist/camera-up.js');
+test('marine framing follows shallow dives while land framing retains the overhead view', () => {
   const center = new Vector3(0, -600000, 0),
     radius = 600000;
   for (const up of [new Vector3(0, 1, 0), new Vector3(0, -1, 0), new Vector3(1, 2, 3).normalize()])

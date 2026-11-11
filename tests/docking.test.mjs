@@ -29,14 +29,34 @@ function pair() {
   b.vel.set(0, 0, 0);
   return [a, b, a.parts[1].id, b.parts[1].id];
 }
-test('Docking uses port geometry across land, runway and sea departures', () => {
+test('Vessels from land, runway and sea departures dock by port geometry and stay where they are', () => {
+  for (const [own, other] of [
+    ['land', 'runway'],
+    ['runway', 'water'],
+    ['water', 'land']
+  ]) {
+    const [a, b, ai, bi] = pair();
+    a.environment = own;
+    b.environment = other;
+    a.detached = [b];
+    assert.equal(dockingStatus(a, ai, b, bi).ready, true);
+    const poses = new Map(
+      [a, b].flatMap(v => v.parts.map(p => [p.id, new T.Vector3(...p.p).applyQuaternion(v.q).add(v.pos)]))
+    );
+    // The combined vessel is rebuilt as a new flight of the root's departure environment.
+    const merged = dockVessels(a, b, ai, bi);
+    try {
+      assert.equal(merged.environment, own);
+      for (const p of merged.parts)
+        assert.ok(
+          new T.Vector3(...p.p).applyQuaternion(merged.q).add(merged.pos).distanceTo(poses.get(p.id)) < 1e-9,
+          own + ': ' + p.type
+        );
+    } finally {
+      merged.dispose();
+    }
+  }
   const [a, b, ai, bi] = pair();
-  b.environment = 'land';
-  assert.equal(dockingStatus(a, ai, b, bi).ready, true);
-  b.environment = 'runway';
-  assert.equal(dockingStatus(a, ai, b, bi).ready, true);
-  b.environment = 'water';
-  assert.equal(dockingStatus(a, ai, b, bi).ready, true);
   b.pos.x += 1;
   assert.match(dockingStatus(a, ai, b, bi).reason, /離れ/);
   a.dispose();

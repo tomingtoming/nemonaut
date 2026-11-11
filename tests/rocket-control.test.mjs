@@ -5,7 +5,7 @@ import {preset} from '../dist/catalog.js';
 const run = (f, n, input = {}) => {
   for (let i = 0; i < n; i++) f.step(1 / 120, input);
 };
-test('Rocket exceeds 400 m/s under sustained thrust', () => {
+test('Rocket exceeds 600 m/s under sustained thrust', () => {
   const f = new Flight(preset('rocket'), 'land');
   try {
     f.throttle = 1;

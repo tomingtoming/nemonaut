@@ -54,7 +54,7 @@ test('Retirement rejects invalid requests atomically and clears only affected na
   after.dispose();
   b.dispose();
 });
-test('Recovering the controlled root preserves debris-only saves and permits new launches', () => {
+test('Terminating the controlled root preserves debris-only saves and permits new launches', () => {
   const f = new Flight(preset('launcher'), 'orbit');
   f.stageNext();
   f.stageNext();

@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {readdirSync, readFileSync, existsSync, statSync} from 'node:fs';
 import path from 'node:path';
 import {transform} from 'esbuild';
+// The module workers (WORKERS): an import map does not apply inside a worker, so each is bundled with its imports.
+import {WORKERS, transformOptions} from '../tools/build.mjs';
 
 // npm test builds dist first (pretest); these check that what is served is what src says.
 const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
@@ -12,10 +14,8 @@ const walk = dir =>
   readdirSync(dir, {withFileTypes: true}).flatMap(e =>
     e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]
   );
-// The module workers: an import map does not apply inside a worker, so each is bundled with its imports.
-const WORKERS = ['landing-plan-worker.js', 'takeoff-forecast-worker.js'];
 
-test('every source file is delivered unchanged, declarations are not', () => {
+test('static files are delivered byte for byte, each .ts as the build transform of its source, declarations not at all', async () => {
   for (const file of walk(src)) {
     const rel = path.relative(src, file);
     if (/\.d\.m?ts$/.test(rel)) {
@@ -23,7 +23,16 @@ test('every source file is delivered unchanged, declarations are not', () => {
       continue;
     }
     if (rel.endsWith('.ts')) {
-      assert.ok(existsSync(path.join(dist, rel.slice(0, -3) + '.js')), rel + ' must be transformed');
+      const name = rel.slice(0, -3) + '.js';
+      assert.ok(existsSync(path.join(dist, name)), rel + ' must be transformed');
+      // The two workers are bundled over their transformed module afterwards.
+      if (WORKERS.includes(name)) continue;
+      const {code} = await transform(readFileSync(file, 'utf8'), transformOptions(rel));
+      assert.equal(
+        readFileSync(path.join(dist, name), 'utf8'),
+        code,
+        rel + ' differs in dist: run npm run build'
+      );
       continue;
     }
     assert.ok(
@@ -45,11 +54,14 @@ test('each worker is one self-contained bundle built from its src module', () =>
       assert.equal(specifier, './vendor/three/three.module.js', name + ' must not import ' + specifier);
   }
 });
-test('a .ts module becomes plain ES module JS with its import path unchanged', async () => {
-  const {code} = await transform(
-    "import {g} from './celestial.js';\nexport const lift=(v: number): number=>g*v;\n",
-    {loader: 'ts', format: 'esm', target: 'es2022', charset: 'utf8'}
-  );
-  assert.match(code, /from "\.\/celestial\.js"/);
-  assert.doesNotMatch(code, /: number/);
+test('a delivered .ts module is plain ES module JS with its import paths as written', async () => {
+  const source = readFileSync(path.join(src, 'surface-frame.ts'), 'utf8'),
+    code = readFileSync(path.join(dist, 'surface-frame.js'), 'utf8');
+  assert.match(source, /\): T\.Quaternion \{/, 'the source has type annotations to strip');
+  // Parsing as JavaScript fails on any TypeScript syntax that was left in.
+  await transform(code, {loader: 'js', format: 'esm'});
+  const written = [...source.matchAll(/^import\s+(?!type\b)[^;]*?from\s+'([^']+)'/gm)].map(m => m[1]),
+    delivered = [...code.matchAll(/^import\s[^;]*?from\s+"([^"]+)"/gm)].map(m => m[1]);
+  assert.ok(written.some(s => s.startsWith('./') && s.endsWith('.js')));
+  assert.deepEqual(delivered, written);
 });

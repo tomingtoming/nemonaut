@@ -7,7 +7,7 @@ const baseline = JSON.parse(
   readFileSync(new URL('./golden/js-v1.json', import.meta.url), 'utf8').replace(/^\uFEFF/, '')
 );
 for (const {definition, expected} of baseline.cases)
-  test('JS golden: ' + definition.name, () =>
+  test('golden v1 (recorded on the JS solver, replayed on Rust): ' + definition.name, () =>
     assertGolden(expected, replay(definition), {mode: definition.mode, limits: baseline.tolerances})
   );
 test('golden rejects control/topology/fuel regressions but tolerates numeric noise and quaternion sign', () => {
@@ -48,10 +48,10 @@ test('impact comparison still rejects nonfinite diagnostic trajectories', () => 
 
 // Golden v2 (sprint 303): the failed part is decided by contact impulse ranking.
 const v2 = JSON.parse(
-  readFileSync(new URL('./golden/js-v2.json', import.meta.url), 'utf8').replace(/^﻿/, '')
+  readFileSync(new URL('./golden/js-v2.json', import.meta.url), 'utf8').replace(/^\uFEFF/, '')
 );
 for (const {definition, expected} of v2.cases)
-  test('JS golden v2: ' + definition.name, () =>
+  test('golden v2 (recorded on the JS solver, replayed on Rust): ' + definition.name, () =>
     assertGolden(expected, replay(definition), {mode: definition.mode, limits: v2.tolerances})
   );
 test('golden v2 rejects contact impulses that are read as zero', async () => {
@@ -76,7 +76,7 @@ test('golden v2 rejects contact impulses that are read as zero', async () => {
 
 // Golden v3 (sprint 307): vessel-vessel collision on Rust physics.
 const v3 = JSON.parse(
-  readFileSync(new URL('./golden/js-v3.json', import.meta.url), 'utf8').replace(/^﻿/, '')
+  readFileSync(new URL('./golden/js-v3.json', import.meta.url), 'utf8').replace(/^\uFEFF/, '')
 );
 for (const {definition, expected} of v3.cases)
   test('Rust golden v3: ' + definition.name, () =>

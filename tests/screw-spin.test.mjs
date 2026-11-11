@@ -10,6 +10,7 @@ import {
 } from '../dist/screw-spin.js';
 import {Flight} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
+import {bodyUp} from '../dist/celestial.js';
 
 test('the rotor speed follows the thrust given, and a larger screw turns more slowly', () => {
   assert.equal(screwSpinTarget(0, 6000, 0.4), 0);
@@ -45,7 +46,7 @@ test('only the declared blades turn, even inside a wider housing', () => {
   assert.equal(housing.parent, model);
   assert.ok(blades.getWorldPosition(new T.Vector3()).distanceTo(before) < 1e-9);
 });
-test('a screw gives thrust (and so turns) only when started, throttled and in the water', () => {
+test('a screw gives thrust only when started, throttled and in the water', () => {
   const f = new Flight(preset('sub'), 'water');
   try {
     const screw = f.parts.find(p => p.type === 'propeller');
@@ -60,7 +61,10 @@ test('a screw gives thrust (and so turns) only when started, throttled and in th
     for (let i = 0; i < 12; i++) f.step(1 / 120);
     const thrust = f.engineThrust.get(screw.id) || 0;
     assert.ok(thrust > 0 && thrust <= 6000, String(thrust));
-    assert.ok(screwSpinTarget(thrust, 6000, 0.4) > 0);
+    // Lifted clear of the sea, the same started screw at full throttle gives nothing.
+    f.pos.addScaledVector(bodyUp(f.pos, f.universalTime), 50);
+    for (let i = 0; i < 12; i++) f.step(1 / 120);
+    assert.equal(f.engineThrust.get(screw.id) || 0, 0, 'out of the water');
   } finally {
     f.dispose();
   }

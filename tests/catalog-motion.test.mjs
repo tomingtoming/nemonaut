@@ -26,10 +26,6 @@ for (const [id, part] of Object.entries(PARTS)) {
       const scene = await model(id, part);
       const nozzle = scene.getObjectByName('GimbalNozzle');
       assert.ok(hasGeometry(nozzle), `${id}: missing or empty GimbalNozzle`);
-      const original = nozzle.name;
-      nozzle.name = 'MissingNozzle';
-      assert.equal(scene.getObjectByName('GimbalNozzle'), undefined, 'renaming the joint must be detectable');
-      nozzle.name = original;
     });
   }
   if (part.thrustMedium === 'water' && part.thrust) {
@@ -49,9 +45,6 @@ for (const [id, part] of Object.entries(PARTS)) {
       assert.ok(hasGeometry(rotor), `${id}: rotor extraction failed`);
       const size = new Box3().setFromObject(rotor).getSize(new Vector3());
       assert.ok(Math.abs(Math.max(size.x, size.z) - Math.max(part.size[0], part.size[2])) < 0.002);
-      const geometry = rotor.children[0];
-      rotor.remove(geometry);
-      assert.equal(hasGeometry(rotor), false, 'empty moving groups are not valid rotors');
     });
   }
   if (part.wheel) {

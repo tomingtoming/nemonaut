@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {PARTS, part} from '../dist/catalog.js';
+import {PARTS, part, preset} from '../dist/catalog.js';
 import {Flight, statistics} from '../dist/core.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
 import {partCenter, partRotation} from '../dist/aero.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import P from '../dist/physics.js';
+import {createPartColliders} from '../dist/part-colliders.js';
 
 await RAPIER.init();
-import {createPartColliders} from '../dist/part-colliders.js';
 
 test('hollow part preserves cavity, rotated wall positions, mass and COM across rebuild and save', () => {
   const original = PARTS.tank;
@@ -110,15 +110,29 @@ test('compound definition rejects a mass center that disagrees with flight stati
   const original = PARTS.tank;
   PARTS.tank = {...original, collisionBoxes: [{center: [1, 0, 0], size: [1, 1, 1]}]};
   // Validate through the helper on an owned world so failure is disposed as well.
-  return import('../dist/part-colliders.js').then(async ({createPartColliders}) => {
-    const world = new P.World({x: 0, y: 0, z: 0});
-    try {
-      const body = world.createRigidBody(P.RigidBodyDesc.dynamic());
-      assert.throws(() => createPartColliders(world, body, part('tank'), 100), /mass center/);
-      assert.equal(body.numColliders(), 0);
-    } finally {
-      world.free();
-      PARTS.tank = original;
-    }
-  });
+  const world = new P.World({x: 0, y: 0, z: 0});
+  try {
+    const body = world.createRigidBody(P.RigidBodyDesc.dynamic());
+    assert.throws(() => createPartColliders(world, body, part('tank'), 100), /mass center/);
+    assert.equal(body.numColliders(), 0);
+  } finally {
+    world.free();
+    PARTS.tank = original;
+  }
+});
+
+test('Asymmetric tank depletion updates each collider and COM from its own remaining fuel', () => {
+  const f = new Flight(preset('launcher'), 'orbit'),
+    tanks = f.parts.filter(p => PARTS[p.type].fuel);
+  try {
+    f.fuel.set(tanks[0].id, 0);
+    f.fuel.set(tanks[1].id, 100);
+    const expected = statistics(f.parts, f.fuel);
+    f.step(1 / 120);
+    assert.ok(f.stats.com.distanceTo(expected.com) < 1e-9);
+    assert.ok(Math.abs(f.colliders.get(tanks[0].id).mass() - PARTS[tanks[0].type].mass) < 0.001);
+    assert.ok(Math.abs(f.colliders.get(tanks[1].id).mass() - PARTS[tanks[1].type].mass - 100) < 0.001);
+  } finally {
+    f.dispose();
+  }
 });

@@ -87,8 +87,11 @@ test('on the runway the gear cannot be retracted; saves keep the flag (old saves
     assert.equal(f.gearDeployed, true);
     assert.equal(setGear(f, true), 'unchanged');
     const rocket = new Flight(preset('rocket'), 'orbit');
-    assert.equal(setGear(rocket, false), 'none', 'nothing to fold');
-    rocket.dispose();
+    try {
+      assert.equal(setGear(rocket, false), 'none', 'nothing to fold');
+    } finally {
+      rocket.dispose();
+    }
     // A retracted vessel round-trips; a save written before 9c loads with the gear down.
     f.gearDeployed = false;
     const saved = saveFlight(f);

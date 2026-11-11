@@ -4,6 +4,7 @@ import {Flight, validateCraft} from '../dist/core.js';
 import {preset} from '../dist/catalog.js';
 import {fleet, selectVessel, canControl} from '../dist/fleet.js';
 import {saveFlight, loadFlight} from '../dist/flight-save.js';
+import {stagePerformance} from '../dist/resources.js';
 const split = () => {
   const f = new Flight(preset('twin'), 'orbit');
   f.stageNext();
@@ -93,8 +94,7 @@ test('Uncontrolled, damaged and foreign vessels cannot be selected and rejection
   twin.dispose();
 });
 
-test('A detached root separator does not erase the selected vessel from performance estimates', async () => {
-  const {stagePerformance} = await import('../dist/resources.js');
+test('A detached root separator does not erase the selected vessel from performance estimates', () => {
   const f = split(),
     second = f.detached[0],
     plan = stagePerformance(second.parts, second.fuel);
