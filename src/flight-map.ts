@@ -75,7 +75,12 @@ export interface MapDrag {
   handle: MapScreenHandle | null | undefined;
   start: number;
 }
-export function mapConic(o: MapConicOrbit, limit: number): (T.Vector3 | null)[] {
+/** Points of the conic every half degree, null where it is not drawn; `take` supplies the vectors to fill. */
+export function mapConic(
+  o: MapConicOrbit,
+  limit: number,
+  take: () => T.Vector3 = () => new T.Vector3()
+): (T.Vector3 | null)[] {
   if (o.normal.lengthSq() < 0.5 || o.p < 1) return [];
   const x = o.eccentricity > 1e-7 ? o.evec.clone().normalize() : o.r.clone().normalize(),
     y = o.normal.clone().cross(x).normalize(),
@@ -86,8 +91,8 @@ export function mapConic(o: MapConicOrbit, limit: number): (T.Vector3 | null)[] 
       r = o.p / den;
     points.push(
       den > 0 && r >= o.body.radius && r <= Math.min(limit, o.body.sphereOfInfluence ?? Infinity)
-        ? x
-            .clone()
+        ? take()
+            .copy(x)
             .multiplyScalar(r * Math.cos(a))
             .addScaledVector(y, r * Math.sin(a))
             .add(o.center)
@@ -640,6 +645,11 @@ export function mountFlightMap(
     {passive: false}
   );
   new ResizeObserver(() => draw()).observe(canvas);
+  // Conic points live until the next draw (orbitHits keeps those of the own orbit), so each draw refills
+  // the same vectors.
+  const conicPoints: T.Vector3[] = [];
+  let conicsTaken = 0;
+  const conicPoint = () => (conicPoints[conicsTaken++] ??= new T.Vector3());
   function draw() {
     element(toolbar, '[data-focus=site]', 'button').textContent = selectedDeliverySite().name;
     if (!current || overlay.hidden) return;
@@ -701,6 +711,18 @@ export function mountFlightMap(
       [PRIMARY, center],
       [MOON, moon]
     ];
+    // What hides a path point: each body's projected centre, depth and squared radius, once per draw.
+    const discs = bodies().map(([b, p]) => {
+      const [bx, by, bz] = project(p),
+        r = b.radius * scale;
+      return {bx, by, bz, rr: r * r};
+    });
+    // The same arithmetic as project(), without its temporaries.
+    const cosYaw = Math.cos(yaw),
+      sinYaw = Math.sin(yaw),
+      cosPitch = Math.cos(pitch),
+      sinPitch = Math.sin(pitch);
+    conicsTaken = 0;
     const path = (points: readonly (T.Vector3 | null)[], color: string, dashed = false, pick = false) => {
       ctx.strokeStyle = color;
       ctx.lineWidth = 1.5;
@@ -712,12 +734,15 @@ export function mountFlightMap(
           prior = false;
           continue;
         }
-        const [x, y, z] = project(v);
-        const hidden = bodies().some(([b, p]) => {
-          const [bx, by, bz] = project(p),
-            r = b.radius * scale;
-          return z < bz && (x - bx) ** 2 + (y - by) ** 2 < r * r;
-        });
+        const dx = v.x - origin.x,
+          dy = v.y - origin.y,
+          dz = v.z - origin.z,
+          xx = cosYaw * dx + sinYaw * dz,
+          zz = -sinYaw * dx + cosYaw * dz,
+          x = cx + xx * scale,
+          y = cy - (cosPitch * dy - sinPitch * zz) * scale,
+          z = sinPitch * dy + cosPitch * zz;
+        const hidden = discs.some(d => z < d.bz && (x - d.bx) ** 2 + (y - d.by) ** 2 < d.rr);
         if (hidden) {
           prior = false;
           continue;
@@ -768,14 +793,15 @@ export function mountFlightMap(
       ctx.fillText(b.name, x, y + Math.max(2, r) + 18);
     }
     for (const vessel of vessels)
-      if (!vessel.stopped) path(mapConic(vessel.orbit, 6e7), vessel.target ? '#ee95e8' : '#526e78', true);
+      if (!vessel.stopped)
+        path(mapConic(vessel.orbit, 6e7, conicPoint), vessel.target ? '#ee95e8' : '#526e78', true);
     orbitHits = [];
     path(moonOrbit, '#49515c');
-    path(mapConic(o, 6e7), '#e5a45b', false, true);
-    if (preview) path(mapConic(preview.orbit, 6e7), '#7de6ef', true);
+    path(mapConic(o, 6e7, conicPoint), '#e5a45b', false, true);
+    if (preview) path(mapConic(preview.orbit, 6e7, conicPoint), '#7de6ef', true);
     if (preview?.finite) {
       path(preview.finite.points, '#9be888');
-      path(mapConic(preview.finite.orbit, 6e7), '#9be888', true);
+      path(mapConic(preview.finite.orbit, 6e7, conicPoint), '#9be888', true);
     }
     const marker = (pos: T.Vector3, label: string, color: string, key?: string | null) => {
       const [x, y, z] = project(pos);
