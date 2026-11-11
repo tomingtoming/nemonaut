@@ -37,16 +37,18 @@ export function closest<K extends Tag>(from: Element, selector: string, tag: K):
 export function missing(what: string): never {
   throw Error(what + 'が見つかりません');
 }
-const shownText = new WeakMap<Node, string>(),
+const shownText = new WeakMap<Node, {text: string; child: ChildNode | null}>(),
   shownSignature = new WeakMap<object, string>();
 /**
  * Sets a node's text only when it differs from the text last set here. A list refreshed on a timer
- * leaves unchanged nodes alone (also when a translator has rewritten what they show).
+ * leaves unchanged nodes alone (also when a translator has rewritten what they show). A write from
+ * elsewhere replaces the text node this one left, and is overwritten again.
  */
 export function setText(node: Node, text: string): void {
-  if (shownText.get(node) === text) return;
-  shownText.set(node, text);
+  const shown = shownText.get(node);
+  if (shown && shown.text === text && shown.child === node.firstChild) return;
   node.textContent = text;
+  shownText.set(node, {text, child: node.firstChild});
 }
 /**
  * Whether what a list shows has changed since the last call for this host; records the new signature.

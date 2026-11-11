@@ -2,7 +2,7 @@ import {flapControl, armChutes, toggleRcs} from './flight-keyboard.js';
 import {equipmentSwitches} from './part-settings.js';
 import {PARTS} from './catalog.js';
 import {canControl, type ControllableVessel} from './fleet.js';
-import {element} from './dom.js';
+import {element, setText} from './dom.js';
 import {hasRetractableGear} from './landing-gear.js';
 
 const commands = [
@@ -35,7 +35,7 @@ export interface FlightControlsVessel extends ControllableVessel {
   gearDeployed: boolean;
 }
 export function showBrakeState(button: HTMLButtonElement, engaged: boolean): void {
-  button.textContent = engaged ? 'BRAKE ON' : 'BRAKE OFF';
+  setText(button, engaged ? 'BRAKE ON' : 'BRAKE OFF');
   button.classList.toggle('active', engaged);
   button.setAttribute('aria-pressed', String(engaged));
 }

@@ -12,7 +12,7 @@ import {markWreckVisual} from './failure-visuals.js';
 import type {mountFailureLog} from './failure-feedback.js';
 import {failureCaption} from './failure-events.js';
 import {syncCargoVisual} from './cargo-geometry.js';
-import {syncEngineShrouds} from './engine-shrouds.js';
+import {engineShrouds, syncEngineShrouds, type EngineShroudSpec} from './engine-shrouds.js';
 import {updateEnginePlume} from './engine-plume.js';
 import {chuteNames} from './recovery.js';
 import {constrainSurfaceCamera, orbitByArrows} from './camera-up.js';
@@ -21,6 +21,8 @@ import {formatUniversalTime} from './universal-time.js';
 import {canControl} from './fleet.js';
 import {releaseBrakeForDrive} from './vessel-controls.js';
 import {PARTS} from './catalog.js';
+import type {FlightPart} from './core.js';
+import {setText} from './dom.js';
 import {navigationVelocity} from './navigation.js';
 import {bodyState, bodyUp, referenceBody} from './celestial.js';
 import {state} from './app-state.js';
@@ -46,6 +48,36 @@ export function startFrameLoop(
   failureLog: ReturnType<typeof mountFailureLog>
 ) {
   const announcedFailures = new Set();
+  // The flight HUD elements the loop reads and writes. They are static in index.html and are looked up
+  // once, at the first flight frame.
+  const lookUp = () => ({
+    throttle: $('#throttle', 'input'),
+    warp: $('#warp', 'select'),
+    warpStatus: $('#warpStatus', 'small'),
+    autoLaunch: $('#autoLaunch', 'button'),
+    brake: $('#brake', 'button'),
+    sas: $('#sas', 'button'),
+    portPower: $('#portPower', 'select'),
+    precisionControl: $('#precisionControl', 'button'),
+    chuteStatus: $('#chuteStatus', 'small'),
+    aeroFlight: $('#aeroFlight', 'small'),
+    alt: $('#alt', 'strong'),
+    speed: $('#speed', 'strong'),
+    navigationFrame: $('#navigationFrame', 'button'),
+    navigationAuto: $('#navigationAuto', 'button'),
+    vspeed: $('#vspeed', 'strong'),
+    throttleVal: $('#throttleVal', 'b'),
+    activeVessel: $('#activeVessel', 'span'),
+    universalTime: $('#universalTime', 'div'),
+    flightStatus: $('#flightStatus', 'span'),
+    stage: $('#stage', 'button')
+  });
+  let found: ReturnType<typeof lookUp> | null = null;
+  // Flight.parts is replaced, never edited in place, when parts leave the vessel (staging, fracture), so the
+  // array itself keys what was derived from it.
+  const partById = new Map<string, FlightPart>();
+  let shroudParts: readonly FlightPart[] | null = null,
+    shroudSpecs: EngineShroudSpec[] = [];
   function animate(now: number) {
     requestAnimationFrame(animate);
     const {renderer, scene, viewport, camera, controls, ambient, sun, craftRoot} = sceneCore(),
@@ -69,13 +101,14 @@ export function startFrameLoop(
     }
     const dt = Math.max(0, Math.min((now - state.last) / 1000, 0.1));
     state.last = now;
-    if (state.flight) {
+    const hud = state.flight ? (found ??= lookUp()) : null;
+    if (state.flight && hud) {
       if (!flightPause.paused) {
         if (throttleUp.codes.some(code => keys.has(code)))
           state.flight.throttle = Math.min(1, state.flight.throttle + dt * 0.35);
         if (throttleDown.codes.some(code => keys.has(code)))
           state.flight.throttle = Math.max(0, state.flight.throttle - dt * 0.35);
-        $('#throttle', 'input').value = String(state.flight.throttle * 100);
+        hud.throttle.value = String(state.flight.throttle * 100);
         const transferWindow =
           state.flight.transferGuide &&
           state.flight.transferGuide.firstBurnTime === null &&
@@ -99,18 +132,20 @@ export function startFrameLoop(
             state.flight.throttle === 0 &&
             !keys.size &&
             !state.flight.crashed;
-        const physicalSelected = [2, 4].includes(Number($('#warp', 'select').value)),
+        const physicalSelected = [2, 4].includes(Number(hud.warp.value)),
           physicalStop = physicalWarpStop(state.flight, keys.size > 0);
         if (physicalSelected ? !!physicalStop : !warpAllowed) {
-          if (physicalSelected) $('#warpStatus', 'small').textContent = '通常速度へ：' + physicalStop;
-          else if (Number($('#warp', 'select').value) > 1)
-            $('#warpStatus', 'small').textContent =
+          if (physicalSelected) setText(hud.warpStatus, '通常速度へ：' + physicalStop);
+          else if (Number(hud.warp.value) > 1)
+            setText(
+              hud.warpStatus,
               maneuverPanel.active && maneuverWarp <= 0
                 ? '通常速度へ：自動噴射の姿勢合わせ（開始の90秒前から）'
-                : '通常速度へ：操作・推力・高度・噴射時刻を確認';
-          $('#warp', 'select').value = '1';
+                : '通常速度へ：操作・推力・高度・噴射時刻を確認'
+            );
+          hud.warp.value = '1';
         }
-        const selectedWarp = Number($('#warp', 'select').value);
+        const selectedWarp = Number(hud.warp.value);
         try {
           if (selectedWarp > 50) {
             physicsClock.reset();
@@ -121,53 +156,56 @@ export function startFrameLoop(
               maxSteps: 64
             });
             showCoastBlocker(result.blocker);
-            $('#warpStatus', 'small').textContent = result.reason
-              ? '通常速度へ：' + showCoastBlocker(result.blocker)
-              : '高速航行中 · 姿勢固定 / SAS・RCS停止 · 発電・冷却は継続';
-            if (result.reason) $('#warp', 'select').value = '1';
-            else if (result.remaining > 0.01)
-              $('#warpStatus', 'small').textContent += ' · 処理上限に合わせ減速';
+            setText(
+              hud.warpStatus,
+              result.reason
+                ? '通常速度へ：' + showCoastBlocker(result.blocker)
+                : '高速航行中 · 姿勢固定 / SAS・RCS停止 · 発電・冷却は継続' +
+                    (result.remaining > 0.01 ? ' · 処理上限に合わせ減速' : '')
+            );
+            if (result.reason) hud.warp.value = '1';
           } else {
-            const physicsResult = physicsClock.advance(dt, selectedWarp, () => {
+            const physicsResult = physicsClock.advance(dt, selectedWarp, step => {
               if (state.launchPilot) {
                 const piloted = currentFlight();
                 if (keys.size || piloted.crashed) {
                   state.launchPilot = null;
-                  $('#autoLaunch', 'button').textContent = '自動軌道投入（見本用）';
+                  hud.autoLaunch.textContent = '自動軌道投入（見本用）';
                 } else {
-                  const ids = new Set(piloted.parts.map(p => p.id));
+                  const before = piloted.parts,
+                    count = before.length;
                   state.launchPilot.update(piloted);
-                  showBrakeState($('#brake', 'button'), piloted.brake);
-                  $('#sas', 'button').classList.toggle('active', piloted.sas);
-                  $('#sas', 'button').textContent = 'SAS ' + (piloted.sas ? 'ON' : 'OFF');
-                  for (const id of ids)
-                    if (!piloted.parts.some(p => p.id === id)) {
-                      const object = objects.get(id);
-                      if (object) object.visible = false;
-                    }
+                  showBrakeState(hud.brake, piloted.brake);
+                  hud.sas.classList.toggle('active', piloted.sas);
+                  setText(hud.sas, 'SAS ' + (piloted.sas ? 'ON' : 'OFF'));
+                  // Parts the pilot staged away disappear at once.
+                  if (piloted.parts !== before || piloted.parts.length !== count) {
+                    const kept = new Set(piloted.parts.map(p => p.id));
+                    for (const [id, object] of objects) if (!kept.has(id)) object.visible = false;
+                  }
                 }
               }
-              maneuverPanel.step(currentFlight(), 1 / 120);
-              orbitalPanel.step(currentFlight(), 1 / 120);
-              const autopilotCommands = cruisePanel.step(currentFlight(), 1 / 120);
-              const dockingCommands = dockingPilot.active ? dockingPilot.step(currentFlight(), 1 / 120) : {};
+              maneuverPanel.step(currentFlight(), step);
+              orbitalPanel.step(currentFlight(), step);
+              const autopilotCommands = cruisePanel.step(currentFlight(), step);
+              const dockingCommands = dockingPilot.active ? dockingPilot.step(currentFlight(), step) : {};
               const stepped = currentFlight(),
                 world = currentWorldRuntime(),
                 pitch = keyAxis(keys, pitchKeys);
               // W/S with the brake on drives powered wheels off at once (BACKLOG 9a).
               if (releaseBrakeForDrive(stepped, pitch)) {
-                showBrakeState($('#brake', 'button'), stepped.brake);
+                showBrakeState(hud.brake, stepped.brake);
                 notify('ブレーキを解除しました');
               }
               world.replace(stepped);
-              world.step(1 / 120, {
+              world.step(step, {
                 ...manualTranslation(
                   keys,
                   stepped.rocketAxes,
-                  Number($('#portPower', 'select').value) / 100,
+                  Number(hud.portPower.value) / 100,
                   stepped.instrumentRotation
                 ),
-                precision: $('#precisionControl', 'button').getAttribute('aria-pressed') === 'true',
+                precision: hud.precisionControl.getAttribute('aria-pressed') === 'true',
                 drive: pitch,
                 pitch,
                 yaw: keyAxis(keys, yawKeys),
@@ -179,29 +217,30 @@ export function startFrameLoop(
               if (state.launchPilot?.done) {
                 const completionMessage = state.launchPilot.completionMessage;
                 state.launchPilot = null;
-                $('#autoLaunch', 'button').textContent = '自動軌道投入（見本用）';
+                hud.autoLaunch.textContent = '自動軌道投入（見本用）';
                 notify(completionMessage);
               }
               if (selectedWarp > 1 && physicalWarpStop(currentFlight(), keys.size > 0)) {
-                $('#warp', 'select').value = '1';
-                $('#warpStatus', 'small').textContent =
-                  '通常速度へ：' + physicalWarpStop(currentFlight(), keys.size > 0);
+                hud.warp.value = '1';
+                setText(hud.warpStatus, '通常速度へ：' + physicalWarpStop(currentFlight(), keys.size > 0));
                 return false;
               }
             });
-            if (Number($('#warp', 'select').value) > 1)
-              $('#warpStatus', 'small').textContent =
+            if (Number(hud.warp.value) > 1)
+              setText(
+                hud.warpStatus,
                 '物理計算 ' +
-                selectedWarp +
-                '倍 · 推力・空力・熱・接地を継続' +
-                (physicsResult.limited ? ' · 処理上限に合わせ減速' : '');
+                  selectedWarp +
+                  '倍 · 推力・空力・熱・接地を継続' +
+                  (physicsResult.limited ? ' · 処理上限に合わせ減速' : '')
+              );
           }
         } catch (error) {
           // A throwing step must not end the frame before it renders. Coasting falls back to normal
           // speed; at normal speed the step would throw again every frame, so the flight pauses.
           if (selectedWarp > 50) {
-            $('#warp', 'select').value = '1';
-            $('#warpStatus', 'small').textContent = '通常速度へ：' + errorMessage(error);
+            hud.warp.value = '1';
+            setText(hud.warpStatus, '通常速度へ：' + errorMessage(error));
           } else {
             console.error(error);
             flightPause.set(true);
@@ -209,11 +248,17 @@ export function startFrameLoop(
           }
         }
       }
-      syncEngineShrouds(state.flight.parts, objects, assets.get('engine-shroud'));
+      if (shroudParts !== state.flight.parts) {
+        shroudParts = state.flight.parts;
+        shroudSpecs = engineShrouds(shroudParts);
+      }
+      syncEngineShrouds(shroudParts, objects, assets.get('engine-shroud'), shroudSpecs);
       craftRoot.position.copy(state.flight.pos);
       craftRoot.quaternion.copy(state.flight.q);
+      partById.clear();
+      for (const p of state.flight.parts) partById.set(p.id, p);
       for (const [id, o] of objects) {
-        o.visible = state.flight.parts.some(p => p.id === id);
+        o.visible = partById.has(id);
         if (o.visible) markWreckVisual(o, state.flight);
       }
       for (const p of state.flight.parts) {
@@ -236,7 +281,7 @@ export function startFrameLoop(
       }
       for (const [id, canopy] of parachuteVisuals) {
         const chute = state.flight.chutes.get(id),
-          p = state.flight.parts.find(p => p.id === id);
+          p = partById.get(id);
         canopy.visible = !!p && !!chute && chute.fraction > 0;
         if (p && chute && canopy.visible) {
           canopy.position.fromArray(p.p).applyQuaternion(state.flight.q).add(state.flight.pos);
@@ -253,11 +298,14 @@ export function startFrameLoop(
           }
         }
       }
-      $('#chuteStatus', 'small').textContent = [...state.flight.chutes.values()]
-        .map(c => 'パラシュート：' + chuteNames[c.status])
-        .join(' · ');
-      $('#aeroFlight', 'small').textContent =
-        `失速域の翼: ${state.flight.telemetry.stallCount || 0} · 接地輪: ${state.flight.telemetry.contacts || 0}`;
+      setText(
+        hud.chuteStatus,
+        [...state.flight.chutes.values()].map(c => 'パラシュート：' + chuteNames[c.status]).join(' · ')
+      );
+      setText(
+        hud.aeroFlight,
+        `失速域の翼: ${state.flight.telemetry.stallCount || 0} · 接地輪: ${state.flight.telemetry.contacts || 0}`
+      );
       updateDebrisVisuals(state.flight, now);
       const focus = state.trackedDebris ? vesselCenter(state.trackedDebris) : flightCenter(),
         delta = focus.clone().sub(flightFocus);
@@ -269,37 +317,42 @@ export function startFrameLoop(
       for (const e of exhaust) {
         updateEnginePlume(e.mesh, state.flight.engineThrust.get(e.id) || 0, state.flight.crashed, now);
       }
-      $('#alt', 'strong').textContent = (state.flight.orbit?.altitude || 0).toFixed(1);
-      $('#speed', 'strong').textContent = navigationVelocity(
-        flightCenter(),
-        state.flight.vel,
-        state.flight.universalTime,
-        state.flight.navigationFrame
-      )
-        .length()
-        .toFixed(1);
-      $('#navigationFrame', 'button').textContent =
-        state.flight.navigationFrame === 'surface' ? '対地速度' : '軌道速度';
-      $('#navigationAuto', 'button').setAttribute(
-        'aria-pressed',
-        String(state.flight.navigationAuto !== false)
+      setText(hud.alt, (state.flight.orbit?.altitude || 0).toFixed(1));
+      setText(
+        hud.speed,
+        navigationVelocity(
+          flightCenter(),
+          state.flight.vel,
+          state.flight.universalTime,
+          state.flight.navigationFrame
+        )
+          .length()
+          .toFixed(1)
       );
-      $('#vspeed', 'strong').textContent = (state.flight.orbit?.vertical || 0).toFixed(1);
-      $('#throttleVal', 'b').textContent = Math.round(state.flight.throttle * 100) + '%';
-      $('#activeVessel', 'span').textContent =
+      setText(hud.navigationFrame, state.flight.navigationFrame === 'surface' ? '対地速度' : '軌道速度');
+      const navigationAuto = String(state.flight.navigationAuto !== false);
+      if (hud.navigationAuto.getAttribute('aria-pressed') !== navigationAuto)
+        hud.navigationAuto.setAttribute('aria-pressed', navigationAuto);
+      setText(hud.vspeed, (state.flight.orbit?.vertical || 0).toFixed(1));
+      setText(hud.throttleVal, Math.round(state.flight.throttle * 100) + '%');
+      setText(
+        hud.activeVessel,
         (canControl(state.flight) ? '操縦中：' : '観察中：') +
-        (state.flight.vesselName ? state.flight.vesselName + ' · ' : '') +
-        controlName(state.flight.parts) +
-        ' · ' +
-        state.flight.parts.length +
-        '部品';
-      $('#universalTime', 'div').textContent =
-        formatUniversalTime(state.flight.universalTime) + ' · 宇宙の共通時刻';
-      $('#flightStatus', 'span').textContent = state.flight.crashed
-        ? [...state.flight.thermal.values()].some(s => s.failed)
-          ? '熱損傷 — 耐熱限界を超えました'
-          : '機体損傷 — 組立棟で設計を見直してください'
-        : `T+ ${state.flight.time.toFixed(1)}s · 燃料 ${Math.round(state.flight.fuelRatio * 100)}% · ${state.launchPilot ? state.launchPilot.message : state.flight.landed ? '着地' : state.flight.started ? '試験中' : ['orbit', 'moon-orbit', 'moon-surface', 'transfer'].includes(state.flight.environment) ? '初期円軌道・惰性飛行' : state.flight.environment === 'entry' ? '再突入試験 · SAS逆行で遮熱' : state.flight.environment === 'drop' ? 'カプセル降下試験' : '点火待機'}`;
+          (state.flight.vesselName ? state.flight.vesselName + ' · ' : '') +
+          controlName(state.flight.parts) +
+          ' · ' +
+          state.flight.parts.length +
+          '部品'
+      );
+      setText(hud.universalTime, formatUniversalTime(state.flight.universalTime) + ' · 宇宙の共通時刻');
+      setText(
+        hud.flightStatus,
+        state.flight.crashed
+          ? [...state.flight.thermal.values()].some(s => s.failed)
+            ? '熱損傷 — 耐熱限界を超えました'
+            : '機体損傷 — 組立棟で設計を見直してください'
+          : `T+ ${state.flight.time.toFixed(1)}s · 燃料 ${Math.round(state.flight.fuelRatio * 100)}% · ${state.launchPilot ? state.launchPilot.message : state.flight.landed ? '着地' : state.flight.started ? '試験中' : ['orbit', 'moon-orbit', 'moon-surface', 'transfer'].includes(state.flight.environment) ? '初期円軌道・惰性飛行' : state.flight.environment === 'entry' ? '再突入試験 · SAS逆行で遮熱' : state.flight.environment === 'drop' ? 'カプセル降下試験' : '点火待機'}`
+      );
       if (now - state.infoTime > 250) {
         failureLog.update(state.flight);
         updateInfo();
@@ -309,11 +362,11 @@ export function startFrameLoop(
         state.infoTime = now;
       }
     }
-    if (state.flight && flightPause.paused) {
+    if (hud && flightPause.paused) {
       keys.clear();
       physicsClock.reset();
       flightPause.refresh();
-      $('#stage', 'button').disabled = true;
+      hud.stage.disabled = true;
     }
     setCameraUp(
       state.flight

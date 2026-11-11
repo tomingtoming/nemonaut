@@ -49,13 +49,15 @@ export function engineShrouds(parts: readonly Part[]): EngineShroudSpec[] {
   return result;
 }
 
+/** Shows a cover on each engine in `objects` that has one; `shrouds` is engineShrouds(parts) when the caller kept it. */
 export function syncEngineShrouds(
   parts: readonly Part[],
   objects: ReadonlyMap<string, T.Object3D>,
-  source: T.Object3D | null | undefined
+  source: T.Object3D | null | undefined,
+  shrouds: readonly EngineShroudSpec[] = engineShrouds(parts)
 ): void {
   if (!source) return;
-  const specs = new Map<string, EngineShroudSpec>(engineShrouds(parts).map(s => [s.engineId, s]));
+  const specs = new Map<string, EngineShroudSpec>(shrouds.map(s => [s.engineId, s]));
   for (const [id, object] of objects) {
     const spec = specs.get(id);
     let cover: T.Object3D | undefined = object.userData.engineShroud;
