@@ -7,6 +7,7 @@ import {acceptsFlightKey} from './flight-keyboard.js';
 import {preserveManualControlEdit, isControlTarget} from './manual-control-edit.js';
 import {element, missing} from './dom.js';
 import type {Flight} from './core.js';
+import {metrics} from './metrics.js';
 import type {ManeuverNodeRecord} from './maneuver-node.js';
 
 export type ManeuverPanelFlight = Flight;
@@ -146,6 +147,7 @@ export function mountManeuverPanel(
       const f = getState().flight;
       try {
         session.start(f, {throttle: Number(power.value), timing: timing.value});
+        metrics.autopilot('maneuver');
         claim();
         if (!f) missing('自動噴射の対象機体');
         session.previous = {

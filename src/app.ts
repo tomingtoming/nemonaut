@@ -63,6 +63,7 @@ import {
 } from './center-ui.js';
 import {wireKeyboard, wireCameraKeys} from './keyboard-input.js';
 import {startFrameLoop} from './frame-loop.js';
+import {metrics} from './metrics.js';
 wireHooks({
   updateInfo,
   syncFlightControls,
@@ -212,6 +213,7 @@ async function boot() {
     rebuild();
     frame();
     $('#loading', 'div').hidden = true;
+    metrics.begin(state.parkedWorld ? 'resume' : 'fresh');
     await initializeCenter();
   } catch (e) {
     console.error(e);

@@ -30,6 +30,7 @@ import {preserveManualControlEdit, isControlTarget} from './manual-control-edit.
 import {PARTS} from './catalog.js';
 import * as T from 'three';
 import {element} from './dom.js';
+import {metrics} from './metrics.js';
 import type {Flight} from './core.js';
 /** The takeoff, landing and return sessions snapshot the whole vessel, so the panel works on a Flight. */
 export type CruisePanelFlight = Flight;
@@ -265,6 +266,7 @@ export function mountCruisePanel(
         owner = f;
         f.cruiseSettings = next;
         pilot = new CruisePilot(f, next);
+        metrics.autopilot('cruise');
         message = '捕捉中';
         sync();
       } catch (error) {
@@ -322,6 +324,7 @@ export function mountCruisePanel(
         owner = f;
         takeoffPrevious = {sas: f.sas, sasMode: f.sasMode, trim: f.trim};
         takeoff = candidate;
+        metrics.autopilot('takeoff');
         message = '滑走';
         sync();
       } catch (error) {
@@ -374,6 +377,7 @@ export function mountCruisePanel(
         }
         owner = f;
         landing.start(f);
+        metrics.autopilot('landing');
         landingNotice = null;
         message = '進入';
         sync();
@@ -395,6 +399,7 @@ export function mountCruisePanel(
         stop();
         owner = f;
         returning.start(f, {speed: next.speed, end: runwaySelection.end});
+        metrics.autopilot('return');
         message = '帰投';
         sync();
       } catch (error) {

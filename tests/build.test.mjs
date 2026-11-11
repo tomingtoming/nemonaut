@@ -4,7 +4,7 @@ import {readdirSync, readFileSync, existsSync, statSync} from 'node:fs';
 import path from 'node:path';
 import {transform} from 'esbuild';
 // The module workers (WORKERS): an import map does not apply inside a worker, so each is bundled with its imports.
-import {WORKERS, transformOptions} from '../tools/build.mjs';
+import {WORKERS, transformOptions, BUILD_ID_FILE, buildId, buildIdModule} from '../tools/build.mjs';
 
 // npm test builds dist first (pretest); these check that what is served is what src says.
 const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
@@ -40,6 +40,21 @@ test('static files are delivered byte for byte, each .ts as the build transform 
       rel + ' differs in dist: run npm run build'
     );
   }
+});
+test('every delivered .js comes from src, except the generated build id', async () => {
+  const sources = new Set(walk(src).map(f => path.relative(src, f).replace(/\.ts$/, '.js')));
+  const extra = walk(dist)
+    .map(f => path.relative(dist, f))
+    .filter(rel => rel.endsWith('.js') && !sources.has(rel));
+  assert.deepEqual(extra, [BUILD_ID_FILE]);
+  // Generated from the commit, so src holds its type only; the module is what the build writes for HEAD.
+  assert.ok(existsSync(path.join(src, 'build-id.d.ts')));
+  assert.equal(existsSync(path.join(src, 'build-id.ts')), false);
+  assert.equal(readFileSync(path.join(dist, BUILD_ID_FILE), 'utf8'), buildIdModule(buildId()));
+  assert.match(buildId(), /^([0-9a-f]{7,16}|dev)$/);
+  assert.equal(buildIdModule('dev'), 'export const BUILD_ID = "dev";\n');
+  const {BUILD_ID} = await import('../dist/' + BUILD_ID_FILE);
+  assert.equal(BUILD_ID, buildId());
 });
 test('each worker is one self-contained bundle built from its src module', () => {
   for (const name of WORKERS) {

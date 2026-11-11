@@ -15,6 +15,7 @@ import {updateNavigation, updateTransferGuide} from './flight-hud.js';
 import {setGear} from './landing-gear.js';
 import {flapControl, armChutes} from './flight-keyboard.js';
 import {showBrakeState, updateFlightControls} from './flight-controls.js';
+import {metrics} from './metrics.js';
 export function wireFlightControls() {
   for (const key of ['reactionEnabled', 'steeringEnabled', 'driveEnabled', 'rcsEnabled'] as const)
     $('#' + key, 'input').onchange = () => {
@@ -33,6 +34,7 @@ export function wireFlightControls() {
       return;
     }
     state.launchPilot = new ReturnPilot();
+    metrics.autopilot('return-demo');
     $('#autoLaunch', 'button').textContent = '自動実演を解除';
     blurActive();
   };
@@ -70,6 +72,7 @@ export function wireFlightControls() {
       $('#autoLaunch', 'button').textContent = '自動軌道投入（見本用）';
     } else {
       state.launchPilot = new LaunchPilot();
+      metrics.autopilot('launch-demo');
       $('#autoLaunch', 'button').textContent = '自動実演を解除';
     }
     blurActive();

@@ -42,6 +42,7 @@ import {updateInfo} from './info-hub.js';
 import {parachuteVisuals, exhaust, allDebris, updateDebrisVisuals, controlName} from './flight-visuals.js';
 import {showCoastBlocker, updateDebrisList, updateNavigation} from './flight-hud.js';
 import {cameraKeys} from './keyboard-input.js';
+import {metrics} from './metrics.js';
 /** Starts the loop: requests the first frame. The failure visuals and log are created by app.ts at their original places. */
 export function startFrameLoop(
   failureVisuals: FailureVisuals,
@@ -80,6 +81,7 @@ export function startFrameLoop(
     shroudSpecs: EngineShroudSpec[] = [];
   function animate(now: number) {
     requestAnimationFrame(animate);
+    metrics.frame(state.atCenter ? 'centre' : state.flight ? 'flight' : 'workshop');
     const {renderer, scene, viewport, camera, controls, ambient, sun, craftRoot} = sceneCore(),
       {highlight, partHover} = selectionOverlays(),
       {maneuverPanel, orbitalPanel, cruisePanel, flightPause, deliveryPanel} = flightPanels(),
@@ -92,7 +94,10 @@ export function startFrameLoop(
           if (announcedFailures.has(e.id)) continue;
           announcedFailures.add(e.id);
           if (announcedFailures.size > 128) announcedFailures.delete(announcedFailures.values().next().value);
-          if (state.flight.universalTime - e.time < 0.5) notify(failureCaption(e));
+          if (state.flight.universalTime - e.time < 0.5) {
+            notify(failureCaption(e));
+            metrics.failure(e.cause);
+          }
         }
     if (state.atCenter) {
       state.last = now;

@@ -24,6 +24,7 @@ import {keys, physicsClock} from './flight-shared.js';
 import {updateInfo} from './info-hub.js';
 import {startFlight, endFlight} from './flight-lifecycle.js';
 import {parkFlight, persistWorkspace} from './workspace-ui.js';
+import {metrics} from './metrics.js';
 export function requestLaunch() {
   launchAdditional({
     parts: state.parts,
@@ -93,6 +94,7 @@ export function launchAdditional(design: PracticeDesign & {bay?: string}) {
     $('#environment', 'select').value = next.environment;
     hooks.rebuild();
     startFlight(next);
+    metrics.launch(design.parts, design.environment, practice);
     state.activeFlightName = next.vesselName;
     state.parkedWorld = launchedWorld;
     state.parts = draft.parts;

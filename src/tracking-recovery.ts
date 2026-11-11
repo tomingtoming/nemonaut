@@ -6,6 +6,7 @@ import {selectWorldVessel, worldTrackingList, retireWorldVessel} from './world-o
 import {formatDuration} from './orbit-plan.js';
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
+import {metrics} from './metrics.js';
 import {$, errorMessage, showModal} from './ui-common.js';
 function hasMapOrbit<R extends {position?: unknown; segments?: unknown}>(
   row: R
@@ -151,6 +152,7 @@ function confirmRecovery(item: import('./world-operations.js').WorldTrackingRow)
         state.parkedWorld = before;
         throw Error('保存できなかったため機体を保持しました');
       }
+      metrics.milestones(result.world.history.slice(-1));
       state.recoveryUndo = {
         before,
         after: JSON.stringify(state.parkedWorld),

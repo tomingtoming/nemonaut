@@ -9,12 +9,14 @@ import {recordSurveyAchievement} from './surface-survey.js';
 import {historyActionLabel} from './departure-mode.js';
 import {state} from './app-state.js';
 import {errorMessage, notify} from './ui-common.js';
+import {metrics} from './metrics.js';
 export function updateFlightChallenges() {
   if (!state.flight || !state.parkedWorld || state.practiceSession) return;
   try {
     const before = state.parkedWorld.history,
       recorded = recordFlightChallenges(before, state.flight);
     if (recorded !== before) state.parkedWorld.history = [...recorded];
+    metrics.milestones(recorded.slice(before.length));
     for (const e of state.parkedWorld.history.slice(before.length))
       if (e.type === 'precision-landing') notify(e.name + ' · ' + historyActionLabel(e));
   } catch (e) {
@@ -36,6 +38,7 @@ export function updateExploration() {
         state.flight
       );
     if (next !== before) state.parkedWorld.history = [...next];
+    metrics.milestones(next.slice(before.length));
     state.explorationError = '';
     for (const event of next.slice(before.length)) notify(event.name + ' · ' + historyActionLabel(event));
   } catch (e) {

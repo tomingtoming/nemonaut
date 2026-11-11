@@ -7,6 +7,7 @@ import {mountWorkshopSymmetry, type WorkshopSymmetry} from './workshop-symmetry.
 import {updateDepartureButton} from './departure-mode.js';
 import {PARTS, CATEGORIES, preset, type PartType} from './catalog.js';
 import {loadCraft, saveCraft, type SavedCraftInput} from './craft-save.js';
+import {metrics} from './metrics.js';
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
 import {$, $$, dataValue, notify, errorMessage, showModal} from './ui-common.js';
@@ -105,6 +106,7 @@ export function wireWorkshopToolbar() {
             const k = dataValue(b, 'example');
             checkpoint();
             state.parts = preset(k);
+            metrics.example(k);
             $('#craftName', 'input').value = exampleTable[k][0];
             setBay(
               [
@@ -181,6 +183,7 @@ export function wireWorkshopToolbar() {
     a.href = url;
     a.download = ($('#craftName', 'input').value.replace(/[^\p{L}\p{N}_-]/gu, '_') || 'craft') + '.json';
     a.click();
+    metrics.craftFile('export', state.parts.length);
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
   $('#import', 'button').onclick = () => {
@@ -194,6 +197,7 @@ export function wireWorkshopToolbar() {
       if (!file) return;
       if (file.size > 1000000) throw Error('機体ファイルが大きすぎます');
       loadData(JSON.parse(await file.text()));
+      metrics.craftFile('import', state.parts.length);
       notify('機体を読み込みました');
     } catch (e) {
       notify(errorMessage(e));

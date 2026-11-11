@@ -5,6 +5,7 @@ import {floatingWindow, type FloatingWindow} from './floating-window.js';
 import {acceptsFlightKey} from './flight-keyboard.js';
 import {preserveManualControlEdit, isControlTarget} from './manual-control-edit.js';
 import {element, missing} from './dom.js';
+import {metrics} from './metrics.js';
 import type {Flight} from './core.js';
 
 export type OrbitalAscentFlight = Flight;
@@ -106,6 +107,7 @@ export function mountOrbitalAscent(
       try {
         const settings = read();
         session.start(f, settings);
+        metrics.autopilot('ascent');
         f.orbitalAscentSettings = settings;
         claim();
         message = '離昇';

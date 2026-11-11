@@ -4,6 +4,7 @@
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
 import {$, notify} from './ui-common.js';
+import {metrics} from './metrics.js';
 const history: string[] = [],
   future: string[] = [];
 export function snapshot() {
@@ -27,6 +28,7 @@ export function checkpoint() {
   history.push(snapshot());
   if (history.length > 60) history.shift();
   future.length = 0;
+  metrics.edit();
 }
 export function undo() {
   const previous = history.at(-1);

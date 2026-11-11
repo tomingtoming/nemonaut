@@ -18,6 +18,7 @@ import {hooks} from './app-hooks.js';
 import {$, blurActive, errorMessage, notify} from './ui-common.js';
 import {currentFlight} from './current-flight.js';
 import {signatureChanged} from './dom.js';
+import {metrics} from './metrics.js';
 /** What the docking UI uses from app.ts: the held flight keys and the audio and docking window, which are created later. */
 export type DockingUiDeps = {
   keys: Set<string>;
@@ -177,6 +178,7 @@ export function updateDocking() {
     }
     try {
       dockingPilot.start(state.flight);
+      metrics.autopilot('docking');
       state.dockingArmed = {flight: state.flight, own: ownId, target: targetId};
       notify('自動ドッキング開始：整列→回り込み→待機点→最終接近の順に進みます。操縦キーで中止。');
     } catch (e) {

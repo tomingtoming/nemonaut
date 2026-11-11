@@ -4,8 +4,10 @@
 // verbatimModuleSyntax asks, so an import kept only for its side effects still runs).
 // The two module workers are then bundled in place from the transformed modules: an import map does
 // not apply inside a worker, so they cannot share the page's 'three' specifier or its modules.
+// dist/build-id.js is generated: the short commit of HEAD (`dev` without git), read by src/metrics.ts.
 // Usage: node tools/build.mjs [--quiet]
 import {build, transform} from 'esbuild';
+import {execFileSync} from 'node:child_process';
 import {readdir, readFile, writeFile, mkdir, rm, copyFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -14,6 +16,22 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(root, 'src'),
   OUT = path.join(root, 'dist');
 export const WORKERS = ['takeoff-forecast-worker.js', 'landing-plan-worker.js'];
+export const BUILD_ID_FILE = 'build-id.js';
+/** Short commit of HEAD, or `dev` when git or the repository is not available. */
+export function buildId() {
+  try {
+    const id = execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], {
+      cwd: root,
+      stdio: ['ignore', 'pipe', 'ignore']
+    })
+      .toString()
+      .trim();
+    return /^[0-9a-f]{7,16}$/.test(id) ? id : 'dev';
+  } catch {
+    return 'dev';
+  }
+}
+export const buildIdModule = id => `export const BUILD_ID = ${JSON.stringify(id)};\n`;
 const isDeclaration = f => /\.d\.m?ts$/.test(f);
 /** esbuild options for one .ts module; `rel` is its path below src/. */
 export const transformOptions = rel => ({
@@ -54,6 +72,7 @@ export async function buildSite({quiet = false} = {}) {
       copied++;
     }
   }
+  await writeFile(path.join(OUT, BUILD_ID_FILE), buildIdModule(buildId()));
   await build({
     absWorkingDir: OUT,
     entryPoints: WORKERS,
