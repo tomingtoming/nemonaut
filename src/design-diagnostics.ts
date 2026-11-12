@@ -5,6 +5,7 @@ import {
   createFuel,
   usesTankPropellant,
   fuelNetworks,
+  stageDrain,
   engineBurn,
   type ResourcePart,
   type FuelMap,
@@ -157,8 +158,11 @@ export function stageThrustDiagnostics(
     const networks = fuelNetworks(retained),
       full = thrustBalance(retained, active, fuel, density),
       lowFuel = new Map(fuel);
-    const fed = networks.groups.filter(g => g.engines.some(p => full.engineIds.includes(p.id)));
-    for (const g of fed) for (const tank of g.tanks) lowFuel.set(tank.id, (fuel.get(tank.id) || 0) * 0.1);
+    // The tanks this stage empties: all of a fed supply, or of a crossfeeding one only its outer tiers.
+    const drained = networks.groups
+      .filter(g => g.engines.some(p => full.engineIds.includes(p.id)))
+      .flatMap(g => stageDrain(g, retained, fuel, slot.stage));
+    for (const tank of drained) lowFuel.set(tank.id, (fuel.get(tank.id) || 0) * 0.1);
     const engineStates = retained
       .filter(p => PARTS[p.type].thrust)
       .map((p): EngineState => {
@@ -181,7 +185,7 @@ export function stageThrustDiagnostics(
         engineStates,
         actions: slot.actions.map(a => ({...a, retained: ids.has(a.id)}))
       });
-    for (const g of fed) for (const tank of g.tanks) fuel.set(tank.id, 0);
+    for (const tank of drained) fuel.set(tank.id, 0);
   }
   return {referenceId: reference.id, stages};
 }

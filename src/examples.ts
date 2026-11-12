@@ -7,6 +7,12 @@ export const examples = {
     '2段式 · 地上から出発 · 上段11部品・RCS・正面ポート',
     'land'
   ],
+  asparagus: [
+    'Trident / 38',
+    '燃料通過ブースターロケット',
+    '3基で離昇 · 外側タンクから消費 · 空の2基を切離す',
+    'land'
+  ],
   hopper: ['Hopper / 24', '精密着陸機', '四脚・単段式 · Spaceで点火 · 姿勢と推力を手動調整', 'land'],
   courier: ['Courier / 23', '観測機運搬ローバー', 'W/S駆動・A/D操舵・B停止 · Spaceで設置', 'land'],
   'orbital-tug': [
@@ -82,6 +88,7 @@ export const exampleGroups = [
     keys: [
       'atlas',
       'tug-launcher',
+      'asparagus',
       'hopper',
       'rocket',
       'launcher',

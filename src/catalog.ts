@@ -115,6 +115,7 @@ export interface Part {
   reactionEnabled?: boolean;
   steeringEnabled?: boolean;
   fuelEnabled?: boolean;
+  fuelCrossfeed?: boolean;
   gimbalEnabled?: boolean;
   driveEnabled?: boolean;
   controlEnabled?: boolean;
@@ -177,7 +178,7 @@ const BASE_PARTS = {
     mass: 15,
     size: [0.625, 0.16, 0.625],
     decoupler: true,
-    desc: '直径0.625 m。ステージで接続枝を分離。燃料通過なし。'
+    desc: '直径0.625 m。ステージで接続枝を分離。燃料通過は設定で切替。'
   },
   decouplerLarge: {
     stackDiameters: [2.5, 2.5],
@@ -188,7 +189,7 @@ const BASE_PARTS = {
     mass: 140,
     size: [2.5, 0.32, 2.5],
     decoupler: true,
-    desc: '直径2.5 m。ステージで接続枝を分離。燃料通過なし。'
+    desc: '直径2.5 m。ステージで接続枝を分離。燃料通過は設定で切替。'
   },
   engineSeaSmall: {
     stackDiameters: [0.625, null],
@@ -385,7 +386,7 @@ const BASE_PARTS = {
     mass: 150,
     fuel: 1800,
     size: [1.25, 2, 1.25],
-    desc: '直径1.25 m・推進剤1800 kg。同じ燃料系統へ推進剤を供給。分離リングを越えては流れません。'
+    desc: '直径1.25 m・推進剤1800 kg。同じ燃料系統へ推進剤を供給。分離リングは燃料通過を入にすると越えます。'
   },
   engine: {
     stackDiameters: [1.25, null],
@@ -446,7 +447,7 @@ const BASE_PARTS = {
     mass: 40,
     size: [1.25, 0.22, 1.25],
     decoupler: true,
-    desc: 'ステージ実行時、この部品から先の接続枝を分離。'
+    desc: 'ステージ実行時、この部品から先の接続枝を分離。燃料通過は設定で切替。'
   },
   truss: {
     stackRectangles: [
@@ -693,6 +694,24 @@ export function preset(kind: string): Part[] {
     const lower2 = add('tankLarge', [0, -13.22, 0], [0, 0, 0], lower);
     add('engineSeaLarge', [0, -16.42, 0], [0, 0, 0], lower2);
     for (const x of [-1.6, 1.6]) add('solar', [x, 0, 0]);
+  }
+  if (kind === 'asparagus') {
+    // Two side boosters on crossfeeding rings: every engine empties the booster tanks first, so the
+    // boosters are dropped empty while the core is still full.
+    add('probe', [0, 5.15, 0]);
+    const upper = add('tank', [0, 3.95, 0]);
+    const lower = add('tank', [0, 1.95, 0], [0, 0, 0], upper);
+    add('engineSeaMedium', [0, 0.25, 0], [0, 0, 0], lower);
+    for (const z of [-1, 1]) add('fin', [0, 1.6, z * 1.625], [0, (-z * Math.PI) / 2, 0], lower);
+    for (const side of [-1, 1]) {
+      const ring = add('decouplerSmall', [side * 0.705, 1.95, 0], [0, 0, (-side * Math.PI) / 2], lower, 1);
+      a[ring].fuelCrossfeed = true;
+      const tank = add('tank', [side * 1.41, 1.95, 0], [0, 0, 0], ring);
+      const top = add('tank', [side * 1.41, 3.95, 0], [0, 0, 0], tank);
+      add('nose', [side * 1.41, 5.45, 0], [0, 0, 0], top);
+      add('engineSeaMedium', [side * 1.41, 0.25, 0], [0, 0, 0], tank);
+      add('fin', [side * 3.035, 1.6, 0], [0, side > 0 ? 0 : Math.PI, 0], tank);
+    }
   }
   if (kind === 'rocket') {
     add('capsule', [0, 3.6, 0]);

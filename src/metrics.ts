@@ -151,7 +151,14 @@ export function craftSignature(parts: readonly Part[]): string {
         round(p.r),
         p.parent === null ? -1 : (index.get(p.parent) ?? -2),
         p.stage,
-        [p.reactionEnabled, p.steeringEnabled, p.fuelEnabled, p.gimbalEnabled, p.driveEnabled]
+        [
+          p.reactionEnabled,
+          p.steeringEnabled,
+          p.fuelEnabled,
+          p.gimbalEnabled,
+          p.driveEnabled,
+          p.fuelCrossfeed
+        ]
           .map(v => (v === undefined ? '-' : v ? '1' : '0'))
           .join('')
       ].join('|')

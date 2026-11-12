@@ -1,4 +1,9 @@
-import {stageFuelLevels, type StageFuelLevel} from './stage-fuel.js';
+import {
+  stageFuelLevels,
+  separationFuelLevels,
+  type StageFuelLevel,
+  type SeparationFuelLevel
+} from './stage-fuel.js';
 import {stagePerformance, type ResourcePart} from './resources.js';
 import {stagePlan, type StagePart} from './staging.js';
 import {PARTS} from './catalog.js';
@@ -37,7 +42,15 @@ const stageGauges = new WeakMap<Element, Map<number, StageGauge>>();
 export function stagingSignature(parts: readonly StackPart[], flight: StackFlight): string {
   return JSON.stringify([
     flight.stage,
-    parts.map(p => [p.id, p.type, p.stage, !!p.parent, flight.chutes.get(p.id)?.status ?? ''])
+    parts.map(p => [
+      p.id,
+      p.type,
+      p.stage,
+      !!p.parent,
+      flight.chutes.get(p.id)?.status ?? '',
+      p.fuelCrossfeed === true && !!PARTS[p.type].decoupler,
+      p.fuelEnabled !== false
+    ])
   ]);
 }
 function showStageFuel(
@@ -63,19 +76,44 @@ function showStageFuel(
     !!flight && fuel.remaining > 0 && fuel.engines.some(id => flight.active.has(id))
   );
 }
+// A separation stage that discards crossfeeding tanks shows their content: empty means the stage is due.
+function showSeparationFuel(
+  {row, gauge, meter, value}: StageGauge,
+  fuel: SeparationFuelLevel,
+  flight: StackFlight | null | undefined
+): void {
+  const empty = fuel.remaining < 0.001;
+  meter.max = Math.max(1, fuel.capacity);
+  meter.value = fuel.remaining;
+  setText(value, fuel.capacity ? Math.round((fuel.remaining / fuel.capacity) * 100) + '%' : '0%');
+  setTitle(
+    gauge,
+    '切り離すタンクの燃料 ' +
+      Math.round(fuel.remaining) +
+      ' / ' +
+      fuel.capacity +
+      ' kg' +
+      (empty ? ' · 空 · 分離できます' : ' · 外側から先に消費')
+  );
+  gauge.classList.toggle('empty', empty);
+  row.classList.toggle('separationDue', !!flight && empty);
+}
 export function renderStageStack(
   host: Element,
   parts: readonly StackPart[],
   {flight, onSelect, onMove, onPreview, previewStage = null}: StageStackOptions
 ): void {
-  const fuelLevels = stageFuelLevels(parts, flight?.fuel);
+  const fuelLevels = stageFuelLevels(parts, flight?.fuel),
+    separationLevels = separationFuelLevels(parts, flight?.fuel);
   // Flight refreshes this on a timer: the rows are rebuilt only when the staging changes, and the fuel
   // gauges are updated on the existing rows. The workshop renders on edits and always rebuilds.
   const shown = stageGauges.get(host);
   if (!signatureChanged(host, flight ? stagingSignature(parts, flight) : '') && flight && shown) {
     for (const [stage, gauge] of shown) {
-      const fuel = fuelLevels.get(stage);
+      const fuel = fuelLevels.get(stage),
+        separation = separationLevels.get(stage);
       if (fuel) showStageFuel(gauge, fuel, flight);
+      else if (separation) showSeparationFuel(gauge, separation, flight);
     }
     return;
   }
@@ -136,16 +174,21 @@ export function renderStageStack(
       icons.append(empty);
     }
     row.append(icons);
-    const fuel = fuelLevels.get(slot.stage);
-    if (fuel) {
+    const fuel = fuelLevels.get(slot.stage),
+      separation = separationLevels.get(slot.stage);
+    if (fuel || separation) {
       const gauge = document.createElement('div');
       gauge.className = 'stageFuel';
       const meter = document.createElement('meter');
       meter.min = 0;
-      meter.setAttribute('aria-label', '段 ' + slot.stage + ' の使用可能燃料');
+      meter.setAttribute(
+        'aria-label',
+        '段 ' + slot.stage + (fuel ? ' の使用可能燃料' : ' で切り離すタンクの燃料')
+      );
       const value = document.createElement('span'),
         shownGauge = {row, gauge, meter, value};
-      showStageFuel(shownGauge, fuel, flight);
+      if (fuel) showStageFuel(shownGauge, fuel, flight);
+      else if (separation) showSeparationFuel(shownGauge, separation, flight);
       gauges.set(slot.stage, shownGauge);
       gauge.append(meter, value);
       row.append(gauge);

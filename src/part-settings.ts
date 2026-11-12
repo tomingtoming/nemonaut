@@ -28,7 +28,7 @@ export function partSettings(p: SettablePart): PartSettingRow[] {
   const d = PARTS[p.type];
   const toggles: [unknown, PartToggleKey, string][] = [
     [d.fuel || d.monoprop, 'fuelEnabled', '燃料使用'],
-    [d.docking, 'fuelCrossfeed', '燃料通過'],
+    [d.docking || d.decoupler, 'fuelCrossfeed', '燃料通過'],
     [d.gimbal, 'gimbalEnabled', 'ジンバル'],
     [d.controlAxis, 'controlEnabled', '操舵面'],
     [d.controlAxis, 'controlPitch', 'ピッチ'],
@@ -46,11 +46,12 @@ export function partSettings(p: SettablePart): PartSettingRow[] {
       key,
       label,
       type: 'boolean',
+      // A separator passes fuel only once it is switched on; every other switch defaults to on.
       value:
         p[key] ??
         (key.startsWith('control') && key !== 'controlEnabled'
           ? d.controlAxis === 'auto' || d.controlAxis === key.slice(7).toLowerCase()
-          : true)
+          : !(key === 'fuelCrossfeed' && d.decoupler))
     }));
   if (d.cargoBay)
     rows.push({key: 'cargoOpen', label: '貨物扉を開く', type: 'boolean', value: p.cargoOpen === true});

@@ -248,7 +248,7 @@ body:not(.flying) #toolbar{left:246px;transform:none;bottom:12px;border-radius:2
 @media(max-width:600px){#practiceNotice{top:258px;font-size:9px}.flying #stageDock{max-height:25dvh}}
 .flying .navpanel{transform:translateX(-50%) scale(.88);transform-origin:bottom center}
 @media(max-width:600px){.flying .navpanel{transform:translateX(-50%)}.navSwitches{right:-63px;width:60px}}
-.stageFuel{grid-column:1/-1;display:flex;align-items:center;gap:4px;min-width:0}.stageFuel meter{width:100%;min-width:0;height:12px;accent-color:#aace63}.stageFuel span{font:9px monospace;color:#c4e29a;min-width:27px;text-align:right}.stageFuel.empty span{color:#ffb18a}.stageStackRow.spent.engaged{opacity:1;border-color:#b8c793}
+.stageFuel{grid-column:1/-1;display:flex;align-items:center;gap:4px;min-width:0}.stageFuel meter{width:100%;min-width:0;height:12px;accent-color:#aace63}.stageFuel span{font:9px monospace;color:#c4e29a;min-width:27px;text-align:right}.stageFuel.empty span{color:#ffb18a}.stageStackRow.spent.engaged{opacity:1;border-color:#b8c793}.stageStackRow.separationDue{border-color:#ffb18a;box-shadow:inset 3px 0 #ffb18a}
 
 .flying .navpanel>label[hidden]{display:none}#sasDirections{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;width:100%;margin-top:3px}#sasDirections button{padding:4px 1px;font-size:10px;background:#303a3f;border:1px solid #7a8589;border-radius:3px}#sasDirections button[aria-pressed="true"]{background:#667c39;color:#f3ffd6;border-color:#d5ec9a}#sasDirections button:disabled{opacity:.35}
 

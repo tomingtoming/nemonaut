@@ -1,4 +1,5 @@
 import {engineMaxThrust, type FuelNetworks} from './resources.js';
+import {separationDue} from './stage-fuel.js';
 import * as T from 'three';
 import {PARTS, type Part} from './catalog.js';
 import {localUp, orbitState} from './planet.js';
@@ -64,7 +65,7 @@ export class LaunchPilot {
         return;
       }
       f.stageNext();
-    }
+    } else if (active.length && separationDue(f.parts, f.fuel, f.stage)) f.stageNext();
     const com = centerOfMass(f),
       o = orbitState(com, f.vel),
       up = localUp(com),

@@ -8,6 +8,7 @@ import {PARTS} from './catalog.js';
 import {atmosphere, localUp, orbitState, radial} from './planet.js';
 import type {Flight} from './core.js';
 import {centerOfMass} from './center-of-mass.js';
+import {separationDue} from './stage-fuel.js';
 export interface AscentTarget {
   altitude?: number;
   tolerance?: number;
@@ -66,7 +67,7 @@ export class AscentPrototype {
         return;
       }
       f.stageNext();
-    }
+    } else if (separationDue(f.parts, f.fuel, f.stage)) f.stageNext();
 
     const com = centerOfMass(f),
       o = orbitState(com, f.vel),

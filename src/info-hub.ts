@@ -197,7 +197,8 @@ export function designStatistics() {
           Math.round(remaining) +
           ' / ' +
           capacity +
-          ' kg'
+          ' kg' +
+          (g.tiers ? ' · 外側のタンクから消費' : '')
         );
       }),
     ...plan.map(p => '段 ' + p.stage + ' · Δv ' + Math.round(p.dv) + ' m/s · TWR ' + p.twr.toFixed(2))

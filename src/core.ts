@@ -260,7 +260,8 @@ export function validateCraft<A extends FlightPart[] = FlightPart[]>(
     if (p.cargoOpen !== undefined && !PARTS[p.type].cargoBay) throw Error('貨物扉は貨物胴体の設定です。');
     if (p.fuelEnabled !== undefined && !PARTS[p.type].fuel && !PARTS[p.type].monoprop)
       throw Error('燃料使用は推進剤を持つ部品の設定です。');
-    if (p.fuelCrossfeed !== undefined && !PARTS[p.type].docking) throw Error('燃料通過はポートの設定です。');
+    if (p.fuelCrossfeed !== undefined && !PARTS[p.type].docking && !PARTS[p.type].decoupler)
+      throw Error('燃料通過はポートと分離リングの設定です。');
     if (
       p.fuelLoad !== undefined &&
       (!(PARTS[p.type].fuel || PARTS[p.type].monoprop) ||
