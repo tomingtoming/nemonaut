@@ -32,6 +32,14 @@ export const stageKey = 'Space';
 export const sasKey = 'KeyT';
 // Frames the camera on the craft. F is the flaps in flight, so the workshop's F is V here.
 export const cameraFrameKey = 'KeyV';
+/**
+ * The action group a key fires: the digit row, 1…9 then 0. The numeric keypad is not bound, because
+ * NumLock decides whether its keys are digits or navigation.
+ */
+export function actionGroupKey(code: string): number | null {
+  const digit = /^Digit(\d)$/.exec(code);
+  return digit ? Number(digit[1]) : null;
+}
 type AxisKeys = readonly [string, string];
 export function keyAxis(held: ReadonlySet<string>, [positive, negative]: AxisKeys): number {
   return Number(held.has(positive)) - Number(held.has(negative));

@@ -54,7 +54,8 @@ export function mountWarpGuard() {
   // running while the pilot changes thrust, staging or attitude commands. Floating windows
   // (part, docking and descent windows) count by their content, not their pin and close buttons;
   // the sound, survey, runway and buoyancy windows hold no flight control, and the settings of the
-  // automation windows (automatic burn, orbital ascent, cruise) stay adjustable while warping.
+  // automation windows (automatic burn, orbital ascent, cruise) stay adjustable while warping, as do
+  // the action group selectors of a part window (an assignment operates nothing).
   const flightControls =
     '#flightHud,#inspector,#orbitOverlay,#stageDock,' +
     '.floatingWindow:not(.audioWindow,.deliveryWindow,.runwayWindow,.maneuverWindow,.ascentWindow,.cruiseWindow)' +
@@ -65,7 +66,14 @@ export function mountWarpGuard() {
       event => {
         const target = event.target,
           control = target instanceof Element ? target.closest('button,input,select') : null;
-        if (!control || control.id === 'warp' || !state.flight || !control.closest(flightControls)) return;
+        if (
+          !control ||
+          control.id === 'warp' ||
+          control.classList.contains('groupSelect') ||
+          !state.flight ||
+          !control.closest(flightControls)
+        )
+          return;
         if (Number($('#warp', 'select').value) > 1) {
           $('#warp', 'select').value = '1';
           physicsClock.reset();

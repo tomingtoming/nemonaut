@@ -18,6 +18,8 @@ import {
   setPartControlLimit
 } from './part-actions.js';
 import {element, closest, missing} from './dom.js';
+import {operationGroups, setOperationGroups} from './action-groups.js';
+import {mountGroupRows, showGroupRow, type GroupRowControl} from './action-group-rows.js';
 type Flight = import('./core.js').Flight;
 export interface PartWindowPort {
   select: HTMLSelectElement;
@@ -50,6 +52,7 @@ export interface PartWindow extends FloatingWindow {
   travelValue?: HTMLSpanElement;
   transfer?: PartWindowTransfer;
   readings?: HTMLOutputElement;
+  groups?: Map<string, GroupRowControl>;
 }
 export interface PartWindows {
   open(id: string, x: number, y: number): void;
@@ -254,6 +257,7 @@ export function mountPartWindows(
           !((f.fuel.get(id) ?? NaN) < transferCapacity(p));
         w.transfer.select.disabled = !choices.length;
       }
+      if (w.groups) for (const [operation, row] of w.groups) showGroupRow(row, operationGroups(p, operation));
       const values: string[] = [];
       if (PARTS[p.type].surfaceObservation === true) {
         const site = observationSite(f, id),
@@ -515,6 +519,12 @@ export function mountPartWindows(
       send.onclick = () => move(true);
       receive.onclick = () => move(false);
     }
+    // Assigning a group is no flight operation: no beforeAction, and it works without control.
+    w.groups = mountGroupRows(w.content, p.type, (operation, group) => {
+      const part = getFlight() === f ? f.parts.find(p => p.id === id) : undefined;
+      if (part) setOperationGroups(part, operation, group === null ? [] : [group]);
+      update();
+    });
     w.readings = document.createElement('output');
     w.content.append(w.readings);
     update();

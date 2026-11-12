@@ -95,6 +95,7 @@ import {
   type ResourcePart
 } from './resources.js';
 import {centerOfMass} from './center-of-mass.js';
+import {validateActionGroups} from './action-groups.js';
 await RAPIER.init();
 /** Where a docked part came from: its vessel name and mission epoch (kept through dock/undock). */
 export interface MissionOrigin {
@@ -283,6 +284,7 @@ export function validateCraft<A extends FlightPart[] = FlightPart[]>(
         p.controlLimit > 1)
     )
       throw Error('舵角上限が不正です。');
+    validateActionGroups(p);
     if (p.missionOrigin !== undefined) {
       const m = p.missionOrigin;
       if (

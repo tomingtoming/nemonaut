@@ -124,6 +124,8 @@ export interface Part {
   symmetryGroup?: string;
   symmetryFrame?: number[];
   cargoOpen?: boolean;
+  /** Action groups: operation id → group numbers 0…9 (action-groups.ts). */
+  actionGroups?: Record<string, number[]>;
 }
 // The literal table keeps its keys for PartType; PARTS is its string-keyed view (the same object).
 const BASE_PARTS = {

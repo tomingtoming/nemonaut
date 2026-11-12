@@ -32,7 +32,7 @@ import {hooks} from './app-hooks.js';
 import {$, errorMessage, notify} from './ui-common.js';
 import {vesselCenter} from './current-flight.js';
 import {sceneCore, editorMarkers, selectionOverlays, objects, flightFocus} from './scene.js';
-import {applySetting, select} from './workshop-select.js';
+import {applySetting, applyActionGroup, select} from './workshop-select.js';
 import {cancelPlacement} from './workshop-place.js';
 import {mountOrbitTrajectory} from './orbit-map-ui.js';
 import {keys, physicsClock} from './flight-shared.js';
@@ -68,20 +68,25 @@ export function flightPanels(): FlightPanels {
   if (!mounted) throw Error('飛行パネルがまだ作られていません');
   return mounted;
 }
+/**
+ * A part is about to be operated by the player (part window, action group): the automatic burn and the
+ * orbital ascent stop, held keys and the launch pilot are dropped, and time returns to normal speed.
+ */
+export function beforePartOperation(): void {
+  const {maneuverPanel, orbitalPanel} = flightPanels();
+  maneuverPanel.stop();
+  orbitalPanel.stop();
+  keys.clear();
+  state.launchPilot = null;
+  $('#warp', 'select').value = '1';
+  physicsClock.reset();
+  $('#warpStatus', 'small').textContent = '通常速度へ：部品操作';
+}
 export function mountPartWindowPanels(): PartWindowPanels {
   const {partHover} = selectionOverlays();
   const partWindows = mountPartWindows(
     () => state.flight,
-    () => {
-      const {maneuverPanel, orbitalPanel} = flightPanels();
-      maneuverPanel.stop();
-      orbitalPanel.stop();
-      keys.clear();
-      state.launchPilot = null;
-      $('#warp', 'select').value = '1';
-      physicsClock.reset();
-      $('#warpStatus', 'small').textContent = '通常速度へ：部品操作';
-    },
+    beforePartOperation,
     id => {
       const object = id && objects.get(id);
       partHover.visible = !!object;
@@ -99,7 +104,8 @@ export function mountPartWindowPanels(): PartWindowPanels {
       const object = id && objects.get(id);
       partHover.visible = !!object;
       if (object) partHover.setFromObject(object);
-    }
+    },
+    (id, operation, group, linked) => applyActionGroup(id, operation, group, linked)
   );
   windows = {partWindows, designPartWindows};
   return windows;

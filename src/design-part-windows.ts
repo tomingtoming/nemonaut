@@ -4,6 +4,8 @@ import {partSettings, type SettablePart} from './part-settings.js';
 import {symmetryTargets} from './symmetry.js';
 import {floatingWindow, type FloatingWindow} from './floating-window.js';
 import {closest} from './dom.js';
+import {operationGroups} from './action-groups.js';
+import {mountGroupRows, showGroupRow, type GroupRowControl} from './action-group-rows.js';
 export interface DesignPartWindowRow {
   input: HTMLInputElement;
   state: HTMLElement;
@@ -12,9 +14,16 @@ export interface DesignPartWindowRow {
 export interface DesignPartWindow extends FloatingWindow {
   reference?: HTMLSelectElement;
   rows: Map<string, DesignPartWindowRow>;
+  groups: Map<string, GroupRowControl>;
   link: HTMLInputElement;
 }
 export type DesignPartChange = (id: string, key: string, value: boolean | number, linked: boolean) => void;
+export type DesignGroupChange = (
+  id: string,
+  operation: string,
+  group: number | null,
+  linked: boolean
+) => void;
 export interface DesignPartWindows {
   open(id: string, x: number, y: number): void;
   update(): void;
@@ -23,7 +32,8 @@ export interface DesignPartWindows {
 export function mountDesignPartWindows(
   getParts: () => SettablePart[] | null | undefined,
   change: DesignPartChange,
-  highlight: (id: string | null) => void = () => {}
+  highlight: (id: string | null) => void = () => {},
+  assign: DesignGroupChange = () => {}
 ): DesignPartWindows {
   const host = document.createElement('div');
   host.id = 'designPartWindows';
@@ -68,6 +78,14 @@ export function mountDesignPartWindows(
             s.unit;
         }
       }
+      for (const [operation, row] of w.groups) {
+        const groups = operationGroups(p, operation);
+        showGroupRow(
+          row,
+          groups,
+          targets.some(q => operationGroups(q, operation).join() !== groups.join())
+        );
+      }
     }
   }
   function open(id: string, x: number, y: number): void {
@@ -87,7 +105,11 @@ export function mountDesignPartWindows(
         y: y + 12,
         onClose: () => close(id)
       }),
-      {rows: new Map<string, DesignPartWindowRow>(), link: document.createElement('input')}
+      {
+        rows: new Map<string, DesignPartWindowRow>(),
+        groups: new Map<string, GroupRowControl>(),
+        link: document.createElement('input')
+      }
     );
     windows.set(id, w);
     if (PARTS[p.type].commandFrame)
@@ -132,7 +154,11 @@ export function mountDesignPartWindows(
         update();
       };
     }
-    if (!w.rows.size && !w.reference) {
+    w.groups = mountGroupRows(w.content, p.type, (operation, group) => {
+      assign(id, operation, group, w.link.checked);
+      update();
+    });
+    if (!w.rows.size && !w.reference && !w.groups.size) {
       const text = document.createElement('output');
       text.textContent = '設定なし';
       w.content.append(text);

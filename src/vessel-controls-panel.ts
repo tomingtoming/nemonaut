@@ -3,10 +3,16 @@
 // keyboard, on-screen names on touch. At launch it opens on a desktop and starts collapsed on touch, where
 // the screen is small; once the viewer opens or collapses it, that choice is remembered per
 // browser. A periodic check re-renders it when the vessel changes (staging, switching, docking) and keeps it
-// between the quick navigation and the controls below it. No import-time side effects; app.ts mounts it.
+// between the quick navigation and the controls below it. Above it, always visible, are the action
+// groups of the piloted vessel that have something assigned: one button per group (number and what it
+// operates) that fires the group; nothing is shown for a vessel without assignments.
+// No import-time side effects; app.ts mounts it.
 import {state} from './app-state.js';
 import {storageKey} from './app-id.js';
 import {vesselControls} from './vessel-controls.js';
+import {groupRows} from './action-groups.js';
+import {fireGroup} from './action-groups-ui.js';
+import {signatureChanged} from './dom.js';
 
 const COLLAPSED_KEY = storageKey('vesselControlsCollapsed');
 /** The viewer's last choice: true collapsed, false open, null none yet. */
@@ -30,6 +36,12 @@ export function mountVesselControls(hud: HTMLElement, body: HTMLElement = docume
   const box = document.createElement('details'),
     summary = document.createElement('summary'),
     list = document.createElement('dl');
+  const groups = document.createElement('div');
+  groups.id = 'actionGroups';
+  groups.setAttribute('role', 'group');
+  groups.setAttribute('aria-label', 'アクショングループ');
+  groups.hidden = true;
+  hud.append(groups);
   box.id = 'vesselControls';
   summary.textContent = 'この機体で使える操作';
   box.append(summary, list);
@@ -56,15 +68,42 @@ export function mountVesselControls(hud: HTMLElement, body: HTMLElement = docume
         if (r.width && r.height && r.top >= top && r.left < left + width && r.right > left)
           limit = Math.min(limit, r.top - 8);
       }
-    box.style.top = top + 'px';
+    groups.style.top = top + 'px';
+    groups.style.left = left + 'px';
+    groups.style.width = width + 'px';
+    // The groups leave room for the summary line of the box of controls, which follows below them.
+    groups.style.maxHeight = Math.max(44, limit - top - 52) + 'px';
+    const boxTop = groups.hidden ? top : groups.getBoundingClientRect().bottom + 6;
+    box.style.top = boxTop + 'px';
     box.style.left = left + 'px';
     box.style.width = width + 'px';
-    box.style.maxHeight = Math.max(44, limit - top) + 'px';
+    box.style.maxHeight = Math.max(44, limit - boxTop) + 'px';
+  };
+  // Rebuilt only when the assignments change: a button replaced between press and release gets no click.
+  const showGroups = (f: NonNullable<typeof state.flight>, touch: boolean) => {
+    const rows = groupRows(f.parts);
+    groups.hidden = !rows.length;
+    if (!signatureChanged(groups, JSON.stringify([touch, rows]))) return;
+    groups.replaceChildren(
+      ...rows.map(({group, summary}) => {
+        const button = document.createElement('button'),
+          number = document.createElement('b'),
+          text = document.createElement('span');
+        button.dataset.group = String(group);
+        number.textContent = String(group);
+        text.textContent = summary;
+        button.title = touch ? '' : 'キー ' + group;
+        button.append(number, text);
+        button.onclick = () => fireGroup(group);
+        return button;
+      })
+    );
   };
   const refresh = () => {
     const f = state.flight;
     if (!f || state.atCenter || !body.classList.contains('flying')) {
       box.hidden = true;
+      groups.hidden = true;
       flying = false;
       shown = '';
       return;
@@ -84,6 +123,7 @@ export function mountVesselControls(hud: HTMLElement, body: HTMLElement = docume
       box.hidden = false;
       box.open = !(readCollapsed() ?? touch);
     }
+    showGroups(f, touch);
     if (key !== shown) {
       shown = key;
       list.replaceChildren(

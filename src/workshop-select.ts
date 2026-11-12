@@ -12,6 +12,7 @@ import {occupiedNodes, nodeAvailable, nodeConnection} from './attachment-nodes.j
 import {editSymmetryPose} from './symmetry-geometry.js';
 import {symmetryTargets, editSymmetrySetting, normalizeSymmetry, hasSymmetryGeometry} from './symmetry.js';
 import {extractBranch} from './assembly-branch.js';
+import {assignActionGroup} from './action-groups.js';
 import {fuelNetworks} from './resources.js';
 import {syncCargoVisual} from './cargo-geometry.js';
 import {showInspector} from './overlay-panels.js';
@@ -183,6 +184,17 @@ export function applySetting(
     renderInspector();
     hooks.updateInfo();
     renderAssemblyTree();
+  } catch (e) {
+    notify(errorMessage(e));
+  }
+}
+/** Gives one operation of a part an action group (null: none), with its symmetric counterparts when linked. */
+export function applyActionGroup(id: string, operation: string, group: number | null, linked: boolean) {
+  if (state.flight || state.atCenter) return;
+  try {
+    const next = assignActionGroup(state.parts, id, operation, group, linked);
+    checkpoint();
+    state.parts = next;
   } catch (e) {
     notify(errorMessage(e));
   }

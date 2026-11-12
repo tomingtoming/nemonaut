@@ -12,8 +12,10 @@ import {
   toggleRcs,
   landingGear,
   wheelBrake,
-  acceptsFlightKey
+  acceptsFlightKey,
+  actionGroupKey
 } from './flight-keyboard.js';
+import {fireGroup} from './action-groups-ui.js';
 import {canControl} from './fleet.js';
 import {state} from './app-state.js';
 import {$} from './ui-common.js';
@@ -79,6 +81,8 @@ export function wireKeyboard() {
       if (e.code === flapControl.code) $('#' + flapControl.button, 'button').click();
       if (e.code === landingGear.code) $('#' + landingGear.button, 'button').click();
       if (e.code === sasKey) $('#sas', 'button').click();
+      const group = actionGroupKey(e.code);
+      if (group !== null) fireGroup(group);
       if (e.code === throttleKeys[1] || e.code === throttleKeys[0]) {
         state.launchPilot = null;
         $('#autoLaunch', 'button').textContent = '自動軌道投入（見本用）';

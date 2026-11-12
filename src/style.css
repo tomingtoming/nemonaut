@@ -517,6 +517,15 @@ body.touch #placementCancel{display:block;flex:none;min-height:40px;min-width:56
 #vesselControls dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:6px 0 2px}
 #vesselControls dt{color:#aabcc5}
 #vesselControls dd{margin:0;color:#ece9e1;font-family:monospace;text-align:right}
+#actionGroups{position:absolute;top:228px;left:12px;width:260px;z-index:4;box-sizing:border-box;display:flex;flex-direction:column;gap:3px;overflow:auto;scrollbar-width:thin}
+#actionGroups[hidden]{display:none}
+#actionGroups button{display:flex;align-items:baseline;gap:8px;padding:4px 8px;font-size:10px;text-align:left;background:#17252be8;border:1px solid #52646a88;border-radius:7px;color:#ece9e1}
+#actionGroups button b{flex:none;min-width:1.2em;font-family:monospace;font-size:12px;color:var(--orange);text-align:center}
+#actionGroups button span{min-width:0;overflow-wrap:anywhere}
+body.touch #actionGroups{flex-direction:row;flex-wrap:wrap;gap:4px}
+body.touch #actionGroups button{flex:1 1 40%;min-height:40px;align-items:center;font-size:11px}
+.groupRows{border-top:1px solid #4e555d;margin-top:8px;padding-top:6px}.groupRows>small{color:#aabcc5;font-size:10px}.groupRows label{margin:5px 0}.groupRows select{flex:none;font-size:11px}
+body.touch .groupRows select{min-height:40px;min-width:64px}
 body.touch #vesselControls{padding:2px 8px;font-size:11px}
 body.touch #vesselControls summary{min-height:40px;display:flex;align-items:center;gap:6px}
 body.touch #vesselControls summary::before{content:'▸';color:var(--orange)}

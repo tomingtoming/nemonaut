@@ -139,7 +139,10 @@ export function craftTraits(parts: readonly Pick<Part, 'type'>[], catalog: PartC
     .map(([name]) => name)
     .join(',');
 }
-/** Structure of a craft without its random part ids: type, pose, parent index, stage and switches. */
+/**
+ * Structure of a craft without its random part ids: type, pose, parent index, stage and switches.
+ * Action group assignments are key bindings, not structure: a built-in example stays that example.
+ */
 export function craftSignature(parts: readonly Part[]): string {
   const index = new Map(parts.map((p, i) => [p.id, i]));
   const round = (v: readonly number[]) => v.map(x => Math.round(x * 1000) / 1000 || 0).join(' ');
