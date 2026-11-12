@@ -5,10 +5,9 @@
 import * as T from 'three';
 import {attachmentSizeLabel} from './attachment-label.js';
 import {PARTS, nodes, nodePoint, nodeAxis, type PartType, type PartAttachment} from './catalog.js';
-import type {FlightPart} from './core.js';
-import {occupiedNodes, nodeAvailable, assertNodeAttachments, bindMatchingNode} from './attachment-nodes.js';
-import {placementSymmetryFrame} from './symmetry.js';
-import {symmetryPlacementPoses, surfacePlacementPose, nodePlacementRotation} from './placement-poses.js';
+import {occupiedNodes, nodeAvailable} from './attachment-nodes.js';
+import {symmetryCopies, symmetricParts, type SymmetryAxisMode} from './symmetry-placement.js';
+import {surfacePlacementPose, nodePlacementRotation} from './placement-poses.js';
 import {placeBranch, moveBranch, type PartBranch} from './assembly-branch.js';
 import {state} from './app-state.js';
 import {hooks} from './app-hooks.js';
@@ -27,6 +26,9 @@ function placementLabel() {
   return label;
 }
 const touchUi = () => document.body.classList.contains('touch');
+/** The toolbar's symmetry-axis choice: around the vessel's axis or around the part attached to. */
+const symmetryAxis = (): SymmetryAxisMode =>
+  $('#symmetryAxis', 'button').dataset.axis === 'parent' ? 'parent' : 'vessel';
 /** The placement hint: click on the desktop, tap on touch (no key names there). */
 function placementHint(subject: string) {
   placementLabel().textContent = touchUi()
@@ -80,12 +82,13 @@ export function updatePlacementCopies() {
     return;
   }
   if (!state.placing) throw Error('配置中の部品がありません');
-  const poses = symmetryPlacementPoses(
-    state.pendingPose.pos,
-    state.pendingPose.q,
+  const poses = symmetryCopies(
+    state.parts,
+    state.pendingPose,
     $('#symmetry', 'select').value,
     state.bayMode,
-    state.placing
+    state.placing,
+    symmetryAxis()
   );
   for (
     let extra = placementCopies.children.at(-1);
@@ -330,58 +333,28 @@ function place() {
     }
     return;
   }
-  const sym = $('#symmetry', 'select').value,
-    count = sym === 'mirror' ? 2 : +sym;
-  if (state.parts.length + count > 400) {
-    notify('部品上限は400です');
-    return;
-  }
   const type = state.placing;
   if (!type) throw Error('配置中の部品がありません');
-  let created: FlightPart[] = [];
-  for (const {pos, q} of symmetryPlacementPoses(
-    state.pendingPose.pos,
-    state.pendingPose.q,
-    sym,
-    state.bayMode,
-    type
-  )) {
-    const e = new T.Euler().setFromQuaternion(q);
-    created.push({
-      id: crypto.randomUUID(),
-      type,
-      p: pos.toArray(),
-      r: [e.x, e.y, e.z],
-      parent: state.pendingPose.parent,
-      stage: 0,
-      attachment: structuredClone(state.pendingPose.attachment)
-    });
-  }
+  let created;
   try {
-    if (state.pendingPose.attachment.mode === 'node') {
-      created = created.map(p => bindMatchingNode(state.parts, p));
-      assertNodeAttachments(
-        [...state.parts, ...created],
-        created.map(p => p.id)
-      );
-    }
+    created = symmetricParts(
+      state.parts,
+      type,
+      state.pendingPose,
+      $('#symmetry', 'select').value,
+      state.bayMode,
+      symmetryAxis()
+    );
   } catch (e) {
     notify(errorMessage(e));
     return;
   }
   checkpoint();
-  if (count > 1) {
-    const group = crypto.randomUUID();
-    for (let i = 0; i < created.length; i++) {
-      created[i].symmetryGroup = group;
-      created[i].symmetryFrame = placementSymmetryFrame(sym, state.bayMode, i, count);
-    }
-  }
   state.parts.push(...created);
   state.selected = created[0].id;
   hooks.rebuild();
   showNodes();
-  notify(`${PARTS[type].name} ×${count} を取り付けました`);
+  notify(`${PARTS[type].name} ×${created.length} を取り付けました`);
 }
 /** The attach target of the shown pose for the touch taps: undefined without a pose, null without a node. */
 function placementTarget() {

@@ -6,12 +6,27 @@ export function nextSymmetry(value: string, mode: string, reverse = false): stri
 }
 export interface WorkshopSymmetry {
   toggle(): void;
+  /** Switches what the copies are arranged around: the vessel's central axis or the part attached to. */
+  toggleAxis(): void;
   cycle(reverse?: boolean): void;
   setBay(bay: string): void;
 }
-export function mountWorkshopSymmetry(select: HTMLSelectElement, button: HTMLElement): WorkshopSymmetry {
+export function mountWorkshopSymmetry(
+  select: HTMLSelectElement,
+  button: HTMLElement,
+  axisButton: HTMLElement
+): WorkshopSymmetry {
   let mode = 'radial',
     radial = '1';
+  // workshop-place.ts reads the choice from data-axis ('vessel' | 'parent').
+  function renderAxis(axis: string) {
+    axisButton.dataset.axis = axis;
+    axisButton.innerHTML = `${axis === 'parent' ? '親部品' : '機体'}<span class="keyhint"> V</span>`;
+    axisButton.classList.toggle('active', axis === 'parent');
+  }
+  const toggleAxis = () => renderAxis(axisButton.dataset.axis === 'parent' ? 'vessel' : 'parent');
+  axisButton.onclick = toggleAxis;
+  renderAxis('vessel');
   function render(value: string) {
     select.innerHTML =
       mode === 'mirror'
@@ -42,6 +57,7 @@ export function mountWorkshopSymmetry(select: HTMLSelectElement, button: HTMLEle
   render('1');
   return {
     toggle,
+    toggleAxis,
     cycle(reverse = false) {
       if (select.disabled) return;
       select.value = nextSymmetry(select.value, mode, reverse);

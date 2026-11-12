@@ -146,7 +146,11 @@ export function wireWorkshopToolbar() {
     if (state.flight) state.flight.trim = +trim.value / 100;
     $('#trimVal', 'b').textContent = trim.value + '%';
   };
-  symmetry = mountWorkshopSymmetry($('#symmetry', 'select'), $('#symmetryMode', 'button'));
+  symmetry = mountWorkshopSymmetry(
+    $('#symmetry', 'select'),
+    $('#symmetryMode', 'button'),
+    $('#symmetryAxis', 'button')
+  );
   $('#vab', 'button').onclick = () => setBay('vab');
   $('#sph', 'button').onclick = () => setBay('sph');
   $('#frame', 'button').onclick = frame;

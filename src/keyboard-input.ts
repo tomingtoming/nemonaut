@@ -101,6 +101,7 @@ export function wireKeyboard() {
     } else if (e.code === 'KeyG') setMode('translate');
     else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.code === 'KeyR') workshopSymmetry().toggle();
     else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.code === 'KeyX') workshopSymmetry().cycle(e.shiftKey);
+    else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.code === 'KeyV') workshopSymmetry().toggleAxis();
     else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.code === 'KeyC') {
       $('#snap', 'input').checked = !$('#snap', 'input').checked;
       applySnap();
